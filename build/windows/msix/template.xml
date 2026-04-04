@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="alis-hub-v3"
+        Arguments=""
+        InstallLocation="C:\Program Files\Patrick-web\Alis Hub">
+    </Installer>
+    <PackageInformation
+        PackageName="com.patrickweb.alishub"
+        PackageDisplayName="Alis Hub"
+        PublisherName="CN=Patrick-web"
+        PublisherDisplayName="Patrick-web"
+        Version="0.0.1.0"
+        PackageDescription="Alis Hub Desktop Application">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.patrickweb.alishub"
+                Description="Alis Hub Desktop Application"
+                DisplayName="Alis Hub"
+                ExecutableName="alis-hub-v3"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>Alis Hub</DisplayName>
+            <PublisherDisplayName>Patrick-web</PublisherDisplayName>
+            <Description>Alis Hub Desktop Application</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="alis-hub-v3.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

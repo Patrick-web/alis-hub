@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Alis Hub
+Comment=Alis Hub Desktop Application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/alis-hub-v3 %u
+Terminal=false
+Type=Application
+Icon=alis-hub-v3
+Categories=Utility;
+StartupWMClass=alis-hub-v3
+
+ 
