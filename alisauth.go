@@ -261,6 +261,9 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 		return err
 	}
 	credsPath := filepath.Join(home, alisConsoleCredentialsPath)
+	if err := os.MkdirAll(filepath.Dir(credsPath), 0700); err != nil {
+		return err
+	}
 	data, err := json.MarshalIndent(creds, "", "  ")
 	if err != nil {
 		return err

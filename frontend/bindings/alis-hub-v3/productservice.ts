@@ -25,6 +25,16 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
 }
 
 /**
+ * GetShareData fetches the IAM policy for the product and enriches each member
+ * with display names via BatchRetrieveMaskedUsers and RetrieveMaskedAccounts.
+ */
+export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
+    return $Call.ByID(1908839309, org, product).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * IsLoggedIn returns true when console credentials exist.
  */
 export function IsLoggedIn(): $CancellablePromise<boolean> {
@@ -33,17 +43,13 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
-/**
- * ListInvites returns the invites for a product's build landing zone.
- * The parent resource is organisations/{org}/products/{product}.
- */
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -60,7 +66,9 @@ const $$createType0 = $models.ProductOverview.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.ServicesOverview.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.EnvInfo.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.InviteInfo.createFrom;
+const $$createType4 = $models.ShareData.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $models.EnvInfo.createFrom;
 const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.InviteInfo.createFrom;
+const $$createType9 = $Create.Array($$createType8);

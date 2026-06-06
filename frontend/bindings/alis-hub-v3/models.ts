@@ -567,6 +567,121 @@ export class ServicesOverview {
     }
 }
 
+export class ShareAccount {
+    "accountId": string;
+    "displayName": string;
+    "role": string;
+    "isExternal": boolean;
+
+    /** Creates a new ShareAccount instance. */
+    constructor($$source: Partial<ShareAccount> = {}) {
+        if (!("accountId" in $$source)) {
+            this["accountId"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("role" in $$source)) {
+            this["role"] = "";
+        }
+        if (!("isExternal" in $$source)) {
+            this["isExternal"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ShareAccount instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ShareAccount {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ShareAccount($$parsedSource as Partial<ShareAccount>);
+    }
+}
+
+export class ShareData {
+    "people": SharePerson[];
+    "accounts": ShareAccount[];
+    "externalAccounts": ShareAccount[];
+
+    /** Creates a new ShareData instance. */
+    constructor($$source: Partial<ShareData> = {}) {
+        if (!("people" in $$source)) {
+            this["people"] = [];
+        }
+        if (!("accounts" in $$source)) {
+            this["accounts"] = [];
+        }
+        if (!("externalAccounts" in $$source)) {
+            this["externalAccounts"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ShareData instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ShareData {
+        const $$createField0_0 = $$createType16;
+        const $$createField1_0 = $$createType18;
+        const $$createField2_0 = $$createType18;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("people" in $$parsedSource) {
+            $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
+        }
+        if ("accounts" in $$parsedSource) {
+            $$parsedSource["accounts"] = $$createField1_0($$parsedSource["accounts"]);
+        }
+        if ("externalAccounts" in $$parsedSource) {
+            $$parsedSource["externalAccounts"] = $$createField2_0($$parsedSource["externalAccounts"]);
+        }
+        return new ShareData($$parsedSource as Partial<ShareData>);
+    }
+}
+
+export class SharePerson {
+    "member": string;
+    "displayName": string;
+    "email": string;
+    "photoUrl": string;
+    "role": string;
+    "isGroup": boolean;
+
+    /** Creates a new SharePerson instance. */
+    constructor($$source: Partial<SharePerson> = {}) {
+        if (!("member" in $$source)) {
+            this["member"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("photoUrl" in $$source)) {
+            this["photoUrl"] = "";
+        }
+        if (!("role" in $$source)) {
+            this["role"] = "";
+        }
+        if (!("isGroup" in $$source)) {
+            this["isGroup"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SharePerson instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SharePerson {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SharePerson($$parsedSource as Partial<SharePerson>);
+    }
+}
+
 export class WorkspaceInfo {
     "organisation": string;
     "organisationDisplayName": string;
@@ -636,3 +751,7 @@ const $$createType11 = NeuronItem.createFrom;
 const $$createType12 = $Create.Array($$createType11);
 const $$createType13 = EnvDeployments.createFrom;
 const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = SharePerson.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = ShareAccount.createFrom;
+const $$createType18 = $Create.Array($$createType17);
