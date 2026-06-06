@@ -70,7 +70,7 @@ export function DevelopPage() {
     setLoadingPkgs(true);
     try {
       const first = selectedNeuronNames[0];
-      const m = first.match(/^(.+)-v(\d+)$/);
+      const m = first.match(/^(.+)-(v\d+)$/);
       const neuronId = m ? m[1] : first;
       const version = m ? m[2] : 'v1';
       const result = await DefineService.ScanNeuronPackages(

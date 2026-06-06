@@ -49,13 +49,8 @@ export function DeploymentsPage() {
   const currentStageIndex = stages.findIndex((s) => s.id === activeStage);
 
   const parseNeuron = (name: string) => {
-    const match = name.match(/^(.+?)-v(\d+)$/);
+    const match = name.match(/^(.+?)-(v\d+)$/);
     if (match) return { id: match[1], version: match[2] };
-    const parts = name.split('-');
-    if (parts.length > 1) {
-      const version = parts.pop() || '';
-      return { id: parts.join('-'), version };
-    }
     return { id: name, version: 'v1' };
   };
 
