@@ -19,6 +19,8 @@ export {
     EnvInfo,
     GCPProject,
     GitRepoInfo,
+    InviteInfo,
+    InviteUserInfo,
     NeuronItem,
     PackageInfo,
     PkgRegistries,

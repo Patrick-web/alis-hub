@@ -38,6 +38,16 @@ export function ListEnvironments(org: string, product: string): $CancellableProm
 }
 
 /**
+ * ListInvites returns the invites for a product's build landing zone.
+ * The parent resource is organisations/{org}/products/{product}.
+ */
+export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
+    return $Call.ByID(1503809804, org, product).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
  * Login triggers the PKCE OAuth2 flow. The browser opens, the user authenticates,
  * and tokens are saved to ~/.alis/console-credentials.json.
  */
@@ -52,3 +62,5 @@ const $$createType2 = $models.ServicesOverview.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = $models.EnvInfo.createFrom;
 const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.InviteInfo.createFrom;
+const $$createType7 = $Create.Array($$createType6);

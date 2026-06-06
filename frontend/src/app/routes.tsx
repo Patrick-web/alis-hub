@@ -11,6 +11,7 @@ import { CodeblockCreatePage } from "./pages/CodeblockCreatePage";
 import { CodeblockDetailsPage } from "./pages/CodeblockDetailsPage";
 import { AgentsPage } from "./pages/AgentsPage";
 import { ToolsPage } from "./pages/ToolsPage";
+import { SharePage } from "./pages/SharePage";
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: "environments", Component: EnvironmentsPage },
       { path: "tools", Component: ToolsPage },
       { path: "agents", Component: AgentsPage },
+      { path: "share", Component: SharePage },
       { path: "codeblocks", Component: CodeblocksPage },
       { path: "codeblocks/create", Component: CodeblockCreatePage },
       { path: "codeblocks/:id", Component: CodeblockDetailsPage },

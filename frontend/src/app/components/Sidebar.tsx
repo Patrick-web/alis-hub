@@ -9,7 +9,7 @@ const developNavItems = [
   { id: 'about', label: 'Overview', route: '/about', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
   { id: 'services', label: 'Services', route: '/services', icon: <Icon icon="solar:layers-linear" className="text-[#F881A9] text-xl" /> },
   { id: 'routes', label: 'Routes', route: null, icon: <Icon icon="solar:map-point-linear" className="text-white text-xl" /> },
-  { id: 'sharing', label: 'Sharing', route: null, icon: <Icon icon="solar:share-linear" className="text-white text-xl" /> },
+  { id: 'sharing', label: 'Sharing', route: '/share', icon: <Icon icon="solar:share-linear" className="text-[#F881A9] text-xl" /> },
   { id: 'product-access', label: 'Product access', route: null, icon: <Icon icon="solar:shield-keyhole-linear" className="text-white text-xl" /> },
 ];
 
