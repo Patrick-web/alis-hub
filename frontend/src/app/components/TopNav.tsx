@@ -32,6 +32,8 @@ export function TopNav() {
 
   const getActiveTab = () => {
     const path = location.pathname.split('/')[1] || 'about';
+    // Services is a sub-section of develop
+    if (path === 'services') return 'develop';
     return path;
   };
 
