@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { SidebarNavItem } from './SidebarNavItem';
 import { Button } from './Button';
 
+// Items with a route navigate; items without (null) are placeholders.
 const developNavItems = [
-  { id: 'overview', label: 'Overview', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'services', label: 'Services', icon: <Icon icon="solar:layers-linear" className="text-white text-xl" /> },
-  { id: 'routes', label: 'Routes', icon: <Icon icon="solar:map-point-linear" className="text-white text-xl" /> },
-  { id: 'sharing', label: 'Sharing', icon: <Icon icon="solar:share-linear" className="text-white text-xl" /> },
-  { id: 'product-access', label: 'Product access', icon: <Icon icon="solar:shield-keyhole-linear" className="text-white text-xl" /> },
+  { id: 'about', label: 'Overview', route: '/about', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
+  { id: 'services', label: 'Services', route: '/services', icon: <Icon icon="solar:layers-linear" className="text-[#F881A9] text-xl" /> },
+  { id: 'routes', label: 'Routes', route: null, icon: <Icon icon="solar:map-point-linear" className="text-white text-xl" /> },
+  { id: 'sharing', label: 'Sharing', route: null, icon: <Icon icon="solar:share-linear" className="text-white text-xl" /> },
+  { id: 'product-access', label: 'Product access', route: null, icon: <Icon icon="solar:shield-keyhole-linear" className="text-white text-xl" /> },
 ];
 
 const envNavItems = [
@@ -37,13 +38,20 @@ const codeblockNavItems = [
 
 export function Sidebar() {
   const location = useLocation();
-  const [activeItem, setActiveItem] = useState('');
+  const navigate = useNavigate();
+  const [activeEnvItem, setActiveEnvItem] = useState('');
+  const [activeBuildItem, setActiveBuildItem] = useState('');
+  const [activeCodeblockItem, setActiveCodeblockItem] = useState('');
 
   const isEnvironments = location.pathname.includes('/environments');
   const isBuilds = location.pathname.includes('/builds');
   const isCodeblocks = location.pathname.includes('/codeblocks');
-  
-  let items = developNavItems;
+
+  // Derive active develop item from current path
+  const currentPath = location.pathname;
+  const activeDevelopId = developNavItems.find(i => i.route === currentPath)?.id ?? 'about';
+
+  let items: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = developNavItems;
   let header = 'DEVELOP';
   let bottomButtonLabel = 'Open in IDE';
   let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
@@ -65,11 +73,22 @@ export function Sidebar() {
     bottomButtonIcon = <Icon icon="solar:download-linear" className="text-xl" />;
   }
 
-  // Ensure activeItem is valid for the current set of items
-  const isValidActiveItem = items.some(item => item.id === activeItem);
-  if (!isValidActiveItem && items.length > 0) {
-    setActiveItem(items[0].id);
-  }
+  const getActiveItem = () => {
+    if (isEnvironments) return activeEnvItem || envNavItems[0]?.id;
+    if (isBuilds) return activeBuildItem || buildNavItems[0]?.id;
+    if (isCodeblocks) return activeCodeblockItem || codeblockNavItems[0]?.id;
+    return activeDevelopId;
+  };
+
+  const handleItemClick = (item: typeof items[0]) => {
+    if (isEnvironments) setActiveEnvItem(item.id);
+    else if (isBuilds) setActiveBuildItem(item.id);
+    else if (isCodeblocks) setActiveCodeblockItem(item.id);
+
+    if ('route' in item && item.route) {
+      navigate(item.route);
+    }
+  };
 
   return (
     <div className="bg-[#2c2c2c] h-full relative shrink-0 w-[300px]">
@@ -86,8 +105,8 @@ export function Sidebar() {
               key={item.id}
               label={item.label}
               icon={item.icon}
-              active={activeItem === item.id}
-              onClick={() => setActiveItem(item.id)}
+              active={getActiveItem() === item.id}
+              onClick={() => handleItemClick(item)}
             />
           ))}
         </div>
