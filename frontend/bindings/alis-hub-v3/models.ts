@@ -223,6 +223,104 @@ export class GitRepoInfo {
     }
 }
 
+export class InviteInfo {
+    "name": string;
+    "buildSeat": number;
+    "manageSeat": number;
+    "allowAll": boolean;
+    "domains": string[];
+    "users": InviteUserInfo[];
+    "inviter": string;
+
+    /** Creates a new InviteInfo instance. */
+    constructor($$source: Partial<InviteInfo> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("buildSeat" in $$source)) {
+            this["buildSeat"] = 0;
+        }
+        if (!("manageSeat" in $$source)) {
+            this["manageSeat"] = 0;
+        }
+        if (!("allowAll" in $$source)) {
+            this["allowAll"] = false;
+        }
+        if (!("domains" in $$source)) {
+            this["domains"] = [];
+        }
+        if (!("users" in $$source)) {
+            this["users"] = [];
+        }
+        if (!("inviter" in $$source)) {
+            this["inviter"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new InviteInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): InviteInfo {
+        const $$createField4_0 = $$createType4;
+        const $$createField5_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("domains" in $$parsedSource) {
+            $$parsedSource["domains"] = $$createField4_0($$parsedSource["domains"]);
+        }
+        if ("users" in $$parsedSource) {
+            $$parsedSource["users"] = $$createField5_0($$parsedSource["users"]);
+        }
+        return new InviteInfo($$parsedSource as Partial<InviteInfo>);
+    }
+}
+
+export class InviteUserInfo {
+    "user": string;
+    "email": string;
+    "displayName": string;
+    "profilePicture": string;
+    "domain": string;
+    "claimed": boolean;
+    "role": number;
+
+    /** Creates a new InviteUserInfo instance. */
+    constructor($$source: Partial<InviteUserInfo> = {}) {
+        if (!("user" in $$source)) {
+            this["user"] = "";
+        }
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("profilePicture" in $$source)) {
+            this["profilePicture"] = "";
+        }
+        if (!("domain" in $$source)) {
+            this["domain"] = "";
+        }
+        if (!("claimed" in $$source)) {
+            this["claimed"] = false;
+        }
+        if (!("role" in $$source)) {
+            this["role"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new InviteUserInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): InviteUserInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new InviteUserInfo($$parsedSource as Partial<InviteUserInfo>);
+    }
+}
+
 export class NeuronItem {
     "id": string;
     "version": string;
@@ -342,8 +440,8 @@ export class ProductOverview {
      */
     static createFrom($$source: any = {}): ProductOverview {
         const $$createField3_0 = $$createType3;
-        const $$createField4_0 = $$createType5;
-        const $$createField5_0 = $$createType7;
+        const $$createField4_0 = $$createType8;
+        const $$createField5_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -456,8 +554,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType9;
-        const $$createField1_0 = $$createType11;
+        const $$createField0_0 = $$createType12;
+        const $$createField1_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -527,11 +625,14 @@ const $$createType0 = DeploymentItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = GCPProject.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = GitRepoInfo.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = PkgRegistries.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = NeuronItem.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = EnvDeployments.createFrom;
-const $$createType11 = $Create.Array($$createType10);
+const $$createType4 = $Create.Array($Create.Any);
+const $$createType5 = InviteUserInfo.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = GitRepoInfo.createFrom;
+const $$createType8 = $Create.Nullable($$createType7);
+const $$createType9 = PkgRegistries.createFrom;
+const $$createType10 = $Create.Nullable($$createType9);
+const $$createType11 = NeuronItem.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = EnvDeployments.createFrom;
+const $$createType14 = $Create.Array($$createType13);
