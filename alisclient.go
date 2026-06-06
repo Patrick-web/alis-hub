@@ -25,13 +25,17 @@ const (
 	alisAppVersion = "0.1.0"
 )
 
+type tokenSource interface {
+	Token() (string, error)
+}
+
 type AlisClient struct {
 	httpClient *http.Client
-	tokens     *AlisTokenSource
+	tokens     tokenSource
 }
 
 func NewAlisClient(ctx context.Context) (*AlisClient, error) {
-	tokens, err := NewAlisTokenSource()
+	tokens, err := NewConsoleTokenSource()
 	if err != nil {
 		return nil, fmt.Errorf("token source: %w", err)
 	}
