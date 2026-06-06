@@ -28,5 +28,8 @@ export {
     RunDefineResult,
     Service,
     ServicesOverview,
+    ShareAccount,
+    ShareData,
+    SharePerson,
     WorkspaceInfo
 } from "./models.js";
