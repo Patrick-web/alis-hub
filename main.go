@@ -17,6 +17,8 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
+			application.NewService(NewDefineService()),
+			application.NewService(NewProductService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -44,10 +46,10 @@ func main() {
 		Width:         300,
 		Height:        400,
 		AlwaysOnTop:   true,
-		Frame:         false,
+		Frameless:     true,
 		Hidden:        true,
 		Windows: application.WindowsWindow{
-			BackdropType: application.WindowsBackdropAcrylic,
+			BackdropType: application.Acrylic,
 		},
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTranslucent,
@@ -58,7 +60,7 @@ func main() {
 	tray := app.SystemTray.New()
 	tray.SetLabel("Alis")
 
-	tray.OnLeftClick(func(_ *application.Context) {
+	tray.OnClick(func() {
 		if trayWindow.IsVisible() {
 			trayWindow.Hide()
 		} else {

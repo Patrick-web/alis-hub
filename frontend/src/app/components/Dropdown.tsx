@@ -4,9 +4,10 @@ import { Icon } from '@iconify/react';
 interface DropdownProps {
   label: string;
   options?: string[];
+  onSelect?: (option: string) => void;
 }
 
-export function Dropdown({ label, options = [] }: DropdownProps) {
+export function Dropdown({ label, options = [], onSelect }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -33,6 +34,7 @@ export function Dropdown({ label, options = [] }: DropdownProps) {
               key={index}
               onClick={() => {
                 setIsOpen(false);
+                onSelect?.(option);
               }}
               className="w-full px-[12px] py-[10px] text-left text-white hover:bg-[#f881a9] hover:text-[#6f0025] transition-colors font-['JetBrains_Mono',sans-serif] text-[11px] uppercase border-b border-[#464646] last:border-b-0"
             >
