@@ -787,26 +787,42 @@ func unpackBuildMetadata(op *dbdv1.Operation) *RunBuildMetadata {
 	return meta
 }
 
-// parseStatus parses google.rpc.Status.
+// parseStatus parses google.rpc.Status: field 1=code (varint), field 2=message (string).
 func parseStatus(data []byte) (int32, string) {
 	var code int32
 	var message string
 	for len(data) > 0 {
-		num, _, n := protowire.ConsumeTag(data)
+		num, typ, n := protowire.ConsumeTag(data)
 		if n < 0 {
 			break
 		}
-		v, m := protowire.ConsumeVarint(data[n:])
-		if m < 0 {
-			break
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return code, message
+			}
+			if num == 1 {
+				code = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return code, message
+			}
+			if num == 2 {
+				message = string(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return code, message
+			}
+			data = data[m:]
 		}
-		total := n + m + int(v)
-		if num == 1 {
-			code = int32(v)
-		} else if num == 2 && total <= len(data) {
-			message = string(data[n+m : total])
-		}
-		data = data[total:]
 	}
 	return code, message
 }
