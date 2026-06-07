@@ -19,6 +19,7 @@ func main() {
 			application.NewService(&ServiceManager{}),
 			application.NewService(NewDefineService()),
 			application.NewService(NewBuildService()),
+			application.NewService(NewDeployService()),
 			application.NewService(NewProductService()),
 		},
 		Assets: application.AssetOptions{

@@ -825,6 +825,295 @@ func unpackBuildMetadata(op *dbdv1.Operation) *RunBuildMetadata {
 	return meta
 }
 
+// marshalRunDeployRequest builds protobuf bytes for alis.os.dbd.v1.RunDeployRequest.
+// Proto fields: 1=environments (repeated string), 2=neuron, 3=version, 4=plan_only (bool), 5=beta (bool).
+func marshalRunDeployRequest(environments []string, neuron, version string, planOnly, beta bool) []byte {
+	var buf []byte
+	for _, env := range environments {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, env)
+	}
+	if neuron != "" {
+		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+		buf = protowire.AppendString(buf, neuron)
+	}
+	if version != "" {
+		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+		buf = protowire.AppendString(buf, version)
+	}
+	if planOnly {
+		buf = protowire.AppendTag(buf, 4, protowire.VarintType)
+		buf = protowire.AppendVarint(buf, 1)
+	}
+	if beta {
+		buf = protowire.AppendTag(buf, 5, protowire.VarintType)
+		buf = protowire.AppendVarint(buf, 1)
+	}
+	return buf
+}
+
+// RunDeploy starts a Deploy operation.
+func (c *AlisClient) RunDeploy(ctx context.Context, req *dbdv1.RunDeployRequest) (*dbdv1.Operation, error) {
+	method := "alis.os.dbd.v1.DbdService/RunDeploy"
+	protoBytes := marshalRunDeployRequest(req.Environments, req.Neuron, req.Version, req.PlanOnly, req.Beta)
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("RunDeploy: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("RunDeploy: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("RunDeploy: response too short: %d bytes", len(body))
+	}
+	return parseOperation(body[5:])
+}
+
+// RunDeployMetadata holds progress info for a running Deploy operation.
+// Proto fields: 1=version, 2=deployments (repeated DeploymentInfo), 3=notes.
+type RunDeployMetadata struct {
+	Version     string
+	Deployments []*DeployInfo
+	Notes       string
+}
+
+// DeployInfo is a single deployment entry from RunDeployMetadata.
+// Proto fields: 1=logs_url.
+type DeployInfo struct {
+	LogsURL string
+}
+
+// unpackDeployMetadata extracts RunDeployMetadata from an operation's metadata Any.
+func unpackDeployMetadata(op *dbdv1.Operation) *RunDeployMetadata {
+	if op == nil || op.Metadata == nil {
+		return nil
+	}
+	anyBytes := op.Metadata.Value
+	var metaBytes []byte
+	for len(anyBytes) > 0 {
+		num, typ, n := protowire.ConsumeTag(anyBytes)
+		if n < 0 {
+			break
+		}
+		anyBytes = anyBytes[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(anyBytes)
+			if m < 0 {
+				break
+			}
+			if num == 2 {
+				metaBytes = b
+			}
+			anyBytes = anyBytes[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, anyBytes)
+			if m < 0 {
+				break
+			}
+			anyBytes = anyBytes[m:]
+		}
+	}
+	if len(metaBytes) == 0 {
+		return nil
+	}
+	meta := &RunDeployMetadata{}
+	data := metaBytes
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			switch num {
+			case 1:
+				meta.Version = string(b)
+			case 2:
+				di := parseDeployInfo(b)
+				meta.Deployments = append(meta.Deployments, di)
+			case 3:
+				meta.Notes = string(b)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return meta
+}
+
+// parseDeployInfo parses RunDeployMetadata.Deployment:
+// field 1=name (resource name), field 2=state (enum), field 3=logs_url (HTTP URL).
+func parseDeployInfo(data []byte) *DeployInfo {
+	di := &DeployInfo{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return di
+			}
+			if num == 3 {
+				di.LogsURL = string(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return di
+			}
+			data = data[m:]
+		}
+	}
+	return di
+}
+
+// NeuronVersionItem is a single entry from ListNeuronVersions.
+// Proto (alis.os.neurons.v1.NeuronVersion): 1=name, 2=version, 7=state (enum), 98=create_time (Timestamp).
+// State enum: BUILT=1, RETAGGED=2, BUILDING=3, FAILED=4.
+type NeuronVersionItem struct {
+	Name       string
+	Version    string
+	State      int32
+	CreateTime int64 // unix seconds from Timestamp.seconds (field 1)
+}
+
+// ListNeuronVersions returns available built/retagged versions for a neuron.
+// parent is the neuron resource name e.g. "organisations/x/products/y/neurons/bff-v1".
+func (c *AlisClient) ListNeuronVersions(ctx context.Context, parent string) ([]*NeuronVersionItem, error) {
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendString(req, parent)
+	// page_size=100
+	req = protowire.AppendTag(req, 2, protowire.VarintType)
+	req = protowire.AppendVarint(req, 100)
+
+	method := "alis.os.neurons.v1.NeuronVersionsService/ListNeuronVersions"
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, req)
+	if err != nil {
+		return nil, fmt.Errorf("ListNeuronVersions: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListNeuronVersions: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListNeuronVersions: response too short")
+	}
+	return parseNeuronVersionsList(body[5:]), nil
+}
+
+func parseNeuronVersionsList(data []byte) []*NeuronVersionItem {
+	var items []*NeuronVersionItem
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			if num == 1 { // neuron_versions (repeated message)
+				items = append(items, parseNeuronVersion(b))
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return items
+}
+
+func parseNeuronVersion(data []byte) *NeuronVersionItem {
+	item := &NeuronVersionItem{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch {
+		case typ == protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return item
+			}
+			switch num {
+			case 1:
+				item.Name = string(b)
+			case 2:
+				item.Version = string(b)
+			case 98: // create_time Timestamp: field 1=seconds
+				item.CreateTime = parseTimestampSeconds(b)
+			}
+			data = data[m:]
+		case typ == protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return item
+			}
+			if num == 7 { // state
+				item.State = int32(v)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return item
+			}
+			data = data[m:]
+		}
+	}
+	return item
+}
+
+func parseTimestampSeconds(data []byte) int64 {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.VarintType {
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				break
+			}
+			if num == 1 { // seconds
+				return int64(v)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return 0
+}
+
 // parseStatus parses google.rpc.Status: field 1=code (varint), field 2=message (string).
 func parseStatus(data []byte) (int32, string) {
 	var code int32
