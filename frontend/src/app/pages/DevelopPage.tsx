@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
@@ -11,6 +11,7 @@ import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Browser } from '@wailsio/runtime';
+import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
 
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
 type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
@@ -85,6 +86,8 @@ export function DevelopPage() {
   const [selectedBuildCommit, setSelectedBuildCommit] = useState<DefineCommit | null>(null);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [buildProgressMsg, setBuildProgressMsg] = useState('Starting...');
+  const termRef = useRef<BuildTerminalHandle>(null);
+  const logOffsetRef = useRef<number>(0);
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -149,6 +152,7 @@ export function DevelopPage() {
     setSelectedBuildCommit(null);
     setBuildResult(null);
     setBuildProgressMsg('Loading commits...');
+    logOffsetRef.current = 0;
     setBuildCommitsLoading(true);
     const parsed = parseNeuron(neuronName);
     try {
@@ -196,6 +200,30 @@ export function DevelopPage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [buildResult?.operationName, buildResult?.done, buildStep, buildNeuron]);
+
+  // Stream build logs into the terminal
+  useEffect(() => {
+    if (!buildResult?.logsUrl) return;
+
+    const fetchLogs = async () => {
+      try {
+        const chunk = await BuildService.FetchBuildLogs(buildResult.logsUrl, logOffsetRef.current);
+        if (chunk?.content) {
+          termRef.current?.write(chunk.content);
+          logOffsetRef.current = chunk.nextOffset;
+        }
+      } catch {}
+    };
+
+    if (buildResult.done) {
+      // One final drain when the build completes
+      fetchLogs();
+      return;
+    }
+
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, [buildResult?.logsUrl, buildResult?.done]);
 
   const handleRunDefine = async () => {
     if (!defineNeuron || !selectedCommit) return;
@@ -783,96 +811,74 @@ export function DevelopPage() {
               </div>
             )}
 
-            {/* Step: running */}
-            {buildStep === 'running' && (
-              <div className="flex-1 overflow-y-auto px-[16px] py-[24px]">
-                <div className="flex flex-col items-center gap-[16px]">
-                  <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-2xl animate-spin" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[12px] font-bold text-white mb-[6px]">Running Build</p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.5] max-w-[280px] text-center">
-                      {buildProgressMsg}
-                    </p>
-                  </div>
-                  {buildResult?.version && (
-                    <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[6px] px-[12px] py-[6px]">
-                      <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)]">
+            {/* Steps: running + result share the terminal so logs persist */}
+            {(buildStep === 'running' || buildStep === 'result') && (
+              <div className="flex-1 flex flex-col min-h-0">
+
+                {/* Running header */}
+                {buildStep === 'running' && (
+                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold text-white leading-tight">Running Build</p>
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
+                    </div>
+                    {buildResult?.version && (
+                      <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.35)] shrink-0">
                         {buildResult.version}
                       </span>
-                    </div>
-                  )}
-                  {buildResult?.logsUrl && (
-                    <button
-                      onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                      className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-[#f881a9] transition-colors"
-                    >
-                      <Icon icon="solar:document-text-linear" className="text-sm" />
-                      View Build Logs
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Step: result */}
-            {buildStep === 'result' && (
-              <div className="flex-1 overflow-y-auto">
-                {buildResult?.error ? (
-                  <>
-                    <div className="px-[16px] py-[16px] border-b border-[#2c2c2c]">
-                      <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
-                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
-                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
-                      </div>
-                    </div>
-                    {buildResult.logsUrl && (
-                      <div className="px-[16px] py-[12px]">
-                        <button
-                          onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                          className="flex items-center gap-[6px] h-[32px] px-[10px] rounded-[6px] bg-[#2c2c2c] border border-[#3a3a3a] text-[10px] font-bold text-[rgba(255,255,255,0.7)] hover:text-white hover:border-[#f881a9] transition-colors"
-                        >
-                          <Icon icon="solar:document-text-linear" className="text-sm" />
-                          View Build Logs
-                        </button>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="px-[16px] py-[14px] border-b border-[#2c2c2c] bg-[rgba(52,199,89,0.05)]">
-                    <div className="flex items-center gap-[8px] mb-[6px]">
-                      <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-base" />
-                      <p className="text-[11px] font-bold text-white">Build Complete</p>
-                    </div>
-                    {(buildResult?.neuronVersion || buildResult?.version) && (
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] mb-[12px]">
-                        {buildResult.neuronVersion || buildResult.version}
-                      </p>
-                    )}
-                    {buildResult?.logsUrl ? (
-                      <button
-                        onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                        className="flex items-center gap-[6px] h-[32px] px-[10px] rounded-[6px] bg-[#2c2c2c] border border-[#3a3a3a] text-[10px] font-bold text-[rgba(255,255,255,0.7)] hover:text-white hover:border-[#f881a9] transition-colors"
-                      >
-                        <Icon icon="solar:document-text-linear" className="text-sm" />
-                        View Build Logs
-                      </button>
-                    ) : (
-                      <p className="text-[9px] text-[rgba(255,255,255,0.3)]">No logs URL returned.</p>
                     )}
                   </div>
                 )}
 
-                <div className="px-[16px] py-[12px] border-t border-[#2c2c2c] mt-[8px]">
-                  <button
-                    onClick={() => openBuildPane(buildNeuron!)}
-                    className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
-                  >
-                    <Icon icon="solar:refresh-linear" className="text-sm" />
-                    Run Build again
-                  </button>
-                </div>
+                {/* Result header */}
+                {buildStep === 'result' && (
+                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
+                    {buildResult?.error ? (
+                      <div className="flex items-start gap-[8px]">
+                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-[8px]">
+                        <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-white leading-tight">Build Complete</p>
+                          {(buildResult?.neuronVersion || buildResult?.version) && (
+                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                              {buildResult.neuronVersion || buildResult.version}
+                            </p>
+                          )}
+                        </div>
+                        {buildResult?.logsUrl && (
+                          <button
+                            onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
+                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                            title="Open in browser"
+                          >
+                            <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Terminal — fills remaining space, persists across running→result */}
+                <BuildTerminal ref={termRef} className="flex-1 min-h-0" />
+
+                {/* Footer: run again */}
+                {buildStep === 'result' && (
+                  <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+                    <button
+                      onClick={() => openBuildPane(buildNeuron!)}
+                      className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                    >
+                      <Icon icon="solar:refresh-linear" className="text-sm" />
+                      Run Build again
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

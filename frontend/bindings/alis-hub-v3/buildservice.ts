@@ -15,11 +15,22 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * FetchBuildLogs fetches the current log page from the alisproxy, extracts plain text,
+ * and returns only the characters past textOffset. Pass 0 on the first call;
+ * pass the returned NextOffset on each subsequent call to stream only new lines.
+ */
+export function FetchBuildLogs(logsUrl: string, textOffset: number): $CancellablePromise<$models.BuildLogsResult | null> {
+    return $Call.ByID(4138132714, logsUrl, textOffset).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * GetBuildCommits lists recent commits from the build repository.
  */
 export function GetBuildCommits(org: string, product: string, neuron: string, version: string, count: number): $CancellablePromise<$models.DefineCommit[]> {
     return $Call.ByID(3945634653, org, product, neuron, version, count).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -29,7 +40,7 @@ export function GetBuildCommits(org: string, product: string, neuron: string, ve
  */
 export function PollBuildOperation(name: string, neuron: string): $CancellablePromise<$models.RunBuildResult | null> {
     return $Call.ByID(2685900073, name, neuron).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
@@ -38,12 +49,14 @@ export function PollBuildOperation(name: string, neuron: string): $CancellablePr
  */
 export function RunBuild(neuron: string, commit: string): $CancellablePromise<$models.RunBuildResult | null> {
     return $Call.ByID(1354516010, neuron, commit).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = $models.DefineCommit.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.RunBuildResult.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
+const $$createType0 = $models.BuildLogsResult.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.DefineCommit.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $models.RunBuildResult.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);

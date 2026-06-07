@@ -6,6 +6,36 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * BuildLogsResult is returned by FetchBuildLogs.
+ * NextOffset is the character count of all log text seen so far; pass it back on the
+ * next call so only newly-appended lines are returned.
+ */
+export class BuildLogsResult {
+    "content": string;
+    "nextOffset": number;
+
+    /** Creates a new BuildLogsResult instance. */
+    constructor($$source: Partial<BuildLogsResult> = {}) {
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+        if (!("nextOffset" in $$source)) {
+            this["nextOffset"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BuildLogsResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): BuildLogsResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new BuildLogsResult($$parsedSource as Partial<BuildLogsResult>);
+    }
+}
+
+/**
  * DefineCommit represents a git commit in the define repository.
  */
 export class DefineCommit {

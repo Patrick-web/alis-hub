@@ -15,6 +15,7 @@ export {
 };
 
 export {
+    BuildLogsResult,
     DefineCommit,
     DeploymentItem,
     EnvDeployments,

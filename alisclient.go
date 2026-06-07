@@ -57,6 +57,44 @@ func (c *AlisClient) Close() error {
 	return nil
 }
 
+// FetchURL makes an authenticated GET request to url, optionally with a Range header for
+// incremental fetching. Returns the response body and the new byte offset.
+func (c *AlisClient) FetchURL(ctx context.Context, url string, byteOffset int64) ([]byte, int64, error) {
+	token, err := c.tokens.Token()
+	if err != nil {
+		return nil, 0, fmt.Errorf("auth: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	if byteOffset > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", byteOffset))
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+
+	// 416 = no new bytes yet (Range past end-of-file)
+	if resp.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+		return nil, byteOffset, nil
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		return nil, 0, fmt.Errorf("HTTP %d from %s", resp.StatusCode, url)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, err
+	}
+	return body, byteOffset + int64(len(body)), nil
+}
+
 // doGRPC sends a gRPC request and handles the response including trailers.
 func (c *AlisClient) doGRPC(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
 	token, err := c.tokens.Token()
