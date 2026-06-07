@@ -56,7 +56,7 @@ func (s *BuildService) buildLogsURL(operationName, neuron string) string {
 	if region == "" {
 		region = "us-east4"
 	}
-	url := fmt.Sprintf("https://git-v2-alisproxy-%s.%s.run.app/executions/%s/BUILD", gp.Number, region, uuid)
+	url := fmt.Sprintf("https://git-v2-alisproxy-%s.%s.run.app/executions/%s", gp.Number, region, uuid)
 	log.Printf("[build] buildLogsURL: constructed %s", url)
 	return url
 }
