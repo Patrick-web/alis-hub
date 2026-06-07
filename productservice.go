@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,6 +20,31 @@ import (
 )
 
 const alisProductHost = "console.alisx.com"
+
+// ── Product summary (for picker) ─────────────────────────────────────────────
+
+type ProductSummary struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	State       int32  `json:"state"`
+}
+
+// ── Landing zones ─────────────────────────────────────────────────────────────
+
+type Organisation struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
+	Logo        string `json:"logo"`
+	Account     string `json:"account"`
+}
+
+type LandingZonesData struct {
+	Own    []Organisation `json:"own"`
+	Shared []Organisation `json:"shared"`
+}
+
+// ── Product overview ──────────────────────────────────────────────────────────
 
 type ProductOverview struct {
 	Name              string         `json:"name"`
@@ -106,6 +132,96 @@ func (s *ProductService) Login() error {
 		s.mu.Unlock()
 	}
 	return err
+}
+
+func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	myAccounts := s.myAccountIDs()
+	protoBytes := marshalListOrganisationsRequest([]string{"name", "display_name", "account", "description", "logo"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.OrganisationsService/ListOrganisations", protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("ListOrganisations: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListOrganisations: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListOrganisations: response too short (%d bytes)", len(body))
+	}
+
+	orgs, err := parseListOrganisationsResponse(body[5:])
+	if err != nil {
+		return nil, err
+	}
+
+	result := &LandingZonesData{Own: []Organisation{}, Shared: []Organisation{}}
+	for _, org := range orgs {
+		if myAccounts[org.Account] {
+			result.Own = append(result.Own, org)
+		} else {
+			result.Shared = append(result.Shared, org)
+		}
+	}
+	return result, nil
+}
+
+func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	parent := fmt.Sprintf("organisations/%s", org)
+	protoBytes := marshalListProductsRequest(parent, []string{"name", "display_name", "state"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.ProductsService/ListProducts", protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("ListProducts: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListProducts: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListProducts: response too short (%d bytes)", len(body))
+	}
+	return parseListProductsResponse(body[5:])
+}
+
+// myAccountIDs parses the JWT access_token to extract the user's account IDs,
+// returning a set of "accounts/<id>" strings for O(1) lookup.
+func (s *ProductService) myAccountIDs() map[string]bool {
+	creds, err := s.tokens.freshCreds()
+	if err != nil {
+		return nil
+	}
+	parts := strings.Split(creds.AccessToken, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil
+	}
+	var claims struct {
+		Accounts map[string]json.RawMessage `json:"accounts"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil
+	}
+	result := make(map[string]bool, len(claims.Accounts))
+	for id := range claims.Accounts {
+		result["accounts/"+id] = true
+	}
+	return result
 }
 
 func (s *ProductService) GetProductOverview(org, product string) (*ProductOverview, error) {
@@ -285,6 +401,171 @@ func openBrowserURL(url string) {
 }
 
 // --- request marshal helpers ---
+
+func marshalListProductsRequest(parent string, fields []string) []byte {
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, parent)
+	if len(fields) > 0 {
+		fm := marshalFieldMask(fields)
+		buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+		buf = protowire.AppendBytes(buf, fm)
+	}
+	return buf
+}
+
+func parseListProductsResponse(data []byte) ([]ProductSummary, error) {
+	var products []ProductSummary
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return products, nil
+			}
+			if num == 1 {
+				p, _ := parseProductSummary(b)
+				if p != nil {
+					products = append(products, *p)
+				}
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return products, nil
+			}
+			data = data[m:]
+		}
+	}
+	return products, nil
+}
+
+func parseProductSummary(data []byte) (*ProductSummary, error) {
+	p := &ProductSummary{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return p, nil
+			}
+			if num == 21 {
+				p.State = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return p, nil
+			}
+			switch num {
+			case 1:
+				p.Name = string(b)
+			case 2:
+				p.DisplayName = string(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return p, nil
+			}
+			data = data[m:]
+		}
+	}
+	return p, nil
+}
+
+func marshalListOrganisationsRequest(fields []string) []byte {
+	var buf []byte
+	if len(fields) > 0 {
+		fm := marshalFieldMask(fields)
+		buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+		buf = protowire.AppendBytes(buf, fm)
+	}
+	return buf
+}
+
+func parseListOrganisationsResponse(data []byte) ([]Organisation, error) {
+	var orgs []Organisation
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return orgs, nil
+			}
+			if num == 1 {
+				org, _ := parseOrganisation(b)
+				if org != nil {
+					orgs = append(orgs, *org)
+				}
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return orgs, nil
+			}
+			data = data[m:]
+		}
+	}
+	return orgs, nil
+}
+
+func parseOrganisation(data []byte) (*Organisation, error) {
+	org := &Organisation{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return org, nil
+			}
+			switch num {
+			case 1:
+				org.Name = string(b)
+			case 2:
+				org.DisplayName = string(b)
+			case 3:
+				org.Description = string(b)
+			case 4:
+				org.Logo = string(b)
+			case 12:
+				org.Account = string(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return org, nil
+			}
+			data = data[m:]
+		}
+	}
+	return org, nil
+}
 
 func marshalFieldMask(paths []string) []byte {
 	var buf []byte
