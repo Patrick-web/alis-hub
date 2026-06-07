@@ -25,9 +25,10 @@ export function GetBuildCommits(org: string, product: string, neuron: string, ve
 
 /**
  * PollBuildOperation checks the status of a running Build operation.
+ * neuron is the full neuron resource name (needed to construct the logs URL when the API doesn't return one).
  */
-export function PollBuildOperation(name: string): $CancellablePromise<$models.RunBuildResult | null> {
-    return $Call.ByID(2685900073, name).then(($result: any) => {
+export function PollBuildOperation(name: string, neuron: string): $CancellablePromise<$models.RunBuildResult | null> {
+    return $Call.ByID(2685900073, name, neuron).then(($result: any) => {
         return $$createType3($result);
     });
 }
