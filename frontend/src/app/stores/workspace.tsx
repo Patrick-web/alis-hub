@@ -27,6 +27,12 @@ export interface Environment {
   googleRegion: string;
 }
 
+export interface LoadedEnv {
+  name: string;        // full resource name e.g. organisations/voyage/products/vp/environments/...
+  displayName: string; // e.g. "Production"
+  state: number;
+}
+
 export interface WorkspaceState {
   phase: AppPhase;
   organisation: string;
@@ -42,6 +48,8 @@ export interface WorkspaceState {
   neurons: Neuron[];
   environments: Environment[];
   activeNeuronIds: string[];
+  loadedEnvs: LoadedEnv[];
+  activeEnvName: string;
 }
 
 type WorkspaceAction =
@@ -52,7 +60,9 @@ type WorkspaceAction =
   | { type: 'SET_NEURONS'; payload: Neuron[] }
   | { type: 'SET_ENVIRONMENTS'; payload: Environment[] }
   | { type: 'SET_ACTIVE_NEURONS'; payload: string[] }
-  | { type: 'SET_ENVIRONMENT'; payload: string };
+  | { type: 'SET_ENVIRONMENT'; payload: string }
+  | { type: 'SET_LOADED_ENVS'; payload: LoadedEnv[] }
+  | { type: 'SET_ACTIVE_ENV'; payload: string };
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -79,6 +89,10 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, activeNeuronIds: action.payload };
     case 'SET_ENVIRONMENT':
       return { ...state, environment: action.payload };
+    case 'SET_LOADED_ENVS':
+      return { ...state, loadedEnvs: action.payload };
+    case 'SET_ACTIVE_ENV':
+      return { ...state, activeEnvName: action.payload };
     default:
       return state;
   }
@@ -99,6 +113,8 @@ const initialState: WorkspaceState = {
   neurons: [],
   activeNeuronIds: [],
   environments: [],
+  loadedEnvs: [],
+  activeEnvName: '',
 };
 
 interface WorkspaceContextValue {
@@ -109,6 +125,8 @@ interface WorkspaceContextValue {
   setNeurons: (neurons: Neuron[]) => void;
   setActiveNeurons: (ids: string[]) => void;
   setEnvironment: (envId: string) => void;
+  setLoadedEnvs: (envs: LoadedEnv[]) => void;
+  setActiveEnv: (envName: string) => void;
   updateWorkspace: (partial: Partial<WorkspaceState>) => void;
 }
 
@@ -129,10 +147,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const setNeurons = useCallback((neurons: Neuron[]) => dispatch({ type: 'SET_NEURONS', payload: neurons }), [dispatch]);
   const setActiveNeurons = useCallback((ids: string[]) => dispatch({ type: 'SET_ACTIVE_NEURONS', payload: ids }), [dispatch]);
   const setEnvironment = useCallback((envId: string) => dispatch({ type: 'SET_ENVIRONMENT', payload: envId }), [dispatch]);
+  const setLoadedEnvs = useCallback((envs: LoadedEnv[]) => dispatch({ type: 'SET_LOADED_ENVS', payload: envs }), [dispatch]);
+  const setActiveEnv = useCallback((envName: string) => dispatch({ type: 'SET_ACTIVE_ENV', payload: envName }), [dispatch]);
   const updateWorkspace = useCallback((partial: Partial<WorkspaceState>) => dispatch({ type: 'SET_WORKSPACE', payload: partial }), [dispatch]);
 
   return (
-    <WorkspaceContext.Provider value={{ state, setPhase, setOrg, setProduct, setNeurons, setActiveNeurons, setEnvironment, updateWorkspace }}>
+    <WorkspaceContext.Provider value={{ state, setPhase, setOrg, setProduct, setNeurons, setActiveNeurons, setEnvironment, setLoadedEnvs, setActiveEnv, updateWorkspace }}>
       {children}
     </WorkspaceContext.Provider>
   );

@@ -86,6 +86,11 @@ type EnvInfo struct {
 	GCPProject  *GCPProject `json:"gcpProject,omitempty"`
 }
 
+type EnvVariable struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
+
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
@@ -270,6 +275,33 @@ func (s *ProductService) ListEnvironments(org, product string) ([]EnvInfo, error
 		return nil, fmt.Errorf("ListEnvironments: response too short (%d bytes)", len(body))
 	}
 	return parseListEnvironmentsResponse(body[5:])
+}
+
+// GetEnvironmentVariables fetches the variables for a single environment.
+// envName is the full resource name, e.g. "organisations/voyage/products/vp/environments/1y2ozw66zv6p3".
+func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, envName)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/GetEnvironment", buf)
+	if err != nil {
+		return nil, fmt.Errorf("GetEnvironmentVariables: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("GetEnvironmentVariables: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("GetEnvironmentVariables: response too short (%d bytes)", len(body))
+	}
+	return parseEnvVariablesFromGetEnvironment(body[5:])
 }
 
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
@@ -895,4 +927,74 @@ func parseEnvironment(data []byte) (*EnvInfo, error) {
 		}
 	}
 	return env, nil
+}
+
+// parseEnvVariablesFromGetEnvironment extracts field 8 (variables) from a GetEnvironment response.
+func parseEnvVariablesFromGetEnvironment(data []byte) ([]EnvVariable, error) {
+	var vars []EnvVariable
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return vars, nil
+			}
+			if num == 8 {
+				v := parseEnvVariable(b)
+				if v.Label != "" {
+					vars = append(vars, v)
+				}
+			}
+			data = data[m:]
+		case protowire.VarintType:
+			_, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return vars, nil
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return vars, nil
+			}
+			data = data[m:]
+		}
+	}
+	return vars, nil
+}
+
+func parseEnvVariable(data []byte) EnvVariable {
+	var v EnvVariable
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			switch num {
+			case 1:
+				v.Label = string(b)
+			case 2:
+				v.Value = string(b)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return v
 }

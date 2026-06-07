@@ -3,8 +3,10 @@ import { useLocation, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { SidebarNavItem } from './SidebarNavItem';
 import { Button } from './Button';
+import { useWorkspace } from '../stores/workspace';
 
 // Items with a route navigate; items without (null) are placeholders.
+// Environment items are loaded dynamically from the API (see Sidebar component).
 const developNavItems = [
   { id: 'about', label: 'Overview', route: '/about', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
   { id: 'services', label: 'Services', route: '/services', icon: <Icon icon="solar:layers-linear" className="text-[#F881A9] text-xl" /> },
@@ -39,7 +41,7 @@ const codeblockNavItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [activeEnvItem, setActiveEnvItem] = useState('');
+  const { state, setActiveEnv } = useWorkspace();
   const [activeBuildItem, setActiveBuildItem] = useState('');
   const [activeCodeblockItem, setActiveCodeblockItem] = useState('');
 
@@ -51,13 +53,20 @@ export function Sidebar() {
   const currentPath = location.pathname;
   const activeDevelopId = developNavItems.find(i => i.route === currentPath)?.id ?? 'about';
 
+  // Build dynamic env items from loaded environments
+  const dynamicEnvItems = state.loadedEnvs.map(env => ({
+    id: env.name,
+    label: env.displayName,
+    icon: <Icon icon="solar:server-square-cloud-linear" className="text-[#F881A9] text-xl" />,
+  }));
+
   let items: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = developNavItems;
   let header = 'DEVELOP';
   let bottomButtonLabel = 'Open in IDE';
   let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
 
   if (isEnvironments) {
-    items = envNavItems;
+    items = dynamicEnvItems.length > 0 ? dynamicEnvItems : envNavItems;
     header = 'ENVIRONMENTS';
     bottomButtonLabel = 'New Environment';
     bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
@@ -74,16 +83,23 @@ export function Sidebar() {
   }
 
   const getActiveItem = () => {
-    if (isEnvironments) return activeEnvItem || envNavItems[0]?.id;
+    if (isEnvironments) {
+      if (dynamicEnvItems.length > 0) return state.activeEnvName || dynamicEnvItems[0]?.id;
+      return envNavItems[0]?.id;
+    }
     if (isBuilds) return activeBuildItem || buildNavItems[0]?.id;
     if (isCodeblocks) return activeCodeblockItem || codeblockNavItems[0]?.id;
     return activeDevelopId;
   };
 
   const handleItemClick = (item: typeof items[0]) => {
-    if (isEnvironments) setActiveEnvItem(item.id);
-    else if (isBuilds) setActiveBuildItem(item.id);
-    else if (isCodeblocks) setActiveCodeblockItem(item.id);
+    if (isEnvironments && dynamicEnvItems.length > 0) {
+      setActiveEnv(item.id);
+    } else if (isBuilds) {
+      setActiveBuildItem(item.id);
+    } else if (isCodeblocks) {
+      setActiveCodeblockItem(item.id);
+    }
 
     if ('route' in item && item.route) {
       navigate(item.route);

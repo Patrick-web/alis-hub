@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -427,6 +428,201 @@ func TestDebugGetProduct(t *testing.T) {
 	}
 }
 
+// TestProbeGetEnvironment dumps raw proto fields from GetEnvironment to discover variables.
+func TestProbeGetEnvironment(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	envs, err := svc.ListEnvironments("voyage", "vp")
+	if err != nil || len(envs) == 0 {
+		t.Skipf("ListEnvironments: %v", err)
+	}
+
+	for _, env := range envs {
+		t.Logf("=== Probing environment: %s (%s) ===", env.DisplayName, env.Name)
+
+		// Try GetEnvironment with broad field masks
+		for _, fields := range [][]string{
+			{"name", "display_name", "state", "google_project", "variables", "env_variables", "environment_variables"},
+			{"name", "variables"},
+			nil, // no field mask = all fields
+		} {
+			var buf []byte
+			buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+			buf = protowire.AppendString(buf, env.Name)
+			if len(fields) > 0 {
+				fm := marshalFieldMask(fields)
+				buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+				buf = protowire.AppendBytes(buf, fm)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/GetEnvironment", buf)
+			cancel()
+
+			t.Logf("  fields=%v → grpcStatus=%d grpcMsg=%q bodyLen=%d reqErr=%v", fields, grpcStatus, grpcMsg, len(body), reqErr)
+			if reqErr != nil || grpcStatus != 0 || len(body) < 5 {
+				continue
+			}
+
+			// Dump all top-level proto fields
+			data := body[5:]
+			for len(data) > 0 {
+				num, typ, n := protowire.ConsumeTag(data)
+				if n < 0 {
+					break
+				}
+				data = data[n:]
+				switch typ {
+				case protowire.VarintType:
+					v, m := protowire.ConsumeVarint(data)
+					if m < 0 {
+						break
+					}
+					t.Logf("    field %d (varint) = %d", num, v)
+					data = data[m:]
+				case protowire.BytesType:
+					b, m := protowire.ConsumeBytes(data)
+					if m < 0 {
+						break
+					}
+					printable := true
+					for _, c := range b {
+						if c < 32 && c != '\n' && c != '\r' {
+							printable = false
+							break
+						}
+					}
+					if printable && len(b) < 200 {
+						t.Logf("    field %d (string, %d) = %q", num, len(b), string(b))
+					} else {
+						t.Logf("    field %d (bytes, %d) hex=%x", num, len(b), b[:min(30, len(b))])
+					}
+					data = data[m:]
+				default:
+					m := protowire.ConsumeFieldValue(num, typ, data)
+					if m < 0 {
+						break
+					}
+					t.Logf("    field %d (type %d, skip %d)", num, typ, m)
+					data = data[m:]
+				}
+			}
+		}
+		break // just probe the first environment
+	}
+}
+
+// TestProbeListEnvironmentsAllFields lists environments with all fields to discover variables.
+func TestProbeListEnvironmentsAllFields(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	// Try with extended field mask
+	parent := "organisations/voyage/products/vp"
+	for _, fields := range [][]string{
+		{"name", "display_name", "state", "google_project", "variables", "env_variables"},
+		nil, // no field mask
+	} {
+		var buf []byte
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, parent)
+		if len(fields) > 0 {
+			fm := marshalFieldMask(fields)
+			buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+			buf = protowire.AppendBytes(buf, fm)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/ListEnvironments", buf)
+		cancel()
+
+		t.Logf("fields=%v → grpcStatus=%d grpcMsg=%q bodyLen=%d reqErr=%v", fields, grpcStatus, grpcMsg, len(body), reqErr)
+		if reqErr != nil || grpcStatus != 0 || len(body) < 5 {
+			continue
+		}
+
+		// Dump first 400 bytes of the first environment message
+		data := body[5:]
+		envCount := 0
+		for len(data) > 0 && envCount < 2 {
+			num, typ, n := protowire.ConsumeTag(data)
+			if n < 0 {
+				break
+			}
+			data = data[n:]
+			if typ == protowire.BytesType {
+				b, m := protowire.ConsumeBytes(data)
+				if m < 0 {
+					break
+				}
+				if num == 1 {
+					envCount++
+					t.Logf("  env[%d] raw hex (%d bytes): %x", envCount, len(b), b[:min(100, len(b))])
+					// Dump fields inside the env message
+					inner := b
+					for len(inner) > 0 {
+						fn, ft, fn2 := protowire.ConsumeTag(inner)
+						if fn2 < 0 {
+							break
+						}
+						inner = inner[fn2:]
+						switch ft {
+						case protowire.VarintType:
+							v, m2 := protowire.ConsumeVarint(inner)
+							if m2 < 0 {
+								break
+							}
+							t.Logf("    field %d (varint) = %d", fn, v)
+							inner = inner[m2:]
+						case protowire.BytesType:
+							bv, m2 := protowire.ConsumeBytes(inner)
+							if m2 < 0 {
+								break
+							}
+							printable := true
+							for _, c := range bv {
+								if c < 32 && c != '\n' && c != '\r' {
+									printable = false
+									break
+								}
+							}
+							if printable && len(bv) < 200 {
+								t.Logf("    field %d (string) = %q", fn, string(bv))
+							} else {
+								t.Logf("    field %d (bytes, %d) hex=%x", fn, len(bv), bv[:min(30, len(bv))])
+							}
+							inner = inner[m2:]
+						default:
+							m2 := protowire.ConsumeFieldValue(fn, ft, inner)
+							if m2 < 0 {
+								break
+							}
+							t.Logf("    field %d (type %d skip %d)", fn, ft, m2)
+							inner = inner[m2:]
+						}
+					}
+				}
+				data = data[m:]
+			} else {
+				m := protowire.ConsumeFieldValue(num, typ, data)
+				if m < 0 {
+					break
+				}
+				data = data[m:]
+			}
+		}
+	}
+}
+
 // TestGetServicesOverviewLive calls the real API to list neurons and deployments.
 func TestGetServicesOverviewLive(t *testing.T) {
 	svc := NewProductService()
@@ -529,4 +725,35 @@ func TestDecodeCredentials(t *testing.T) {
 		}
 	}
 	fmt.Println() // visible even without -v
+}
+
+// TestGetEnvironmentVariablesLive tests the new GetEnvironmentVariables method.
+func TestGetEnvironmentVariablesLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	envs, err := svc.ListEnvironments("voyage", "vp")
+	if err != nil || len(envs) == 0 {
+		t.Fatalf("ListEnvironments: %v", err)
+	}
+
+	env := envs[0]
+	t.Logf("Fetching variables for: %s (%s)", env.DisplayName, env.Name)
+
+	vars, err := svc.GetEnvironmentVariables(env.Name)
+	if err != nil {
+		t.Fatalf("GetEnvironmentVariables: %v", err)
+	}
+	t.Logf("Got %d variables", len(vars))
+	for i, v := range vars {
+		if i >= 10 {
+			t.Logf("  ... and %d more", len(vars)-10)
+			break
+		}
+		t.Logf("  %-40s = %s", v.Label, truncateStr(v.Value, 50))
+	}
 }
