@@ -15,6 +15,7 @@ import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerm
 
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
 type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
+type BuildMode = 'cloud' | 'local' | 'deploy';
 
 interface DefineCommit {
   sha: string;
@@ -57,6 +58,7 @@ interface BuildResult {
   notes: string;
   done: boolean;
   error?: string;
+  stub?: boolean;
 }
 
 export function DevelopPage() {
@@ -88,6 +90,9 @@ export function DevelopPage() {
   const [buildProgressMsg, setBuildProgressMsg] = useState('Starting...');
   const termRef = useRef<BuildTerminalHandle>(null);
   const logOffsetRef = useRef<number>(0);
+  const [buildBranch, setBuildBranch] = useState('master');
+  const [buildBranches, setBuildBranches] = useState<string[]>(['master']);
+  const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -145,30 +150,51 @@ export function DevelopPage() {
   }, [state.organisation, state.product]);
 
   const openBuildPane = useCallback(async (neuronName: string) => {
-    setDefineNeuron(null); // close define pane if open
+    setDefineNeuron(null);
     setBuildNeuron(neuronName);
     setBuildStep('commits');
     setBuildCommits([]);
     setSelectedBuildCommit(null);
     setBuildResult(null);
     setBuildProgressMsg('Loading commits...');
+    setBuildMode('cloud');
+    setBuildBranch('master');
     logOffsetRef.current = 0;
     setBuildCommitsLoading(true);
     const parsed = parseNeuron(neuronName);
-    try {
-      const result = await BuildService.GetBuildCommits(
-        state.organisation, state.product, parsed.id, parsed.version, 30
-      );
-      setBuildCommits(result as DefineCommit[]);
-    } catch {
+    // Load branches and commits in parallel
+    const [, commits] = await Promise.allSettled([
+      BuildService.GetBuildBranches(state.organisation, state.product).then(
+        (b) => { if (b && b.length > 0) setBuildBranches(b as string[]); }
+      ),
+      BuildService.GetBuildCommits(
+        state.organisation, state.product, parsed.id, parsed.version, 'master', 30
+      ),
+    ]);
+    setBuildCommitsLoading(false);
+    if (commits.status === 'fulfilled' && commits.value) {
+      setBuildCommits(commits.value as DefineCommit[]);
+    } else {
       setBuildCommits([]);
-    } finally {
-      setBuildCommitsLoading(false);
     }
   }, [state.organisation, state.product]);
 
   const handleRunBuild = async () => {
     if (!buildNeuron || !selectedBuildCommit) return;
+
+    if (buildMode === 'local' || buildMode === 'deploy') {
+      const label = buildMode === 'local' ? 'local build' : 'deploy';
+      setBuildStep('running');
+      setBuildProgressMsg(buildMode === 'local' ? 'Building locally...' : 'Deploying...');
+      // Small delay so the terminal has time to mount before we write
+      setTimeout(() => {
+        termRef.current?.write(`\x1b[33m[${label}]\x1b[0m  Coming soon — not yet implemented.\r\n`);
+        setBuildStep('result');
+        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, stub: true } as BuildResult);
+      }, 200);
+      return;
+    }
+
     const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
     setBuildStep('running');
     setBuildProgressMsg('Starting Build...');
@@ -179,6 +205,25 @@ export function DevelopPage() {
       setBuildProgressMsg(`Failed: ${e?.message || e}`);
     }
   };
+
+  const handleBranchChange = useCallback(async (branch: string) => {
+    if (!buildNeuron) return;
+    setBuildBranch(branch);
+    setSelectedBuildCommit(null);
+    setBuildCommitsLoading(true);
+    setBuildCommits([]);
+    const parsed = parseNeuron(buildNeuron);
+    try {
+      const result = await BuildService.GetBuildCommits(
+        state.organisation, state.product, parsed.id, parsed.version, branch, 30
+      );
+      setBuildCommits(result as DefineCommit[]);
+    } catch {
+      setBuildCommits([]);
+    } finally {
+      setBuildCommitsLoading(false);
+    }
+  }, [buildNeuron, state.organisation, state.product]);
 
   // Poll build operation
   useEffect(() => {
@@ -741,37 +786,57 @@ export function DevelopPage() {
 
             {/* Step: commits */}
             {buildStep === 'commits' && (
-              <div className="flex-1 overflow-y-auto">
-                {buildCommitsLoading ? (
-                  <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
-                    <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+              <div className="flex-1 flex flex-col min-h-0">
+                {/* Branch selector */}
+                <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-[#2c2c2c]">
+                  <Icon icon="solar:branch-linear" className="text-[rgba(255,255,255,0.35)] text-sm shrink-0" />
+                  <div className="relative flex-1 min-w-0">
+                    <select
+                      value={buildBranch}
+                      onChange={(e) => handleBranchChange(e.target.value)}
+                      className="w-full appearance-none bg-transparent text-[10px] text-white font-['JetBrains_Mono',sans-serif] outline-none cursor-pointer pr-[16px]"
+                    >
+                      {buildBranches.map((b) => (
+                        <option key={b} value={b} className="bg-[#1e1e1e] text-white">{b}</option>
+                      ))}
+                    </select>
+                    <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.35)] text-xs pointer-events-none" />
                   </div>
-                ) : buildCommits.length === 0 ? (
-                  <div className="px-[16px] py-[20px]">
-                    <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found in build repo.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col">
-                    {buildCommits.map((c) => (
-                      <button
-                        key={c.sha}
-                        onClick={() => { setSelectedBuildCommit(c); setBuildStep('confirm'); }}
-                        className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors"
-                      >
-                        <div className="flex items-center gap-[8px] mb-[3px]">
-                          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
-                            {c.sha.substring(0, 7)}
-                          </span>
-                          <span className="text-[10px] text-white leading-tight">{c.message}</span>
-                        </div>
-                        <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
-                          {c.author} · {formatTimestamp(c.timestamp)}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                </div>
+
+                {/* Commit list */}
+                <div className="flex-1 overflow-y-auto">
+                  {buildCommitsLoading ? (
+                    <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
+                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                      <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+                    </div>
+                  ) : buildCommits.length === 0 ? (
+                    <div className="px-[16px] py-[20px]">
+                      <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found for this branch.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {buildCommits.map((c) => (
+                        <button
+                          key={c.sha}
+                          onClick={() => { setSelectedBuildCommit(c); setBuildStep('confirm'); }}
+                          className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors"
+                        >
+                          <div className="flex items-center gap-[8px] mb-[3px]">
+                            <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                              {c.sha.substring(0, 7)}
+                            </span>
+                            <span className="text-[10px] text-white leading-tight truncate">{c.message}</span>
+                          </div>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
+                            {c.author} · {formatTimestamp(c.timestamp)}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -786,19 +851,46 @@ export function DevelopPage() {
                   Back to commits
                 </button>
 
-                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px] mb-[20px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
-                    Selected Commit
+                {/* Selected commit */}
+                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[14px] mb-[20px]">
+                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                    {buildBranch} · {selectedBuildCommit.sha.substring(0, 7)}
                   </p>
-                  <p className="text-[11px] text-white leading-[1.5] mb-[10px]">{selectedBuildCommit.message}</p>
-                  <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
-                      {selectedBuildCommit.sha.substring(0, 12)}
-                    </span>
-                  </div>
+                  <p className="text-[11px] text-white leading-[1.5] mb-[8px]">{selectedBuildCommit.message}</p>
                   <p className="text-[9px] text-[rgba(255,255,255,0.4)]">
                     {selectedBuildCommit.author} · {formatTimestamp(selectedBuildCommit.timestamp)}
                   </p>
+                </div>
+
+                {/* Build mode selector */}
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                  Action
+                </p>
+                <div className="flex flex-col gap-[2px] mb-[20px]">
+                  {([
+                    { mode: 'cloud' as BuildMode, icon: 'solar:cloud-bolt-linear', label: 'Cloud Build', soon: false },
+                    { mode: 'local' as BuildMode, icon: 'solar:laptop-linear', label: 'Build Locally', soon: true },
+                    { mode: 'deploy' as BuildMode, icon: 'solar:rocket-2-linear', label: 'Deploy', soon: true },
+                  ]).map(({ mode, icon, label, soon }) => (
+                    <button
+                      key={mode}
+                      onClick={() => setBuildMode(mode)}
+                      className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
+                        buildMode === mode
+                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
+                          : 'bg-[#1e1e1e] border-[#2c2c2c] text-[rgba(255,255,255,0.5)] hover:border-[#3a3a3a] hover:text-[rgba(255,255,255,0.7)]'
+                      }`}
+                    >
+                      <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-[#f881a9]' : 'bg-[#3a3a3a]'}`} />
+                      <Icon icon={icon} className="text-sm shrink-0" />
+                      <span className="text-[11px] font-medium flex-1">{label}</span>
+                      {soon && (
+                        <span className="text-[8px] font-bold uppercase font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.25)] border border-[#2c2c2c] rounded px-[4px] py-[1px]">
+                          soon
+                        </span>
+                      )}
+                    </button>
+                  ))}
                 </div>
 
                 <Button
@@ -806,7 +898,7 @@ export function DevelopPage() {
                   className="w-full justify-center py-[10px]"
                   onClick={handleRunBuild}
                 >
-                  Run Build
+                  {buildMode === 'cloud' ? 'Run Cloud Build' : buildMode === 'local' ? 'Build Locally' : 'Deploy'}
                 </Button>
               </div>
             )}
@@ -833,8 +925,19 @@ export function DevelopPage() {
 
                 {/* Result header */}
                 {buildStep === 'result' && (
-                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
-                    {buildResult?.error ? (
+                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+                    buildResult?.stub ? 'bg-[rgba(255,159,10,0.05)]'
+                    : buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]'
+                    : 'bg-[rgba(52,199,89,0.05)]'
+                  }`}>
+                    {buildResult?.stub ? (
+                      <div className="flex items-center gap-[8px]">
+                        <Icon icon="solar:clock-circle-linear" className="text-[#ff9f0a] text-sm shrink-0" />
+                        <p className="text-[10px] font-bold text-[rgba(255,255,255,0.7)] leading-tight">
+                          {buildMode === 'deploy' ? 'Deploy' : 'Local Build'} — Coming Soon
+                        </p>
+                      </div>
+                    ) : buildResult?.error ? (
                       <div className="flex items-start gap-[8px]">
                         <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
                         <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
