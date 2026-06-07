@@ -15,11 +15,23 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * ExplainDefine calls Glass to explain what a completed define produced.
+ * definition is from RunDefineResult.Definition (e.g. "definitions/voyage.vp").
+ * artifacts is from RunDefineResult.DefinitionArtifacts.
+ * neuron is the neuron resource name (e.g. "organisations/voyage/products/vp/neurons/bff-v1").
+ */
+export function ExplainDefine(definition: string, artifacts: string[], neuron: string): $CancellablePromise<$models.GlassResult | null> {
+    return $Call.ByID(4045319554, definition, artifacts, neuron).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * GetDefineCommits lists recent commits from the define repository.
  */
 export function GetDefineCommits(org: string, product: string, neuron: string, version: string, count: number): $CancellablePromise<$models.DefineCommit[]> {
     return $Call.ByID(387817029, org, product, neuron, version, count).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -28,7 +40,7 @@ export function GetDefineCommits(org: string, product: string, neuron: string, v
  */
 export function PollDefineOperation(name: string): $CancellablePromise<$models.RunDefineResult | null> {
     return $Call.ByID(3463411517, name).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
@@ -37,20 +49,22 @@ export function PollDefineOperation(name: string): $CancellablePromise<$models.R
  */
 export function RunDefine(neuron: string, commit: string, releaseType: string): $CancellablePromise<$models.RunDefineResult | null> {
     return $Call.ByID(1940816492, neuron, commit, releaseType).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
 export function ScanNeuronPackages(org: string, product: string, neuron: string, version: string): $CancellablePromise<$models.PackageInfo[]> {
     return $Call.ByID(3292503717, org, product, neuron, version).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
 // Private type creation functions
-const $$createType0 = $models.DefineCommit.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.RunDefineResult.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.PackageInfo.createFrom;
-const $$createType5 = $Create.Array($$createType4);
+const $$createType0 = $models.GlassResult.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.DefineCommit.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $models.RunDefineResult.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $models.PackageInfo.createFrom;
+const $$createType7 = $Create.Array($$createType6);
