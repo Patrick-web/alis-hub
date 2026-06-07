@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	htmlpkg "html"
@@ -9,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
@@ -16,8 +18,28 @@ import (
 
 // BuildService is a Wails-bound service that orchestrates the Build flow.
 type BuildService struct {
-	alisClient *AlisClient
-	productSvc *ProductService
+	alisClient  *AlisClient
+	productSvc  *ProductService
+	localBuilds sync.Map // map[string]*localBuildState
+}
+
+// localBuildState holds output from a running docker build.
+type localBuildState struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+	// done and errMsg are set when the build goroutine exits.
+	done   bool
+	errMsg string
+}
+
+// lockedWriter implements io.Writer over localBuildState so docker build
+// output is appended safely from the goroutine.
+type lockedWriter struct{ s *localBuildState }
+
+func (w *lockedWriter) Write(p []byte) (int, error) {
+	w.s.mu.Lock()
+	defer w.s.mu.Unlock()
+	return w.s.buf.Write(p)
 }
 
 func NewBuildService() *BuildService {
@@ -416,4 +438,101 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 
 	log.Printf("[build] PollBuildOperation: final logsUrl=%q", result.LogsURL)
 	return result, nil
+}
+
+// LocalBuildResult is returned when a local Docker build is started.
+type LocalBuildResult struct {
+	BuildID string `json:"buildId"`
+}
+
+// LocalBuildChunk is a polling response for a running local Docker build.
+type LocalBuildChunk struct {
+	Content    string `json:"content"`
+	NextOffset int    `json:"nextOffset"`
+	Done       bool   `json:"done"`
+	Error      string `json:"error,omitempty"`
+}
+
+// StartLocalBuild launches a local Docker build in a goroutine and returns
+// a build ID that can be passed to PollLocalBuild to stream output.
+// neuron is the full resource name e.g. "organisations/voyage/products/vp/neurons/hubspot-v1".
+func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult, error) {
+	parts := strings.Split(neuron, "/")
+	if len(parts) < 6 {
+		return nil, fmt.Errorf("invalid neuron resource: %s", neuron)
+	}
+	org, product, neuronID := parts[1], parts[3], parts[5]
+
+	dashIdx := strings.LastIndex(neuronID, "-")
+	if dashIdx < 0 {
+		return nil, fmt.Errorf("invalid neuron ID (no version suffix): %s", neuronID)
+	}
+	nID, nVer := neuronID[:dashIdx], neuronID[dashIdx+1:]
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	neuronDir := filepath.Join(home, "alis.build", org, "build", product, nID, nVer)
+	if _, err := os.Stat(neuronDir); err != nil {
+		return nil, fmt.Errorf("neuron dir not found at %s", neuronDir)
+	}
+
+	tag := fmt.Sprintf("%s-%s:%.8s", nID, nVer, commit)
+
+	buildID := fmt.Sprintf("local-%d", time.Now().UnixNano())
+	st := &localBuildState{}
+	s.localBuilds.Store(buildID, st)
+
+	go func() {
+		lw := &lockedWriter{s: st}
+		fmt.Fprintf(lw, "==> docker build --progress=plain -t %s .\n", tag)
+		fmt.Fprintf(lw, "==> Context: %s\n\n", neuronDir)
+
+		cmd := exec.Command("docker", "build", "--progress=plain", "-t", tag, ".")
+		cmd.Dir = neuronDir
+		cmd.Stdout = lw
+		cmd.Stderr = lw
+
+		runErr := cmd.Run()
+
+		st.mu.Lock()
+		st.done = true
+		if runErr != nil {
+			st.errMsg = runErr.Error()
+			st.buf.WriteString("\n\nBuild failed: " + runErr.Error() + "\n")
+		} else {
+			st.buf.WriteString("\n\nBuild complete: " + tag + "\n")
+		}
+		st.mu.Unlock()
+	}()
+
+	log.Printf("[build] StartLocalBuild: buildID=%s tag=%s dir=%s", buildID, tag, neuronDir)
+	return &LocalBuildResult{BuildID: buildID}, nil
+}
+
+// PollLocalBuild returns new output from a running local Docker build.
+// Pass 0 as offset on first call; pass NextOffset from each response on subsequent calls.
+func (s *BuildService) PollLocalBuild(buildID string, offset int) (*LocalBuildChunk, error) {
+	val, ok := s.localBuilds.Load(buildID)
+	if !ok {
+		return nil, fmt.Errorf("local build not found: %s", buildID)
+	}
+	st := val.(*localBuildState)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+
+	all := st.buf.String()
+	chunk := ""
+	if offset < len(all) {
+		chunk = all[offset:]
+	}
+
+	return &LocalBuildChunk{
+		Content:    chunk,
+		NextOffset: len(all),
+		Done:       st.done,
+		Error:      st.errMsg,
+	}, nil
 }
