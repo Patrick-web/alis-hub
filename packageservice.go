@@ -158,9 +158,6 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &packageProcess{cancel: cancel}
-	// Pre-write the command so the user sees what is being run, matching
-	// the extension's terminal.sendText() which types the command visibly.
-	fmt.Fprintf(&p.buf, "\x1b[1;32m$\x1b[0m %s\r\n", command)
 	s.processes.Store(runID, p)
 
 	go func() {
@@ -170,7 +167,9 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 		if shell == "" {
 			shell = "/bin/bash"
 		}
-		cmd := exec.Command(shell, "-l", "-c", command)
+		// Start a persistent interactive login shell. The command is sent as
+		// input after a brief delay (matching VS Code's terminal.sendText).
+		cmd := exec.Command(shell, "-l")
 		cmd.Dir = workDir
 
 		ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 220})
@@ -195,9 +194,12 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 			}
 		}()
 
-		// Close the PTY master as soon as the main process (the shell) exits.
-		// Without this, any background job that inherited the slave fd keeps
-		// ptmx.Read blocked forever, so done is never set.
+		// Send the command to the shell once it has had time to initialize.
+		go func() {
+			time.Sleep(200 * time.Millisecond)
+			ptmx.Write([]byte(command + "\n"))
+		}()
+
 		exitErrCh := make(chan error, 1)
 		go func() {
 			exitErrCh <- cmd.Wait()
@@ -222,11 +224,13 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 
 		p.mu.Lock()
 		p.ptmx = nil
-		if exitErr != nil {
-			fmt.Fprintf(&p.buf, "\r\n\x1b[31m[process exited: %v]\x1b[0m\r\n", exitErr)
+		// If the shell was killed by context cancellation (user closed the tab),
+		// don't treat it as an error.
+		if exitErr != nil && ctx.Err() == nil {
+			fmt.Fprintf(&p.buf, "\r\n\x1b[31m[session ended: %v]\x1b[0m\r\n", exitErr)
 			p.errMsg = exitErr.Error()
 		} else {
-			p.buf.WriteString("\r\n\x1b[2m[process exited]\x1b[0m\r\n")
+			p.buf.WriteString("\r\n\x1b[2m[session ended]\x1b[0m\r\n")
 		}
 		p.done = true
 		p.mu.Unlock()
