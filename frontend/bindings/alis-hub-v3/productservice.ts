@@ -53,6 +53,18 @@ export function ListInvites(org: string, product: string): $CancellablePromise<$
     });
 }
 
+export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
+    return $Call.ByID(3242955384).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
+    return $Call.ByID(1517062122, org).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
 /**
  * Login triggers the PKCE OAuth2 flow. The browser opens, the user authenticates,
  * and tokens are saved to ~/.alis/console-credentials.json.
@@ -72,3 +84,7 @@ const $$createType6 = $models.EnvInfo.createFrom;
 const $$createType7 = $Create.Array($$createType6);
 const $$createType8 = $models.InviteInfo.createFrom;
 const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = $models.LandingZonesData.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $models.ProductSummary.createFrom;
+const $$createType13 = $Create.Array($$createType12);

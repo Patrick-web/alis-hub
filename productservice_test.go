@@ -110,6 +110,30 @@ func TestGetProductOverviewLive(t *testing.T) {
 	}
 }
 
+// TestListLandingZonesLive calls the real ListOrganisations API and prints own vs shared orgs.
+func TestListLandingZonesLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v (run ProductService.Login() first)", err)
+	}
+	svc.tokens = ts
+
+	data, err := svc.ListLandingZones()
+	if err != nil {
+		t.Fatalf("ListLandingZones: %v", err)
+	}
+
+	t.Logf("Own orgs (%d):", len(data.Own))
+	for _, o := range data.Own {
+		t.Logf("  %-30s account=%-20s desc=%s", o.DisplayName, o.Account, o.Description)
+	}
+	t.Logf("Shared orgs (%d):", len(data.Shared))
+	for _, o := range data.Shared {
+		t.Logf("  %-30s account=%-20s desc=%s", o.DisplayName, o.Account, o.Description)
+	}
+}
+
 // TestListEnvironmentsLive calls the real ListEnvironments API.
 func TestListEnvironmentsLive(t *testing.T) {
 	svc := NewProductService()

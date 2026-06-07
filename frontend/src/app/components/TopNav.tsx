@@ -2,6 +2,8 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { Dropdown } from './Dropdown';
+import { useWorkspace } from '../stores/workspace';
+import { Browser } from '@wailsio/runtime';
 
 function WindowControls() {
   return (
@@ -29,19 +31,22 @@ const tabs = [
 export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { state, setPhase } = useWorkspace();
 
   const getActiveTab = () => {
     const path = location.pathname.split('/')[1] || 'about';
-    // Services is a sub-section of develop
     if (path === 'services') return 'develop';
     return path;
   };
 
   const activeTab = getActiveTab();
 
-  const handleTabClick = (tabId: string) => {
-    navigate(`/${tabId}`);
-  };
+  const handleTabClick = (tabId: string) => navigate(`/${tabId}`);
+
+  const handleHomeClick = () => setPhase('picking-org');
+  const handleOrgClick = () => setPhase('picking-product');
+
+  const openProfile = () => Browser.OpenURL('https://console.alisx.com/profile');
 
   return (
     <div className="bg-[#2c2c2c] border-b border-[#464646] h-[35px] flex items-center shrink-0 w-full overflow-hidden">
@@ -52,12 +57,35 @@ export function TopNav() {
         </div>
 
         <div className="flex items-center gap-[5px] ml-[5px] border-l border-r border-[#464646] h-full px-[10px]">
-          <Icon icon="solar:home-2-linear" className="text-white text-base opacity-70 cursor-pointer hover:opacity-100" />
-          <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[10px] opacity-40" />
-          <p className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] opacity-70">voyage</p>
-          <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[10px] opacity-40" />
-          <p className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] opacity-70 font-bold">vp</p>
-          <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[10px] opacity-40" />
+          <button
+            onClick={handleHomeClick}
+            className="opacity-70 hover:opacity-100 transition-opacity"
+            title="All landing zones"
+          >
+            <Icon icon="solar:home-2-linear" className="text-white text-base" />
+          </button>
+
+          {state.organisation && (
+            <>
+              <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[10px] opacity-40" />
+              <button
+                onClick={handleOrgClick}
+                className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] opacity-70 hover:opacity-100 transition-opacity"
+                title="Change product"
+              >
+                {state.organisation}
+              </button>
+            </>
+          )}
+
+          {state.product && (
+            <>
+              <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[10px] opacity-40" />
+              <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] opacity-70 font-bold">
+                {state.product}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -76,12 +104,18 @@ export function TopNav() {
         </div>
       </div>
 
-      {/* Right: Environment and Settings */}
+      {/* Right: Environment + Profile */}
       <div className="flex items-center h-full px-[10px] gap-[10px]">
         <Dropdown label="Production" options={['Production', 'Staging', 'Development']} />
         <div className="h-full w-px bg-[#464646]" />
-        <Icon icon="solar:user-circle-linear" className="text-white text-xl opacity-70 cursor-pointer hover:opacity-100" />
+        <button
+          onClick={openProfile}
+          className="opacity-70 hover:opacity-100 transition-opacity"
+          title="Open profile"
+        >
+          <Icon icon="solar:user-circle-linear" className="text-white text-xl" />
+        </button>
       </div>
     </div>
   );
-  }
+}

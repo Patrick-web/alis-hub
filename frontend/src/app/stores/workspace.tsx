@@ -1,5 +1,15 @@
 import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
 
+export type AppPhase = 'init' | 'login' | 'picking-org' | 'picking-product' | 'workspace';
+
+export interface Organisation {
+  name: string;
+  displayName: string;
+  description: string;
+  logo: string;
+  account: string;
+}
+
 export interface Neuron {
   id: string;
   name: string;
@@ -18,8 +28,10 @@ export interface Environment {
 }
 
 export interface WorkspaceState {
+  phase: AppPhase;
   organisation: string;
   organisationDisplayName: string;
+  selectedOrg: Organisation | null;
   product: string;
   productDisplayName: string;
   environment: string;
@@ -33,7 +45,10 @@ export interface WorkspaceState {
 }
 
 type WorkspaceAction =
+  | { type: 'SET_PHASE'; payload: AppPhase }
   | { type: 'SET_WORKSPACE'; payload: Partial<WorkspaceState> }
+  | { type: 'SET_ORG'; payload: Organisation }
+  | { type: 'SET_PRODUCT'; payload: { org: string; orgDisplayName: string; product: string; productDisplayName: string } }
   | { type: 'SET_NEURONS'; payload: Neuron[] }
   | { type: 'SET_ENVIRONMENTS'; payload: Environment[] }
   | { type: 'SET_ACTIVE_NEURONS'; payload: string[] }
@@ -41,8 +56,21 @@ type WorkspaceAction =
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
+    case 'SET_PHASE':
+      return { ...state, phase: action.payload };
     case 'SET_WORKSPACE':
       return { ...state, ...action.payload };
+    case 'SET_ORG':
+      return { ...state, selectedOrg: action.payload, phase: 'picking-product' };
+    case 'SET_PRODUCT':
+      return {
+        ...state,
+        organisation: action.payload.org,
+        organisationDisplayName: action.payload.orgDisplayName,
+        product: action.payload.product,
+        productDisplayName: action.payload.productDisplayName,
+        phase: 'workspace',
+      };
     case 'SET_NEURONS':
       return { ...state, neurons: action.payload };
     case 'SET_ENVIRONMENTS':
@@ -56,48 +84,28 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
   }
 }
 
-export const defaultWorkspace: WorkspaceState = {
-  organisation: 'voyage',
-  organisationDisplayName: 'Voyage',
-  product: 'vp',
-  productDisplayName: 'Voyage Platform',
+const initialState: WorkspaceState = {
+  phase: 'init',
+  organisation: '',
+  organisationDisplayName: '',
+  selectedOrg: null,
+  product: '',
+  productDisplayName: '',
   environment: 'production',
   environmentDisplayName: 'Production',
-  environmentGoogleProjectId: 'voyage-vp-prod',
-  environmentGoogleRegion: 'us-east4',
-  rootDirectory: '/Users/jp/alis.build/voyage/build/vp',
-  neurons: [
-    { id: '1', name: 'bookings-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '2', name: 'bundles-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '3', name: 'charters-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '4', name: 'chartertypes-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '5', name: 'commissions-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '6', name: 'iam-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '7', name: 'products-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '8', name: 'packages-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '9', name: 'pricingrules-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '10', name: 'yachts-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '11', name: 'yachtowners-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '12', name: 'experiences-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '13', name: 'bff-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '14', name: 'customerportal-v2', type: 1, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '15', name: 'console-v2', type: 1, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '16', name: 'hubspot-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '17', name: 'payments-v2', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '18', name: 'leads-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '19', name: 'sendgrid-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-    { id: '20', name: 'referrals-v1', type: 2, state: 1, latestBuild: '1.0.167', envs: [] },
-  ],
+  environmentGoogleProjectId: '',
+  environmentGoogleRegion: '',
+  rootDirectory: '',
+  neurons: [],
   activeNeuronIds: [],
-  environments: [
-    { id: 'prod', name: 'Production', type: 'prod', googleProjectId: 'voyage-vp-prod', googleRegion: 'us-east4' },
-    { id: 'staging', name: 'Staging', type: 'staging', googleProjectId: 'voyage-vp-staging', googleRegion: 'us-east4' },
-    { id: 'dev', name: 'Development', type: 'dev', googleProjectId: 'voyage-vp-dev', googleRegion: 'us-east4' },
-  ],
+  environments: [],
 };
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
+  setPhase: (phase: AppPhase) => void;
+  setOrg: (org: Organisation) => void;
+  setProduct: (org: string, orgDisplayName: string, product: string, productDisplayName: string) => void;
   setNeurons: (neurons: Neuron[]) => void;
   setActiveNeurons: (ids: string[]) => void;
   setEnvironment: (envId: string) => void;
@@ -107,30 +115,24 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<WorkspaceState>(defaultWorkspace);
+  const [state, setState] = useState<WorkspaceState>(initialState);
 
   const dispatch = useCallback((action: WorkspaceAction) => {
     setState(prev => workspaceReducer(prev, action));
   }, []);
 
-  const setNeurons = useCallback((neurons: Neuron[]) => {
-    dispatch({ type: 'SET_NEURONS', payload: neurons });
+  const setPhase = useCallback((phase: AppPhase) => dispatch({ type: 'SET_PHASE', payload: phase }), [dispatch]);
+  const setOrg = useCallback((org: Organisation) => dispatch({ type: 'SET_ORG', payload: org }), [dispatch]);
+  const setProduct = useCallback((org: string, orgDisplayName: string, product: string, productDisplayName: string) => {
+    dispatch({ type: 'SET_PRODUCT', payload: { org, orgDisplayName, product, productDisplayName } });
   }, [dispatch]);
-
-  const setActiveNeurons = useCallback((ids: string[]) => {
-    dispatch({ type: 'SET_ACTIVE_NEURONS', payload: ids });
-  }, [dispatch]);
-
-  const setEnvironment = useCallback((envId: string) => {
-    dispatch({ type: 'SET_ENVIRONMENT', payload: envId });
-  }, [dispatch]);
-
-  const updateWorkspace = useCallback((partial: Partial<WorkspaceState>) => {
-    dispatch({ type: 'SET_WORKSPACE', payload: partial });
-  }, [dispatch]);
+  const setNeurons = useCallback((neurons: Neuron[]) => dispatch({ type: 'SET_NEURONS', payload: neurons }), [dispatch]);
+  const setActiveNeurons = useCallback((ids: string[]) => dispatch({ type: 'SET_ACTIVE_NEURONS', payload: ids }), [dispatch]);
+  const setEnvironment = useCallback((envId: string) => dispatch({ type: 'SET_ENVIRONMENT', payload: envId }), [dispatch]);
+  const updateWorkspace = useCallback((partial: Partial<WorkspaceState>) => dispatch({ type: 'SET_WORKSPACE', payload: partial }), [dispatch]);
 
   return (
-    <WorkspaceContext.Provider value={{ state, setNeurons, setActiveNeurons, setEnvironment, updateWorkspace }}>
+    <WorkspaceContext.Provider value={{ state, setPhase, setOrg, setProduct, setNeurons, setActiveNeurons, setEnvironment, updateWorkspace }}>
       {children}
     </WorkspaceContext.Provider>
   );
@@ -138,8 +140,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
 export function useWorkspace(): WorkspaceContextValue {
   const ctx = useContext(WorkspaceContext);
-  if (!ctx) {
-    throw new Error('useWorkspace must be used within a WorkspaceProvider');
-  }
+  if (!ctx) throw new Error('useWorkspace must be used within a WorkspaceProvider');
   return ctx;
 }
