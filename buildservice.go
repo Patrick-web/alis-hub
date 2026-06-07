@@ -162,8 +162,9 @@ type RunBuildResult struct {
 	Error         string `json:"error,omitempty"`
 }
 
-// scanDockerfiles returns a map of Dockerfile paths (relative to the product build repo root) → BUILD action.
-// It looks in ~/alis.build/{org}/build/{product}/{neuronId}/{version}/.
+// scanDockerfiles returns a map of Dockerfile context directories (relative to the neuron directory) → BUILD action.
+// The extension uses path.dirname(dockerfilePath) relative to the neuron root, so a Dockerfile at
+// bff/v1/Dockerfile produces key "." — matching the "BUILD ." step name on the alisproxy.
 func (s *BuildService) scanDockerfiles(neuron string) map[string]dbdv1.RunBuildAction {
 	// neuron = "organisations/{org}/products/{product}/neurons/{id}-{version}"
 	parts := strings.Split(neuron, "/")
@@ -184,15 +185,17 @@ func (s *BuildService) scanDockerfiles(neuron string) map[string]dbdv1.RunBuildA
 		return nil
 	}
 	neuronDir := filepath.Join(home, "alis.build", org, "build", product, nID, nVer)
-	repoRoot := filepath.Join(home, "alis.build", org, "build", product)
 
 	images := make(map[string]dbdv1.RunBuildAction)
-	err = filepath.WalkDir(neuronDir, func(path string, d os.DirEntry, err error) error {
+	err = filepath.WalkDir(neuronDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
 		if d.Name() == "Dockerfile" {
-			rel, relErr := filepath.Rel(repoRoot, path)
+			// Key = directory containing the Dockerfile, relative to the neuron root.
+			// e.g. bff/v1/Dockerfile → dir=bff/v1 → rel to bff/v1 = "."
+			contextDir := filepath.Dir(p)
+			rel, relErr := filepath.Rel(neuronDir, contextDir)
 			if relErr == nil {
 				images[rel] = dbdv1.RunBuildActionBuild
 			}
