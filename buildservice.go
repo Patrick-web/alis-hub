@@ -78,11 +78,46 @@ func (s *BuildService) initClient() error {
 	return nil
 }
 
+// GetBuildBranches lists remote branches in the build repository for a given product.
+func (s *BuildService) GetBuildBranches(org, product string) ([]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	repoDir := filepath.Join(home, "alis.build", org, "build", product)
+
+	cmd := exec.Command("git", "branch", "-r")
+	cmd.Dir = repoDir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git branch -r: %w", err)
+	}
+
+	var branches []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.Contains(line, "HEAD ->") {
+			continue
+		}
+		branch := strings.TrimPrefix(line, "origin/")
+		if branch != "" {
+			branches = append(branches, branch)
+		}
+	}
+	log.Printf("[build] GetBuildBranches: %s/%s → %d branches", org, product, len(branches))
+	return branches, nil
+}
+
 // GetBuildCommits lists recent commits from the build repository.
-func (s *BuildService) GetBuildCommits(org, product, neuron, version string, count int) ([]DefineCommit, error) {
+// branch is the remote branch name (without "origin/" prefix); defaults to "master" if empty.
+func (s *BuildService) GetBuildCommits(org, product, neuron, version, branch string, count int) ([]DefineCommit, error) {
 	if count <= 0 {
 		count = 50
 	}
+	if branch == "" {
+		branch = "master"
+	}
+	remote := "origin/" + branch
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -90,7 +125,7 @@ func (s *BuildService) GetBuildCommits(org, product, neuron, version string, cou
 	}
 
 	repoDir := filepath.Join(home, "alis.build", org, "build", product)
-	log.Printf("[build] GetBuildCommits: repo=%s filter=%s/%s count=%d", repoDir, neuron, version, count)
+	log.Printf("[build] GetBuildCommits: repo=%s branch=%s filter=%s/%s count=%d", repoDir, branch, neuron, version, count)
 
 	if _, err := os.Stat(repoDir); err != nil {
 		log.Printf("[build] GetBuildCommits: repo not found: %v", err)
@@ -100,7 +135,7 @@ func (s *BuildService) GetBuildCommits(org, product, neuron, version string, cou
 	targetSubdir := filepath.Join(neuron, version)
 
 	args := []string{
-		"log", "origin/master",
+		"log", remote,
 		"--first-parent",
 		"--max-count", fmt.Sprintf("%d", count),
 		"--format=format:%H|%ct|%an|%ae|%s",
@@ -112,7 +147,7 @@ func (s *BuildService) GetBuildCommits(org, product, neuron, version string, cou
 	out, err := cmd.CombinedOutput()
 	if err != nil || len(out) == 0 {
 		log.Printf("[build] GetBuildCommits: path-filtered log empty, falling back to full log (err=%v)", err)
-		fallback := exec.Command("git", "log", "origin/master",
+		fallback := exec.Command("git", "log", remote,
 			"--first-parent",
 			"--max-count", fmt.Sprintf("%d", count),
 			"--format=format:%H|%ct|%an|%ae|%s",

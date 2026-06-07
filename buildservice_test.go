@@ -77,7 +77,7 @@ func TestStreamBuildLogs_BffV1(t *testing.T) {
 	svc := NewBuildService()
 	svc.alisClient = client
 
-	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", 1)
+	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", "master", 1)
 	if err != nil || len(commits) == 0 {
 		t.Fatalf("GetBuildCommits: %v (len=%d)", err, len(commits))
 	}
@@ -171,7 +171,7 @@ func TestStreamBuildLogs_HubspotV1(t *testing.T) {
 	svc.alisClient = client
 
 	neuron := "organisations/voyage/products/vp/neurons/hubspot-v1"
-	commits, err := svc.GetBuildCommits("voyage", "vp", "hubspot", "v1", 1)
+	commits, err := svc.GetBuildCommits("voyage", "vp", "hubspot", "v1", "master", 1)
 	if err != nil || len(commits) == 0 {
 		t.Fatalf("GetBuildCommits: %v (len=%d)", err, len(commits))
 	}
@@ -256,7 +256,7 @@ func TestStreamBuildLogs_HubspotV1(t *testing.T) {
 // TestBuildGetCommits_BffV1 verifies commit listing from the build repo.
 func TestBuildGetCommits_BffV1(t *testing.T) {
 	svc := NewBuildService()
-	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", 10)
+	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", "master", 10)
 	if err != nil {
 		t.Fatalf("GetBuildCommits: %v", err)
 	}
@@ -297,7 +297,7 @@ func TestRunBuild_BffV1(t *testing.T) {
 	svc.alisClient = client
 
 	// Get the latest build commit.
-	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", 1)
+	commits, err := svc.GetBuildCommits("voyage", "vp", "bff", "v1", "master", 1)
 	if err != nil || len(commits) == 0 {
 		t.Fatalf("GetBuildCommits: %v (len=%d)", err, len(commits))
 	}
