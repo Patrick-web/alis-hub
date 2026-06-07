@@ -190,7 +190,7 @@ export function DevelopPage() {
       setBuildProgressMsg('Building locally...');
       try {
         const result = await BuildService.StartLocalBuild(neuronResource, selectedBuildCommit.sha);
-        setLocalBuildId(result.buildId);
+        if (result) setLocalBuildId(result.buildId);
       } catch (e: any) {
         setBuildStep('result');
         setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: e?.message || 'Failed to start local build' } as BuildResult);
