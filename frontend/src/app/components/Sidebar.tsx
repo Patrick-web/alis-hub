@@ -3,10 +3,20 @@ import { useLocation, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { SidebarNavItem } from './SidebarNavItem';
 import { Button } from './Button';
-import { useWorkspace } from '../stores/workspace';
+import { EnvFormSheet } from './EnvFormSheet';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from './ui/alert-dialog';
+import { useWorkspace, type LoadedEnv } from '../stores/workspace';
+import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
-// Items with a route navigate; items without (null) are placeholders.
-// Environment items are loaded dynamically from the API (see Sidebar component).
 const developNavItems = [
   { id: 'about', label: 'Overview', route: '/about', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
   { id: 'services', label: 'Services', route: '/services', icon: <Icon icon="solar:layers-linear" className="text-[#F881A9] text-xl" /> },
@@ -41,19 +51,24 @@ const codeblockNavItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, setActiveEnv } = useWorkspace();
+  const { state, setActiveEnv, setLoadedEnvs } = useWorkspace();
   const [activeBuildItem, setActiveBuildItem] = useState('');
   const [activeCodeblockItem, setActiveCodeblockItem] = useState('');
+
+  // Env CRUD state
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetMode, setSheetMode] = useState<'create' | 'edit'>('create');
+  const [editTarget, setEditTarget] = useState<LoadedEnv | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<LoadedEnv | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const isEnvironments = location.pathname.includes('/environments');
   const isBuilds = location.pathname.includes('/builds');
   const isCodeblocks = location.pathname.includes('/codeblocks');
 
-  // Derive active develop item from current path
   const currentPath = location.pathname;
   const activeDevelopId = developNavItems.find(i => i.route === currentPath)?.id ?? 'about';
 
-  // Build dynamic env items from loaded environments
   const dynamicEnvItems = state.loadedEnvs.map(env => ({
     id: env.name,
     label: env.displayName,
@@ -64,12 +79,18 @@ export function Sidebar() {
   let header = 'DEVELOP';
   let bottomButtonLabel = 'Open in IDE';
   let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
+  let onBottomButtonClick: (() => void) | undefined;
 
   if (isEnvironments) {
     items = dynamicEnvItems.length > 0 ? dynamicEnvItems : envNavItems;
     header = 'ENVIRONMENTS';
     bottomButtonLabel = 'New Environment';
     bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
+    onBottomButtonClick = () => {
+      setSheetMode('create');
+      setEditTarget(null);
+      setSheetOpen(true);
+    };
   } else if (isBuilds) {
     items = buildNavItems;
     header = 'BUILDS';
@@ -100,47 +121,145 @@ export function Sidebar() {
     } else if (isCodeblocks) {
       setActiveCodeblockItem(item.id);
     }
-
     if ('route' in item && item.route) {
       navigate(item.route);
     }
   };
 
-  return (
-    <div className="bg-[#2c2c2c] h-full relative shrink-0 w-[300px]">
-      <div className="content-stretch flex flex-col items-center justify-between overflow-clip relative rounded-[inherit] size-full">
-        {/* Navigation items */}
-        <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-          <div className="px-[20px] py-[10px] w-full border-b border-[#464646]">
-            <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-50">
-              {header}
-            </p>
-          </div>
-          {items.map((item) => (
-            <SidebarNavItem
-              key={item.id}
-              label={item.label}
-              icon={item.icon}
-              active={getActiveItem() === item.id}
-              onClick={() => handleItemClick(item)}
-            />
-          ))}
-        </div>
+  const handleCreateEnv = async (displayName: string, envType: number) => {
+    const result = await (ProductService.CreateEnvironment as (org: string, product: string, displayName: string, envType: number) => Promise<any>)(
+      state.organisation,
+      state.product,
+      displayName,
+      envType,
+    );
+    const newEnv: LoadedEnv = {
+      name: result?.name ?? '',
+      displayName: result?.displayName ?? displayName,
+      state: result?.state ?? 0,
+    };
+    const updated = [...state.loadedEnvs, newEnv];
+    setLoadedEnvs(updated);
+    if (newEnv.name) setActiveEnv(newEnv.name);
+  };
 
-        {/* Bottom button */}
-        <div className="relative shrink-0 w-full">
-          <div className="content-stretch flex flex-col items-start p-[10px] relative w-full">
-            <Button 
-              variant="primary" 
-              icon={bottomButtonIcon}
-              className="w-full flex-col h-[60px]"
-            >
-              {bottomButtonLabel}
-            </Button>
+  const handleEditEnv = async (displayName: string) => {
+    if (!editTarget) return;
+    const result = await (ProductService.UpdateEnvironment as (envName: string, displayName: string) => Promise<any>)(
+      editTarget.name,
+      displayName,
+    );
+    const updated = state.loadedEnvs.map(e =>
+      e.name === editTarget.name
+        ? { ...e, displayName: result?.displayName ?? displayName }
+        : e,
+    );
+    setLoadedEnvs(updated);
+  };
+
+  const handleDeleteEnv = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    try {
+      await (ProductService.DeleteEnvironment as (envName: string) => Promise<void>)(deleteTarget.name);
+      const updated = state.loadedEnvs.filter(e => e.name !== deleteTarget.name);
+      setLoadedEnvs(updated);
+      if (state.activeEnvName === deleteTarget.name) {
+        setActiveEnv(updated[0]?.name ?? '');
+      }
+    } finally {
+      setDeleteLoading(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-[#2c2c2c] h-full relative shrink-0 w-[300px]">
+        <div className="content-stretch flex flex-col items-center justify-between overflow-clip relative rounded-[inherit] size-full">
+          <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
+            <div className="px-[20px] py-[10px] w-full border-b border-[#464646]">
+              <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-50">
+                {header}
+              </p>
+            </div>
+            {items.map((item) => (
+              <SidebarNavItem
+                key={item.id}
+                label={item.label}
+                icon={item.icon}
+                active={getActiveItem() === item.id}
+                onClick={() => handleItemClick(item)}
+                onEdit={isEnvironments && dynamicEnvItems.length > 0 ? () => {
+                  const env = state.loadedEnvs.find(e => e.name === item.id);
+                  if (env) {
+                    setEditTarget(env);
+                    setSheetMode('edit');
+                    setSheetOpen(true);
+                  }
+                } : undefined}
+                onDelete={isEnvironments && dynamicEnvItems.length > 0 ? () => {
+                  const env = state.loadedEnvs.find(e => e.name === item.id);
+                  if (env) setDeleteTarget(env);
+                } : undefined}
+              />
+            ))}
+          </div>
+
+          <div className="relative shrink-0 w-full">
+            <div className="content-stretch flex flex-col items-start p-[10px] relative w-full">
+              <Button
+                variant="primary"
+                icon={bottomButtonIcon}
+                className="w-full flex-col h-[60px]"
+                onClick={onBottomButtonClick}
+              >
+                {bottomButtonLabel}
+              </Button>
+            </div>
           </div>
         </div>
+        <div aria-hidden="true" className="absolute border-[#626262] border-r border-solid inset-0 pointer-events-none" />
       </div>
-      <div aria-hidden="true" className="absolute border-[#626262] border-r border-solid inset-0 pointer-events-none" />
-    </div>
+
+      {/* Create / Edit sheet */}
+      <EnvFormSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        mode={sheetMode}
+        initialDisplayName={sheetMode === 'edit' ? (editTarget?.displayName ?? '') : ''}
+        onSubmit={sheetMode === 'create' ? handleCreateEnv : (displayName) => handleEditEnv(displayName)}
+      />
+
+      {/* Delete confirmation */}
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent className="bg-[#2c2c2c] border border-[#464646] text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[14px]">
+              Delete Environment
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif] text-[12px]">
+              Are you sure you want to delete <span className="text-white">{deleteTarget?.displayName}</span>?
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="bg-transparent border border-[#464646] text-white hover:bg-[rgba(255,255,255,0.05)] font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
+              disabled={deleteLoading}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#ff5050] hover:bg-[#ff3333] text-white border-0 font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
+              onClick={handleDeleteEnv}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? 'Deleting…' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

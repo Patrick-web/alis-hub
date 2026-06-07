@@ -304,6 +304,106 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 	return parseEnvVariablesFromGetEnvironment(body[5:])
 }
 
+// CreateEnvironment creates a new environment under the given org/product.
+// envType: 1=DEV, 2=STAGING, 3=PROD
+func (s *ProductService) CreateEnvironment(org, product, displayName string, envType int32) (*EnvInfo, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
+
+	// Build environment sub-message: field 2=displayName, field 7=type
+	var envBuf []byte
+	envBuf = protowire.AppendTag(envBuf, 2, protowire.BytesType)
+	envBuf = protowire.AppendString(envBuf, displayName)
+	if envType != 0 {
+		envBuf = protowire.AppendTag(envBuf, 7, protowire.VarintType)
+		envBuf = protowire.AppendVarint(envBuf, uint64(envType))
+	}
+
+	// CreateEnvironmentRequest: field 1=parent, field 2=environment
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, parent)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, envBuf)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/CreateEnvironment", buf)
+	if err != nil {
+		return nil, fmt.Errorf("CreateEnvironment: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("CreateEnvironment: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("CreateEnvironment: response too short (%d bytes)", len(body))
+	}
+	return parseEnvInfoFromEnvironment(body[5:])
+}
+
+// UpdateEnvironment updates the displayName of an existing environment.
+// envName is the full resource name.
+func (s *ProductService) UpdateEnvironment(envName, displayName string) (*EnvInfo, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	// Build environment sub-message: field 1=name, field 2=displayName
+	var envBuf []byte
+	envBuf = protowire.AppendTag(envBuf, 1, protowire.BytesType)
+	envBuf = protowire.AppendString(envBuf, envName)
+	envBuf = protowire.AppendTag(envBuf, 2, protowire.BytesType)
+	envBuf = protowire.AppendString(envBuf, displayName)
+
+	// UpdateEnvironmentRequest: field 1=environment, field 2=update_mask
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, envBuf)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, marshalFieldMask([]string{"display_name"}))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/UpdateEnvironment", buf)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateEnvironment: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("UpdateEnvironment: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("UpdateEnvironment: response too short (%d bytes)", len(body))
+	}
+	return parseEnvInfoFromEnvironment(body[5:])
+}
+
+// DeleteEnvironment deletes the environment with the given full resource name.
+func (s *ProductService) DeleteEnvironment(envName string) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, envName)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/DeleteEnvironment", buf)
+	if err != nil {
+		return fmt.Errorf("DeleteEnvironment: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("DeleteEnvironment: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	return nil
+}
+
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
 // Authentication uses all three alis cookies — the server requires all of them.
 func (s *ProductService) doConsoleGRPCWeb(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
@@ -997,4 +1097,10 @@ func parseEnvVariable(data []byte) EnvVariable {
 		}
 	}
 	return v
+}
+
+// parseEnvInfoFromEnvironment parses a single Environment proto response (from Create/UpdateEnvironment).
+// The response body starts directly with the Environment message fields (no outer list wrapper).
+func parseEnvInfoFromEnvironment(data []byte) (*EnvInfo, error) {
+	return parseEnvironment(data)
 }
