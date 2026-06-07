@@ -8,7 +8,7 @@ import { Dropdown } from '../components/Dropdown';
 import { Table } from '../components/Table';
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
-import * as SM from '../../../bindings/alis-hub-v3/servicemanager';
+import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Browser } from '@wailsio/runtime';
 
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
@@ -66,16 +66,17 @@ export function DevelopPage() {
   const [glassLoading, setGlassLoading] = useState(false);
 
   useEffect(() => {
+    if (!state.organisation || !state.product) return;
     const load = async () => {
       try {
-        const services = await SM.GetServices();
-        if (services && services.length > 0) {
-          setNeurons(services.map(s => ({
-            id: s.id,
-            name: s.name,
-            type: (s as any).type ?? 2,
-            state: (s as any).state ?? 1,
-            latestBuild: s.latestBuild,
+        const overview = await ProductService.GetServicesOverview(state.organisation, state.product);
+        if (overview && overview.neurons && overview.neurons.length > 0) {
+          setNeurons(overview.neurons.map(n => ({
+            id: n.id,
+            name: n.id,
+            type: 2,
+            state: n.state,
+            latestBuild: n.version,
             envs: [],
           })));
         }
@@ -84,11 +85,16 @@ export function DevelopPage() {
       }
     };
     load();
-  }, []);
+  }, [state.organisation, state.product]);
 
   const parseNeuron = (name: string) => {
-    const m = name.match(/^(.+)-(v\d+)$/);
-    return m ? { id: m[1], version: m[2] } : { id: name, version: 'v1' };
+    // Dot notation from alis API: "bookings.v2" → { id: 'bookings', version: 'v2' }
+    const mDot = name.match(/^(.+)\.(v\d+)$/);
+    if (mDot) return { id: mDot[1], version: mDot[2] };
+    // Hyphen notation: "bookings-v1" → { id: 'bookings', version: 'v1' }
+    const mHyphen = name.match(/^(.+)-(v\d+)$/);
+    if (mHyphen) return { id: mHyphen[1], version: mHyphen[2] };
+    return { id: name, version: 'v1' };
   };
 
   const openDefinePane = useCallback(async (neuronName: string) => {
@@ -115,8 +121,7 @@ export function DevelopPage() {
 
   const handleRunDefine = async () => {
     if (!defineNeuron || !selectedCommit) return;
-    const parsed = parseNeuron(defineNeuron);
-    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${parsed.id}-${parsed.version}`;
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${defineNeuron}`;
     setDefineStep('running');
     setProgressMsg('Starting Define...');
     try {
@@ -130,9 +135,8 @@ export function DevelopPage() {
   // Poll define operation
   useEffect(() => {
     if (!defineResult || defineResult.done || defineStep !== 'running') return;
-    const neuronParsed = defineNeuron ? parseNeuron(defineNeuron) : null;
-    const neuronResource = neuronParsed
-      ? `organisations/${state.organisation}/products/${state.product}/neurons/${neuronParsed.id}-${neuronParsed.version}`
+    const neuronResource = defineNeuron
+      ? `organisations/${state.organisation}/products/${state.product}/neurons/${defineNeuron}`
       : '';
     const interval = setInterval(async () => {
       try {
