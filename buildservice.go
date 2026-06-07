@@ -16,10 +16,49 @@ import (
 // BuildService is a Wails-bound service that orchestrates the Build flow.
 type BuildService struct {
 	alisClient *AlisClient
+	productSvc *ProductService
 }
 
 func NewBuildService() *BuildService {
 	return &BuildService{}
+}
+
+func (s *BuildService) initProductSvc() {
+	if s.productSvc == nil {
+		s.productSvc = NewProductService()
+	}
+}
+
+// buildLogsURL constructs the alisproxy logs URL from the operation name and product's GCP project.
+// Pattern: https://git-v2-alisproxy-{number}.{region}.run.app/executions/{uuid}/BUILD
+func (s *BuildService) buildLogsURL(operationName, neuron string) string {
+	uuid := strings.TrimPrefix(operationName, "operations/")
+	if uuid == operationName || uuid == "" {
+		return ""
+	}
+
+	// Extract org/product from neuron resource: organisations/{org}/products/{product}/neurons/...
+	parts := strings.Split(neuron, "/")
+	if len(parts) < 4 {
+		return ""
+	}
+	org, product := parts[1], parts[3]
+
+	s.initProductSvc()
+	overview, err := s.productSvc.GetProductOverview(org, product)
+	if err != nil || overview.GoogleProject == nil {
+		log.Printf("[build] buildLogsURL: could not get GCP project for %s/%s: %v", org, product, err)
+		return ""
+	}
+
+	gp := overview.GoogleProject
+	region := gp.Region
+	if region == "" {
+		region = "us-east4"
+	}
+	url := fmt.Sprintf("https://git-v2-alisproxy-%s.%s.run.app/executions/%s/BUILD", gp.Number, region, uuid)
+	log.Printf("[build] buildLogsURL: constructed %s", url)
+	return url
 }
 
 func (s *BuildService) initClient() error {
@@ -161,7 +200,8 @@ func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) 
 }
 
 // PollBuildOperation checks the status of a running Build operation.
-func (s *BuildService) PollBuildOperation(name string) (*RunBuildResult, error) {
+// neuron is the full neuron resource name (needed to construct the logs URL when the API doesn't return one).
+func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult, error) {
 	if s.alisClient == nil {
 		return nil, fmt.Errorf("not connected to Alis backend")
 	}
@@ -210,6 +250,11 @@ func (s *BuildService) PollBuildOperation(name string) (*RunBuildResult, error) 
 		} else {
 			log.Printf("[build] PollBuildOperation: done=true but no response body parsed")
 		}
+
+		// If the API didn't return a logs URL, construct one from the operation UUID + product GCP project.
+		if result.LogsURL == "" && neuron != "" {
+			result.LogsURL = s.buildLogsURL(op.Name, neuron)
+		}
 	}
 
 	if e, ok := op.Result.(*dbdv1.OperationError); ok {
@@ -217,5 +262,6 @@ func (s *BuildService) PollBuildOperation(name string) (*RunBuildResult, error) 
 		result.Error = e.Message
 	}
 
+	log.Printf("[build] PollBuildOperation: final logsUrl=%q", result.LogsURL)
 	return result, nil
 }

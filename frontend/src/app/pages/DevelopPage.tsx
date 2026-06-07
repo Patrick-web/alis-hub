@@ -181,7 +181,8 @@ export function DevelopPage() {
     if (!buildResult || buildResult.done || buildStep !== 'running') return;
     const interval = setInterval(async () => {
       try {
-        const result = await BuildService.PollBuildOperation(buildResult.operationName);
+        const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
+        const result = await BuildService.PollBuildOperation(buildResult.operationName, neuronResource);
         setBuildResult(result as BuildResult);
         if (result?.done) {
           clearInterval(interval);
@@ -194,7 +195,7 @@ export function DevelopPage() {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [buildResult?.operationName, buildResult?.done, buildStep]);
+  }, [buildResult?.operationName, buildResult?.done, buildStep, buildNeuron]);
 
   const handleRunDefine = async () => {
     if (!defineNeuron || !selectedCommit) return;
