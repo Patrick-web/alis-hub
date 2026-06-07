@@ -588,7 +588,9 @@ func (c *AlisClient) ExplainDefine(ctx context.Context, definition string, artif
 }
 
 // marshalRunBuildRequest builds protobuf bytes for alis.os.dbd.v1.RunBuildRequest.
-func marshalRunBuildRequest(neuron, commit string) []byte {
+// images is a map of dockerfile path (relative to build repo root) → action (1=BUILD, 2=RETAG).
+// Proto map<string, enum> is encoded as repeated BytesType field (field 3), each entry: field1=key, field2=varint.
+func marshalRunBuildRequest(neuron, commit string, images map[string]dbdv1.RunBuildAction) []byte {
 	var buf []byte
 	if neuron != "" {
 		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
@@ -598,13 +600,22 @@ func marshalRunBuildRequest(neuron, commit string) []byte {
 		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
 		buf = protowire.AppendString(buf, commit)
 	}
+	for path, action := range images {
+		var entry []byte
+		entry = protowire.AppendTag(entry, 1, protowire.BytesType)
+		entry = protowire.AppendString(entry, path)
+		entry = protowire.AppendTag(entry, 2, protowire.VarintType)
+		entry = protowire.AppendVarint(entry, uint64(action))
+		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+		buf = protowire.AppendBytes(buf, entry)
+	}
 	return buf
 }
 
 // RunBuild starts a Build operation.
 func (c *AlisClient) RunBuild(ctx context.Context, req *dbdv1.RunBuildRequest) (*dbdv1.Operation, error) {
 	method := "alis.os.dbd.v1.DbdService/RunBuild"
-	protoBytes := marshalRunBuildRequest(req.Neuron, req.Commit)
+	protoBytes := marshalRunBuildRequest(req.Neuron, req.Commit, req.Images)
 
 	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
 	if err != nil {

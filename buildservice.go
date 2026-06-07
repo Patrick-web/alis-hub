@@ -162,6 +162,50 @@ type RunBuildResult struct {
 	Error         string `json:"error,omitempty"`
 }
 
+// scanDockerfiles returns a map of Dockerfile paths (relative to the product build repo root) → BUILD action.
+// It looks in ~/alis.build/{org}/build/{product}/{neuronId}/{version}/.
+func (s *BuildService) scanDockerfiles(neuron string) map[string]dbdv1.RunBuildAction {
+	// neuron = "organisations/{org}/products/{product}/neurons/{id}-{version}"
+	parts := strings.Split(neuron, "/")
+	if len(parts) < 6 {
+		return nil
+	}
+	org, product, neuronID := parts[1], parts[3], parts[5]
+
+	// Split neuronID into id and version (e.g. "bff-v1" → "bff", "v1")
+	dashIdx := strings.LastIndex(neuronID, "-")
+	if dashIdx < 0 {
+		return nil
+	}
+	nID, nVer := neuronID[:dashIdx], neuronID[dashIdx+1:]
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	neuronDir := filepath.Join(home, "alis.build", org, "build", product, nID, nVer)
+	repoRoot := filepath.Join(home, "alis.build", org, "build", product)
+
+	images := make(map[string]dbdv1.RunBuildAction)
+	err = filepath.WalkDir(neuronDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if d.Name() == "Dockerfile" {
+			rel, relErr := filepath.Rel(repoRoot, path)
+			if relErr == nil {
+				images[rel] = dbdv1.RunBuildActionBuild
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		log.Printf("[build] scanDockerfiles: walk error: %v", err)
+	}
+	log.Printf("[build] scanDockerfiles: found %d Dockerfiles in %s", len(images), neuronDir)
+	return images
+}
+
 // RunBuild starts a Build operation on the Alis backend.
 func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) {
 	if err := s.initClient(); err != nil {
@@ -170,9 +214,15 @@ func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) 
 
 	log.Printf("[build] RunBuild: neuron=%s commit=%s", neuron, commit)
 
+	images := s.scanDockerfiles(neuron)
+	for path := range images {
+		log.Printf("[build] RunBuild: imagesMap %s → BUILD", path)
+	}
+
 	req := &dbdv1.RunBuildRequest{
 		Neuron: neuron,
 		Commit: commit,
+		Images: images,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -251,9 +301,12 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 			log.Printf("[build] PollBuildOperation: done=true but no response body parsed")
 		}
 
-		// If the API didn't return a logs URL, construct one from the operation UUID + product GCP project.
+		// If the API didn't return a logs URL, try constructing one from the operation UUID + product GCP project.
+		// This covers fast builds where the API omits the field, as long as the project is reachable.
 		if result.LogsURL == "" && neuron != "" {
-			result.LogsURL = s.buildLogsURL(op.Name, neuron)
+			if constructed := s.buildLogsURL(op.Name, neuron); constructed != "" {
+				result.LogsURL = constructed
+			}
 		}
 	}
 
