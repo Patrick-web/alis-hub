@@ -198,10 +198,9 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 		// Close the PTY master as soon as the main process (the shell) exits.
 		// Without this, any background job that inherited the slave fd keeps
 		// ptmx.Read blocked forever, so done is never set.
-		processDone := make(chan struct{})
+		exitErrCh := make(chan error, 1)
 		go func() {
-			cmd.Wait()
-			close(processDone)
+			exitErrCh <- cmd.Wait()
 			ptmx.Close()
 		}()
 
@@ -219,11 +218,16 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 			}
 		}
 
-		<-processDone // ensure cmd.Wait() has been called before marking done
+		exitErr := <-exitErrCh
 
 		p.mu.Lock()
 		p.ptmx = nil
-		p.buf.WriteString("\r\n\x1b[2m[process exited]\x1b[0m\r\n")
+		if exitErr != nil {
+			fmt.Fprintf(&p.buf, "\r\n\x1b[31m[process exited: %v]\x1b[0m\r\n", exitErr)
+			p.errMsg = exitErr.Error()
+		} else {
+			p.buf.WriteString("\r\n\x1b[2m[process exited]\x1b[0m\r\n")
+		}
 		p.done = true
 		p.mu.Unlock()
 	}()
