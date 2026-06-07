@@ -10,18 +10,35 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * CreateEnvironment creates a new environment under the given org/product.
+ * envType: 1=DEV, 2=STAGING, 3=PROD
+ */
+export function CreateEnvironment(org: string, product: string, displayName: string, envType: number): $CancellablePromise<$models.EnvInfo | null> {
+    return $Call.ByID(2295881451, org, product, displayName, envType).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * DeleteEnvironment deletes the environment with the given full resource name.
+ */
+export function DeleteEnvironment(envName: string): $CancellablePromise<void> {
+    return $Call.ByID(2246279434, envName);
+}
+
+/**
  * GetEnvironmentVariables fetches the variables for a single environment.
  * envName is the full resource name, e.g. "organisations/voyage/products/vp/environments/1y2ozw66zv6p3".
  */
 export function GetEnvironmentVariables(envName: string): $CancellablePromise<$models.EnvVariable[]> {
     return $Call.ByID(3106139540, envName).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
@@ -30,7 +47,7 @@ export function GetProductOverview(org: string, product: string): $CancellablePr
  */
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
@@ -40,7 +57,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -53,25 +70,25 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType10($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType12($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType14($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType16($result);
     });
 }
 
@@ -83,20 +100,31 @@ export function Login(): $CancellablePromise<void> {
     return $Call.ByID(1314230687);
 }
 
+/**
+ * UpdateEnvironment updates the displayName of an existing environment.
+ * envName is the full resource name.
+ */
+export function UpdateEnvironment(envName: string, displayName: string): $CancellablePromise<$models.EnvInfo | null> {
+    return $Call.ByID(828266076, envName, displayName).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
 // Private type creation functions
-const $$createType0 = $models.EnvVariable.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.ProductOverview.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.ServicesOverview.createFrom;
+const $$createType0 = $models.EnvInfo.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.EnvVariable.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $models.ProductOverview.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $models.ShareData.createFrom;
+const $$createType6 = $models.ServicesOverview.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.EnvInfo.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $models.InviteInfo.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = $models.LandingZonesData.createFrom;
-const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $models.ProductSummary.createFrom;
-const $$createType15 = $Create.Array($$createType14);
+const $$createType8 = $models.ShareData.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $Create.Array($$createType0);
+const $$createType11 = $models.InviteInfo.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = $models.LandingZonesData.createFrom;
+const $$createType14 = $Create.Nullable($$createType13);
+const $$createType15 = $models.ProductSummary.createFrom;
+const $$createType16 = $Create.Array($$createType15);
