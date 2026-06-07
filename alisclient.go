@@ -636,13 +636,49 @@ type RunBuildResponseData struct {
 }
 
 // parseBuildResponse extracts RunBuildResponse from a completed operation's result field.
+// Field 5 of the Operation holds a google.protobuf.Any:
+//   field 1 = type_url (string), field 2 = value (RunBuildResponse proto bytes).
+// RunBuildResponse fields: 1=neuronVersion, 2=buildLogsUrl, 3=deployments, 4=version.
 func parseBuildResponse(op *dbdv1.Operation) *RunBuildResponseData {
 	resp, ok := op.Result.(*dbdv1.OperationResponse)
 	if !ok || resp == nil || resp.Value == nil {
 		return nil
 	}
-	data := resp.Value.Value
+
+	// Unwrap the google.protobuf.Any — field 2 holds the actual RunBuildResponse bytes.
+	anyBytes := resp.Value.Value
+	var responseBytes []byte
+	for len(anyBytes) > 0 {
+		num, typ, n := protowire.ConsumeTag(anyBytes)
+		if n < 0 {
+			break
+		}
+		anyBytes = anyBytes[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(anyBytes)
+			if m < 0 {
+				break
+			}
+			if num == 2 {
+				responseBytes = b
+			}
+			anyBytes = anyBytes[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, anyBytes)
+			if m < 0 {
+				break
+			}
+			anyBytes = anyBytes[m:]
+		}
+	}
+
+	if len(responseBytes) == 0 {
+		return nil
+	}
+
+	// Parse RunBuildResponse: 1=neuronVersion, 2=buildLogsUrl, 4=version.
 	result := &RunBuildResponseData{}
+	data := responseBytes
 	for len(data) > 0 {
 		num, typ, n := protowire.ConsumeTag(data)
 		if n < 0 {
