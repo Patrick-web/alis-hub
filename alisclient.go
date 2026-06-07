@@ -286,40 +286,56 @@ func (c *AlisClient) GetOperation(ctx context.Context, name string) (*dbdv1.Oper
 }
 
 // parseOperation parses a protobuf-serialized google.longrunning.Operation.
+// google.longrunning.Operation fields:
+//   1=name (string), 2=metadata (Any), 3=done (bool/varint), 4=error (Status), 5=response (Any)
 func parseOperation(data []byte) (*dbdv1.Operation, error) {
 	op := &dbdv1.Operation{}
 
 	for len(data) > 0 {
-		num, _, n := protowire.ConsumeTag(data)
+		num, typ, n := protowire.ConsumeTag(data)
 		if n < 0 {
 			return op, nil
 		}
-		v, m := protowire.ConsumeVarint(data[n:])
-		if m < 0 {
-			return op, nil
-		}
-		length := int(v)
-		total := n + m + length
-		if total > len(data) {
-			return op, nil
-		}
-		chunk := data[n+m : total]
-		data = data[total:]
+		data = data[n:]
 
-		switch num {
-		case 1: // name
-			op.Name = string(chunk)
-		case 2: // metadata (google.protobuf.Any — store raw bytes for unpackDefineMetadata)
-			op.Metadata = &anypb.Any{Value: chunk}
-		case 3: // done
-			op.Done = v != 0
-		case 4: // error
-			code, msg := parseStatus(chunk)
-			op.Result = &dbdv1.OperationError{Code: code, Message: msg}
-		case 5: // response
-			op.Result = &dbdv1.OperationResponse{
-				Value: &anypb.Any{Value: chunk, TypeUrl: "type.googleapis.com/alis.os.dbd.v1.RunDefineResponse"},
+		switch typ {
+		case protowire.VarintType:
+			// Handles bool `done` (field 3) and any other varint fields.
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return op, nil
 			}
+			if num == 3 {
+				op.Done = v != 0
+			}
+			data = data[m:]
+
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return op, nil
+			}
+			switch num {
+			case 1:
+				op.Name = string(b)
+			case 2:
+				op.Metadata = &anypb.Any{Value: b}
+			case 4:
+				code, msg := parseStatus(b)
+				op.Result = &dbdv1.OperationError{Code: code, Message: msg}
+			case 5:
+				op.Result = &dbdv1.OperationResponse{
+					Value: &anypb.Any{Value: b},
+				}
+			}
+			data = data[m:]
+
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return op, nil
+			}
+			data = data[m:]
 		}
 	}
 
@@ -569,6 +585,159 @@ func (c *AlisClient) ExplainDefine(ctx context.Context, definition string, artif
 		return nil, fmt.Errorf("ExplainDefine: response too short")
 	}
 	return parseGlassResponse(body[5:]), nil
+}
+
+// marshalRunBuildRequest builds protobuf bytes for alis.os.dbd.v1.RunBuildRequest.
+func marshalRunBuildRequest(neuron, commit string) []byte {
+	var buf []byte
+	if neuron != "" {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, neuron)
+	}
+	if commit != "" {
+		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+		buf = protowire.AppendString(buf, commit)
+	}
+	return buf
+}
+
+// RunBuild starts a Build operation.
+func (c *AlisClient) RunBuild(ctx context.Context, req *dbdv1.RunBuildRequest) (*dbdv1.Operation, error) {
+	method := "alis.os.dbd.v1.DbdService/RunBuild"
+	protoBytes := marshalRunBuildRequest(req.Neuron, req.Commit)
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("RunBuild: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("RunBuild: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("RunBuild: response too short: %d bytes", len(body))
+	}
+	return parseOperation(body[5:])
+}
+
+// RunBuildMetadata holds progress info for a running Build operation.
+// Proto fields: 1=logsUrl, 2=version, 3=notes, 4=deployMetadata (message).
+type RunBuildMetadata struct {
+	LogsURL string
+	Version string
+	Notes   string
+}
+
+// RunBuildResponseData holds the final result of a completed Build operation.
+// RunBuildResponse proto fields: 1=neuronVersion, 2=buildLogsUrl, 3=deployments (repeated), 4=version.
+type RunBuildResponseData struct {
+	NeuronVersion string
+	BuildLogsURL  string
+	Version       string
+}
+
+// parseBuildResponse extracts RunBuildResponse from a completed operation's result field.
+func parseBuildResponse(op *dbdv1.Operation) *RunBuildResponseData {
+	resp, ok := op.Result.(*dbdv1.OperationResponse)
+	if !ok || resp == nil || resp.Value == nil {
+		return nil
+	}
+	data := resp.Value.Value
+	result := &RunBuildResponseData{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			switch num {
+			case 1:
+				result.NeuronVersion = string(b)
+			case 2:
+				result.BuildLogsURL = string(b)
+			case 4:
+				result.Version = string(b)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return result
+}
+
+// unpackBuildMetadata extracts RunBuildMetadata from an operation's metadata Any.
+func unpackBuildMetadata(op *dbdv1.Operation) *RunBuildMetadata {
+	if op == nil || op.Metadata == nil {
+		return nil
+	}
+	anyBytes := op.Metadata.Value
+	var metaBytes []byte
+	for len(anyBytes) > 0 {
+		num, typ, n := protowire.ConsumeTag(anyBytes)
+		if n < 0 {
+			break
+		}
+		anyBytes = anyBytes[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(anyBytes)
+			if m < 0 {
+				break
+			}
+			if num == 2 {
+				metaBytes = b
+			}
+			anyBytes = anyBytes[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, anyBytes)
+			if m < 0 {
+				break
+			}
+			anyBytes = anyBytes[m:]
+		}
+	}
+	if len(metaBytes) == 0 {
+		return nil
+	}
+	meta := &RunBuildMetadata{}
+	data := metaBytes
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			switch num {
+			case 1:
+				meta.LogsURL = string(b)
+			case 2:
+				meta.Version = string(b)
+			case 3:
+				meta.Notes = string(b)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return meta
 }
 
 // parseStatus parses google.rpc.Status.
