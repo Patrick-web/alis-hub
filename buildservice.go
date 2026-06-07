@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	htmlpkg "html"
 	"log"
 	"os"
 	"os/exec"
@@ -250,6 +251,66 @@ func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) 
 	}
 
 	return result, nil
+}
+
+// BuildLogsResult is returned by FetchBuildLogs.
+// NextOffset is the character count of all log text seen so far; pass it back on the
+// next call so only newly-appended lines are returned.
+type BuildLogsResult struct {
+	Content    string `json:"content"`
+	NextOffset int64  `json:"nextOffset"`
+}
+
+// extractBuildLogText pulls the plain-text log out of the alisproxy HTML page.
+// The alisproxy embeds log output in <span class="text-sm"> inside #rightPanel,
+// using <br> for line breaks and standard HTML entities for special chars.
+func extractBuildLogText(pageHTML string) string {
+	const marker = `<span class="text-sm">`
+	start := strings.Index(pageHTML, marker)
+	if start == -1 {
+		return ""
+	}
+	start += len(marker)
+	end := strings.Index(pageHTML[start:], "</span>")
+	if end == -1 {
+		return ""
+	}
+	text := pageHTML[start : start+end]
+	text = strings.ReplaceAll(text, "<br>", "\n")
+	text = strings.ReplaceAll(text, "<br/>", "\n")
+	text = strings.ReplaceAll(text, "<br />", "\n")
+	return htmlpkg.UnescapeString(text)
+}
+
+// FetchBuildLogs fetches the current log page from the alisproxy, extracts plain text,
+// and returns only the characters past textOffset. Pass 0 on the first call;
+// pass the returned NextOffset on each subsequent call to stream only new lines.
+func (s *BuildService) FetchBuildLogs(logsUrl string, textOffset int64) (*BuildLogsResult, error) {
+	if s.alisClient == nil {
+		return nil, fmt.Errorf("not connected to Alis backend")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, _, err := s.alisClient.FetchURL(ctx, logsUrl, 0)
+	if err != nil {
+		return nil, fmt.Errorf("fetch build logs: %w", err)
+	}
+
+	text := extractBuildLogText(string(body))
+	newContent := ""
+	nextOffset := textOffset
+	if int64(len(text)) > textOffset {
+		newContent = text[textOffset:]
+		nextOffset = int64(len(text))
+	}
+
+	log.Printf("[build] FetchBuildLogs: textLen=%d offset=%d new=%d", len(text), textOffset, len(newContent))
+	return &BuildLogsResult{
+		Content:    newContent,
+		NextOffset: nextOffset,
+	}, nil
 }
 
 // PollBuildOperation checks the status of a running Build operation.
