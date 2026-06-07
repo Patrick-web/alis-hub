@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,6 +26,7 @@ func (s *DefineService) initClient() error {
 	if s.alisClient != nil {
 		return nil
 	}
+	log.Println("[define] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	client, err := NewAlisClient(ctx)
@@ -32,6 +34,7 @@ func (s *DefineService) initClient() error {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
 	s.alisClient = client
+	log.Println("[define] gRPC client ready")
 	return nil
 }
 
@@ -56,7 +59,10 @@ func (s *DefineService) GetDefineCommits(org, product, neuron, version string, c
 	}
 
 	repoDir := filepath.Join(home, "alis.build", org, "define")
+	log.Printf("[define] GetDefineCommits: repo=%s filter=%s/%s/%s/%s count=%d", repoDir, org, product, neuron, version, count)
+
 	if _, err := os.Stat(repoDir); err != nil {
+		log.Printf("[define] GetDefineCommits: repo not found: %v", err)
 		return nil, fmt.Errorf("define repo not found at %s: %w", repoDir, err)
 	}
 
@@ -108,6 +114,7 @@ func (s *DefineService) GetDefineCommits(org, product, neuron, version string, c
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	// If the only line is empty, return empty
 	if len(lines) == 1 && lines[0] == "" {
+		log.Printf("[define] GetDefineCommits: no commits found")
 		return []DefineCommit{}, nil
 	}
 	commits := make([]DefineCommit, 0, len(lines))
@@ -127,6 +134,7 @@ func (s *DefineService) GetDefineCommits(org, product, neuron, version string, c
 		})
 	}
 
+	log.Printf("[define] GetDefineCommits: returned %d commits", len(commits))
 	return commits, nil
 }
 
@@ -147,6 +155,8 @@ func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefin
 		return nil, err
 	}
 
+	log.Printf("[define] RunDefine: neuron=%s commit=%s releaseType=%q", neuron, commit, releaseType)
+
 	req := &dbdv1.RunDefineRequest{
 		Neuron:      neuron,
 		Commit:      commit,
@@ -158,8 +168,11 @@ func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefin
 
 	op, err := s.alisClient.RunDefine(ctx, req)
 	if err != nil {
+		log.Printf("[define] RunDefine: gRPC error: %v", err)
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
+
+	log.Printf("[define] RunDefine: operation started name=%s done=%v", op.Name, op.Done)
 
 	result := &RunDefineResult{
 		OperationName: op.Name,
@@ -167,6 +180,7 @@ func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefin
 	}
 
 	if err, ok := op.Result.(*dbdv1.OperationError); ok {
+		log.Printf("[define] RunDefine: operation returned error immediately: %s", err.Message)
 		result.Error = err.Message
 	}
 
@@ -179,13 +193,18 @@ func (s *DefineService) PollDefineOperation(name string) (*RunDefineResult, erro
 		return nil, fmt.Errorf("not connected to Alis backend")
 	}
 
+	log.Printf("[define] PollDefineOperation: polling %s", name)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.GetOperation(ctx, name)
 	if err != nil {
+		log.Printf("[define] PollDefineOperation: GetOperation error: %v", err)
 		return nil, fmt.Errorf("poll operation: %w", err)
 	}
+
+	log.Printf("[define] PollDefineOperation: done=%v", op.Done)
 
 	result := &RunDefineResult{
 		OperationName: op.Name,
@@ -194,13 +213,18 @@ func (s *DefineService) PollDefineOperation(name string) (*RunDefineResult, erro
 
 	meta := unpackDefineMetadata(op)
 	if meta != nil {
+		log.Printf("[define] PollDefineOperation: metadata definition=%q version=%q notes=%q artifacts=%d",
+			meta.Definition, meta.Version, meta.Notes, len(meta.DefinitionArtifacts))
 		result.Definition = meta.Definition
 		result.Version = meta.Version
 		result.Notes = meta.Notes
 		result.DefinitionArtifacts = meta.DefinitionArtifacts
+	} else {
+		log.Printf("[define] PollDefineOperation: no metadata in operation")
 	}
 
 	if err, ok := op.Result.(*dbdv1.OperationError); ok {
+		log.Printf("[define] PollDefineOperation: operation failed: code=%d message=%s", err.Code, err.Message)
 		result.Error = err.Message
 	}
 
@@ -224,9 +248,16 @@ func (s *DefineService) ExplainDefine(definition string, artifacts []string, neu
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
+	log.Printf("[define] ExplainDefine: definition=%q neuron=%s artifacts=%d", definition, neuron, len(artifacts))
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return s.alisClient.ExplainDefine(ctx, definition, artifacts, neuron)
+	result, err := s.alisClient.ExplainDefine(ctx, definition, artifacts, neuron)
+	if err != nil {
+		log.Printf("[define] ExplainDefine: error: %v", err)
+		return nil, err
+	}
+	log.Printf("[define] ExplainDefine: title=%q artifacts=%d", result.Title, len(result.Artifacts))
+	return result, nil
 }
 
 // ScanNeuronPackages scans the neuron build directory for language config files.

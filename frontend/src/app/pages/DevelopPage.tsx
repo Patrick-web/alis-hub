@@ -8,10 +8,12 @@ import { Dropdown } from '../components/Dropdown';
 import { Table } from '../components/Table';
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
+import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Browser } from '@wailsio/runtime';
 
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
+type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
 
 interface DefineCommit {
   sha: string;
@@ -46,6 +48,16 @@ interface DefineResult {
   error?: string;
 }
 
+interface BuildResult {
+  operationName: string;
+  version: string;
+  neuronVersion: string;
+  logsUrl: string;
+  notes: string;
+  done: boolean;
+  error?: string;
+}
+
 export function DevelopPage() {
   const { state, setNeurons, updateWorkspace } = useWorkspace();
   const navigate = useNavigate();
@@ -64,6 +76,15 @@ export function DevelopPage() {
   const [progressMsg, setProgressMsg] = useState('Starting...');
   const [glassResult, setGlassResult] = useState<GlassResult | null>(null);
   const [glassLoading, setGlassLoading] = useState(false);
+
+  // Build pane state
+  const [buildNeuron, setBuildNeuron] = useState<string | null>(null);
+  const [buildStep, setBuildStep] = useState<BuildStep>('commits');
+  const [buildCommits, setBuildCommits] = useState<DefineCommit[]>([]);
+  const [buildCommitsLoading, setBuildCommitsLoading] = useState(false);
+  const [selectedBuildCommit, setSelectedBuildCommit] = useState<DefineCommit | null>(null);
+  const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
+  const [buildProgressMsg, setBuildProgressMsg] = useState('Starting...');
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -98,6 +119,7 @@ export function DevelopPage() {
   };
 
   const openDefinePane = useCallback(async (neuronName: string) => {
+    setBuildNeuron(null); // close build pane if open
     setDefineNeuron(neuronName);
     setDefineStep('commits');
     setCommits([]);
@@ -118,6 +140,61 @@ export function DevelopPage() {
       setCommitsLoading(false);
     }
   }, [state.organisation, state.product]);
+
+  const openBuildPane = useCallback(async (neuronName: string) => {
+    setDefineNeuron(null); // close define pane if open
+    setBuildNeuron(neuronName);
+    setBuildStep('commits');
+    setBuildCommits([]);
+    setSelectedBuildCommit(null);
+    setBuildResult(null);
+    setBuildProgressMsg('Loading commits...');
+    setBuildCommitsLoading(true);
+    const parsed = parseNeuron(neuronName);
+    try {
+      const result = await BuildService.GetBuildCommits(
+        state.organisation, state.product, parsed.id, parsed.version, 30
+      );
+      setBuildCommits(result as DefineCommit[]);
+    } catch {
+      setBuildCommits([]);
+    } finally {
+      setBuildCommitsLoading(false);
+    }
+  }, [state.organisation, state.product]);
+
+  const handleRunBuild = async () => {
+    if (!buildNeuron || !selectedBuildCommit) return;
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
+    setBuildStep('running');
+    setBuildProgressMsg('Starting Build...');
+    try {
+      const result = await BuildService.RunBuild(neuronResource, selectedBuildCommit.sha);
+      setBuildResult(result as BuildResult);
+    } catch (e: any) {
+      setBuildProgressMsg(`Failed: ${e?.message || e}`);
+    }
+  };
+
+  // Poll build operation
+  useEffect(() => {
+    if (!buildResult || buildResult.done || buildStep !== 'running') return;
+    const interval = setInterval(async () => {
+      try {
+        const result = await BuildService.PollBuildOperation(buildResult.operationName);
+        setBuildResult(result as BuildResult);
+        if (result?.done) {
+          clearInterval(interval);
+          setBuildStep('result');
+        } else if (result?.notes) {
+          setBuildProgressMsg(result.notes);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [buildResult?.operationName, buildResult?.done, buildStep]);
 
   const handleRunDefine = async () => {
     if (!defineNeuron || !selectedCommit) return;
@@ -214,6 +291,8 @@ export function DevelopPage() {
   const handleNeuronAction = (neuronName: string, stage: string) => {
     if (stage === 'define') {
       openDefinePane(neuronName);
+    } else if (stage === 'build') {
+      openBuildPane(neuronName);
     } else {
       updateWorkspace({ activeNeuronIds: [neuronName] });
       navigate(`/deployments?neuron=${encodeURIComponent(neuronName)}&stage=${stage}`);
@@ -225,6 +304,8 @@ export function DevelopPage() {
     if (!target) return;
     if (stage === 'define') {
       openDefinePane(target);
+    } else if (stage === 'build') {
+      openBuildPane(target);
     } else {
       updateWorkspace({ activeNeuronIds: selectedNeuronNames });
       navigate(`/deployments?neuron=${encodeURIComponent(target)}&stage=${stage}`);
@@ -605,6 +686,190 @@ export function DevelopPage() {
                   >
                     <Icon icon="solar:refresh-linear" className="text-sm" />
                     Run Define again
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Build pane */}
+        {buildNeuron && (
+          <div className="w-[380px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
+            {/* Pane header */}
+            <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
+              <div>
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">Build</p>
+                <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{buildNeuron}</p>
+              </div>
+              <button
+                onClick={() => setBuildNeuron(null)}
+                className="size-[28px] flex items-center justify-center rounded-[4px] hover:bg-[#2c2c2c] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+              >
+                <Icon icon="solar:close-linear" className="text-base" />
+              </button>
+            </div>
+
+            {/* Step: commits */}
+            {buildStep === 'commits' && (
+              <div className="flex-1 overflow-y-auto">
+                {buildCommitsLoading ? (
+                  <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
+                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                    <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+                  </div>
+                ) : buildCommits.length === 0 ? (
+                  <div className="px-[16px] py-[20px]">
+                    <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found in build repo.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {buildCommits.map((c) => (
+                      <button
+                        key={c.sha}
+                        onClick={() => { setSelectedBuildCommit(c); setBuildStep('confirm'); }}
+                        className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors"
+                      >
+                        <div className="flex items-center gap-[8px] mb-[3px]">
+                          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                            {c.sha.substring(0, 7)}
+                          </span>
+                          <span className="text-[10px] text-white leading-tight">{c.message}</span>
+                        </div>
+                        <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
+                          {c.author} · {formatTimestamp(c.timestamp)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step: confirm */}
+            {buildStep === 'confirm' && selectedBuildCommit && (
+              <div className="flex-1 overflow-y-auto px-[16px] py-[20px]">
+                <button
+                  onClick={() => setBuildStep('commits')}
+                  className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[20px] transition-colors"
+                >
+                  <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
+                  Back to commits
+                </button>
+
+                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px] mb-[20px]">
+                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                    Selected Commit
+                  </p>
+                  <p className="text-[11px] text-white leading-[1.5] mb-[10px]">{selectedBuildCommit.message}</p>
+                  <div className="flex items-center gap-[8px] mb-[4px]">
+                    <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                      {selectedBuildCommit.sha.substring(0, 12)}
+                    </span>
+                  </div>
+                  <p className="text-[9px] text-[rgba(255,255,255,0.4)]">
+                    {selectedBuildCommit.author} · {formatTimestamp(selectedBuildCommit.timestamp)}
+                  </p>
+                </div>
+
+                <Button
+                  variant="primary"
+                  className="w-full justify-center py-[10px]"
+                  onClick={handleRunBuild}
+                >
+                  Run Build
+                </Button>
+              </div>
+            )}
+
+            {/* Step: running */}
+            {buildStep === 'running' && (
+              <div className="flex-1 overflow-y-auto px-[16px] py-[24px]">
+                <div className="flex flex-col items-center gap-[16px]">
+                  <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
+                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-2xl animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[12px] font-bold text-white mb-[6px]">Running Build</p>
+                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.5] max-w-[280px] text-center">
+                      {buildProgressMsg}
+                    </p>
+                  </div>
+                  {buildResult?.version && (
+                    <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[6px] px-[12px] py-[6px]">
+                      <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)]">
+                        {buildResult.version}
+                      </span>
+                    </div>
+                  )}
+                  {buildResult?.logsUrl && (
+                    <button
+                      onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
+                      className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-[#f881a9] transition-colors"
+                    >
+                      <Icon icon="solar:document-text-linear" className="text-sm" />
+                      View Build Logs
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step: result */}
+            {buildStep === 'result' && (
+              <div className="flex-1 overflow-y-auto">
+                {buildResult?.error ? (
+                  <>
+                    <div className="px-[16px] py-[16px] border-b border-[#2c2c2c]">
+                      <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
+                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
+                      </div>
+                    </div>
+                    {buildResult.logsUrl && (
+                      <div className="px-[16px] py-[12px]">
+                        <button
+                          onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
+                          className="flex items-center gap-[6px] h-[32px] px-[10px] rounded-[6px] bg-[#2c2c2c] border border-[#3a3a3a] text-[10px] font-bold text-[rgba(255,255,255,0.7)] hover:text-white hover:border-[#f881a9] transition-colors"
+                        >
+                          <Icon icon="solar:document-text-linear" className="text-sm" />
+                          View Build Logs
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="px-[16px] py-[14px] border-b border-[#2c2c2c] bg-[rgba(52,199,89,0.05)]">
+                    <div className="flex items-center gap-[8px] mb-[6px]">
+                      <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-base" />
+                      <p className="text-[11px] font-bold text-white">Build Complete</p>
+                    </div>
+                    {(buildResult?.neuronVersion || buildResult?.version) && (
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] mb-[12px]">
+                        {buildResult.neuronVersion || buildResult.version}
+                      </p>
+                    )}
+                    {buildResult?.logsUrl ? (
+                      <button
+                        onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
+                        className="flex items-center gap-[6px] h-[32px] px-[10px] rounded-[6px] bg-[#2c2c2c] border border-[#3a3a3a] text-[10px] font-bold text-[rgba(255,255,255,0.7)] hover:text-white hover:border-[#f881a9] transition-colors"
+                      >
+                        <Icon icon="solar:document-text-linear" className="text-sm" />
+                        View Build Logs
+                      </button>
+                    ) : (
+                      <p className="text-[9px] text-[rgba(255,255,255,0.3)]">No logs URL returned.</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="px-[16px] py-[12px] border-t border-[#2c2c2c] mt-[8px]">
+                  <button
+                    onClick={() => openBuildPane(buildNeuron!)}
+                    className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                  >
+                    <Icon icon="solar:refresh-linear" className="text-sm" />
+                    Run Build again
                   </button>
                 </div>
               </div>

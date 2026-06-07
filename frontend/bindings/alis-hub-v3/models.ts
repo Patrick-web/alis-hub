@@ -680,6 +680,51 @@ export class ProductSummary {
 }
 
 /**
+ * RunBuildResult is returned to the frontend after initiating a Build.
+ */
+export class RunBuildResult {
+    "operationName": string;
+    "version": string;
+    "neuronVersion": string;
+    "logsUrl": string;
+    "notes": string;
+    "done": boolean;
+    "error"?: string;
+
+    /** Creates a new RunBuildResult instance. */
+    constructor($$source: Partial<RunBuildResult> = {}) {
+        if (!("operationName" in $$source)) {
+            this["operationName"] = "";
+        }
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("neuronVersion" in $$source)) {
+            this["neuronVersion"] = "";
+        }
+        if (!("logsUrl" in $$source)) {
+            this["logsUrl"] = "";
+        }
+        if (!("notes" in $$source)) {
+            this["notes"] = "";
+        }
+        if (!("done" in $$source)) {
+            this["done"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RunBuildResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): RunBuildResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new RunBuildResult($$parsedSource as Partial<RunBuildResult>);
+    }
+}
+
+/**
  * RunDefineResult is returned to the frontend after running a Define.
  */
 export class RunDefineResult {
