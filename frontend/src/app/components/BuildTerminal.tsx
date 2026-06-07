@@ -8,8 +8,14 @@ export interface BuildTerminalHandle {
   clear: () => void;
 }
 
-export const BuildTerminal = forwardRef<BuildTerminalHandle, { className?: string }>(
-  ({ className }, ref) => {
+interface BuildTerminalProps {
+  className?: string;
+  onInput?: (data: string) => void;
+  onResize?: (cols: number, rows: number) => void;
+}
+
+export const BuildTerminal = forwardRef<BuildTerminalHandle, BuildTerminalProps>(
+  ({ className, onInput, onResize }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const termRef = useRef<Terminal | null>(null);
     const fitRef = useRef<FitAddon | null>(null);
@@ -29,10 +35,10 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, { className?: strin
         fontFamily: '"JetBrains Mono", "Cascadia Code", Consolas, monospace',
         fontSize: 11,
         lineHeight: 1.4,
-        cursorBlink: false,
-        disableStdin: true,
+        cursorBlink: true,
+        disableStdin: !onInput,
         scrollback: 10000,
-        convertEol: true,
+        convertEol: false,
       });
 
       const fit = new FitAddon();
@@ -43,10 +49,23 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, { className?: strin
       termRef.current = term;
       fitRef.current = fit;
 
+      if (onInput) {
+        term.onData(onInput);
+      }
+
       const observer = new ResizeObserver(() => {
-        requestAnimationFrame(() => fitRef.current?.fit());
+        requestAnimationFrame(() => {
+          fitRef.current?.fit();
+          if (onResize && termRef.current) {
+            onResize(termRef.current.cols, termRef.current.rows);
+          }
+        });
       });
       observer.observe(containerRef.current);
+
+      if (onResize) {
+        term.onResize(({ cols, rows }) => onResize(cols, rows));
+      }
 
       return () => {
         observer.disconnect();
@@ -54,6 +73,9 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, { className?: strin
         termRef.current = null;
         fitRef.current = null;
       };
+    // onInput and onResize are callbacks — intentionally excluded to avoid
+    // re-mounting the terminal on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     useImperativeHandle(ref, () => ({
