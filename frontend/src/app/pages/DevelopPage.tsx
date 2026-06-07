@@ -1720,6 +1720,8 @@ export function DevelopPage() {
                 sessions={packageSessions}
                 onCloseSession={handleCloseSession}
                 onClose={() => setPackageSessions([])}
+                onInput={(runID, data) => PackageService.WritePackageInput(runID, data).catch(() => {})}
+                onResize={(runID, cols, rows) => PackageService.ResizePackageTerminal(runID, cols, rows).catch(() => {})}
               />
             </ResizablePanel>
           </>

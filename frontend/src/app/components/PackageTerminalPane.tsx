@@ -19,15 +19,15 @@ interface Props {
   sessions: TerminalSession[];
   onCloseSession: (runID: string) => void;
   onClose: () => void;
+  onInput: (runID: string, data: string) => void;
+  onResize: (runID: string, cols: number, rows: number) => void;
 }
 
-
 export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
-  ({ sessions, onCloseSession, onClose }, ref) => {
+  ({ sessions, onCloseSession, onClose, onInput, onResize }, ref) => {
     const [activeID, setActiveID] = useState<string>(() => sessions[0]?.runID ?? '');
     const termRefs = useRef<Map<string, BuildTerminalHandle>>(new Map());
 
-    // When sessions change, default-select the first if active is gone
     const effectiveActive = sessions.find(s => s.runID === activeID)
       ? activeID
       : (sessions[0]?.runID ?? '');
@@ -40,9 +40,7 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
     const statusIcon = (s: TerminalSession) => {
       if (s.error) return <Icon icon="solar:close-circle-bold" className="text-[10px] text-red-400" />;
       if (s.done) return <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400" />;
-      return (
-        <span className="inline-block w-[7px] h-[7px] rounded-full bg-[#f881a9] animate-pulse" />
-      );
+      return <span className="inline-block w-[7px] h-[7px] rounded-full bg-[#f881a9] animate-pulse" />;
     };
 
     return (
@@ -98,6 +96,8 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
                   if (handle) termRefs.current.set(s.runID, handle);
                   else termRefs.current.delete(s.runID);
                 }}
+                onInput={s.done ? undefined : (data) => onInput(s.runID, data)}
+                onResize={(cols, rows) => onResize(s.runID, cols, rows)}
               />
             </div>
           ))}

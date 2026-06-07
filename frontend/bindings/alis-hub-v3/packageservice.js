@@ -35,7 +35,7 @@ export function CheckVenvExists(org, product) {
 }
 
 /**
- * PollPackageRun returns new output since offset. Reuses the LocalBuildChunk type from buildservice.
+ * PollPackageRun returns new output since offset. Reuses LocalBuildChunk from buildservice.
  * @param {string} runID
  * @param {number} offset
  * @returns {$CancellablePromise<$models.LocalBuildChunk | null>}
@@ -62,8 +62,18 @@ export function PreparePackageScripts(org, product, neuron, version) {
 }
 
 /**
- * StartPackageScript launches a script in a goroutine and stores its state under runID.
- * The shell command is run via bash -c so it inherits PATH and env.
+ * ResizePackageTerminal updates the PTY window size, keeping line-wrapping correct.
+ * @param {string} runID
+ * @param {number} cols
+ * @param {number} rows
+ * @returns {$CancellablePromise<void>}
+ */
+export function ResizePackageTerminal(runID, cols, rows) {
+    return $Call.ByID(2164536571, runID, cols, rows);
+}
+
+/**
+ * StartPackageScript launches a command in a PTY so the terminal is fully interactive.
  * @param {string} runID
  * @param {string} command
  * @param {string} workDir
@@ -74,9 +84,8 @@ export function StartPackageScript(runID, command, workDir) {
 }
 
 /**
- * StartVenvSetup launches the Python venv creation command as a tracked process.
- * Mirrors the extension's Imt() — fires and does not block waiting for completion.
- * Command: python3 -m venv .venv && .venv/bin/python3 -m pip install keyring keyrings.google-artifactregistry-auth wheel && gcloud auth application-default login
+ * StartVenvSetup launches the Python venv creation command as a PTY process.
+ * Mirrors the extension's Imt() — fires without blocking.
  * @param {string} runID
  * @param {string} org
  * @param {string} product
@@ -84,6 +93,16 @@ export function StartPackageScript(runID, command, workDir) {
  */
 export function StartVenvSetup(runID, org, product) {
     return $Call.ByID(1646026243, runID, org, product);
+}
+
+/**
+ * WritePackageInput sends keystrokes to the PTY stdin of a running process.
+ * @param {string} runID
+ * @param {string} data
+ * @returns {$CancellablePromise<void>}
+ */
+export function WritePackageInput(runID, data) {
+    return $Call.ByID(2728173072, runID, data);
 }
 
 // Private type creation functions

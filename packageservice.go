@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/creack/pty"
 )
 
 // PackageService orchestrates the Manage Packages flow: scan → GeneratePackageScripts → run scripts.
@@ -24,14 +27,7 @@ type packageProcess struct {
 	done   bool
 	errMsg string
 	cancel context.CancelFunc
-}
-
-type packageProcessWriter struct{ p *packageProcess }
-
-func (w *packageProcessWriter) Write(b []byte) (int, error) {
-	w.p.mu.Lock()
-	defer w.p.mu.Unlock()
-	return w.p.buf.Write(b)
+	ptmx   *os.File // PTY master — nil once the process has exited
 }
 
 func NewPackageService() *PackageService {
@@ -68,7 +64,7 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 
 	buildDir := filepath.Join(home, "alis.build", org, "build", product, neuron, version)
 	productDir := filepath.Join(home, "alis.build", org, "build", product)
-	folderName := neuron + "-" + version // e.g. "asana-v1"
+	folderName := neuron + "-" + version
 
 	locations, names, err := scanBuildDirForLocations(buildDir, productDir, folderName)
 	if err != nil {
@@ -86,17 +82,15 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 	if err != nil {
 		return nil, err
 	}
-	// Populate Name from the scan's computed display name, matched by workDir.
 	for i := range scripts {
 		if n, ok := names[scripts[i].WorkDir]; ok {
 			scripts[i].Name = n
 		}
 	}
 
-	// Auth: write ~/.netrc, ~/.npmrc (and dart pub-tokens.json if needed).
 	hasDart := false
-	for _, s := range scripts {
-		if s.Lang == "dart" {
+	for _, sc := range scripts {
+		if sc.Lang == "dart" {
 			hasDart = true
 			break
 		}
@@ -126,7 +120,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 
 	seen := map[string]bool{}
 	var locations []PackageScriptLocation
-	names := map[string]string{} // workDir → display name
+	names := map[string]string{}
 	err := filepath.WalkDir(buildDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
@@ -157,8 +151,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 	return locations, names, err
 }
 
-// StartPackageScript launches a script in a goroutine and stores its state under runID.
-// The shell command is run via bash -c so it inherits PATH and env.
+// StartPackageScript launches a command in a PTY so the terminal is fully interactive.
 func (s *PackageService) StartPackageScript(runID, command, workDir string) error {
 	if _, loaded := s.processes.LoadOrStore(runID, nil); loaded {
 		return fmt.Errorf("run %s already exists", runID)
@@ -169,28 +162,103 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 	s.processes.Store(runID, p)
 
 	go func() {
-		w := &packageProcessWriter{p}
+		defer cancel()
+
 		shell := os.Getenv("SHELL")
 		if shell == "" {
 			shell = "/bin/bash"
 		}
-		cmd := exec.CommandContext(ctx, shell, "-l", "-c", command)
+		cmd := exec.Command(shell, "-l", "-c", command)
 		cmd.Dir = workDir
-		cmd.Stdout = w
-		cmd.Stderr = w
-		runErr := cmd.Run()
-		p.mu.Lock()
-		p.done = true
-		if runErr != nil && ctx.Err() == nil {
-			p.errMsg = runErr.Error()
+
+		ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 220})
+		if err != nil {
+			p.mu.Lock()
+			p.done = true
+			p.errMsg = err.Error()
+			p.mu.Unlock()
+			return
 		}
+
+		p.mu.Lock()
+		p.ptmx = ptmx
+		p.mu.Unlock()
+
+		// Kill process when context is cancelled (e.g. user closes the tab).
+		go func() {
+			<-ctx.Done()
+			ptmx.Close()
+			if cmd.Process != nil {
+				cmd.Process.Kill()
+			}
+		}()
+
+		// Drain PTY output into the buffer.
+		buf := make([]byte, 4096)
+		for {
+			n, err := ptmx.Read(buf)
+			if n > 0 {
+				p.mu.Lock()
+				p.buf.Write(buf[:n])
+				p.mu.Unlock()
+			}
+			if err != nil {
+				if err != io.EOF {
+					// EIO is normal when the slave side closes on process exit.
+					_ = err
+				}
+				break
+			}
+		}
+
+		cmd.Wait() // reap the process; ignore exit error (non-zero exit is normal)
+
+		p.mu.Lock()
+		p.ptmx = nil
+		p.done = true
 		p.mu.Unlock()
 	}()
 
 	return nil
 }
 
-// PollPackageRun returns new output since offset. Reuses the LocalBuildChunk type from buildservice.
+// WritePackageInput sends keystrokes to the PTY stdin of a running process.
+func (s *PackageService) WritePackageInput(runID, data string) error {
+	val, ok := s.processes.Load(runID)
+	if !ok {
+		return fmt.Errorf("unknown run %s", runID)
+	}
+	p := val.(*packageProcess)
+	p.mu.Lock()
+	ptmx := p.ptmx
+	p.mu.Unlock()
+	if ptmx == nil {
+		return nil // process already done; silently ignore
+	}
+	_, err := ptmx.Write([]byte(data))
+	return err
+}
+
+// ResizePackageTerminal updates the PTY window size, keeping line-wrapping correct.
+func (s *PackageService) ResizePackageTerminal(runID string, cols, rows int) error {
+	val, ok := s.processes.Load(runID)
+	if !ok {
+		return fmt.Errorf("unknown run %s", runID)
+	}
+	p := val.(*packageProcess)
+	p.mu.Lock()
+	ptmx := p.ptmx
+	p.mu.Unlock()
+	if ptmx == nil {
+		return nil
+	}
+	return pty.Setsize(ptmx, &pty.Winsize{
+		Rows: uint16(rows),
+		Cols: uint16(cols),
+	})
+}
+
+// PollPackageRun returns new output since offset. Reuses LocalBuildChunk from buildservice.
 func (s *PackageService) PollPackageRun(runID string, offset int) (*LocalBuildChunk, error) {
 	val, ok := s.processes.Load(runID)
 	if !ok {
@@ -207,13 +275,12 @@ func (s *PackageService) PollPackageRun(runID string, offset int) (*LocalBuildCh
 	if offset > len(all) {
 		offset = len(all)
 	}
-	chunk := &LocalBuildChunk{
+	return &LocalBuildChunk{
 		Content:    string(all[offset:]),
 		NextOffset: len(all),
 		Done:       done,
 		Error:      errMsg,
-	}
-	return chunk, nil
+	}, nil
 }
 
 // CancelPackageRun cancels a running script.
@@ -238,9 +305,8 @@ func (s *PackageService) CheckVenvExists(org, product string) bool {
 	return err == nil
 }
 
-// StartVenvSetup launches the Python venv creation command as a tracked process.
-// Mirrors the extension's Imt() — fires and does not block waiting for completion.
-// Command: python3 -m venv .venv && .venv/bin/python3 -m pip install keyring keyrings.google-artifactregistry-auth wheel && gcloud auth application-default login
+// StartVenvSetup launches the Python venv creation command as a PTY process.
+// Mirrors the extension's Imt() — fires without blocking.
 func (s *PackageService) StartVenvSetup(runID, org, product string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
