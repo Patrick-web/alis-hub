@@ -5,9 +5,13 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -1225,4 +1229,604 @@ func unpackDefineMetadata(op *dbdv1.Operation) *dbdv1.RunDefineMetadata {
 		}
 	}
 	return meta
+}
+
+// ── GeneratePackageScripts ────────────────────────────────────────────────────
+// alis.os.vscode.v2.VscodeService/GeneratePackageScripts
+
+// vscodeLanguage enum values for alis.os.vscode.v2.Language
+const (
+	vscodeLanguageGO     = 1
+	vscodeLanguageNODE   = 2
+	vscodeLanguagePYTHON = 3
+	vscodeLanguageDART   = 4
+)
+
+// vscodePlatform enum values for alis.os.vscode.v2.Platform
+const (
+	vscodePlatformWINDOWS = 1
+	vscodePlatformLINUX   = 2
+	vscodePlatformMACOS   = 3
+)
+
+// PackageScriptLocation is an input location for GeneratePackageScripts.
+type PackageScriptLocation struct {
+	WorkingDirectory string
+	Language         int
+	BuildDirectory   string
+}
+
+// PackageScript holds server-generated shell commands for one language folder.
+type PackageScript struct {
+	Name           string `json:"name"`   // display name: "asana-v1" or "asana-v1/proto"
+	Title          string `json:"title"`
+	WorkDir        string `json:"workDir"`
+	Lang           string `json:"lang"`
+	Install        string `json:"install"`
+	Upgrade        string `json:"upgrade"`
+	UpgradeDefined string `json:"upgradeDefined"`
+	Add            string `json:"add"`
+}
+
+// GeneratePackageScripts calls VscodeService/GeneratePackageScripts and returns
+// the shell commands for each language folder.
+func (c *AlisClient) GeneratePackageScripts(ctx context.Context, definition string, locations []PackageScriptLocation) ([]PackageScript, error) {
+	protoBytes := marshalGeneratePackageScriptsRequest(definition, locations)
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/GeneratePackageScripts", protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("GeneratePackageScripts: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("GeneratePackageScripts: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("GeneratePackageScripts: response too short (%d bytes)", len(body))
+	}
+	return parseGeneratePackageScriptsResponse(body[5:])
+}
+
+func marshalGeneratePackageScriptsRequest(definition string, locations []PackageScriptLocation) []byte {
+	var buf []byte
+
+	// field 1: definition
+	if definition != "" {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, definition)
+	}
+
+	// field 2: repeated Location
+	for _, loc := range locations {
+		var inner []byte
+		if loc.WorkingDirectory != "" {
+			inner = protowire.AppendTag(inner, 1, protowire.BytesType)
+			inner = protowire.AppendString(inner, loc.WorkingDirectory)
+		}
+		if loc.Language != 0 {
+			inner = protowire.AppendTag(inner, 2, protowire.VarintType)
+			inner = protowire.AppendVarint(inner, uint64(loc.Language))
+		}
+		if loc.BuildDirectory != "" {
+			inner = protowire.AppendTag(inner, 3, protowire.BytesType)
+			inner = protowire.AppendString(inner, loc.BuildDirectory)
+		}
+		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+		buf = protowire.AppendBytes(buf, inner)
+	}
+
+	// field 3: excludeGcloudAuth = true
+	buf = protowire.AppendTag(buf, 3, protowire.VarintType)
+	buf = protowire.AppendVarint(buf, 1)
+
+	// field 4: targetPlatform
+	if p := currentVscodePlatform(); p != 0 {
+		buf = protowire.AppendTag(buf, 4, protowire.VarintType)
+		buf = protowire.AppendVarint(buf, uint64(p))
+	}
+
+	return buf
+}
+
+func currentVscodePlatform() int {
+	switch runtime.GOOS {
+	case "windows":
+		return vscodePlatformWINDOWS
+	case "linux":
+		return vscodePlatformLINUX
+	default:
+		return vscodePlatformMACOS
+	}
+}
+
+func parseGeneratePackageScriptsResponse(data []byte) ([]PackageScript, error) {
+	langByField := map[protowire.Number]string{1: "go", 2: "node", 3: "python", 4: "dart"}
+	var scripts []PackageScript
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return scripts, nil
+			}
+			if langStr, ok := langByField[num]; ok {
+				scripts = append(scripts, parsePackageScript(b, langStr))
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return scripts, nil
+			}
+			data = data[m:]
+		}
+	}
+	return scripts, nil
+}
+
+func parsePackageScript(data []byte, langStr string) PackageScript {
+	s := PackageScript{Lang: langStr}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return s
+			}
+			switch num {
+			case 1:
+				s.Title = string(b)
+			case 2:
+				s.WorkDir = string(b)
+			case 4:
+				s.Install = parseStringValue(b)
+			case 5:
+				s.Upgrade = parseStringValue(b)
+			case 6:
+				s.UpgradeDefined = parseStringValue(b)
+			case 7:
+				s.Add = parseStringValue(b)
+			}
+			data = data[m:]
+		case protowire.VarintType:
+			_, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return s
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return s
+			}
+			data = data[m:]
+		}
+	}
+	return s
+}
+
+// parseStringValue unwraps a google.protobuf.StringValue (field 1 = string).
+func parseStringValue(data []byte) string {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType && num == 1 {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			return string(b)
+		}
+		m := protowire.ConsumeFieldValue(num, typ, data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+	}
+	return ""
+}
+
+// ── Package Registry Auth ─────────────────────────────────────────────────────
+// Mirrors the extension's GT() + sre() calls that run before package scripts.
+
+// gcpRegions is the full list used by the extension to write .netrc entries.
+var gcpRegions = []string{
+	"northamerica-northeast1", "northamerica-northeast2", "northamerica-south1",
+	"us-central1", "us-east1", "us-east4", "us-east5", "us-south1",
+	"us-west1", "us-west2", "us-west3", "us-west4",
+	"southamerica-east1", "southamerica-west1",
+	"europe-central2", "europe-north1", "europe-north2", "europe-southwest1",
+	"europe-west1", "europe-west2", "europe-west3", "europe-west4",
+	"europe-west6", "europe-west8", "europe-west9", "europe-west10", "europe-west12",
+	"me-central1", "me-central2", "me-west1",
+	"asia-east1", "asia-east2",
+	"asia-northeast1", "asia-northeast2", "asia-northeast3",
+	"asia-south1", "asia-south2",
+	"asia-southeast1", "asia-southeast2",
+	"australia-southeast1", "australia-southeast2",
+	"africa-south1",
+}
+
+type dartPubHost struct {
+	Host  string
+	Token string
+}
+
+// AuthSetupPackages authenticates against Google Artifact Registry and writes
+// ~/.netrc, ~/.npmrc (and optionally dart pub-tokens.json) before running scripts.
+func (c *AlisClient) AuthSetupPackages(ctx context.Context, org, product string, hasDart bool) error {
+	token, err := c.authArtifactRegistry(ctx, org, product)
+	if err != nil {
+		return fmt.Errorf("auth artifact registry: %w", err)
+	}
+	if err := writeNetrc(token); err != nil {
+		return fmt.Errorf("write .netrc: %w", err)
+	}
+	npmHosts, err := c.retrieveProductNpmHosts(ctx, org, product)
+	if err != nil {
+		return fmt.Errorf("retrieve npm hosts: %w", err)
+	}
+	if len(npmHosts) > 0 {
+		if err := writeNpmrc(npmHosts, token); err != nil {
+			return fmt.Errorf("write .npmrc: %w", err)
+		}
+	}
+	if hasDart {
+		pubHosts, err := c.generateLanguagePackageConfigsDart(ctx, org, product)
+		if err != nil {
+			return fmt.Errorf("dart package configs: %w", err)
+		}
+		if len(pubHosts) > 0 {
+			if err := writeDartPubTokens(pubHosts); err != nil {
+				return fmt.Errorf("write dart pub tokens: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// authArtifactRegistry calls alis.os.gcloud.v1.AuthService/AuthArtifactRegistry.
+// Request field 1 = product resource; response field 1 = access token.
+func (c *AlisClient) authArtifactRegistry(ctx context.Context, org, product string) (string, error) {
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.gcloud.v1.AuthService/AuthArtifactRegistry", req)
+	if err != nil {
+		return "", err
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("response too short")
+	}
+	data := body[5:]
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		if typ == protowire.BytesType && num == 1 {
+			return string(b), nil
+		}
+		data = data[m:]
+	}
+	return "", fmt.Errorf("accessToken not in response")
+}
+
+// retrieveProductNpmHosts calls VscodeService/RetrieveProductNpmHosts.
+// Request field 1 = product resource; response field 1 = repeated string (hosts).
+func (c *AlisClient) retrieveProductNpmHosts(ctx context.Context, org, product string) ([]string, error) {
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/RetrieveProductNpmHosts", req)
+	if err != nil {
+		return nil, err
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, nil
+	}
+	data := body[5:]
+	var hosts []string
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		if num == 1 {
+			hosts = append(hosts, string(b))
+		}
+		data = data[m:]
+	}
+	return hosts, nil
+}
+
+// generateLanguagePackageConfigsDart calls VscodeService/GenerateLanguagePackageConfigs
+// and returns the dart pub host list.
+// Request field 1 = definition; response field 3 = DartConfig (field 1 = repeated PubHost).
+func (c *AlisClient) generateLanguagePackageConfigsDart(ctx context.Context, org, product string) ([]dartPubHost, error) {
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendString(req, fmt.Sprintf("definitions/%s.%s", org, product))
+
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/GenerateLanguagePackageConfigs", req)
+	if err != nil {
+		return nil, err
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, nil
+	}
+	data := body[5:]
+	var hosts []dartPubHost
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		if num == 3 { // DartConfig
+			hosts = parseDartConfig(b)
+		}
+		data = data[m:]
+	}
+	return hosts, nil
+}
+
+func parseDartConfig(data []byte) []dartPubHost {
+	var hosts []dartPubHost
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		if num == 1 { // repeated PubHost
+			hosts = append(hosts, parseDartPubHostMsg(b))
+		}
+		data = data[m:]
+	}
+	return hosts
+}
+
+func parseDartPubHostMsg(data []byte) dartPubHost {
+	var h dartPubHost
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		switch num {
+		case 1:
+			h.Host = string(b)
+		case 2:
+			h.Token = string(b)
+		}
+		data = data[m:]
+	}
+	return h
+}
+
+// writeNetrc writes oauth2 credentials for all GCP regions to ~/.netrc.
+// Existing pkg.dev entries are replaced; all other entries are preserved.
+func writeNetrc(token string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	netrcPath := filepath.Join(home, ".netrc")
+
+	existing := ""
+	if b, err := os.ReadFile(netrcPath); err == nil {
+		existing = string(b)
+	}
+
+	// Keep lines that don't reference *.pkg.dev hosts.
+	var kept []string
+	for _, line := range strings.Split(existing, "\n") {
+		if strings.Contains(line, ".pkg.dev") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+
+	var buf strings.Builder
+	trimmed := strings.TrimRight(strings.Join(kept, "\n"), "\n ")
+	if trimmed != "" {
+		buf.WriteString(trimmed + "\n")
+	}
+	for _, region := range gcpRegions {
+		fmt.Fprintf(&buf, "machine %s-docker.pkg.dev login oauth2accesstoken password %s\n", region, token)
+		fmt.Fprintf(&buf, "machine %s-go.pkg.dev login oauth2accesstoken password %s\n", region, token)
+	}
+	return os.WriteFile(netrcPath, []byte(buf.String()), 0600)
+}
+
+// writeNpmrc writes _authToken entries for each npm host to ~/.npmrc.
+// Existing entries for those hosts are replaced.
+func writeNpmrc(hosts []string, token string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	npmrcPath := filepath.Join(home, ".npmrc")
+
+	existing := ""
+	if b, err := os.ReadFile(npmrcPath); err == nil {
+		existing = string(b)
+	}
+
+	hostSet := make(map[string]bool, len(hosts))
+	for _, h := range hosts {
+		hostSet[h] = true
+	}
+
+	var kept []string
+	for _, line := range strings.Split(existing, "\n") {
+		trimmed := strings.TrimSpace(line)
+		isAuthLine := false
+		for _, h := range hosts {
+			if strings.HasPrefix(trimmed, "//"+h+":_authToken=") {
+				isAuthLine = true
+				break
+			}
+		}
+		if !isAuthLine {
+			kept = append(kept, line)
+		}
+	}
+
+	var buf strings.Builder
+	base := strings.TrimRight(strings.Join(kept, "\n"), "\n ")
+	if base != "" {
+		buf.WriteString(base + "\n")
+	}
+	for _, h := range hosts {
+		fmt.Fprintf(&buf, "//%s:_authToken=%s\n", h, token)
+	}
+	return os.WriteFile(npmrcPath, []byte(buf.String()), 0600)
+}
+
+// dartPubTokensPath returns the platform-specific path for dart pub-tokens.json,
+// matching the extension's GetDartPubTokensPath logic.
+func dartPubTokensPath() string {
+	home, _ := os.UserHomeDir()
+	switch runtime.GOOS {
+	case "windows":
+		if appdata := os.Getenv("APPDATA"); appdata != "" {
+			return filepath.Join(appdata, "dart", "pub-tokens.json")
+		}
+	case "darwin":
+		return filepath.Join(home, "Library", "Application Support", "dart", "pub-tokens.json")
+	default:
+		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+			return filepath.Join(xdg, "dart", "pub-tokens.json")
+		}
+		return filepath.Join(home, ".config", "dart", "pub-tokens.json")
+	}
+	return filepath.Join(home, ".config", "dart", "pub-tokens.json")
+}
+
+// writeDartPubTokens updates the dart pub-tokens.json file with new host tokens.
+func writeDartPubTokens(hosts []dartPubHost) error {
+	path := dartPubTokensPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+
+	type pubEntry struct {
+		URL   string `json:"url"`
+		Token string `json:"token"`
+	}
+	type pubTokens struct {
+		Version int        `json:"version"`
+		Hosted  []pubEntry `json:"hosted"`
+	}
+
+	var tokens pubTokens
+	if b, err := os.ReadFile(path); err == nil {
+		_ = json.Unmarshal(b, &tokens)
+	}
+	if tokens.Version == 0 {
+		tokens.Version = 1
+	}
+	if tokens.Hosted == nil {
+		tokens.Hosted = []pubEntry{}
+	}
+
+	for _, h := range hosts {
+		updated := false
+		for i := range tokens.Hosted {
+			if tokens.Hosted[i].URL == h.Host {
+				tokens.Hosted[i].Token = h.Token
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			tokens.Hosted = append(tokens.Hosted, pubEntry{URL: h.Host, Token: h.Token})
+		}
+	}
+
+	b, err := json.Marshal(tokens)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0600)
 }

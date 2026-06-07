@@ -21,6 +21,7 @@ func main() {
 			application.NewService(NewBuildService()),
 			application.NewService(NewDeployService()),
 			application.NewService(NewProductService()),
+			application.NewService(NewPackageService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
