@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -318,9 +319,12 @@ type BuildLogsResult struct {
 	NextOffset int64  `json:"nextOffset"`
 }
 
+var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
+
 // extractBuildLogText pulls the plain-text log out of the alisproxy HTML page.
-// The alisproxy embeds log output in <span class="text-sm"> inside #rightPanel,
-// using <br> for line breaks and standard HTML entities for special chars.
+// Both build and deploy pages embed logs in <span class="text-sm"> inside #rightPanel.
+// Build logs contain only text nodes; deploy logs contain nested <span style="..."> tags.
+// We find the outer span's content using </span></div> as the end marker, then strip inner tags.
 func extractBuildLogText(pageHTML string) string {
 	const marker = `<span class="text-sm">`
 	start := strings.Index(pageHTML, marker)
@@ -328,14 +332,21 @@ func extractBuildLogText(pageHTML string) string {
 		return ""
 	}
 	start += len(marker)
-	end := strings.Index(pageHTML[start:], "</span>")
+	// Deploy logs: outer span closes just before the rightPanel </div>.
+	// Use </span></div> to skip nested spans.
+	end := strings.Index(pageHTML[start:], "</span></div>")
 	if end == -1 {
-		return ""
+		// Fallback for build logs with no nesting.
+		end = strings.Index(pageHTML[start:], "</span>")
+		if end == -1 {
+			return ""
+		}
 	}
 	text := pageHTML[start : start+end]
 	text = strings.ReplaceAll(text, "<br>", "\n")
 	text = strings.ReplaceAll(text, "<br/>", "\n")
 	text = strings.ReplaceAll(text, "<br />", "\n")
+	text = htmlTagRe.ReplaceAllString(text, "")
 	return htmlpkg.UnescapeString(text)
 }
 
