@@ -1,0 +1,203 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"time"
+
+	dbdv1 "alis-hub-v3/dbdv1"
+)
+
+// DeployService is a Wails-bound service that orchestrates the Deploy flow.
+type DeployService struct {
+	alisClient *AlisClient
+}
+
+func NewDeployService() *DeployService {
+	return &DeployService{}
+}
+
+func (s *DeployService) initClient() error {
+	if s.alisClient != nil {
+		return nil
+	}
+	log.Println("[deploy] initialising Alis gRPC client")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	client, err := NewAlisClient(ctx)
+	if err != nil {
+		return fmt.Errorf("connecting to Alis backend: %w", err)
+	}
+	s.alisClient = client
+	log.Println("[deploy] gRPC client ready")
+	return nil
+}
+
+// RunDeployResult is returned to the frontend after initiating a Deploy.
+type RunDeployResult struct {
+	OperationName string        `json:"operationName"`
+	Version       string        `json:"version"`
+	Deployments   []*DeployItem `json:"deployments"`
+	Notes         string        `json:"notes"`
+	Done          bool          `json:"done"`
+	Error         string        `json:"error,omitempty"`
+}
+
+// DeployItem is a single deployment entry returned from the backend.
+type DeployItem struct {
+	LogsURL string `json:"logsUrl"`
+}
+
+// NeuronVersionSummary is a built/retagged neuron version returned to the frontend.
+type NeuronVersionSummary struct {
+	Version    string `json:"version"`
+	CreateTime int64  `json:"createTime"` // unix seconds
+}
+
+// ListNeuronVersions returns built/retagged versions for a neuron, newest first.
+// neuron is the full neuron resource name e.g. "organisations/x/products/y/neurons/bff-v1".
+func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSummary, error) {
+	if err := s.initClient(); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	items, err := s.alisClient.ListNeuronVersions(ctx, neuron)
+	if err != nil {
+		log.Printf("[deploy] ListNeuronVersions error: %v", err)
+		return nil, fmt.Errorf("ListNeuronVersions: %w", err)
+	}
+
+	var out []*NeuronVersionSummary
+	for _, item := range items {
+		// state: BUILT=1, RETAGGED=2
+		if item.State == 1 || item.State == 2 {
+			out = append(out, &NeuronVersionSummary{
+				Version:    item.Version,
+				CreateTime: item.CreateTime,
+			})
+		}
+	}
+	// Already ordered newest-first by the server, but reverse if needed.
+	log.Printf("[deploy] ListNeuronVersions: %d built/retagged versions for %s", len(out), neuron)
+	return out, nil
+}
+
+// RunDeploy starts a Deploy operation on the Alis backend.
+// environments is a list of environment resource names (e.g. ["organisations/x/products/y/environments/dev"]).
+// neuron is the full neuron resource name. version is the neuron version to deploy.
+// planOnly runs terraform plan only; beta allows beta-state neurons to be deployed.
+func (s *DeployService) RunDeploy(neuron, version string, environments []string, planOnly, beta bool) (*RunDeployResult, error) {
+	if err := s.initClient(); err != nil {
+		return nil, err
+	}
+
+	log.Printf("[deploy] RunDeploy: neuron=%s version=%s envs=%v planOnly=%v beta=%v", neuron, version, environments, planOnly, beta)
+
+	req := &dbdv1.RunDeployRequest{
+		Neuron:       neuron,
+		Version:      version,
+		Environments: environments,
+		PlanOnly:     planOnly,
+		Beta:         beta,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	op, err := s.alisClient.RunDeploy(ctx, req)
+	if err != nil {
+		log.Printf("[deploy] RunDeploy: gRPC error: %v", err)
+		return nil, fmt.Errorf("RunDeploy: %w", err)
+	}
+
+	log.Printf("[deploy] RunDeploy: operation started name=%s done=%v", op.Name, op.Done)
+
+	result := &RunDeployResult{
+		OperationName: op.Name,
+		Done:          op.Done,
+	}
+
+	if e, ok := op.Result.(*dbdv1.OperationError); ok {
+		log.Printf("[deploy] RunDeploy: operation returned error immediately: %s", e.Message)
+		result.Error = e.Message
+	}
+
+	return result, nil
+}
+
+// PollDeployOperation checks the status of a running Deploy operation.
+func (s *DeployService) PollDeployOperation(name string) (*RunDeployResult, error) {
+	if s.alisClient == nil {
+		return nil, fmt.Errorf("not connected to Alis backend")
+	}
+
+	log.Printf("[deploy] PollDeployOperation: polling %s", name)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	op, err := s.alisClient.GetOperation(ctx, name)
+	if err != nil {
+		log.Printf("[deploy] PollDeployOperation: GetOperation error: %v", err)
+		return nil, fmt.Errorf("poll operation: %w", err)
+	}
+
+	log.Printf("[deploy] PollDeployOperation: done=%v", op.Done)
+
+	result := &RunDeployResult{
+		OperationName: op.Name,
+		Done:          op.Done,
+	}
+
+	meta := unpackDeployMetadata(op)
+	if meta != nil {
+		log.Printf("[deploy] PollDeployOperation: metadata version=%q notes=%q deployments=%d", meta.Version, meta.Notes, len(meta.Deployments))
+		result.Version = meta.Version
+		result.Notes = meta.Notes
+		for _, d := range meta.Deployments {
+			result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})
+		}
+	} else {
+		log.Printf("[deploy] PollDeployOperation: no metadata in operation")
+	}
+
+	if e, ok := op.Result.(*dbdv1.OperationError); ok {
+		log.Printf("[deploy] PollDeployOperation: operation failed: code=%d message=%s", e.Code, e.Message)
+		result.Error = e.Message
+	}
+
+	return result, nil
+}
+
+// FetchDeployLogs fetches log output from a deploy logs URL.
+// Pass 0 as textOffset on the first call; pass the returned NextOffset on subsequent calls.
+func (s *DeployService) FetchDeployLogs(logsUrl string, textOffset int64) (*BuildLogsResult, error) {
+	if s.alisClient == nil {
+		return nil, fmt.Errorf("not connected to Alis backend")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, _, err := s.alisClient.FetchURL(ctx, logsUrl, 0)
+	if err != nil {
+		return nil, fmt.Errorf("fetch deploy logs: %w", err)
+	}
+
+	text := extractBuildLogText(string(body))
+	newContent := ""
+	nextOffset := textOffset
+	if int64(len(text)) > textOffset {
+		newContent = text[textOffset:]
+		nextOffset = int64(len(text))
+	}
+
+	log.Printf("[deploy] FetchDeployLogs: textLen=%d offset=%d new=%d", len(text), textOffset, len(newContent))
+	return &BuildLogsResult{
+		Content:    newContent,
+		NextOffset: nextOffset,
+	}, nil
+}

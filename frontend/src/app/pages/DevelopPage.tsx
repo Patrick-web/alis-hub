@@ -9,6 +9,7 @@ import { Table } from '../components/Table';
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
+import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
@@ -16,6 +17,13 @@ import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerm
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
 type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
 type BuildMode = 'cloud' | 'local' | 'deploy';
+type DeployStep = 'loading' | 'confirm' | 'running' | 'result';
+
+interface DeployEnv {
+  name: string;
+  displayName: string;
+  currentVersion: string; // version currently deployed in this env for this neuron
+}
 
 interface DefineCommit {
   sha: string;
@@ -61,6 +69,14 @@ interface BuildResult {
   stub?: boolean;
 }
 
+function formatRelativeTime(unixSeconds: number): string {
+  const diff = Math.floor(Date.now() / 1000) - unixSeconds;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
 export function DevelopPage() {
   const { state, setNeurons, updateWorkspace } = useWorkspace();
   const navigate = useNavigate();
@@ -95,6 +111,23 @@ export function DevelopPage() {
   const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
   const [localBuildId, setLocalBuildId] = useState<string | null>(null);
 
+  // Deploy pane state
+  const [deployNeuron, setDeployNeuron] = useState<string | null>(null);
+  const [deployStep, setDeployStep] = useState<DeployStep>('loading');
+  const [deployEnvs, setDeployEnvs] = useState<DeployEnv[]>([]);
+  const [selectedDeployEnvs, setSelectedDeployEnvs] = useState<string[]>([]);
+  const [deployVersions, setDeployVersions] = useState<{ version: string; createTime: number }[]>([]);
+  const [deployVersion, setDeployVersion] = useState('');
+  const [deployPlanOnly, setDeployPlanOnly] = useState(false);
+  const [deployBeta, setDeployBeta] = useState(false);
+  const [deployResult, setDeployResult] = useState<{
+    operationName: string; version: string; deployments: { logsUrl: string }[];
+    notes: string; done: boolean; error?: string;
+  } | null>(null);
+  const [deployProgressMsg, setDeployProgressMsg] = useState('Starting...');
+  const deployTermRef = useRef<BuildTerminalHandle>(null);
+  const deployLogOffsetRef = useRef<number>(0);
+
   useEffect(() => {
     if (!state.organisation || !state.product) return;
     const load = async () => {
@@ -128,7 +161,8 @@ export function DevelopPage() {
   };
 
   const openDefinePane = useCallback(async (neuronName: string) => {
-    setBuildNeuron(null); // close build pane if open
+    setBuildNeuron(null);
+    setDeployNeuron(null);
     setDefineNeuron(neuronName);
     setDefineStep('commits');
     setCommits([]);
@@ -152,6 +186,7 @@ export function DevelopPage() {
 
   const openBuildPane = useCallback(async (neuronName: string) => {
     setDefineNeuron(null);
+    setDeployNeuron(null);
     setBuildNeuron(neuronName);
     setBuildStep('commits');
     setBuildCommits([]);
@@ -238,6 +273,105 @@ export function DevelopPage() {
       setBuildCommitsLoading(false);
     }
   }, [buildNeuron, state.organisation, state.product]);
+
+  const openDeployPane = useCallback(async (neuronName: string) => {
+    setDefineNeuron(null);
+    setBuildNeuron(null);
+    setDeployNeuron(neuronName);
+    setDeployStep('loading');
+    setDeployEnvs([]);
+    setDeployVersions([]);
+    setSelectedDeployEnvs([]);
+    setDeployVersion('');
+    setDeployResult(null);
+    deployLogOffsetRef.current = 0;
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${neuronName}`;
+    try {
+      const [overview, versions] = await Promise.all([
+        ProductService.GetServicesOverview(state.organisation, state.product),
+        DeployService.ListNeuronVersions(neuronResource),
+      ]);
+      // Version list (already sorted newest-first by server)
+      const builtVersions = (versions ?? []).filter(v => v !== null).map(v => ({
+        version: v!.version,
+        createTime: v!.createTime,
+      }));
+      setDeployVersions(builtVersions);
+      // Pre-select the latest version
+      if (builtVersions.length > 0) setDeployVersion(builtVersions[0].version);
+      // Build enriched environment list with current deployment status per env
+      const envs: DeployEnv[] = (overview?.environments ?? []).map(env => {
+        const dep = env.deployments?.find(d => d.neuronId === neuronName);
+        return { name: env.name, displayName: env.displayName, currentVersion: dep?.version ?? '' };
+      });
+      setDeployEnvs(envs);
+    } catch {
+      setDeployEnvs([]);
+    } finally {
+      setDeployStep('confirm');
+    }
+  }, [state.organisation, state.product]);
+
+  const handleRunDeploy = async () => {
+    if (!deployNeuron || selectedDeployEnvs.length === 0 || !deployVersion) return;
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${deployNeuron}`;
+    setDeployStep('running');
+    setDeployProgressMsg('Starting Deploy...');
+    deployTermRef.current?.clear();
+    deployLogOffsetRef.current = 0;
+    try {
+      const result = await DeployService.RunDeploy(neuronResource, deployVersion, selectedDeployEnvs, deployPlanOnly, deployBeta);
+      setDeployResult(result as any);
+    } catch (e: any) {
+      setDeployProgressMsg(`Failed: ${e?.message || e}`);
+      setDeployStep('result');
+      setDeployResult({ operationName: '', version: '', deployments: [], notes: '', done: true, error: e?.message || 'Deploy failed' });
+    }
+  };
+
+  // Poll deploy operation
+  useEffect(() => {
+    if (!deployResult || deployResult.done || deployStep !== 'running') return;
+    const interval = setInterval(async () => {
+      try {
+        const result = await DeployService.PollDeployOperation(deployResult.operationName);
+        setDeployResult(result as any);
+        if (result?.done) {
+          clearInterval(interval);
+          setDeployStep('result');
+        } else if (result?.notes) {
+          setDeployProgressMsg(result.notes);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [deployResult?.operationName, deployResult?.done, deployStep]);
+
+  // Stream deploy logs into the terminal
+  useEffect(() => {
+    const logsUrl = deployResult?.deployments?.[0]?.logsUrl;
+    if (!logsUrl) return;
+
+    const fetchLogs = async () => {
+      try {
+        const chunk = await DeployService.FetchDeployLogs(logsUrl, deployLogOffsetRef.current);
+        if (chunk?.content) {
+          deployTermRef.current?.write(chunk.content);
+          deployLogOffsetRef.current = chunk.nextOffset;
+        }
+      } catch {}
+    };
+
+    if (deployResult?.done) {
+      fetchLogs();
+      return;
+    }
+
+    const interval = setInterval(fetchLogs, 3000);
+    return () => clearInterval(interval);
+  }, [deployResult?.deployments?.[0]?.logsUrl, deployResult?.done]);
 
   // Poll build operation
   useEffect(() => {
@@ -412,6 +546,8 @@ export function DevelopPage() {
       openDefinePane(neuronName);
     } else if (stage === 'build') {
       openBuildPane(neuronName);
+    } else if (stage === 'deploy') {
+      openDeployPane(neuronName);
     } else {
       updateWorkspace({ activeNeuronIds: [neuronName] });
       navigate(`/deployments?neuron=${encodeURIComponent(neuronName)}&stage=${stage}`);
@@ -425,6 +561,8 @@ export function DevelopPage() {
       openDefinePane(target);
     } else if (stage === 'build') {
       openBuildPane(target);
+    } else if (stage === 'deploy') {
+      openDeployPane(target);
     } else {
       updateWorkspace({ activeNeuronIds: selectedNeuronNames });
       navigate(`/deployments?neuron=${encodeURIComponent(target)}&stage=${stage}`);
@@ -812,6 +950,270 @@ export function DevelopPage() {
           </div>
         )}
 
+        {/* Deploy pane */}
+        {deployNeuron && (
+          <div className="w-[400px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
+            {/* Pane header */}
+            <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
+              <div>
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">Deploy</p>
+                <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{deployNeuron}</p>
+              </div>
+              <button
+                onClick={() => setDeployNeuron(null)}
+                className="size-[28px] flex items-center justify-center rounded-[4px] hover:bg-[#2c2c2c] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+              >
+                <Icon icon="solar:close-linear" className="text-base" />
+              </button>
+            </div>
+
+            {/* Step: loading */}
+            {deployStep === 'loading' && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-[12px]">
+                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Loading deployment info...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step: confirm — version picker + environment selection + options */}
+            {deployStep === 'confirm' && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto">
+
+                  {/* Version section */}
+                  <div className="border-b border-[#2c2c2c]">
+                    <div className="px-[16px] pt-[14px] pb-[8px]">
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                        Build Version
+                      </p>
+                    </div>
+                    {deployVersions.length === 0 ? (
+                      <div className="px-[16px] pb-[12px]">
+                        <p className="text-[11px] text-[rgba(255,255,255,0.3)]">No built versions found.</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-[160px] overflow-y-auto">
+                        {deployVersions.map((v) => {
+                          const selected = deployVersion === v.version;
+                          const ago = v.createTime > 0
+                            ? formatRelativeTime(v.createTime)
+                            : '';
+                          return (
+                            <button
+                              key={v.version}
+                              onClick={() => setDeployVersion(v.version)}
+                              className={`w-full text-left px-[16px] py-[9px] border-b border-[#1e1e1e] flex items-center gap-[10px] transition-colors ${
+                                selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                              }`}
+                            >
+                              <span className={`size-[14px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                selected ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                              }`}>
+                                {selected && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                              </span>
+                              <span className={`text-[12px] font-bold font-['JetBrains_Mono',sans-serif] ${selected ? 'text-[#f881a9]' : 'text-white'}`}>
+                                {v.version}
+                              </span>
+                              {ago && (
+                                <span className="ml-auto text-[9px] text-[rgba(255,255,255,0.3)] shrink-0">{ago}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Environments section */}
+                  <div className="px-[16px] pt-[12px] pb-[4px]">
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                      Target Environments
+                    </p>
+                  </div>
+                  {deployEnvs.length === 0 ? (
+                    <div className="px-[16px] pb-[12px]">
+                      <p className="text-[11px] text-[rgba(255,255,255,0.3)]">No environments found.</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col">
+                      {deployEnvs.map((env) => {
+                        const selected = selectedDeployEnvs.includes(env.name);
+                        const isCurrent = env.currentVersion === deployVersion;
+                        const hasDeployment = !!env.currentVersion;
+                        return (
+                          <button
+                            key={env.name}
+                            onClick={() => setSelectedDeployEnvs(prev =>
+                              selected ? prev.filter(e => e !== env.name) : [...prev, env.name]
+                            )}
+                            className={`text-left px-[16px] py-[11px] border-b border-[#232323] transition-colors flex items-center gap-[10px] ${
+                              selected ? 'bg-[rgba(248,129,169,0.05)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                            }`}
+                          >
+                            {/* Checkbox */}
+                            <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
+                              selected ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                            }`}>
+                              {selected && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                            </span>
+
+                            {/* Env name */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-medium text-white leading-tight">
+                                {env.displayName || env.name}
+                              </p>
+                            </div>
+
+                            {/* Current deployment status */}
+                            {hasDeployment ? (
+                              isCurrent ? (
+                                <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759] shrink-0">
+                                  {env.currentVersion} ✓
+                                </span>
+                              ) : (
+                                <div className="flex items-center gap-[4px] shrink-0">
+                                  <span className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] line-through">
+                                    {env.currentVersion}
+                                  </span>
+                                  <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.25)] text-[10px]" />
+                                  <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                                    {deployVersion || '?'}
+                                  </span>
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-[9px] text-[rgba(255,255,255,0.25)] shrink-0">not deployed</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Options */}
+                  <div className="px-[16px] pt-[14px] pb-[16px] border-t border-[#2c2c2c] mt-[4px]">
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                      Options
+                    </p>
+                    <div className="flex flex-col gap-[8px]">
+                      <label className="flex items-center gap-[8px] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deployPlanOnly}
+                          onChange={(e) => setDeployPlanOnly(e.target.checked)}
+                          className="accent-[#f881a9]"
+                        />
+                        <div>
+                          <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Plan only</span>
+                          <span className="text-[9px] text-[rgba(255,255,255,0.3)] ml-[6px]">terraform plan, no apply</span>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-[8px] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={deployBeta}
+                          onChange={(e) => setDeployBeta(e.target.checked)}
+                          className="accent-[#f881a9]"
+                        />
+                        <div>
+                          <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Beta</span>
+                          <span className="text-[9px] text-[rgba(255,255,255,0.3)] ml-[6px]">sets ALIS_BETA_VERSION</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="shrink-0 px-[14px] py-[10px] border-t border-[#464646]">
+                  <Button
+                    variant="primary"
+                    className="w-full justify-center py-[10px]"
+                    disabled={!deployVersion || selectedDeployEnvs.length === 0}
+                    onClick={handleRunDeploy}
+                  >
+                    {deployPlanOnly ? 'Run Plan' : 'Run Deploy'} · {selectedDeployEnvs.length} env{selectedDeployEnvs.length !== 1 ? 's' : ''}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Steps: running + result share the terminal */}
+            {(deployStep === 'running' || deployStep === 'result') && (
+              <div className="flex-1 flex flex-col min-h-0">
+
+                {/* Running header */}
+                {deployStep === 'running' && (
+                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold text-white leading-tight">
+                        {deployPlanOnly ? 'Planning' : 'Deploying'} · {deployVersion}
+                      </p>
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Result header */}
+                {deployStep === 'result' && (
+                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+                    deployResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
+                  }`}>
+                    {deployResult?.error ? (
+                      <div className="flex items-start gap-[8px]">
+                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{deployResult.error}</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-[8px]">
+                        <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-white leading-tight">
+                            {deployPlanOnly ? 'Plan Complete' : 'Deploy Complete'}
+                          </p>
+                          {(deployResult?.version || deployVersion) && (
+                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                              {deployResult?.version || deployVersion}
+                            </p>
+                          )}
+                        </div>
+                        {deployResult?.deployments?.[0]?.logsUrl && (
+                          <button
+                            onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
+                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                            title="Open in browser"
+                          >
+                            <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Terminal */}
+                <BuildTerminal ref={deployTermRef} className="flex-1 min-h-0" />
+
+                {/* Footer: run again */}
+                {deployStep === 'result' && (
+                  <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+                    <button
+                      onClick={() => openDeployPane(deployNeuron!)}
+                      className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                    >
+                      <Icon icon="solar:refresh-linear" className="text-sm" />
+                      Run Deploy again
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Build pane */}
         {buildNeuron && (
           <div className="w-[380px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
@@ -915,7 +1317,7 @@ export function DevelopPage() {
                   {([
                     { mode: 'cloud' as BuildMode, icon: 'solar:cloud-bolt-linear', label: 'Cloud Build', soon: false },
                     { mode: 'local' as BuildMode, icon: 'solar:laptop-linear', label: 'Build Locally', soon: false },
-                    { mode: 'deploy' as BuildMode, icon: 'solar:rocket-2-linear', label: 'Build and Deploy', soon: true },
+                    { mode: 'deploy' as BuildMode, icon: 'solar:rocket-2-linear', label: 'Build and Deploy', soon: false },
                   ]).map(({ mode, icon, label, soon }) => (
                     <button
                       key={mode}

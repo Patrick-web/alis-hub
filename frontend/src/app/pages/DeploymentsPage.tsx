@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { Icon } from '@iconify/react';
 import { PageLayout } from '../components/PageLayout';
@@ -6,8 +6,11 @@ import { StageCard } from '../components/StageCard';
 import { CodeBlock } from '../components/CodeBlock';
 import { Button } from '../components/Button';
 import { ConfigValue } from '../components/ConfigValue';
+import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
+import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
+import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 type StageId = 'overview' | 'quickstart' | 'define' | 'build' | 'deploy' | 'playground';
 
@@ -32,6 +35,20 @@ export function DeploymentsPage() {
   const [selectedNeuron, setSelectedNeuron] = useState<string>(preselectedNeuron);
   const [, setSelectedVersion] = useState('v1');
   const [defineUpdated, setDefineUpdated] = useState(false);
+  // Deploy stage state
+  const [environments, setEnvironments] = useState<{ name: string; displayName: string }[]>([]);
+  const [envsLoading, setEnvsLoading] = useState(false);
+  const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
+  const [deployVersion, setDeployVersion] = useState('');
+  const [planOnly, setPlanOnly] = useState(false);
+  const [betaDeploy, setBetaDeploy] = useState(false);
+  const [deployResult, setDeployResult] = useState<{
+    operationName: string; version: string; deployments: { logsUrl: string }[];
+    notes: string; done: boolean; error?: string;
+  } | null>(null);
+  const [deployLoading, setDeployLoading] = useState(false);
+  const [deployStatusMessage, setDeployStatusMessage] = useState('');
+  const deployTermRef = useRef<BuildTerminalHandle>(null);
   const [defineCommitted, setDefineCommitted] = useState(false);
   const [commits, setCommits] = useState<{ sha: string; message: string; author: string }[]>([]);
   const [selectedCommit, setSelectedCommit] = useState('');
@@ -135,6 +152,38 @@ export function DeploymentsPage() {
     }
   };
 
+  const loadEnvironments = useCallback(async () => {
+    if (environments.length > 0) return;
+    setEnvsLoading(true);
+    try {
+      const envs = await ProductService.ListEnvironments(state.organisation, state.product);
+      setEnvironments(envs.map(e => ({ name: e.name, displayName: e.displayName })));
+    } catch (err) {
+      console.error('Failed to load environments:', err);
+    } finally {
+      setEnvsLoading(false);
+    }
+  }, [state.organisation, state.product, environments.length]);
+
+  const handleRunDeploy = async () => {
+    if (!selectedNeuron || selectedEnvs.length === 0) return;
+    const parsed = parseNeuron(selectedNeuron);
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${parsed.id}-${parsed.version}`;
+    setDeployLoading(true);
+    setDeployStatusMessage('Starting Deploy operation...');
+    setDeployResult(null);
+    deployTermRef.current?.clear();
+    try {
+      const result = await DeployService.RunDeploy(neuronResource, deployVersion, selectedEnvs, planOnly, betaDeploy);
+      setDeployResult(result as any);
+      setDeployStatusMessage('Deploy started. Polling for completion...');
+    } catch (err: any) {
+      setDeployStatusMessage(`Deploy failed: ${err.message || err}`);
+    } finally {
+      setDeployLoading(false);
+    }
+  };
+
   const handleStageClick = (id: StageId) => {
     setActiveStage(id);
   };
@@ -145,6 +194,48 @@ export function DeploymentsPage() {
       loadCommitsFor(preselectedNeuron);
     }
   }, [preselectedNeuron, activeStage]);
+
+  useEffect(() => {
+    if (activeStage === 'deploy') {
+      loadEnvironments();
+    }
+  }, [activeStage]);
+
+  useEffect(() => {
+    if (!deployResult || deployResult.done) return;
+    const interval = setInterval(async () => {
+      try {
+        const result = await DeployService.PollDeployOperation(deployResult.operationName);
+        setDeployResult(result as any);
+        if (result?.notes) setDeployStatusMessage(result.notes);
+        if (result?.done) {
+          setDeployStatusMessage(result.error ? 'Deploy failed.' : 'Deploy complete.');
+          clearInterval(interval);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [deployResult?.operationName, deployResult?.done]);
+
+  useEffect(() => {
+    const logsUrl = deployResult?.deployments?.[0]?.logsUrl;
+    if (!logsUrl) return;
+    let offset = 0;
+    const interval = setInterval(async () => {
+      try {
+        const chunk = await DeployService.FetchDeployLogs(logsUrl, offset);
+        if (chunk?.content) {
+          deployTermRef.current?.write(chunk.content);
+          offset = chunk.nextOffset;
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [deployResult?.deployments?.[0]?.logsUrl]);
 
   useEffect(() => {
     if (!defineResult || defineResult.done) return;
@@ -584,36 +675,145 @@ export function DeploymentsPage() {
                 Deploy to Cloud Run
               </h2>
               <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.5] mb-[24px]">
-                Review the Terraform configuration and deploy your service.
+                Select target environments, specify the neuron version, and deploy.
               </p>
 
-              <StageCard title="Review Infrastructure" step={1} className="mb-[16px]">
-                <div className="grid grid-cols-2 gap-[12px] mb-[16px]">
-                  <ConfigValue label="Target Service" value={selectedNeuron || 'Not selected'} />
-                  <ConfigValue label="Deployment Target" value="Cloud Run" />
-                  <ConfigValue label="Port" value="8080" />
-                  <ConfigValue label="Region" value="us-east4" />
+              {selectedNeuron && (
+                <div className="mb-[16px]"><ConfigValue label="Target Neuron" value={selectedNeuron} /></div>
+              )}
+
+              <StageCard title="Select Environments" step={1} className="mb-[16px]">
+                {envsLoading ? (
+                  <div className="flex items-center gap-[8px]">
+                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                    <span className="text-[11px] text-[rgba(255,255,255,0.7)]">Loading environments...</span>
+                  </div>
+                ) : environments.length === 0 ? (
+                  <div>
+                    <p className="text-[11px] text-[rgba(255,255,255,0.5)] mb-[8px]">No environments found.</p>
+                    <Button variant="secondary" className="px-[12px]" onClick={loadEnvironments}>
+                      <Icon icon="solar:refresh-linear" className="text-base mr-[4px]" />
+                      Refresh
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-[8px]">
+                    {environments.map((env) => (
+                      <button
+                        key={env.name}
+                        onClick={() => setSelectedEnvs(prev =>
+                          prev.includes(env.name) ? prev.filter(e => e !== env.name) : [...prev, env.name]
+                        )}
+                        className={`px-[12px] py-[6px] rounded-[4px] text-[10px] font-bold font-['JetBrains_Mono',sans-serif] uppercase transition-all ${
+                          selectedEnvs.includes(env.name)
+                            ? 'bg-[#f881a9] text-[#6f0025]'
+                            : 'bg-[#1e1e1e] border border-[#464646] text-white hover:bg-[#2c2c2c]'
+                        }`}
+                      >
+                        {env.displayName || env.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </StageCard>
+
+              <StageCard title="Version & Options" step={2} className="mb-[16px]">
+                <div className="flex flex-col gap-[10px]">
+                  <div>
+                    <label className="text-[9px] uppercase font-bold text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] block mb-[4px]">
+                      Neuron Version
+                    </label>
+                    <input
+                      type="text"
+                      value={deployVersion}
+                      onChange={(e) => setDeployVersion(e.target.value)}
+                      placeholder="e.g. 1.0.42"
+                      className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] px-[10px] py-[6px] text-[11px] text-white font-['JetBrains_Mono',sans-serif] w-[200px] focus:outline-none focus:border-[#f881a9]"
+                    />
+                  </div>
+                  <div className="flex items-center gap-[16px]">
+                    <label className="flex items-center gap-[6px] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={planOnly}
+                        onChange={(e) => setPlanOnly(e.target.checked)}
+                        className="accent-[#f881a9]"
+                      />
+                      <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Plan only (dry run)</span>
+                    </label>
+                    <label className="flex items-center gap-[6px] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={betaDeploy}
+                        onChange={(e) => setBetaDeploy(e.target.checked)}
+                        className="accent-[#f881a9]"
+                      />
+                      <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Beta</span>
+                    </label>
+                  </div>
                 </div>
-                <CodeBlock
-                  title="cloudrun.tf"
-                  language="hcl"
-                  code={`resource "google_cloud_run_service" "default" {
-  name     = "${selectedNeuron || 'my-service'}"
-  location = "us-east4"
-  template {
-    spec {
-      containers {
-        image = "us-east4-docker.pkg.dev/my-project/neurons/${selectedNeuron || 'my-service'}:latest"
-        ports { container_port = 8080 }
-      }
-    }
-  }
-}`}
-                />
-                <Button variant="primary" className="mt-[12px] px-[16px]">
-                  Run Deploy
+              </StageCard>
+
+              <StageCard title="Run Deploy" step={3} className="mb-[16px]">
+                <Button
+                  variant="primary"
+                  className="px-[16px]"
+                  disabled={selectedEnvs.length === 0 || !deployVersion || deployLoading || (!!deployResult && !deployResult.done)}
+                  onClick={handleRunDeploy}
+                >
+                  {deployLoading ? 'Starting...' : (deployResult && !deployResult.done) ? 'Deploying...' : 'Run Deploy'}
                 </Button>
               </StageCard>
+
+              {deployStatusMessage && (
+                <div className="mb-[16px] p-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
+                  <div className="flex items-center gap-[8px]">
+                    {deployResult && !deployResult.done && (
+                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin shrink-0" />
+                    )}
+                    <p className="text-[11px] text-[rgba(255,255,255,0.8)]">{deployStatusMessage}</p>
+                  </div>
+                </div>
+              )}
+
+              {deployResult?.done && !deployResult?.error && (
+                <div className="mb-[16px] p-[12px] bg-[rgba(52,199,89,0.1)] border border-[#34C759] rounded-[4px]">
+                  <div className="flex items-center gap-[8px]">
+                    <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-lg" />
+                    <p className="text-[11px] text-white font-bold">
+                      Deploy Complete{deployResult.version ? ` · ${deployResult.version}` : ''}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {deployResult?.error && (
+                <div className="mb-[16px] p-[12px] bg-[rgba(255,92,95,0.1)] border border-[#FF5C5F] rounded-[4px]">
+                  <div className="flex items-center gap-[8px]">
+                    <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                    <p className="text-[11px] text-white">{deployResult.error}</p>
+                  </div>
+                </div>
+              )}
+
+              {deployResult?.deployments?.[0]?.logsUrl && (
+                <div className="mb-[16px] rounded-[4px] overflow-hidden border border-[#464646]">
+                  <div className="px-[16px] py-[8px] bg-[#2c2c2c] border-b border-[#464646] flex items-center justify-between">
+                    <p className="text-[9px] font-bold uppercase font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)]">
+                      Deploy Logs
+                    </p>
+                    <a
+                      href={deployResult.deployments[0].logsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[9px] text-[#f881a9] hover:underline font-['JetBrains_Mono',sans-serif]"
+                    >
+                      Open in browser
+                    </a>
+                  </div>
+                  <BuildTerminal ref={deployTermRef} className="h-[300px]" />
+                </div>
+              )}
 
               <div className="flex justify-between mt-[24px]">
                 <Button variant="ghost" onClick={() => setActiveStage('build')}>
@@ -622,6 +822,7 @@ export function DeploymentsPage() {
                 <Button
                   variant="primary"
                   className="px-[20px]"
+                  disabled={!deployResult?.done || !!deployResult?.error}
                   onClick={() => setActiveStage('playground')}
                 >
                   Next: Playground
