@@ -93,6 +93,7 @@ export function DevelopPage() {
   const [buildBranch, setBuildBranch] = useState('master');
   const [buildBranches, setBuildBranches] = useState<string[]>(['master']);
   const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
+  const [localBuildId, setLocalBuildId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -159,6 +160,7 @@ export function DevelopPage() {
     setBuildProgressMsg('Loading commits...');
     setBuildMode('cloud');
     setBuildBranch('master');
+    setLocalBuildId(null);
     logOffsetRef.current = 0;
     setBuildCommitsLoading(true);
     const parsed = parseNeuron(neuronName);
@@ -182,13 +184,25 @@ export function DevelopPage() {
   const handleRunBuild = async () => {
     if (!buildNeuron || !selectedBuildCommit) return;
 
-    if (buildMode === 'local' || buildMode === 'deploy') {
-      const label = buildMode === 'local' ? 'local build' : 'deploy';
+    if (buildMode === 'local') {
+      const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
       setBuildStep('running');
-      setBuildProgressMsg(buildMode === 'local' ? 'Building locally...' : 'Deploying...');
-      // Small delay so the terminal has time to mount before we write
+      setBuildProgressMsg('Building locally...');
+      try {
+        const result = await BuildService.StartLocalBuild(neuronResource, selectedBuildCommit.sha);
+        setLocalBuildId(result.buildId);
+      } catch (e: any) {
+        setBuildStep('result');
+        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: e?.message || 'Failed to start local build' } as BuildResult);
+      }
+      return;
+    }
+
+    if (buildMode === 'deploy') {
+      setBuildStep('running');
+      setBuildProgressMsg('Building and deploying...');
       setTimeout(() => {
-        termRef.current?.write(`\x1b[33m[${label}]\x1b[0m  Coming soon — not yet implemented.\r\n`);
+        termRef.current?.write('\x1b[33m[deploy]\x1b[0m  Coming soon — not yet implemented.\r\n');
         setBuildStep('result');
         setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, stub: true } as BuildResult);
       }, 200);
@@ -269,6 +283,37 @@ export function DevelopPage() {
     const interval = setInterval(fetchLogs, 3000);
     return () => clearInterval(interval);
   }, [buildResult?.logsUrl, buildResult?.done]);
+
+  // Poll local Docker build output
+  useEffect(() => {
+    if (!localBuildId || buildStep !== 'running') return;
+    let offset = 0;
+    const interval = setInterval(async () => {
+      try {
+        const chunk = await BuildService.PollLocalBuild(localBuildId, offset);
+        if (chunk?.content) {
+          termRef.current?.write(chunk.content);
+          offset = chunk.nextOffset;
+        }
+        if (chunk?.done) {
+          clearInterval(interval);
+          setBuildStep('result');
+          setBuildResult({
+            operationName: '',
+            version: '',
+            neuronVersion: '',
+            logsUrl: '',
+            notes: '',
+            done: true,
+            error: chunk.error || undefined,
+          } as BuildResult);
+        }
+      } catch {
+        clearInterval(interval);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [localBuildId, buildStep]);
 
   const handleRunDefine = async () => {
     if (!defineNeuron || !selectedCommit) return;
@@ -869,8 +914,8 @@ export function DevelopPage() {
                 <div className="flex flex-col gap-[2px] mb-[20px]">
                   {([
                     { mode: 'cloud' as BuildMode, icon: 'solar:cloud-bolt-linear', label: 'Cloud Build', soon: false },
-                    { mode: 'local' as BuildMode, icon: 'solar:laptop-linear', label: 'Build Locally', soon: true },
-                    { mode: 'deploy' as BuildMode, icon: 'solar:rocket-2-linear', label: 'Deploy', soon: true },
+                    { mode: 'local' as BuildMode, icon: 'solar:laptop-linear', label: 'Build Locally', soon: false },
+                    { mode: 'deploy' as BuildMode, icon: 'solar:rocket-2-linear', label: 'Build and Deploy', soon: true },
                   ]).map(({ mode, icon, label, soon }) => (
                     <button
                       key={mode}
@@ -898,7 +943,7 @@ export function DevelopPage() {
                   className="w-full justify-center py-[10px]"
                   onClick={handleRunBuild}
                 >
-                  {buildMode === 'cloud' ? 'Run Cloud Build' : buildMode === 'local' ? 'Build Locally' : 'Deploy'}
+                  {buildMode === 'cloud' ? 'Run Cloud Build' : buildMode === 'local' ? 'Build Locally' : 'Build and Deploy'}
                 </Button>
               </div>
             )}
@@ -934,7 +979,7 @@ export function DevelopPage() {
                       <div className="flex items-center gap-[8px]">
                         <Icon icon="solar:clock-circle-linear" className="text-[#ff9f0a] text-sm shrink-0" />
                         <p className="text-[10px] font-bold text-[rgba(255,255,255,0.7)] leading-tight">
-                          {buildMode === 'deploy' ? 'Deploy' : 'Local Build'} — Coming Soon
+                          Build and Deploy — Coming Soon
                         </p>
                       </div>
                     ) : buildResult?.error ? (

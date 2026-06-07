@@ -735,6 +735,89 @@ export class LandingZonesData {
     }
 }
 
+/**
+ * LocalBuildChunk is a polling response for a running local Docker build.
+ */
+export class LocalBuildChunk {
+    /**
+     * Creates a new LocalBuildChunk instance.
+     * @param {Partial<LocalBuildChunk>} [$$source = {}] - The source object to create the LocalBuildChunk.
+     */
+    constructor($$source = {}) {
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("nextOffset" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["nextOffset"] = 0;
+        }
+        if (!("done" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["done"] = false;
+        }
+        if (/** @type {any} */(false)) {
+            /**
+             * @member
+             * @type {string | undefined}
+             */
+            this["error"] = undefined;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LocalBuildChunk instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {LocalBuildChunk}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new LocalBuildChunk(/** @type {Partial<LocalBuildChunk>} */($$parsedSource));
+    }
+}
+
+/**
+ * LocalBuildResult is returned when a local Docker build is started.
+ */
+export class LocalBuildResult {
+    /**
+     * Creates a new LocalBuildResult instance.
+     * @param {Partial<LocalBuildResult>} [$$source = {}] - The source object to create the LocalBuildResult.
+     */
+    constructor($$source = {}) {
+        if (!("buildId" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["buildId"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LocalBuildResult instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {LocalBuildResult}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new LocalBuildResult(/** @type {Partial<LocalBuildResult>} */($$parsedSource));
+    }
+}
+
 export class NeuronItem {
     /**
      * Creates a new NeuronItem instance.

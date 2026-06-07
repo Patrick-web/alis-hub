@@ -72,6 +72,19 @@ export function PollBuildOperation(name, neuron) {
 }
 
 /**
+ * PollLocalBuild returns new output from a running local Docker build.
+ * Pass 0 as offset on first call; pass NextOffset from each response on subsequent calls.
+ * @param {string} buildID
+ * @param {number} offset
+ * @returns {$CancellablePromise<$models.LocalBuildChunk | null>}
+ */
+export function PollLocalBuild(buildID, offset) {
+    return $Call.ByID(4081576225, buildID, offset).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType8($result);
+    }));
+}
+
+/**
  * RunBuild starts a Build operation on the Alis backend.
  * @param {string} neuron
  * @param {string} commit
@@ -83,6 +96,20 @@ export function RunBuild(neuron, commit) {
     }));
 }
 
+/**
+ * StartLocalBuild launches a local Docker build in a goroutine and returns
+ * a build ID that can be passed to PollLocalBuild to stream output.
+ * neuron is the full resource name e.g. "organisations/voyage/products/vp/neurons/hubspot-v1".
+ * @param {string} neuron
+ * @param {string} commit
+ * @returns {$CancellablePromise<$models.LocalBuildResult | null>}
+ */
+export function StartLocalBuild(neuron, commit) {
+    return $Call.ByID(1986611470, neuron, commit).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType10($result);
+    }));
+}
+
 // Private type creation functions
 const $$createType0 = $models.BuildLogsResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
@@ -91,3 +118,7 @@ const $$createType3 = $models.DefineCommit.createFrom;
 const $$createType4 = $Create.Array($$createType3);
 const $$createType5 = $models.RunBuildResult.createFrom;
 const $$createType6 = $Create.Nullable($$createType5);
+const $$createType7 = $models.LocalBuildChunk.createFrom;
+const $$createType8 = $Create.Nullable($$createType7);
+const $$createType9 = $models.LocalBuildResult.createFrom;
+const $$createType10 = $Create.Nullable($$createType9);

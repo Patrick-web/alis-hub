@@ -29,6 +29,8 @@ export {
     InviteInfo,
     InviteUserInfo,
     LandingZonesData,
+    LocalBuildChunk,
+    LocalBuildResult,
     NeuronItem,
     Organisation,
     PackageInfo,
