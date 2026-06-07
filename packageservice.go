@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -159,6 +158,9 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &packageProcess{cancel: cancel}
+	// Pre-write the command so the user sees what is being run, matching
+	// the extension's terminal.sendText() which types the command visibly.
+	fmt.Fprintf(&p.buf, "\x1b[1;32m$\x1b[0m %s\r\n", command)
 	s.processes.Store(runID, p)
 
 	go func() {
@@ -193,6 +195,16 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 			}
 		}()
 
+		// Close the PTY master as soon as the main process (the shell) exits.
+		// Without this, any background job that inherited the slave fd keeps
+		// ptmx.Read blocked forever, so done is never set.
+		processDone := make(chan struct{})
+		go func() {
+			cmd.Wait()
+			close(processDone)
+			ptmx.Close()
+		}()
+
 		// Drain PTY output into the buffer.
 		buf := make([]byte, 4096)
 		for {
@@ -203,18 +215,15 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 				p.mu.Unlock()
 			}
 			if err != nil {
-				if err != io.EOF {
-					// EIO is normal when the slave side closes on process exit.
-					_ = err
-				}
 				break
 			}
 		}
 
-		cmd.Wait() // reap the process; ignore exit error (non-zero exit is normal)
+		<-processDone // ensure cmd.Wait() has been called before marking done
 
 		p.mu.Lock()
 		p.ptmx = nil
+		p.buf.WriteString("\r\n\x1b[2m[process exited]\x1b[0m\r\n")
 		p.done = true
 		p.mu.Unlock()
 	}()
