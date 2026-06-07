@@ -36,11 +36,19 @@ export function DeploymentsPage() {
   const [commits, setCommits] = useState<{ sha: string; message: string; author: string }[]>([]);
   const [selectedCommit, setSelectedCommit] = useState('');
   const [loading, setLoading] = useState(false);
+  const [glassLoading, setGlassLoading] = useState(false);
+  const [glassResult, setGlassResult] = useState<{
+    title: string;
+    summary: string;
+    definition: { name: string; version: string; commit: string; releaseType: string };
+    artifacts: { type: string; state: number; notes: string; locationUri: string; extra: string }[];
+  } | null>(null);
   const [defineResult, setDefineResult] = useState<{
     operationName: string;
     definition: string;
     version: string;
     notes: string;
+    definitionArtifacts: string[];
     done: boolean;
     error?: string;
   } | null>(null);
@@ -54,6 +62,20 @@ export function DeploymentsPage() {
     return { id: name, version: 'v1' };
   };
 
+  const loadGlass = useCallback(async (definition: string, artifacts: string[], neuron: string) => {
+    if (!neuron) return;
+    setGlassLoading(true);
+    setGlassResult(null);
+    try {
+      const result = await DefineService.ExplainDefine(definition, artifacts, neuron);
+      setGlassResult(result as any);
+    } catch {
+      // non-fatal — Glass only works post-define
+    } finally {
+      setGlassLoading(false);
+    }
+  }, []);
+
   const handleNeuronSelect = (name: string) => {
     setSelectedNeuron(name);
     const parsed = parseNeuron(name);
@@ -61,6 +83,7 @@ export function DeploymentsPage() {
     setSelectedCommit('');
     setCommits([]);
     setDefineResult(null);
+    setGlassResult(null);
     setStatusMessage('');
   };
 
@@ -118,7 +141,6 @@ export function DeploymentsPage() {
 
   useEffect(() => {
     if (preselectedNeuron && activeStage === 'define') {
-      // Set the neuron first, then load commits
       setSelectedNeuron(preselectedNeuron);
       loadCommitsFor(preselectedNeuron);
     }
@@ -126,12 +148,20 @@ export function DeploymentsPage() {
 
   useEffect(() => {
     if (!defineResult || defineResult.done) return;
+    const neuronName = selectedNeuron
+      ? (() => { const p = parseNeuron(selectedNeuron); return `organisations/${state.organisation}/products/${state.product}/neurons/${p.id}-${p.version}`; })()
+      : '';
     const interval = setInterval(async () => {
       try {
         const result = await DefineService.PollDefineOperation(defineResult.operationName);
         setDefineResult(result as any);
         if (result?.done) {
-          setStatusMessage('Define completed successfully!');
+          if (!result.error && result.definition && neuronName) {
+            setStatusMessage('Define complete — loading Glass...');
+            loadGlass(result.definition, result.definitionArtifacts ?? [], neuronName);
+          } else {
+            setStatusMessage(result.error ? 'Define failed.' : 'Define completed.');
+          }
           clearInterval(interval);
         } else if (result?.notes) {
           setStatusMessage(result.notes);
@@ -420,6 +450,63 @@ export function DeploymentsPage() {
                     <p className="text-[11px] text-white">{defineResult.error}</p>
                   </div>
                 </div>
+              )}
+
+              {/* Glass panel — shown after define completes */}
+              {(glassLoading || glassResult) && (
+                <StageCard title="Glass" step={3} className="mt-[16px]">
+                  {glassLoading ? (
+                    <div className="flex items-center gap-[8px]">
+                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                      <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading Glass...</span>
+                    </div>
+                  ) : glassResult && (
+                    <div>
+                      {glassResult.title && (
+                        <p className="text-[12px] font-bold text-white mb-[4px]">{glassResult.title}</p>
+                      )}
+                      {glassResult.summary && (
+                        <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5] mb-[12px]">{glassResult.summary}</p>
+                      )}
+                      {glassResult.definition?.version && (
+                        <div className="flex gap-[8px] mb-[12px]">
+                          <span className="text-[9px] uppercase font-bold font-['JetBrains_Mono',sans-serif] px-[6px] py-[2px] rounded bg-[#2c2c2c] border border-[#464646] text-[rgba(255,255,255,0.5)]">
+                            {glassResult.definition.version}
+                          </span>
+                          {glassResult.definition.releaseType && (
+                            <span className="text-[9px] uppercase font-bold font-['JetBrains_Mono',sans-serif] px-[6px] py-[2px] rounded bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] text-[#f881a9]">
+                              {glassResult.definition.releaseType}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {glassResult.artifacts && glassResult.artifacts.length > 0 && (
+                        <div>
+                          <p className="text-[9px] uppercase font-bold text-[rgba(255,255,255,0.4)] mb-[8px] font-['JetBrains_Mono',sans-serif]">
+                            Artifacts
+                          </p>
+                          <div className="flex flex-wrap gap-[6px]">
+                            {glassResult.artifacts.map((a, i) => (
+                              <div
+                                key={i}
+                                className="flex items-center gap-[4px] px-[8px] py-[4px] rounded bg-[#2c2c2c] border border-[#464646]"
+                                title={a.locationUri || a.notes || a.type}
+                              >
+                                <span className="size-[6px] rounded-full shrink-0"
+                                  style={{ backgroundColor: a.state === 1 ? '#34C759' : a.state === 0 ? '#f881a9' : '#ff9500' }}
+                                />
+                                <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-white">{a.type}</span>
+                                {a.extra && (
+                                  <span className="text-[9px] text-[rgba(255,255,255,0.4)] max-w-[120px] truncate">{a.extra}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </StageCard>
               )}
 
               <div className="flex justify-between mt-[24px]">

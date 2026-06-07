@@ -223,6 +223,130 @@ export class GitRepoInfo {
     }
 }
 
+/**
+ * GlassArtifact is one artifact type from ExplainDefine.
+ */
+export class GlassArtifact {
+    "type": string;
+    "state": number;
+    "notes": string;
+    "locationUri": string;
+
+    /**
+     * packageImportPath (Go) or packageName (JS)
+     */
+    "extra": string;
+
+    /** Creates a new GlassArtifact instance. */
+    constructor($$source: Partial<GlassArtifact> = {}) {
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = 0;
+        }
+        if (!("notes" in $$source)) {
+            this["notes"] = "";
+        }
+        if (!("locationUri" in $$source)) {
+            this["locationUri"] = "";
+        }
+        if (!("extra" in $$source)) {
+            this["extra"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GlassArtifact instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GlassArtifact {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GlassArtifact($$parsedSource as Partial<GlassArtifact>);
+    }
+}
+
+/**
+ * GlassDefinition holds current definition metadata from ExplainDefine.
+ */
+export class GlassDefinition {
+    "name": string;
+    "version": string;
+    "commit": string;
+    "releaseType": string;
+
+    /** Creates a new GlassDefinition instance. */
+    constructor($$source: Partial<GlassDefinition> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("commit" in $$source)) {
+            this["commit"] = "";
+        }
+        if (!("releaseType" in $$source)) {
+            this["releaseType"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GlassDefinition instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GlassDefinition {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GlassDefinition($$parsedSource as Partial<GlassDefinition>);
+    }
+}
+
+/**
+ * GlassResult is the response from ExplainDefine.
+ */
+export class GlassResult {
+    "title": string;
+    "summary": string;
+    "definition": GlassDefinition;
+    "artifacts": GlassArtifact[];
+
+    /** Creates a new GlassResult instance. */
+    constructor($$source: Partial<GlassResult> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("summary" in $$source)) {
+            this["summary"] = "";
+        }
+        if (!("definition" in $$source)) {
+            this["definition"] = (new GlassDefinition());
+        }
+        if (!("artifacts" in $$source)) {
+            this["artifacts"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GlassResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GlassResult {
+        const $$createField2_0 = $$createType4;
+        const $$createField3_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("definition" in $$parsedSource) {
+            $$parsedSource["definition"] = $$createField2_0($$parsedSource["definition"]);
+        }
+        if ("artifacts" in $$parsedSource) {
+            $$parsedSource["artifacts"] = $$createField3_0($$parsedSource["artifacts"]);
+        }
+        return new GlassResult($$parsedSource as Partial<GlassResult>);
+    }
+}
+
 export class InviteInfo {
     "name": string;
     "buildSeat": number;
@@ -263,8 +387,8 @@ export class InviteInfo {
      * Creates a new InviteInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): InviteInfo {
-        const $$createField4_0 = $$createType4;
-        const $$createField5_0 = $$createType6;
+        const $$createField4_0 = $$createType7;
+        const $$createField5_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("domains" in $$parsedSource) {
             $$parsedSource["domains"] = $$createField4_0($$parsedSource["domains"]);
@@ -321,6 +445,39 @@ export class InviteUserInfo {
     }
 }
 
+export class LandingZonesData {
+    "own": Organisation[];
+    "shared": Organisation[];
+
+    /** Creates a new LandingZonesData instance. */
+    constructor($$source: Partial<LandingZonesData> = {}) {
+        if (!("own" in $$source)) {
+            this["own"] = [];
+        }
+        if (!("shared" in $$source)) {
+            this["shared"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LandingZonesData instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LandingZonesData {
+        const $$createField0_0 = $$createType11;
+        const $$createField1_0 = $$createType11;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("own" in $$parsedSource) {
+            $$parsedSource["own"] = $$createField0_0($$parsedSource["own"]);
+        }
+        if ("shared" in $$parsedSource) {
+            $$parsedSource["shared"] = $$createField1_0($$parsedSource["shared"]);
+        }
+        return new LandingZonesData($$parsedSource as Partial<LandingZonesData>);
+    }
+}
+
 export class NeuronItem {
     "id": string;
     "version": string;
@@ -347,6 +504,43 @@ export class NeuronItem {
     static createFrom($$source: any = {}): NeuronItem {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new NeuronItem($$parsedSource as Partial<NeuronItem>);
+    }
+}
+
+export class Organisation {
+    "name": string;
+    "displayName": string;
+    "description": string;
+    "logo": string;
+    "account": string;
+
+    /** Creates a new Organisation instance. */
+    constructor($$source: Partial<Organisation> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("logo" in $$source)) {
+            this["logo"] = "";
+        }
+        if (!("account" in $$source)) {
+            this["account"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Organisation instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Organisation {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Organisation($$parsedSource as Partial<Organisation>);
     }
 }
 
@@ -440,8 +634,8 @@ export class ProductOverview {
      */
     static createFrom($$source: any = {}): ProductOverview {
         const $$createField3_0 = $$createType3;
-        const $$createField4_0 = $$createType8;
-        const $$createField5_0 = $$createType10;
+        const $$createField4_0 = $$createType13;
+        const $$createField5_0 = $$createType15;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -456,6 +650,35 @@ export class ProductOverview {
     }
 }
 
+export class ProductSummary {
+    "name": string;
+    "displayName": string;
+    "state": number;
+
+    /** Creates a new ProductSummary instance. */
+    constructor($$source: Partial<ProductSummary> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProductSummary instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProductSummary {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ProductSummary($$parsedSource as Partial<ProductSummary>);
+    }
+}
+
 /**
  * RunDefineResult is returned to the frontend after running a Define.
  */
@@ -464,6 +687,7 @@ export class RunDefineResult {
     "definition": string;
     "version": string;
     "notes": string;
+    "definitionArtifacts": string[];
     "done": boolean;
     "error"?: string;
 
@@ -481,6 +705,9 @@ export class RunDefineResult {
         if (!("notes" in $$source)) {
             this["notes"] = "";
         }
+        if (!("definitionArtifacts" in $$source)) {
+            this["definitionArtifacts"] = [];
+        }
         if (!("done" in $$source)) {
             this["done"] = false;
         }
@@ -492,7 +719,11 @@ export class RunDefineResult {
      * Creates a new RunDefineResult instance from a string or object.
      */
     static createFrom($$source: any = {}): RunDefineResult {
+        const $$createField4_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("definitionArtifacts" in $$parsedSource) {
+            $$parsedSource["definitionArtifacts"] = $$createField4_0($$parsedSource["definitionArtifacts"]);
+        }
         return new RunDefineResult($$parsedSource as Partial<RunDefineResult>);
     }
 }
@@ -554,8 +785,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType12;
-        const $$createField1_0 = $$createType14;
+        const $$createField0_0 = $$createType17;
+        const $$createField1_0 = $$createType19;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -624,9 +855,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType16;
-        const $$createField1_0 = $$createType18;
-        const $$createField2_0 = $$createType18;
+        const $$createField0_0 = $$createType21;
+        const $$createField1_0 = $$createType23;
+        const $$createField2_0 = $$createType23;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -740,18 +971,23 @@ const $$createType0 = DeploymentItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = GCPProject.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $Create.Array($Create.Any);
-const $$createType5 = InviteUserInfo.createFrom;
+const $$createType4 = GlassDefinition.createFrom;
+const $$createType5 = GlassArtifact.createFrom;
 const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = GitRepoInfo.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
-const $$createType9 = PkgRegistries.createFrom;
-const $$createType10 = $Create.Nullable($$createType9);
-const $$createType11 = NeuronItem.createFrom;
-const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = EnvDeployments.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = SharePerson.createFrom;
-const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = ShareAccount.createFrom;
-const $$createType18 = $Create.Array($$createType17);
+const $$createType7 = $Create.Array($Create.Any);
+const $$createType8 = InviteUserInfo.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = Organisation.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = GitRepoInfo.createFrom;
+const $$createType13 = $Create.Nullable($$createType12);
+const $$createType14 = PkgRegistries.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = NeuronItem.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = EnvDeployments.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = SharePerson.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = ShareAccount.createFrom;
+const $$createType23 = $Create.Array($$createType22);

@@ -132,12 +132,13 @@ func (s *DefineService) GetDefineCommits(org, product, neuron, version string, c
 
 // RunDefineResult is returned to the frontend after running a Define.
 type RunDefineResult struct {
-	OperationName string `json:"operationName"`
-	Definition    string `json:"definition"`
-	Version       string `json:"version"`
-	Notes         string `json:"notes"`
-	Done          bool   `json:"done"`
-	Error         string `json:"error,omitempty"`
+	OperationName       string   `json:"operationName"`
+	Definition          string   `json:"definition"`
+	Version             string   `json:"version"`
+	Notes               string   `json:"notes"`
+	DefinitionArtifacts []string `json:"definitionArtifacts"`
+	Done                bool     `json:"done"`
+	Error               string   `json:"error,omitempty"`
 }
 
 // RunDefine starts a Define operation on the Alis backend.
@@ -196,6 +197,7 @@ func (s *DefineService) PollDefineOperation(name string) (*RunDefineResult, erro
 		result.Definition = meta.Definition
 		result.Version = meta.Version
 		result.Notes = meta.Notes
+		result.DefinitionArtifacts = meta.DefinitionArtifacts
 	}
 
 	if err, ok := op.Result.(*dbdv1.OperationError); ok {
@@ -212,6 +214,19 @@ type DefineArtifactInfo struct {
 	Lang    string `json:"lang"`
 	Version string `json:"version"`
 	Notes   string `json:"notes"`
+}
+
+// ExplainDefine calls Glass to explain what a completed define produced.
+// definition is from RunDefineResult.Definition (e.g. "definitions/voyage.vp").
+// artifacts is from RunDefineResult.DefinitionArtifacts.
+// neuron is the neuron resource name (e.g. "organisations/voyage/products/vp/neurons/bff-v1").
+func (s *DefineService) ExplainDefine(definition string, artifacts []string, neuron string) (*GlassResult, error) {
+	if err := s.initClient(); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return s.alisClient.ExplainDefine(ctx, definition, artifacts, neuron)
 }
 
 // ScanNeuronPackages scans the neuron build directory for language config files.

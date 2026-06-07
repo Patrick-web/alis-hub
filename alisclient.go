@@ -14,9 +14,7 @@ import (
 
 	dbdv1 "alis-hub-v3/dbdv1"
 	"google.golang.org/protobuf/encoding/protowire"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -311,11 +309,8 @@ func parseOperation(data []byte) (*dbdv1.Operation, error) {
 		switch num {
 		case 1: // name
 			op.Name = string(chunk)
-		case 2: // metadata (google.protobuf.Any)
-			metaStruct := &structpb.Struct{}
-			if err := proto.Unmarshal(chunk, metaStruct); err == nil {
-				op.Metadata, _ = anypb.New(metaStruct)
-			}
+		case 2: // metadata (google.protobuf.Any — store raw bytes for unpackDefineMetadata)
+			op.Metadata = &anypb.Any{Value: chunk}
 		case 3: // done
 			op.Done = v != 0
 		case 4: // error
@@ -329,6 +324,251 @@ func parseOperation(data []byte) (*dbdv1.Operation, error) {
 	}
 
 	return op, nil
+}
+
+// --- Glass (ExplainDefine) support ---
+
+// GlassArtifact is one artifact type from ExplainDefine.
+type GlassArtifact struct {
+	Type        string `json:"type"`
+	State       int32  `json:"state"`
+	Notes       string `json:"notes"`
+	LocationUri string `json:"locationUri"`
+	Extra       string `json:"extra"` // packageImportPath (Go) or packageName (JS)
+}
+
+// GlassDefinition holds current definition metadata from ExplainDefine.
+type GlassDefinition struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Commit      string `json:"commit"`
+	ReleaseType string `json:"releaseType"`
+}
+
+// GlassResult is the response from ExplainDefine.
+type GlassResult struct {
+	Title      string          `json:"title"`
+	Summary    string          `json:"summary"`
+	Definition GlassDefinition `json:"definition"`
+	Artifacts  []GlassArtifact `json:"artifacts"`
+}
+
+// neuronToDefinition converts a neuron resource name to a product-level definition resource name.
+// "organisations/voyage/products/vp/neurons/bff-v1" → "definitions/voyage.vp"
+func neuronToDefinition(neuron string) string {
+	afterOrgs := strings.TrimPrefix(neuron, "organisations/")
+	orgEnd := strings.Index(afterOrgs, "/")
+	if orgEnd < 0 {
+		return ""
+	}
+	org := afterOrgs[:orgEnd]
+
+	afterProducts := strings.TrimPrefix(afterOrgs[orgEnd:], "/products/")
+	prodEnd := strings.Index(afterProducts, "/")
+	if prodEnd < 0 {
+		return ""
+	}
+	product := afterProducts[:prodEnd]
+
+	return fmt.Sprintf("definitions/%s.%s", org, product)
+}
+
+func marshalExplainDefineRequest(definition string, artifacts []string, neuron string) []byte {
+	var buf []byte
+	if definition != "" {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, definition)
+	}
+	// field 3: repeated artifact resource names
+	for _, a := range artifacts {
+		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+		buf = protowire.AppendString(buf, a)
+	}
+	if neuron != "" {
+		buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+		buf = protowire.AppendString(buf, neuron)
+	}
+	return buf
+}
+
+func parseGlassArtifactMsg(data []byte) (state int32, notes, locationUri, extra string) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			return
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return
+			}
+			if num == 2 {
+				state = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return
+			}
+			switch num {
+			case 3:
+				notes = string(b)
+			case 4:
+				locationUri = string(b)
+			case 5:
+				if extra == "" {
+					extra = string(b)
+				}
+			case 8:
+				extra = string(b) // packageImportPath for Go (overrides field 5)
+			}
+			data = data[m:]
+		default:
+			n := protowire.ConsumeFieldValue(num, typ, data)
+			if n < 0 {
+				return
+			}
+			data = data[n:]
+		}
+	}
+	return
+}
+
+var glassArtifactNames = map[protowire.Number]string{
+	1: "Go", 2: "Javascript", 3: "Python", 4: "Dart",
+	5: "Cloud Spanner", 6: "Cloud Pub/Sub", 7: ".NET",
+	8: "OpenAPI", 9: "Postman", 10: "Go (Public)",
+	11: "Javascript (Public)", 12: "Protos (Public)", 13: "ECMAScript (Public)",
+}
+
+func parseGlassArtifacts(data []byte) []GlassArtifact {
+	var artifacts []GlassArtifact
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			if name, ok := glassArtifactNames[num]; ok {
+				state, notes, locationUri, extra := parseGlassArtifactMsg(b)
+				artifacts = append(artifacts, GlassArtifact{
+					Type: name, State: state, Notes: notes,
+					LocationUri: locationUri, Extra: extra,
+				})
+			}
+			data = data[m:]
+		} else {
+			n := protowire.ConsumeFieldValue(num, typ, data)
+			if n < 0 {
+				break
+			}
+			data = data[n:]
+		}
+	}
+	return artifacts
+}
+
+func parseGlassDefinitionMsg(data []byte) GlassDefinition {
+	def := GlassDefinition{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			return def
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return def
+			}
+			switch num {
+			case 1:
+				def.Name = string(b)
+			case 2:
+				def.Version = string(b)
+			case 3:
+				def.Commit = string(b)
+			case 4:
+				def.ReleaseType = string(b)
+			}
+			data = data[m:]
+		} else {
+			n := protowire.ConsumeFieldValue(num, typ, data)
+			if n < 0 {
+				return def
+			}
+			data = data[n:]
+		}
+	}
+	return def
+}
+
+func parseGlassResponse(data []byte) *GlassResult {
+	result := &GlassResult{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			return result
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return result
+			}
+			switch num {
+			case 1:
+				result.Title = string(b)
+			case 2:
+				result.Summary = string(b)
+			case 3:
+				result.Definition = parseGlassDefinitionMsg(b)
+			case 5:
+				result.Artifacts = parseGlassArtifacts(b)
+			}
+			data = data[m:]
+		} else {
+			n := protowire.ConsumeFieldValue(num, typ, data)
+			if n < 0 {
+				return result
+			}
+			data = data[n:]
+		}
+	}
+	return result
+}
+
+// ExplainDefine calls alis.os.glass.v1.GlassService/ExplainDefine.
+// definition is the product-level definition name (e.g. "definitions/voyage.vp").
+// artifacts is the list of artifact resource names from RunDefineMetadata.
+// neuron is the neuron resource name.
+func (c *AlisClient) ExplainDefine(ctx context.Context, definition string, artifacts []string, neuron string) (*GlassResult, error) {
+	if definition == "" {
+		definition = neuronToDefinition(neuron)
+	}
+	if definition == "" {
+		return nil, fmt.Errorf("ExplainDefine: cannot derive definition name from %q", neuron)
+	}
+	protoBytes := marshalExplainDefineRequest(definition, artifacts, neuron)
+	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.glass.v1.GlassService/ExplainDefine", protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("ExplainDefine: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ExplainDefine: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ExplainDefine: response too short")
+	}
+	return parseGlassResponse(body[5:]), nil
 }
 
 // parseStatus parses google.rpc.Status.
@@ -356,24 +596,74 @@ func parseStatus(data []byte) (int32, string) {
 }
 
 // unpackDefineMetadata extracts RunDefineMetadata from an operation's metadata.
+// The metadata field in the Operation is a google.protobuf.Any containing RunDefineMetadata.
+// We parse the Any.value bytes directly with protowire.
 func unpackDefineMetadata(op *dbdv1.Operation) *dbdv1.RunDefineMetadata {
 	if op == nil || op.Metadata == nil {
 		return nil
 	}
-	var s structpb.Struct
-	if err := op.Metadata.UnmarshalTo(&s); err != nil {
+	// op.Metadata.Value holds the raw bytes of the google.protobuf.Any message.
+	// Field 1 = type_url (string), field 2 = value (bytes = RunDefineMetadata proto).
+	anyBytes := op.Metadata.Value
+	var metaBytes []byte
+	for len(anyBytes) > 0 {
+		num, typ, n := protowire.ConsumeTag(anyBytes)
+		if n < 0 {
+			break
+		}
+		anyBytes = anyBytes[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(anyBytes)
+			if m < 0 {
+				break
+			}
+			if num == 2 {
+				metaBytes = b
+			}
+			anyBytes = anyBytes[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, anyBytes)
+			if m < 0 {
+				break
+			}
+			anyBytes = anyBytes[m:]
+		}
+	}
+	if len(metaBytes) == 0 {
 		return nil
 	}
-	fields := s.GetFields()
+	// Parse RunDefineMetadata: field 1=definition, 2=version, 3=notes, 4=artifact names (repeated).
 	meta := &dbdv1.RunDefineMetadata{}
-	if v, ok := fields["definition"]; ok {
-		meta.Definition = v.GetStringValue()
-	}
-	if v, ok := fields["version"]; ok {
-		meta.Version = v.GetStringValue()
-	}
-	if v, ok := fields["notes"]; ok {
-		meta.Notes = v.GetStringValue()
+	data := metaBytes
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			switch num {
+			case 1:
+				meta.Definition = string(b)
+			case 2:
+				meta.Version = string(b)
+			case 3:
+				meta.Notes = string(b)
+			case 4:
+				meta.DefinitionArtifacts = append(meta.DefinitionArtifacts, string(b))
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
 	}
 	return meta
 }
