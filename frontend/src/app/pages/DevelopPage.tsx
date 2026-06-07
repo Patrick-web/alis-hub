@@ -4,13 +4,16 @@ import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { ActionButton } from '../components/ActionButton';
-import { Dropdown } from '../components/Dropdown';
 import { Table } from '../components/Table';
+import { RightPane } from '../components/RightPane';
+import { PackageTerminalPane, type TerminalSession, type PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable';
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
 
@@ -18,6 +21,18 @@ type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
 type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
 type BuildMode = 'cloud' | 'local' | 'deploy';
 type DeployStep = 'loading' | 'confirm' | 'running' | 'result';
+type PackagesStep = 'scan' | 'select-action' | 'select-folders' | 'venv-setup' | 'preparing' | 'running';
+
+interface PackageScript {
+  name: string;
+  title: string;
+  workDir: string;
+  lang: string;
+  install: string;
+  upgrade: string;
+  upgradeDefined: string;
+  add: string;
+}
 
 interface DeployEnv {
   name: string;
@@ -82,9 +97,6 @@ export function DevelopPage() {
   const navigate = useNavigate();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [filterText, setFilterText] = useState('');
-  const [packages, setPackages] = useState<{ name: string; language: string; artifactId: string }[]>([]);
-  const [, setLoadingPkgs] = useState(false);
-
   // Define pane state
   const [defineNeuron, setDefineNeuron] = useState<string | null>(null);
   const [defineStep, setDefineStep] = useState<DefineStep>('commits');
@@ -127,6 +139,19 @@ export function DevelopPage() {
   const [deployProgressMsg, setDeployProgressMsg] = useState('Starting...');
   const deployTermRef = useRef<BuildTerminalHandle>(null);
   const deployLogOffsetRef = useRef<number>(0);
+
+  // Packages pane state
+  const [packagesNeuron, setPackagesNeuron] = useState<string | null>(null);
+  const [packagesStep, setPackagesStep] = useState<PackagesStep>('scan');
+  const [packagesAction, setPackagesAction] = useState<'upgrade_defined' | 'upgrade' | 'install' | 'add'>('upgrade_defined');
+  const [packageScripts, setPackageScripts] = useState<PackageScript[]>([]);
+  const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
+  const [packagesError, setPackagesError] = useState('');
+
+  // Terminal sessions (bottom pane)
+  const [packageSessions, setPackageSessions] = useState<TerminalSession[]>([]);
+  const paneRef = useRef<PackageTerminalPaneHandle>(null);
+  const pkgOffsetRefs = useRef<Record<string, number>>({});
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -503,6 +528,120 @@ export function DevelopPage() {
     return () => clearInterval(interval);
   }, [defineResult?.operationName, defineResult?.done, defineStep]);
 
+  // Package session polling
+  useEffect(() => {
+    const running = packageSessions.filter(s => !s.done && !s.error);
+    if (running.length === 0) return;
+    const interval = setInterval(async () => {
+      for (const session of running) {
+        try {
+          const chunk = await PackageService.PollPackageRun(session.runID, pkgOffsetRefs.current[session.runID] ?? 0);
+          if (!chunk) continue;
+          if (chunk.content) paneRef.current?.write(session.runID, chunk.content);
+          pkgOffsetRefs.current[session.runID] = chunk.nextOffset;
+          if (chunk.done || chunk.error) {
+            setPackageSessions(prev => prev.map(s =>
+              s.runID === session.runID
+                ? { ...s, done: chunk.done, error: chunk.error || undefined }
+                : s
+            ));
+          }
+        } catch {
+          // ignore poll errors
+        }
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [packageSessions]);
+
+  const openPackagesPane = useCallback(async (neuronNames: string[]) => {
+    if (neuronNames.length === 0) return;
+    setDefineNeuron(null);
+    setBuildNeuron(null);
+    setDeployNeuron(null);
+    setPackagesNeuron(neuronNames.length === 1 ? neuronNames[0] : `${neuronNames.length} neurons`);
+    setPackagesStep('scan');
+    setPackageScripts([]);
+    setSelectedScripts(new Set());
+    setPackagesError('');
+    try {
+      const allScripts: PackageScript[] = [];
+      for (const neuronName of neuronNames) {
+        const parsed = parseNeuron(neuronName);
+        const scripts = await PackageService.PreparePackageScripts(
+          state.organisation, state.product, parsed.id, parsed.version
+        );
+        allScripts.push(...(scripts as PackageScript[]));
+      }
+      setPackageScripts(allScripts);
+      setSelectedScripts(new Set(allScripts.map(s => s.workDir)));
+      setPackagesStep('select-action');
+    } catch (e: unknown) {
+      setPackagesError(e instanceof Error ? e.message : String(e));
+      setPackagesStep('select-action');
+    }
+  }, [state.organisation, state.product]);
+
+  // doRunScripts starts the selected scripts as terminal sessions, optionally
+  // prepending a venv session. Mirrors extension's Promise.all — all fire concurrently.
+  const doRunScripts = async (withVenv: boolean) => {
+    const scriptsToRun = packageScripts.filter(s => selectedScripts.has(s.workDir));
+    if (scriptsToRun.length === 0 && !withVenv) return;
+    setPackagesStep('preparing');
+    const newSessions: TerminalSession[] = [];
+
+    if (withVenv) {
+      const venvRunID = `pkg-venv-${Date.now()}`;
+      try {
+        await PackageService.StartVenvSetup(venvRunID, state.organisation, state.product);
+        newSessions.push({ runID: venvRunID, title: '.venv setup', lang: 'python', done: false });
+        pkgOffsetRefs.current[venvRunID] = 0;
+      } catch { /* continue even if venv start fails */ }
+    }
+
+    for (const script of scriptsToRun) {
+      const cmd = packagesAction === 'upgrade_defined' ? script.upgradeDefined
+        : packagesAction === 'upgrade' ? script.upgrade
+        : packagesAction === 'install' ? script.install
+        : script.add;
+      if (!cmd) continue;
+      const runID = `pkg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const title = script.name || script.workDir.split('/').slice(-2).join('/');
+      try {
+        await PackageService.StartPackageScript(runID, cmd, script.workDir);
+        newSessions.push({ runID, title, lang: script.lang, done: false });
+        pkgOffsetRefs.current[runID] = 0;
+      } catch { /* skip scripts that fail to start */ }
+    }
+
+    if (newSessions.length > 0) {
+      setPackageSessions(prev => [...prev, ...newSessions]);
+      setPackagesStep('running');
+    } else {
+      setPackagesError('Failed to start any package scripts');
+      setPackagesStep('select-folders');
+    }
+  };
+
+  const handleRunPackages = async () => {
+    const scriptsToRun = packageScripts.filter(s => selectedScripts.has(s.workDir));
+    if (scriptsToRun.length === 0) return;
+    const hasPython = scriptsToRun.some(s => s.lang === 'python');
+    if (hasPython) {
+      const venvExists = await PackageService.CheckVenvExists(state.organisation, state.product);
+      if (!venvExists) {
+        setPackagesStep('venv-setup');
+        return;
+      }
+    }
+    await doRunScripts(false);
+  };
+
+  const handleCloseSession = (runID: string) => {
+    PackageService.CancelPackageRun(runID).catch(() => {});
+    setPackageSessions(prev => prev.filter(s => s.runID !== runID));
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
@@ -521,25 +660,6 @@ export function DevelopPage() {
     .map(id => state.neurons.find(n => n.id === id))
     .filter(Boolean)
     .map(n => n!.name);
-
-  const handleScanPackages = async () => {
-    if (selectedNeuronNames.length === 0) return;
-    setLoadingPkgs(true);
-    try {
-      const first = selectedNeuronNames[0];
-      const m = first.match(/^(.+)-(v\d+)$/);
-      const neuronId = m ? m[1] : first;
-      const version = m ? m[2] : 'v1';
-      const result = await DefineService.ScanNeuronPackages(
-        state.organisation, state.product, neuronId, version
-      );
-      setPackages(result);
-    } catch {
-      setPackages([]);
-    } finally {
-      setLoadingPkgs(false);
-    }
-  };
 
   const handleNeuronAction = (neuronName: string, stage: string) => {
     if (stage === 'define') {
@@ -563,6 +683,8 @@ export function DevelopPage() {
       openBuildPane(target);
     } else if (stage === 'deploy') {
       openDeployPane(target);
+    } else if (stage === 'packages') {
+      openPackagesPane(selectedNeuronNames.length > 0 ? selectedNeuronNames : [target]);
     } else {
       updateWorkspace({ activeNeuronIds: selectedNeuronNames });
       navigate(`/deployments?neuron=${encodeURIComponent(target)}&stage=${stage}`);
@@ -652,11 +774,14 @@ export function DevelopPage() {
           >
             DEPLOY
           </Button>
-          <Dropdown
-            label={`Packages${packages.length > 0 ? ` (${packages.length})` : ''}`}
-            options={['Scan Packages', 'Manage Dependencies', 'Update All']}
-            onSelect={(opt) => { if (opt === 'Scan Packages') handleScanPackages(); }}
-          />
+          <Button
+            variant="secondary"
+            className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
+            icon={<Icon icon="solar:box-linear" className="text-base" />}
+            onClick={() => handleGlobalAction('packages')}
+          >
+            PACKAGES
+          </Button>
           <Button
             variant="primary"
             icon={<Icon icon="solar:add-circle-linear" className="text-xl" />}
@@ -668,23 +793,10 @@ export function DevelopPage() {
         </div>
       </div>
 
-      {packages.length > 0 && (
-        <div className="px-[20px] py-[8px] border-b border-[#464646] bg-[rgba(248,129,169,0.03)] shrink-0">
-          <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold mb-[4px]">
-            Discovered Packages ({selectedNeuronNames[0] || 'N/A'})
-          </p>
-          <div className="flex gap-[6px] flex-wrap">
-            {packages.map((p, i) => (
-              <span key={i} className="px-[8px] py-[2px] bg-[#2c2c2c] border border-[#464646] rounded-[3px] text-[9px] text-white font-['JetBrains_Mono',sans-serif]">
-                {p.language}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Main content: table + optional define pane */}
-      <div className="flex-1 overflow-hidden flex">
+      {/* Main content: table + optional right pane + optional terminal bottom pane */}
+      <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
+        <ResizablePanel defaultSize={packageSessions.length > 0 ? 65 : 100} minSize={25}>
+          <div className="flex h-full overflow-hidden">
         {/* Services table */}
         <div className="flex-1 overflow-hidden">
           <Table
@@ -699,20 +811,7 @@ export function DevelopPage() {
 
         {/* Define pane */}
         {defineNeuron && (
-          <div className="w-[380px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
-            {/* Pane header */}
-            <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
-              <div>
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">Define</p>
-                <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{defineNeuron}</p>
-              </div>
-              <button
-                onClick={() => setDefineNeuron(null)}
-                className="size-[28px] flex items-center justify-center rounded-[4px] hover:bg-[#2c2c2c] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-              >
-                <Icon icon="solar:close-linear" className="text-base" />
-              </button>
-            </div>
+          <RightPane label="Define" title={defineNeuron} onClose={() => setDefineNeuron(null)}>
 
             {/* Step: commits */}
             {defineStep === 'commits' && (
@@ -947,26 +1046,12 @@ export function DevelopPage() {
                 </div>
               </div>
             )}
-          </div>
+          </RightPane>
         )}
 
         {/* Deploy pane */}
         {deployNeuron && (
-          <div className="w-[400px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
-            {/* Pane header */}
-            <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
-              <div>
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">Deploy</p>
-                <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{deployNeuron}</p>
-              </div>
-              <button
-                onClick={() => setDeployNeuron(null)}
-                className="size-[28px] flex items-center justify-center rounded-[4px] hover:bg-[#2c2c2c] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-              >
-                <Icon icon="solar:close-linear" className="text-base" />
-              </button>
-            </div>
-
+          <RightPane label="Deploy" title={deployNeuron} onClose={() => setDeployNeuron(null)} width="w-[400px]">
             {/* Step: loading */}
             {deployStep === 'loading' && (
               <div className="flex-1 flex items-center justify-center">
@@ -1211,25 +1296,12 @@ export function DevelopPage() {
                 )}
               </div>
             )}
-          </div>
+          </RightPane>
         )}
 
         {/* Build pane */}
         {buildNeuron && (
-          <div className="w-[380px] border-l border-[#464646] flex flex-col overflow-hidden shrink-0">
-            {/* Pane header */}
-            <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
-              <div>
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">Build</p>
-                <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{buildNeuron}</p>
-              </div>
-              <button
-                onClick={() => setBuildNeuron(null)}
-                className="size-[28px] flex items-center justify-center rounded-[4px] hover:bg-[#2c2c2c] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-              >
-                <Icon icon="solar:close-linear" className="text-base" />
-              </button>
-            </div>
+          <RightPane label="Build" title={buildNeuron} onClose={() => setBuildNeuron(null)}>
 
             {/* Step: commits */}
             {buildStep === 'commits' && (
@@ -1431,9 +1503,228 @@ export function DevelopPage() {
                 )}
               </div>
             )}
-          </div>
+          </RightPane>
+        )}
+
+        {/* Packages pane */}
+        {packagesNeuron && (
+          <RightPane label="Packages" title={packagesNeuron} onClose={() => setPackagesNeuron(null)}>
+            {/* Step: scan */}
+            {packagesStep === 'scan' && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-[12px]">
+                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Scanning packages...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step: select-action */}
+            {packagesStep === 'select-action' && (
+              <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
+                {packagesError && (
+                  <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] mb-[16px]">
+                    <Icon icon="solar:danger-triangle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                    <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{packagesError}</p>
+                  </div>
+                )}
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                  Action
+                </p>
+                <div className="flex flex-col gap-[2px] mb-[20px]">
+                  {([
+                    { value: 'upgrade_defined', label: 'Upgrade Defined', desc: 'Upgrade packages generated by Define' },
+                    { value: 'upgrade', label: 'Upgrade All', desc: 'Upgrade all specified packages' },
+                    { value: 'install', label: 'Install', desc: 'Install all relevant packages' },
+                    { value: 'add', label: 'Add', desc: 'Add packages from your Define steps' },
+                  ] as const).map(({ value, label, desc }) => (
+                    <button
+                      key={value}
+                      onClick={() => setPackagesAction(value)}
+                      className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
+                        packagesAction === value
+                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
+                          : 'bg-[#1e1e1e] border-[#2c2c2c] text-[rgba(255,255,255,0.5)] hover:border-[#3a3a3a] hover:text-[rgba(255,255,255,0.7)]'
+                      }`}
+                    >
+                      <span className={`size-[6px] rounded-full shrink-0 ${packagesAction === value ? 'bg-[#f881a9]' : 'bg-[#3a3a3a]'}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-medium">{label}</p>
+                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] leading-snug mt-[1px]">{desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  variant="primary"
+                  className="w-full justify-center py-[10px]"
+                  disabled={packageScripts.length === 0}
+                  onClick={() => packageScripts.length === 1 ? handleRunPackages() : setPackagesStep('select-folders')}
+                >
+                  {packageScripts.length === 1 ? 'Run' : 'Next →'}
+                </Button>
+                {packageScripts.length === 0 && !packagesError && (
+                  <p className="text-[10px] text-[rgba(255,255,255,0.3)] text-center mt-[12px]">No package scripts available</p>
+                )}
+              </div>
+            )}
+
+            {/* Step: select-folders */}
+            {packagesStep === 'select-folders' && (
+              <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 overflow-y-auto">
+                  <div className="px-[16px] pt-[14px] pb-[8px]">
+                    <button
+                      onClick={() => setPackagesStep('select-action')}
+                      className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[12px] transition-colors"
+                    >
+                      <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
+                      Back
+                    </button>
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                      Select Folders
+                    </p>
+                  </div>
+                  <div className="flex flex-col">
+                    {packageScripts.map((s) => {
+                      const checked = selectedScripts.has(s.workDir);
+                      return (
+                        <button
+                          key={s.workDir}
+                          onClick={() => setSelectedScripts(prev => {
+                            const next = new Set(prev);
+                            if (next.has(s.workDir)) next.delete(s.workDir);
+                            else next.add(s.workDir);
+                            return next;
+                          })}
+                          className={`text-left px-[16px] py-[10px] border-b border-[#232323] flex items-center gap-[10px] transition-colors ${
+                            checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                          }`}
+                        >
+                          <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
+                            checked ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                          }`}>
+                            {checked && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-medium text-white truncate">
+                              {s.name || s.workDir.split('/').slice(-2).join('/')}
+                            </p>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] uppercase leading-snug mt-[1px]">
+                              {s.lang}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="shrink-0 px-[14px] py-[10px] border-t border-[#464646]">
+                  <Button
+                    variant="primary"
+                    className="w-full justify-center py-[10px]"
+                    disabled={selectedScripts.size === 0}
+                    onClick={handleRunPackages}
+                  >
+                    Run · {selectedScripts.size} folder{selectedScripts.size !== 1 ? 's' : ''}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: venv-setup */}
+            {packagesStep === 'venv-setup' && (
+              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-[16px] py-[16px]">
+                <div className="flex items-start gap-[10px] p-[12px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.25)] rounded-[6px] mb-[20px]">
+                  <Icon icon="solar:info-circle-linear" className="text-[#f881a9] text-base shrink-0 mt-[1px]" />
+                  <div>
+                    <p className="text-[11px] font-medium text-white leading-snug">Python virtual environment not found</p>
+                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-relaxed mt-[4px]">
+                      A <code className="font-['JetBrains_Mono',sans-serif] text-[#f881a9]">.venv</code> is required at the product build root before running Python package scripts.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-[8px]">
+                  <Button
+                    variant="primary"
+                    className="w-full justify-center py-[10px]"
+                    onClick={() => doRunScripts(true)}
+                  >
+                    Create .venv &amp; Run
+                  </Button>
+                  <button
+                    onClick={() => doRunScripts(false)}
+                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif] uppercase"
+                  >
+                    Skip &amp; Run Anyway
+                  </button>
+                  <button
+                    onClick={() => setPackagesStep('select-folders')}
+                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.3)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif]"
+                  >
+                    ← Back
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Step: preparing */}
+            {packagesStep === 'preparing' && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-[12px]">
+                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Starting scripts...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step: running */}
+            {packagesStep === 'running' && (
+              <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[12px]">
+                  Running · {packageSessions.filter(s => !s.done).length} active
+                </p>
+                <div className="flex flex-col gap-[6px] mb-[16px]">
+                  {packageSessions.map(s => (
+                    <div key={s.runID} className="flex items-center gap-[8px] px-[10px] py-[8px] bg-[#232323] border border-[#2c2c2c] rounded-[6px]">
+                      {s.error ? (
+                        <Icon icon="solar:close-circle-bold" className="text-red-400 text-sm shrink-0" />
+                      ) : s.done ? (
+                        <Icon icon="solar:check-circle-bold" className="text-green-400 text-sm shrink-0" />
+                      ) : (
+                        <span className="w-[8px] h-[8px] rounded-full bg-[#f881a9] animate-pulse shrink-0" />
+                      )}
+                      <span className="text-[10px] text-white font-['JetBrains_Mono',sans-serif] flex-1 truncate min-w-0">
+                        {s.title}
+                      </span>
+                      <span className="text-[9px] text-[rgba(255,255,255,0.3)] shrink-0 uppercase">{s.lang}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[9px] text-[rgba(255,255,255,0.3)] text-center">
+                  Output in the terminal pane ↓
+                </p>
+              </div>
+            )}
+          </RightPane>
         )}
       </div>
+        </ResizablePanel>
+
+        {packageSessions.length > 0 && (
+          <>
+            <ResizableHandle withHandle className="bg-[#464646] data-[resize-handle-active=pointer]:bg-[#f881a9] data-[resize-handle-active=keyboard]:bg-[#f881a9]" />
+            <ResizablePanel defaultSize={35} minSize={12} maxSize={70}>
+              <PackageTerminalPane
+                ref={paneRef}
+                sessions={packageSessions}
+                onCloseSession={handleCloseSession}
+                onClose={() => setPackageSessions([])}
+              />
+            </ResizablePanel>
+          </>
+        )}
+      </ResizablePanelGroup>
     </div>
   );
 }
