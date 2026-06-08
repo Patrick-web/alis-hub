@@ -1287,6 +1287,35 @@ export class SharePerson {
     }
 }
 
+export class UserProfile {
+    "email": string;
+    "name": string;
+    "picture": string;
+
+    /** Creates a new UserProfile instance. */
+    constructor($$source: Partial<UserProfile> = {}) {
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("picture" in $$source)) {
+            this["picture"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UserProfile instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UserProfile {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UserProfile($$parsedSource as Partial<UserProfile>);
+    }
+}
+
 export class WorkspaceInfo {
     "organisation": string;
     "organisationDisplayName": string;

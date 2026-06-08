@@ -1,9 +1,20 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { Dropdown } from './Dropdown';
 import { useWorkspace } from '../stores/workspace';
-import { Browser } from '@wailsio/runtime';
+import { Events } from '@wailsio/runtime';
+import { ReleaseNotesModal } from './ReleaseNotesModal';
+import { ProfileModal } from './ProfileModal';
+import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+
+interface UpdateInfo {
+  currentVersion: string;
+  latestVersion: string;
+  releaseNotes: string;
+  releaseUrl: string;
+}
 
 function WindowControls() {
   return (
@@ -32,6 +43,28 @@ export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, setPhase } = useWorkspace();
+  const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarName, setAvatarName] = useState('');
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
+  useEffect(() => {
+    const off = Events.On('update:available', (ev) => {
+      setPendingUpdate(ev.data as UpdateInfo);
+    });
+    return () => { off(); };
+  }, []);
+
+  useEffect(() => {
+    ProductService.GetUserProfile().then((p: any) => {
+      if (p) {
+        setAvatarUrl(p.picture || '');
+        setAvatarName(p.name || '');
+      }
+    }).catch(() => {});
+  }, []);
 
   const getActiveTab = () => {
     const path = location.pathname.split('/')[1] || 'about';
@@ -46,7 +79,7 @@ export function TopNav() {
   const handleHomeClick = () => setPhase('picking-org');
   const handleOrgClick = () => setPhase('picking-product');
 
-  const openProfile = () => Browser.OpenURL('https://console.alisx.com/profile');
+  const openProfile = () => setProfileOpen(true);
 
   return (
     <div className="bg-[#2c2c2c] border-b border-[#464646] h-[35px] flex items-center shrink-0 w-full overflow-hidden">
@@ -104,18 +137,55 @@ export function TopNav() {
         </div>
       </div>
 
-      {/* Right: Environment + Profile */}
+      {/* Right: Environment + Profile + Update badge */}
       <div className="flex items-center h-full px-[10px] gap-[10px]">
         <Dropdown label="Production" options={['Production', 'Staging', 'Development']} />
         <div className="h-full w-px bg-[#464646]" />
+        {pendingUpdate && (
+          <button
+            onClick={() => setNotesOpen(true)}
+            className="text-[10px] font-['JetBrains_Mono',sans-serif] font-bold bg-[#34C759] text-black px-[6px] py-[2px] rounded-full uppercase tracking-wide hover:bg-[#2eaf4f] transition-colors"
+            title={`Update available: v${pendingUpdate.latestVersion}`}
+          >
+            Update
+          </button>
+        )}
         <button
           onClick={openProfile}
-          className="opacity-70 hover:opacity-100 transition-opacity"
+          className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
           title="Open profile"
         >
-          <Icon icon="solar:user-circle-linear" className="text-white text-xl" />
+          {avatarUrl && !avatarImgError ? (
+            <img
+              src={avatarUrl}
+              alt={avatarName}
+              className="size-[22px] rounded-full object-cover"
+              onError={() => setAvatarImgError(true)}
+            />
+          ) : avatarName ? (
+            <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.4)] flex items-center justify-center">
+              <span className="text-[8px] font-bold text-[#F881A9] font-['JetBrains_Mono',sans-serif]">
+                {avatarName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+              </span>
+            </div>
+          ) : (
+            <Icon icon="solar:user-circle-linear" className="text-white text-xl" />
+          )}
         </button>
       </div>
+
+      {pendingUpdate && (
+        <ReleaseNotesModal
+          open={notesOpen}
+          onOpenChange={setNotesOpen}
+          currentVersion={pendingUpdate.currentVersion}
+          latestVersion={pendingUpdate.latestVersion}
+          releaseNotes={pendingUpdate.releaseNotes}
+          releaseUrl={pendingUpdate.releaseUrl}
+        />
+      )}
+
+      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }

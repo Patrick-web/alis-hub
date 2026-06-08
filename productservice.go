@@ -153,6 +153,98 @@ func (s *ProductService) Login() error {
 	return err
 }
 
+type UserProfile struct {
+	Email   string `json:"email"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
+}
+
+// GetUserProfile fetches name and photo for the logged-in user via
+// BatchRetrieveMaskedUsers, using the sub from the stored token as the user ID.
+func (s *ProductService) GetUserProfile() (*UserProfile, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	// Decode sub and email from the stored token (no verification needed).
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(filepath.Join(home, alisConsoleCredentialsPath))
+	if err != nil {
+		return nil, fmt.Errorf("not logged in")
+	}
+	var creds consoleCredentials
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return nil, fmt.Errorf("bad credentials: %w", err)
+	}
+	tok := creds.IDToken
+	if tok == "" {
+		tok = creds.AccessToken
+	}
+	if tok == "" {
+		return nil, fmt.Errorf("no token found")
+	}
+	parts := strings.Split(tok, ".")
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("invalid token format")
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("decode token claims: %w", err)
+	}
+	var claims struct {
+		Email string `json:"email"`
+		Sub   string `json:"sub"`
+	}
+	if err := json.Unmarshal(decoded, &claims); err != nil {
+		return nil, fmt.Errorf("parse claims: %w", err)
+	}
+
+	profile := &UserProfile{Email: claims.Email}
+
+	// Fetch first/last name and photo from BatchRetrieveMaskedUsers.
+	if claims.Sub != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var buf []byte
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, "users/"+claims.Sub)
+
+		resp, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx,
+			"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
+		if err == nil && grpcStatus == 0 && len(resp) >= 5 {
+			users := parseBatchUsersResponse(resp[5:])
+			if len(users) > 0 {
+				u := users[0]
+				name := strings.TrimSpace(u.FirstName + " " + u.LastName)
+				profile.Name = name
+				profile.Picture = u.PhotoURL
+			}
+		}
+	}
+
+	return profile, nil
+}
+
+// Logout removes the stored console credentials, signing the user out.
+func (s *ProductService) Logout() error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(home, alisConsoleCredentialsPath)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	s.mu.Lock()
+	s.tokens = nil
+	s.mu.Unlock()
+	return nil
+}
+
 func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err

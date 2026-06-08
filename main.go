@@ -3,14 +3,21 @@ package main
 import (
 	"embed"
 	"log"
+	"time"
+
+	"alis-hub-v3/internal/updater"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
+
+var version = "dev"
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
+	updaterSvc := updater.NewService(version)
+
 	app := application.New(application.Options{
 		Name:        "Alis Hub",
 		Description: "Alis Hub Desktop Application",
@@ -22,6 +29,7 @@ func main() {
 			application.NewService(NewDeployService()),
 			application.NewService(NewProductService()),
 			application.NewService(NewPackageService()),
+			application.NewService(updaterSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -33,7 +41,7 @@ func main() {
 
 	// Create a new window
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title: "Alis Hub",
+		Title:  "Alis Hub",
 		Width:  1024,
 		Height: 768,
 		Mac: application.MacWindow{
@@ -43,6 +51,7 @@ func main() {
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
 	})
+	window.Maximise()
 
 	trayWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:         "Tray Window",
@@ -83,6 +92,9 @@ func main() {
 	})
 
 	tray.SetMenu(trayMenu)
+
+	updaterSvc.SetApp(app)
+	updater.BackgroundCheck(app, version, 30*time.Second)
 
 	err := app.Run()
 	if err != nil {

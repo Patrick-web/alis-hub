@@ -53,5 +53,6 @@ export {
     ShareAccount,
     ShareData,
     SharePerson,
+    UserProfile,
     WorkspaceInfo
 } from "./models.js";
