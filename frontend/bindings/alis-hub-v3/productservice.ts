@@ -101,6 +101,15 @@ export function Login(): $CancellablePromise<void> {
 }
 
 /**
+ * SetEnvironmentVariables replaces all variables on an environment by calling
+ * UpdateEnvironment with an update_mask of "envs". Variables are field 8
+ * (repeated Environment.Env sub-messages: field 1=name/label, field 2=value).
+ */
+export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariable[]): $CancellablePromise<void> {
+    return $Call.ByID(1096665320, envName, vars);
+}
+
+/**
  * UpdateEnvironment updates the displayName of an existing environment.
  * envName is the full resource name.
  */
