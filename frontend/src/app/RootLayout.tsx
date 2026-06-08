@@ -60,8 +60,15 @@ export function RootLayout() {
   }
 
   // Workspace phase — full nav chrome + sidebar + tab content
-  const isCodeblockSubPage = location.pathname.startsWith('/codeblocks/') && location.pathname !== '/codeblocks';
-  const showSidebar = !isCodeblockSubPage;
+  const path = location.pathname;
+  const isCodeblockSubPage = path.startsWith('/codeblocks/') && path !== '/codeblocks';
+  const showSidebar = (
+    path === '/develop' ||
+    path.startsWith('/services') ||
+    path === '/environments' ||
+    path === '/builds' ||
+    (path === '/codeblocks' || (path.startsWith('/codeblocks') && !isCodeblockSubPage))
+  ) && !isCodeblockSubPage;
 
   return (
     <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
