@@ -117,11 +117,12 @@ export function Sidebar() {
     }
   };
 
-  const handleCreateEnv = async (displayName: string, envType: number) => {
-    const result = await (ProductService.CreateEnvironment as (org: string, product: string, displayName: string, envType: number) => Promise<any>)(
+  const handleCreateEnv = async (displayName: string, envType: number, region: string) => {
+    const result = await (ProductService.CreateEnvironment as (org: string, product: string, displayName: string, region: string, envType: number) => Promise<any>)(
       state.organisation,
       state.product,
       displayName,
+      region,
       envType,
     );
     const newEnv: LoadedEnv = {
@@ -219,7 +220,7 @@ export function Sidebar() {
         onOpenChange={setSheetOpen}
         mode={sheetMode}
         initialDisplayName={sheetMode === 'edit' ? (editTarget?.displayName ?? '') : ''}
-        onSubmit={sheetMode === 'create' ? handleCreateEnv : (displayName) => handleEditEnv(displayName)}
+        onSubmit={sheetMode === 'create' ? handleCreateEnv : (displayName, _envType, _region) => handleEditEnv(displayName)}
       />
 
       {/* Delete confirmation */}

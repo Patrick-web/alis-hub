@@ -11,10 +11,10 @@ import * as $models from "./models.js";
 
 /**
  * CreateEnvironment creates a new environment under the given org/product.
- * envType: 1=DEV, 2=STAGING, 3=PROD
+ * envType: 1=DEV, 2=STAGING, 3=PROD. region must be a valid GCP region.
  */
-export function CreateEnvironment(org: string, product: string, displayName: string, envType: number): $CancellablePromise<$models.EnvInfo | null> {
-    return $Call.ByID(2295881451, org, product, displayName, envType).then(($result: any) => {
+export function CreateEnvironment(org: string, product: string, displayName: string, region: string, envType: number): $CancellablePromise<$models.EnvInfo | null> {
+    return $Call.ByID(2295881451, org, product, displayName, region, envType).then(($result: any) => {
         return $$createType1($result);
     });
 }
@@ -68,27 +68,36 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
     return $Call.ByID(1203503551);
 }
 
+/**
+ * ListCodeblocks fetches all available codeblocks from alis.bl.blocks.v1.BlocksService.
+ */
+export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
+    return $Call.ByID(2482784325).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType12($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -130,10 +139,12 @@ const $$createType6 = $models.ServicesOverview.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
 const $$createType8 = $models.ShareData.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $Create.Array($$createType0);
-const $$createType11 = $models.InviteInfo.createFrom;
-const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = $models.LandingZonesData.createFrom;
-const $$createType14 = $Create.Nullable($$createType13);
-const $$createType15 = $models.ProductSummary.createFrom;
-const $$createType16 = $Create.Array($$createType15);
+const $$createType10 = $models.Codeblock.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = $Create.Array($$createType0);
+const $$createType13 = $models.InviteInfo.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = $models.LandingZonesData.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = $models.ProductSummary.createFrom;
+const $$createType18 = $Create.Array($$createType17);
