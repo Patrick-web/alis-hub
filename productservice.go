@@ -91,6 +91,20 @@ type EnvVariable struct {
 	Value string `json:"value"`
 }
 
+// ── Codeblocks ────────────────────────────────────────────────────────────────
+
+type Codeblock struct {
+	Name          string `json:"name"`
+	DisplayName   string `json:"displayName"`
+	ReleaseLevel  int32  `json:"releaseLevel"`
+	Publisher     string `json:"publisher"`
+	LatestVersion string `json:"latestVersion"`
+	Headline      string `json:"headline"`
+	Description   string `json:"description"`
+	BannerURL     string `json:"bannerUrl"`
+	InstallCount  int32  `json:"installCount"`
+}
+
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
@@ -346,17 +360,24 @@ func (s *ProductService) SetEnvironmentVariables(envName string, vars []EnvVaria
 }
 
 // CreateEnvironment creates a new environment under the given org/product.
-// envType: 1=DEV, 2=STAGING, 3=PROD
-func (s *ProductService) CreateEnvironment(org, product, displayName string, envType int32) (*EnvInfo, error) {
+// envType: 1=DEV, 2=STAGING, 3=PROD. region must be a valid GCP region.
+func (s *ProductService) CreateEnvironment(org, product, displayName, region string, envType int32) (*EnvInfo, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
 	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
 
-	// Build environment sub-message: field 2=displayName, field 7=type
+	// Build google_project sub-message (Environment field 5): field 4=region
+	var gcpBuf []byte
+	gcpBuf = protowire.AppendTag(gcpBuf, 4, protowire.BytesType)
+	gcpBuf = protowire.AppendString(gcpBuf, region)
+
+	// Build environment sub-message: field 2=displayName, field 5=googleProject, field 7=type
 	var envBuf []byte
 	envBuf = protowire.AppendTag(envBuf, 2, protowire.BytesType)
 	envBuf = protowire.AppendString(envBuf, displayName)
+	envBuf = protowire.AppendTag(envBuf, 5, protowire.BytesType)
+	envBuf = protowire.AppendBytes(envBuf, gcpBuf)
 	if envType != 0 {
 		envBuf = protowire.AppendTag(envBuf, 7, protowire.VarintType)
 		envBuf = protowire.AppendVarint(envBuf, uint64(envType))
@@ -443,6 +464,34 @@ func (s *ProductService) DeleteEnvironment(envName string) error {
 		return fmt.Errorf("DeleteEnvironment: grpc status %d: %s", grpcStatus, grpcMsg)
 	}
 	return nil
+}
+
+// ListCodeblocks fetches all available codeblocks from alis.bl.blocks.v1.BlocksService.
+func (s *ProductService) ListCodeblocks() ([]Codeblock, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	fields := []string{"name", "display_name", "release_level", "publisher", "releases", "overview_details"}
+	fm := marshalFieldMask(fields)
+	var buf []byte
+	buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, fm)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/RetrieveBlockDetails", buf)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblocks: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListCodeblocks: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListCodeblocks: response too short (%d bytes)", len(body))
+	}
+	return parseCodeblocksResponse(body[5:])
 }
 
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
@@ -1144,4 +1193,228 @@ func parseEnvVariable(data []byte) EnvVariable {
 // The response body starts directly with the Environment message fields (no outer list wrapper).
 func parseEnvInfoFromEnvironment(data []byte) (*EnvInfo, error) {
 	return parseEnvironment(data)
+}
+
+// ── Codeblock parse helpers ───────────────────────────────────────────────────
+
+// parseCodeblocksResponse parses the outer repeated BlockDetails (field 1) from RetrieveBlockDetails.
+func parseCodeblocksResponse(data []byte) ([]Codeblock, error) {
+	var blocks []Codeblock
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 { // BlockDetails message
+			cb := parseBlockDetails(b)
+			if cb.Name != "" {
+				blocks = append(blocks, cb)
+			}
+		}
+	}
+	return blocks, nil
+}
+
+// parseBlockDetails parses one BlockDetails message:
+// field 1 = Block, field 3 = install_count.
+func parseBlockDetails(data []byte) Codeblock {
+	var cb Codeblock
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return cb
+			}
+			if num == 3 {
+				cb.InstallCount = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return cb
+			}
+			if num == 1 {
+				parseBlockInto(b, &cb)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return cb
+			}
+			data = data[m:]
+		}
+	}
+	return cb
+}
+
+// parseBlockInto fills a Codeblock from a Block proto message.
+// Key fields: f1=name, f2=display_name, f4=releases, f15=release_level, f30=publisher, f31=overview_details.
+func parseBlockInto(data []byte, cb *Codeblock) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return
+			}
+			if num == 15 {
+				cb.ReleaseLevel = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return
+			}
+			switch num {
+			case 1:
+				cb.Name = string(b)
+			case 2:
+				cb.DisplayName = string(b)
+			case 4:
+				cb.LatestVersion = parseBlockLatestVersion(b)
+			case 30:
+				cb.Publisher = parseBlockPublisherAccount(b)
+			case 31:
+				parseBlockOverviewInto(b, cb)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return
+			}
+			data = data[m:]
+		}
+	}
+}
+
+// parseBlockLatestVersion extracts the most specific version from the releases message.
+// f1=stable, f2=beta/primary, f5=experimental. Returns f2 if present, else f1.
+func parseBlockLatestVersion(data []byte) string {
+	var stable, primary string
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		switch num {
+		case 1:
+			stable = string(b)
+		case 2:
+			primary = string(b)
+		}
+	}
+	if primary != "" {
+		return primary
+	}
+	return stable
+}
+
+// parseBlockPublisherAccount extracts the account resource name from the publisher message (f1).
+func parseBlockPublisherAccount(data []byte) string {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 {
+			return string(b)
+		}
+	}
+	return ""
+}
+
+// parseBlockOverviewInto fills BannerURL, Headline, Description from overview_details (f31).
+// f1=banner_url, f2=headline, f3=description, f10=short_title.
+func parseBlockOverviewInto(data []byte, cb *Codeblock) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			return
+		}
+		data = data[m:]
+		switch num {
+		case 1:
+			cb.BannerURL = string(b)
+		case 2:
+			cb.Headline = string(b)
+		case 3:
+			if cb.Description == "" {
+				cb.Description = string(b)
+			}
+		case 10:
+			if cb.Headline == "" {
+				cb.Headline = string(b)
+			}
+		}
+	}
 }

@@ -15,7 +15,7 @@ interface EnvFormSheetProps {
   onOpenChange: (open: boolean) => void;
   mode: 'create' | 'edit';
   initialDisplayName?: string;
-  onSubmit: (displayName: string, envType: number) => Promise<void>;
+  onSubmit: (displayName: string, envType: number, region: string) => Promise<void>;
 }
 
 const ENV_TYPES = [
@@ -24,26 +24,74 @@ const ENV_TYPES = [
   { value: 3, label: 'Production', icon: 'solar:earth-linear' },
 ];
 
+const GCP_REGIONS = [
+  'africa-south1',
+  'asia-east1',
+  'asia-east2',
+  'asia-northeast1',
+  'asia-northeast2',
+  'asia-northeast3',
+  'asia-south1',
+  'asia-south2',
+  'asia-southeast1',
+  'asia-southeast2',
+  'australia-southeast1',
+  'australia-southeast2',
+  'europe-central2',
+  'europe-north1',
+  'europe-southwest1',
+  'europe-west1',
+  'europe-west2',
+  'europe-west3',
+  'europe-west4',
+  'europe-west6',
+  'europe-west8',
+  'europe-west9',
+  'europe-west10',
+  'europe-west12',
+  'me-central1',
+  'me-central2',
+  'me-west1',
+  'northamerica-northeast1',
+  'northamerica-northeast2',
+  'southamerica-east1',
+  'southamerica-west1',
+  'us-central1',
+  'us-east1',
+  'us-east4',
+  'us-east5',
+  'us-south1',
+  'us-west1',
+  'us-west2',
+  'us-west3',
+  'us-west4',
+];
+
 export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = '', onSubmit }: EnvFormSheetProps) {
   const [displayName, setDisplayName] = useState(initialDisplayName);
   const [envType, setEnvType] = useState(1);
+  const [region, setRegion] = useState('europe-west3');
+  const [regionFilter, setRegionFilter] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
       setDisplayName(initialDisplayName);
+      setRegionFilter('');
       setError(null);
       setLoading(false);
     }
   }, [open, initialDisplayName]);
+
+  const filteredRegions = GCP_REGIONS.filter(r => r.includes(regionFilter.toLowerCase()));
 
   const handleSubmit = async () => {
     if (!displayName.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      await onSubmit(displayName.trim(), envType);
+      await onSubmit(displayName.trim(), envType, region);
       onOpenChange(false);
     } catch (err) {
       setError(String(err));
@@ -67,7 +115,8 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
           </div>
         </SheetHeader>
 
-        <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1">
+        <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1 overflow-y-auto">
+          {/* Display Name */}
           <div className="flex flex-col gap-[6px]">
             <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Display Name
@@ -82,35 +131,67 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
           </div>
 
           {mode === 'create' && (
-            <div className="flex flex-col gap-[6px]">
-              <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
-                Type
-              </p>
-              <div className="flex flex-col gap-[4px]">
-                {ENV_TYPES.map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setEnvType(t.value)}
-                    disabled={loading}
-                    className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
-                      envType === t.value
-                        ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)]'
-                        : 'border-[#464646] hover:bg-[rgba(255,255,255,0.04)]'
-                    }`}
-                  >
-                    <Icon
-                      icon={t.icon}
-                      className={`text-xl ${envType === t.value ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.5)]'}`}
-                    />
-                    <span className={`font-['JetBrains_Mono',sans-serif] text-[12px] ${
-                      envType === t.value ? 'text-[#F881A9]' : 'text-white'
-                    }`}>
-                      {t.label}
-                    </span>
-                  </button>
-                ))}
+            <>
+              {/* Type */}
+              <div className="flex flex-col gap-[6px]">
+                <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                  Type
+                </p>
+                <div className="flex flex-col gap-[4px]">
+                  {ENV_TYPES.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => setEnvType(t.value)}
+                      disabled={loading}
+                      className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
+                        envType === t.value
+                          ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)]'
+                          : 'border-[#464646] hover:bg-[rgba(255,255,255,0.04)]'
+                      }`}
+                    >
+                      <Icon
+                        icon={t.icon}
+                        className={`text-xl ${envType === t.value ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.5)]'}`}
+                      />
+                      <span className={`font-['JetBrains_Mono',sans-serif] text-[12px] ${envType === t.value ? 'text-[#F881A9]' : 'text-white'}`}>
+                        {t.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+
+              {/* Region */}
+              <div className="flex flex-col gap-[6px]">
+                <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                  Region
+                </p>
+                <Input
+                  placeholder="Filter regions..."
+                  value={regionFilter}
+                  onChange={(e) => setRegionFilter(e.target.value)}
+                  disabled={loading}
+                  className="font-['JetBrains_Mono',sans-serif] text-[12px]"
+                />
+                <div className="flex flex-col gap-[2px] max-h-[180px] overflow-y-auto border border-[#464646] rounded-[4px]">
+                  {filteredRegions.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => setRegion(r)}
+                      disabled={loading}
+                      className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
+                        region === r
+                          ? 'bg-[rgba(248,129,169,0.12)] text-[#F881A9]'
+                          : 'text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.04)]'
+                      }`}
+                    >
+                      <span className="font-['JetBrains_Mono',sans-serif] text-[11px]">{r}</span>
+                      {region === r && <Icon icon="solar:check-circle-linear" className="text-[#F881A9] text-[14px] shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           {error && (
