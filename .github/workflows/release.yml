@@ -1,0 +1,218 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
+      - name: Install frontend deps
+        run: npm --prefix frontend install
+      - name: Generate bindings
+        run: wails3 generate bindings
+      - name: Build frontend
+        run: npm --prefix frontend run build
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        run: |
+          echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+
+          # Install Apple WWDR intermediate certificates (required for valid chain)
+          curl -sL https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer -o /tmp/DevIDG2.cer
+          security import /tmp/DevIDG2.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
+          curl -sL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o /tmp/WWDRG3.cer
+          security import /tmp/WWDRG3.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
+
+          security import /tmp/certificate.p12 -P "$MACOS_CERTIFICATE_PWD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          # Verify
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          rm /tmp/certificate.p12 /tmp/DevIDG2.cer /tmp/WWDRG3.cer
+      - name: Build binary
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+      - name: Create .app bundle and sign
+        run: |
+          APP="Alis Hub.app"
+          mkdir -p "$APP/Contents/MacOS"
+          mkdir -p "$APP/Contents/Resources"
+          cp alis-hub-v3 "$APP/Contents/MacOS/"
+          cp build/darwin/icons.icns "$APP/Contents/Resources/"
+          cp build/darwin/Info.plist "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.ref_name }}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ github.ref_name }}" "$APP/Contents/Info.plist"
+          # Try Developer ID signing; fall back to ad-hoc if cert unavailable
+          IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/' || true)
+          if [ -n "$IDENTITY" ]; then
+            echo "Signing with: $IDENTITY"
+            # Strip Go's auto ad-hoc signature before re-signing.
+            codesign --remove-signature "$APP/Contents/MacOS/alis-hub-v3" || true
+            # Sign inner binary with entitlements + hardened runtime + timestamp (required for notarization).
+            codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+              --entitlements build/darwin/entitlements.plist \
+              "$APP/Contents/MacOS/alis-hub-v3"
+            codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+              "$APP"
+            codesign --verify --strict --verbose=2 "$APP"
+          else
+            echo "No Developer ID found, using ad-hoc signing"
+            codesign --force --deep --sign - --entitlements build/darwin/entitlements.plist "$APP"
+          fi
+      - name: Notarize and staple
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          APP="Alis Hub.app"
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
+            echo "::warning::Notarization secrets missing; skipping notarization. Downloaded app will be blocked by Gatekeeper."
+            exit 0
+          fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP" /tmp/AlisHub-notarize.zip
+          # Capture submission ID so we can fetch Apple's log on failure
+          SUBMIT_OUT=$(xcrun notarytool submit /tmp/AlisHub-notarize.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --wait 2>&1) || NOTARIZE_FAILED=1
+          echo "$SUBMIT_OUT"
+          SUBMIT_ID=$(echo "$SUBMIT_OUT" | awk '/^  id: / {print $2; exit}')
+          if [ -n "$NOTARIZE_FAILED" ] || echo "$SUBMIT_OUT" | grep -q "status: Invalid"; then
+            echo "::error::Notarization failed. Fetching Apple's log..."
+            if [ -n "$SUBMIT_ID" ]; then
+              xcrun notarytool log "$SUBMIT_ID" \
+                --apple-id "$APPLE_ID" \
+                --team-id "$APPLE_TEAM_ID" \
+                --password "$APPLE_APP_PASSWORD"
+            fi
+            exit 1
+          fi
+          xcrun stapler staple "$APP"
+          spctl -a -vvv -t execute "$APP" || true
+          rm /tmp/AlisHub-notarize.zip
+      - name: Create zip + DMG with Applications shortcut
+        run: |
+          APP="Alis Hub.app"
+          VERSION=${{ github.ref_name }}
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "AlisHub-macOS-${VERSION}.zip"
+
+          hdiutil create -size 200m -volname "Alis Hub" -fs HFS+ -ov /tmp/alishub-rw.dmg
+          hdiutil attach /tmp/alishub-rw.dmg -mountpoint /tmp/alishub-mount
+          cp -R "$APP" /tmp/alishub-mount/
+          ln -s /Applications /tmp/alishub-mount/Applications
+          hdiutil detach /tmp/alishub-mount
+          hdiutil convert /tmp/alishub-rw.dmg -format UDZO -o "AlisHub-macOS-${VERSION}.dmg"
+          rm /tmp/alishub-rw.dmg
+      - uses: actions/upload-artifact@v5
+        with:
+          name: macos
+          path: |
+            AlisHub-macOS-*.zip
+            AlisHub-macOS-*.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
+      - name: Install frontend deps
+        run: npm --prefix frontend install
+      - name: Generate bindings
+        run: wails3 generate bindings
+      - name: Build frontend
+        run: npm --prefix frontend run build
+      - name: Build binary
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+      - name: Package
+        run: |
+          VERSION=${{ github.ref_name }}
+          mkdir -p AlisHub-linux
+          cp alis-hub-v3 AlisHub-linux/
+          cp build/appicon.png AlisHub-linux/alishub.png
+          tar czf "AlisHub-linux-${VERSION}.tar.gz" AlisHub-linux
+      - uses: actions/upload-artifact@v5
+        with:
+          name: linux
+          path: AlisHub-linux-*.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
+      - name: Install frontend deps
+        run: cd frontend && npm install
+      - name: Generate bindings
+        run: wails3 generate bindings
+      - name: Build frontend
+        run: cd frontend && npm run build
+      - name: Build binary
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3.exe .
+      - name: Package
+        run: Compress-Archive -Path alis-hub-v3.exe -DestinationPath "AlisHub-windows-${{ github.ref_name }}.zip"
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows
+          path: AlisHub-windows-*.zip
+
+  release:
+    needs: [build-macos, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -la
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            AlisHub-macOS-*.zip
+            AlisHub-macOS-*.dmg
+            AlisHub-linux-*.tar.gz
+            AlisHub-windows-*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
