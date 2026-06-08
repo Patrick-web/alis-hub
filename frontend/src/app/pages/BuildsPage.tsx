@@ -4,6 +4,8 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Table } from '../components/Table';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
+import { RightPane } from '../components/RightPane';
+import { Tab } from '../components/Tab';
 import { useWorkspace } from '../stores/workspace';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
@@ -113,7 +115,9 @@ export function BuildsPage() {
   // Changelog between versions
   const [changelogCommits, setChangelogCommits] = useState<DefineCommit[]>([]);
   const [changelogLoading, setChangelogLoading] = useState(false);
-  const [changelogExpanded, setChangelogExpanded] = useState(false);
+
+  // Detail pane tab
+  const [detailTab, setDetailTab] = useState<'details' | 'logs' | 'commits'>('details');
 
   // Repo remote URI for GCSR links (product-level)
   const [repoRemoteUri, setRepoRemoteUri] = useState<string | null>(null);
@@ -180,7 +184,7 @@ export function BuildsPage() {
     setLogsError(null);
     setChangelogCommits([]);
     setChangelogLoading(false);
-    setChangelogExpanded(false);
+    setDetailTab('details');
 
     if (!activeNeuron || !state.organisation || !state.product) return;
     const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${activeNeuron}`;
@@ -374,7 +378,6 @@ export function BuildsPage() {
   // Load changelog when a version is selected
   useEffect(() => {
     setChangelogCommits([]);
-    setChangelogExpanded(false);
     if (!activeVersionId || !activeNeuron || !state.organisation || !state.product) return;
 
     const selectedIdx = versions.findIndex(v => v.version === activeVersionId);
@@ -411,6 +414,26 @@ export function BuildsPage() {
       .catch(() => {})
       .finally(() => setChangelogLoading(false));
   }, [activeVersionId, activeNeuron, state.organisation, state.product]);
+
+  // Auto-fetch build logs when the logs tab is opened
+  useEffect(() => {
+    if (detailTab !== 'logs' || !activeVersionId) return;
+    const ver = versions.find(v => v.version === activeVersionId);
+    if (!ver?.logsUrl || logsContent !== null || logsLoading) return;
+    setLogsLoading(true);
+    setLogsError(null);
+    BuildService.FetchBuildLogs(ver.logsUrl, 0)
+      .then((result: any) => {
+        const text = result?.content ?? '';
+        setLogsContent(text.trim() || null);
+        if (!text.trim()) setLogsError('Logs are no longer available for this build.');
+      })
+      .catch((e: any) => {
+        const msg: string = e?.message ?? String(e) ?? '';
+        setLogsError(msg.includes('HTTP 5') ? 'Logs are no longer available for this build.' : msg || 'Failed to load logs');
+      })
+      .finally(() => setLogsLoading(false));
+  }, [detailTab, activeVersionId]);
 
   const filteredVersions = versions.filter(v =>
     v.version.toLowerCase().includes(filterText.toLowerCase())
@@ -553,6 +576,7 @@ export function BuildsPage() {
                 setActiveVersionId(v.version === activeVersionId ? null : v.version);
                 setLogsContent(null);
                 setLogsError(null);
+                setDetailTab('details');
               }}
               activeRowId={activeVersionId ?? undefined}
             />
@@ -561,211 +585,208 @@ export function BuildsPage() {
       </div>
 
       {/* Right Section: Build flow / Logs Panel — only shown when a version is selected or a flow is active */}
-      {(activeVersionId !== null || buildStep !== null || deployStep !== null) && <div className="w-[450px] flex flex-col bg-[#1e1e1e] overflow-hidden border-l border-[#464646]">
-        {/* Header */}
-        <div className="px-[20px] py-[10px] border-b border-[#464646] flex items-center justify-between h-[51px] shrink-0">
-          <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-70">
-            {deployStep === 'select-env' ? 'SELECT ENVIRONMENTS' : deployStep === 'running' || deployStep === 'result' ? 'DEPLOY LOGS' : buildStep === null ? 'DETAILS' : buildStep === 'commits' ? 'SELECT COMMIT' : buildStep === 'confirm' ? 'CONFIRM BUILD' : 'BUILD LOGS'}
-          </p>
-          <div className="flex items-center gap-[15px]">
-            {buildResult?.logsUrl && deployStep === null && (
-              <button
-                onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                title="Open logs in browser"
-                className="text-white opacity-50 hover:opacity-100 transition-opacity"
-              >
-                <Icon icon="solar:arrow-right-up-linear" className="text-lg" />
-              </button>
-            )}
-            {(buildStep !== null || deployStep !== null) && (
-              <button
-                onClick={() => { setBuildStep(null); setBuildResult(null); setDeployStep(null); setDeployResult(null); }}
-                className="text-white opacity-50 hover:opacity-100 transition-opacity"
-                title="Close panel"
-              >
-                <Icon icon="solar:close-linear" className="text-lg" />
-              </button>
-            )}
+      {(activeVersionId !== null || buildStep !== null || deployStep !== null) && <RightPane
+        label={
+          deployStep === 'select-env' ? 'SELECT ENVIRONMENTS' :
+          deployStep === 'running' || deployStep === 'result' ? 'DEPLOY LOGS' :
+          buildStep === null ? 'DETAILS' :
+          buildStep === 'commits' ? 'SELECT COMMIT' :
+          buildStep === 'confirm' ? 'CONFIRM BUILD' :
+          'BUILD LOGS'
+        }
+        onClose={
+          buildStep !== null || deployStep !== null
+            ? () => { setBuildStep(null); setBuildResult(null); setDeployStep(null); setDeployResult(null); }
+            : undefined
+        }
+        actions={
+          buildResult?.logsUrl && deployStep === null ? (
+            <button
+              onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
+              title="Open logs in browser"
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[#3c3c3c] transition-colors"
+            >
+              <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+            </button>
+          ) : undefined
+        }
+        width="w-[450px]"
+        footer={buildStep === null && deployStep === null && selectedVersion ? (
+          <div className="flex flex-col gap-[8px]">
+            <Button variant="primary" className="w-full justify-center py-[10px]" onClick={openDeployFlow}>
+              {isLatest(selectedVersion) ? 'Redeploy' : 'Revert to this version'}
+            </Button>
+            <Button variant="secondary" className="w-full justify-center py-[10px]" onClick={openBuildFlow}>
+              Build Newer Version
+            </Button>
+            {repoRemoteUri && selectedVersion.buildCommit && (() => {
+              const idx = versions.findIndex(v => v.version === selectedVersion.version);
+              const prev = versions[idx + 1];
+              const commitUrl = buildGCSRUrl(repoRemoteUri, selectedVersion.buildCommit);
+              const compareUrl = prev?.buildCommit
+                ? buildGCSRUrl(repoRemoteUri, `${prev.buildCommit}..${selectedVersion.buildCommit}`)
+                : null;
+              if (!commitUrl) return null;
+              return (
+                <div className="flex gap-[8px]">
+                  <button
+                    onClick={() => Browser.OpenURL(commitUrl)}
+                    className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
+                  >
+                    <Icon icon="solar:code-square-linear" className="text-sm" />
+                    View commit
+                    <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
+                  </button>
+                  {compareUrl && (
+                    <button
+                      onClick={() => Browser.OpenURL(compareUrl!)}
+                      className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
+                    >
+                      <Icon icon="solar:graph-new-up-linear" className="text-sm" />
+                      View changes
+                      <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
-        </div>
+        ) : undefined}
+      >
 
         {/* Content: idle */}
         {buildStep === null && deployStep === null && (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 flex flex-col min-h-0">
             {selectedVersion ? (
-              <div className="px-[20px] py-[20px]">
-                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px] mb-[16px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[12px]">
-                    Build Version
-                  </p>
-                  <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[20px] text-white mb-[6px]">
-                    {selectedVersion.version}
-                  </p>
-                  {selectedVersion.createTime > 0 && (
-                    <p className="text-[10px] text-[rgba(255,255,255,0.45)] mb-[12px]">
-                      {formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}
-                    </p>
-                  )}
-                  {selectedVersion.buildCommit && (
-                    <div className="flex items-center gap-[8px] mt-[4px]">
-                      <Icon icon="solar:code-square-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)]">
-                        {selectedVersion.buildCommit.substring(0, 12)}
-                      </span>
-                    </div>
-                  )}
-                  {/* Deployed-in env chips */}
-                  {(() => {
-                    const envNames = deployedEnvsForVersion(selectedVersion.version);
-                    return envNames.length > 0 ? (
-                      <div className="flex items-center gap-[6px] mt-[10px] flex-wrap">
-                        <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-['JetBrains_Mono',sans-serif] shrink-0">
-                          Deployed in
-                        </span>
-                        {envNames.map(name => (
-                          <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null;
-                  })()}
+              <>
+                {/* Tab bar */}
+                <div className="flex h-[36px] border-b border-[#464646] shrink-0">
+                  <Tab
+                    label="Details"
+                    icon={<Icon icon="solar:info-circle-linear" className="text-sm" />}
+                    active={detailTab === 'details'}
+                    onClick={() => setDetailTab('details')}
+                  />
+                  <Tab
+                    label="Logs"
+                    icon={<Icon icon="solar:document-text-linear" className="text-sm" />}
+                    active={detailTab === 'logs'}
+                    onClick={() => setDetailTab('logs')}
+                  />
+                  <Tab
+                    label="Commits"
+                    icon={<Icon icon="solar:history-linear" className="text-sm" />}
+                    active={detailTab === 'commits'}
+                    onClick={() => setDetailTab('commits')}
+                  />
                 </div>
 
-                <Button
-                  variant="primary"
-                  className="w-full justify-center py-[10px] mb-[8px]"
-                  onClick={openDeployFlow}
-                >
-                  {isLatest(selectedVersion) ? 'Redeploy' : 'Revert to this version'}
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="w-full justify-center py-[10px] mb-[8px]"
-                  onClick={openBuildFlow}
-                >
-                  Build Newer Version
-                </Button>
-
-                {/* GCSR links */}
-                {repoRemoteUri && selectedVersion.buildCommit && (() => {
-                  const selectedIdx2 = versions.findIndex(v => v.version === selectedVersion.version);
-                  const prevVer2 = versions[selectedIdx2 + 1];
-                  const commitUrl = buildGCSRUrl(repoRemoteUri, selectedVersion.buildCommit);
-                  const compareUrl = prevVer2?.buildCommit
-                    ? buildGCSRUrl(repoRemoteUri, `${prevVer2.buildCommit}..${selectedVersion.buildCommit}`)
-                    : null;
-                  if (!commitUrl) return null;
-                  return (
-                    <div className="flex gap-[8px] mb-[8px]">
-                      <button
-                        onClick={() => Browser.OpenURL(commitUrl)}
-                        className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
-                      >
-                        <Icon icon="solar:code-square-linear" className="text-sm" />
-                        View commit
-                        <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
-                      </button>
-                      {compareUrl && (
-                        <button
-                          onClick={() => Browser.OpenURL(compareUrl!)}
-                          className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
-                        >
-                          <Icon icon="solar:graph-new-up-linear" className="text-sm" />
-                          View changes
-                          <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
-                        </button>
+                {/* Details tab */}
+                {detailTab === 'details' && (
+                  <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
+                    <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px]">
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[12px]">
+                        Build Version
+                      </p>
+                      <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[20px] text-white mb-[6px]">
+                        {selectedVersion.version}
+                      </p>
+                      {selectedVersion.createTime > 0 && (
+                        <p className="text-[10px] text-[rgba(255,255,255,0.45)] mb-[12px]">
+                          {formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}
+                        </p>
                       )}
+                      {selectedVersion.buildCommit && (
+                        <div className="flex items-center gap-[8px] mt-[4px]">
+                          <Icon icon="solar:code-square-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
+                          <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)]">
+                            {selectedVersion.buildCommit.substring(0, 12)}
+                          </span>
+                        </div>
+                      )}
+                      {(() => {
+                        const envNames = deployedEnvsForVersion(selectedVersion.version);
+                        return envNames.length > 0 ? (
+                          <div className="flex items-center gap-[6px] mt-[10px] flex-wrap">
+                            <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-['JetBrains_Mono',sans-serif] shrink-0">
+                              Deployed in
+                            </span>
+                            {envNames.map(name => (
+                              <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null;
+                      })()}
                     </div>
-                  );
-                })()}
-
-                {/* Build logs toggle */}
-                {selectedVersion.logsUrl && (
-                  <button
-                    onClick={async () => {
-                      if (logsContent !== null) { setLogsContent(null); setLogsError(null); return; }
-                      setLogsLoading(true);
-                      setLogsError(null);
-                      try {
-                        const result = await BuildService.FetchBuildLogs(selectedVersion.logsUrl, 0);
-                        const text = (result as any)?.content ?? '';
-                        setLogsContent(text.trim() || null);
-                        if (!text.trim()) setLogsError('Logs are no longer available for this build.');
-                      } catch (e: any) {
-                        setLogsError(e?.message ?? 'Failed to load logs');
-                      } finally {
-                        setLogsLoading(false);
-                      }
-                    }}
-                    className="w-full flex items-center justify-center gap-[6px] py-[8px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-                  >
-                    {logsLoading ? (
-                      <Icon icon="solar:spinner-linear" className="animate-spin text-sm" />
-                    ) : (
-                      <Icon icon="solar:document-text-linear" className="text-sm" />
-                    )}
-                    {logsContent !== null ? 'Hide logs' : logsLoading ? 'Loading…' : 'View build logs'}
-                  </button>
-                )}
-                {logsError && (
-                  <p className="text-[10px] text-[rgba(255,92,95,0.8)] mt-[4px] text-center">{logsError}</p>
-                )}
-                {logsContent !== null && (
-                  <div className="mt-[12px] bg-[#111] border border-[#333] rounded-[6px] overflow-auto max-h-[400px]">
-                    <pre className="p-[12px] text-[10px] leading-[1.6] text-[rgba(255,255,255,0.75)] font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap break-words">
-                      {logsContent || '(no log output)'}
-                    </pre>
                   </div>
                 )}
 
-                {/* Changelog */}
-                <div className="mt-[4px]">
-                  {changelogLoading ? (
-                    <div className="flex items-center gap-[8px] py-[8px]">
-                      <Icon icon="solar:spinner-linear" className="text-[rgba(255,255,255,0.3)] animate-spin text-sm" />
-                      <span className="text-[10px] text-[rgba(255,255,255,0.3)]">Loading changelog...</span>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => changelogCommits.length > 0 && setChangelogExpanded(e => !e)}
-                      className={`w-full flex items-center justify-between py-[8px] text-left ${changelogCommits.length > 0 ? 'group cursor-pointer' : 'cursor-default'}`}
-                    >
-                      <div className="flex items-center gap-[6px]">
-                        <Icon icon="solar:history-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
-                        <span className={`text-[10px] text-[rgba(255,255,255,0.35)] ${changelogCommits.length > 0 ? 'group-hover:text-white transition-colors' : ''}`}>
-                          {changelogCommits.length > 0
-                            ? `${changelogCommits.length} commit${changelogCommits.length !== 1 ? 's' : ''} since ${versions[versions.findIndex(v => v.version === activeVersionId) + 1]?.version ?? 'start'}`
-                            : 'No changelog available'}
-                        </span>
+                {/* Logs tab */}
+                {detailTab === 'logs' && (
+                  <div className="flex-1 overflow-y-auto">
+                    {!selectedVersion.logsUrl ? (
+                      <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
+                        <Icon icon="solar:document-text-linear" className="text-white text-[24px]" />
+                        <p className="text-[11px] text-white">No logs for this build</p>
                       </div>
-                      {changelogCommits.length > 0 && (
-                        <Icon
-                          icon={changelogExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                          className="text-[rgba(255,255,255,0.3)] text-sm shrink-0"
-                        />
-                      )}
-                    </button>
-                  )}
-                  {changelogExpanded && changelogCommits.length > 0 && (
-                    <div className="mb-[8px] border border-[#2c2c2c] rounded-[6px] overflow-hidden">
-                      {changelogCommits.map(c => (
-                        <div key={c.sha} className="flex items-start gap-[8px] px-[10px] py-[8px] border-b border-[#2c2c2c] last:border-b-0 hover:bg-[#252525]">
-                          <span className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[#f881a9] shrink-0 mt-[1px]">
-                            {c.sha.substring(0, 7)}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] text-white leading-tight">{c.message}</p>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] mt-[2px]">
-                              {c.author} · {formatRelativeTime(c.timestamp)}
-                            </p>
+                    ) : logsLoading ? (
+                      <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
+                        <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                        <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading logs...</span>
+                      </div>
+                    ) : logsError ? (
+                      <p className="text-[10px] text-[rgba(255,92,95,0.8)] px-[16px] py-[20px]">{logsError}</p>
+                    ) : logsContent !== null ? (
+                      <pre className="p-[12px] text-[10px] leading-[1.6] text-[rgba(255,255,255,0.75)] font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap break-words">
+                        {logsContent || '(no log output)'}
+                      </pre>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
+                        <Icon icon="solar:document-text-linear" className="text-white text-[24px]" />
+                        <p className="text-[11px] text-white">No log output</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Commits tab */}
+                {detailTab === 'commits' && (
+                  <div className="flex-1 overflow-y-auto">
+                    {changelogLoading ? (
+                      <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
+                        <Icon icon="solar:spinner-linear" className="text-[rgba(255,255,255,0.3)] animate-spin text-base" />
+                        <span className="text-[11px] text-[rgba(255,255,255,0.3)]">Loading commits...</span>
+                      </div>
+                    ) : changelogCommits.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
+                        <Icon icon="solar:history-linear" className="text-white text-[24px]" />
+                        <p className="text-[11px] text-white">No changelog available</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col">
+                        <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                          {changelogCommits.length} commit{changelogCommits.length !== 1 ? 's' : ''} since {versions[versions.findIndex(v => v.version === activeVersionId) + 1]?.version ?? 'start'}
+                        </p>
+                        {changelogCommits.map(c => (
+                          <div key={c.sha} className="flex items-start gap-[8px] px-[16px] py-[8px] border-b border-[#2c2c2c] last:border-b-0 hover:bg-[#252525]">
+                            <span className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[#f881a9] shrink-0 mt-[1px]">
+                              {c.sha.substring(0, 7)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] text-white leading-tight">{c.message}</p>
+                              <p className="text-[9px] text-[rgba(255,255,255,0.35)] mt-[2px]">
+                                {c.author} · {formatRelativeTime(c.timestamp)}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-[12px] opacity-30 pb-[40px]">
                 <Icon icon="solar:box-linear" className="text-white text-[32px]" />
@@ -1052,7 +1073,7 @@ export function BuildsPage() {
             )}
           </div>
         )}
-      </div>}
+      </RightPane>}
     </div>
   );
 }
