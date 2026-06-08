@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	repo       = "Patrick-web/alis-hub-v3"
+	repo       = "Patrick-web/alis-hub"
 	apiLatest  = "https://api.github.com/repos/" + repo + "/releases/latest"
 	releaseURL = "https://github.com/" + repo + "/releases/latest"
 )
