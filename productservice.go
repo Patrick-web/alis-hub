@@ -304,6 +304,47 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 	return parseEnvVariablesFromGetEnvironment(body[5:])
 }
 
+// SetEnvironmentVariables replaces all variables on an environment by calling
+// UpdateEnvironment with an update_mask of "envs". Variables are field 8
+// (repeated Environment.Env sub-messages: field 1=name/label, field 2=value).
+func (s *ProductService) SetEnvironmentVariables(envName string, vars []EnvVariable) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+
+	// Build environment sub-message with name + all variables
+	var envBuf []byte
+	envBuf = protowire.AppendTag(envBuf, 1, protowire.BytesType)
+	envBuf = protowire.AppendString(envBuf, envName)
+	for _, v := range vars {
+		var varBuf []byte
+		varBuf = protowire.AppendTag(varBuf, 1, protowire.BytesType)
+		varBuf = protowire.AppendString(varBuf, v.Label)
+		varBuf = protowire.AppendTag(varBuf, 2, protowire.BytesType)
+		varBuf = protowire.AppendString(varBuf, v.Value)
+		envBuf = protowire.AppendTag(envBuf, 8, protowire.BytesType)
+		envBuf = protowire.AppendBytes(envBuf, varBuf)
+	}
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, envBuf)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, marshalFieldMask([]string{"envs"}))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/UpdateEnvironment", buf)
+	if err != nil {
+		return fmt.Errorf("SetEnvironmentVariables: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("SetEnvironmentVariables: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	return nil
+}
+
 // CreateEnvironment creates a new environment under the given org/product.
 // envType: 1=DEV, 2=STAGING, 3=PROD
 func (s *ProductService) CreateEnvironment(org, product, displayName string, envType int32) (*EnvInfo, error) {

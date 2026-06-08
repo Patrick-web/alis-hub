@@ -4,16 +4,7 @@ import { Icon } from '@iconify/react';
 import { SidebarNavItem } from './SidebarNavItem';
 import { Button } from './Button';
 import { EnvFormSheet } from './EnvFormSheet';
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from './ui/alert-dialog';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useWorkspace, type LoadedEnv } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
@@ -232,34 +223,19 @@ export function Sidebar() {
       />
 
       {/* Delete confirmation */}
-      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <AlertDialogContent className="bg-[#2c2c2c] border border-[#464646] text-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[14px]">
-              Delete Environment
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif] text-[12px]">
-              Are you sure you want to delete <span className="text-white">{deleteTarget?.displayName}</span>?
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              className="bg-transparent border border-[#464646] text-white hover:bg-[rgba(255,255,255,0.05)] font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
-              disabled={deleteLoading}
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-[#ff5050] hover:bg-[#ff3333] text-white border-0 font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
-              onClick={handleDeleteEnv}
-              disabled={deleteLoading}
-            >
-              {deleteLoading ? 'Deleting…' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete Environment"
+        description={
+          <>
+            Delete <span className="text-white">{deleteTarget?.displayName}</span>? This cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        onConfirm={handleDeleteEnv}
+      />
     </>
   );
 }

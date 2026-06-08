@@ -4,6 +4,8 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { ActionButton } from '../components/ActionButton';
 import { Table } from '../components/Table';
+import { VarFormSheet } from '../components/VarFormSheet';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
@@ -20,7 +22,17 @@ export function EnvironmentsPage() {
   const [vars, setVars] = useState<EnvVar[]>([]);
   const [loading, setLoading] = useState(false);
   const [envsLoading, setEnvsLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Variable CRUD sheet state
+  const [varSheetOpen, setVarSheetOpen] = useState(false);
+  const [varSheetMode, setVarSheetMode] = useState<'create' | 'edit'>('create');
+  const [editVar, setEditVar] = useState<EnvVar | null>(null);
+
+  // Delete confirmation state
+  const [deleteVar, setDeleteVar] = useState<EnvVar | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Load environment list on mount if not already loaded
   useEffect(() => {
@@ -72,6 +84,52 @@ export function EnvironmentsPage() {
     }
   }, [state.activeEnvName, loadVariables]);
 
+  // Persist vars array to API
+  const persistVars = useCallback(async (updated: EnvVar[]) => {
+    if (!state.activeEnvName) return;
+    setSaving(true);
+    try {
+      await (ProductService.SetEnvironmentVariables as (envName: string, vars: any[]) => Promise<void>)(
+        state.activeEnvName,
+        updated.map((v) => ({ label: v.label, value: v.value })),
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [state.activeEnvName]);
+
+  const handleCreateVar = async (label: string, value: string) => {
+    if (vars.some((v) => v.label === label)) {
+      throw new Error(`Variable "${label}" already exists`);
+    }
+    const newId = String(Date.now());
+    const updated = [...vars, { id: newId, label, value }];
+    setVars(updated);
+    await persistVars(updated);
+  };
+
+  const handleEditVar = async (_label: string, value: string) => {
+    if (!editVar) return;
+    const updated = vars.map((v) => v.id === editVar.id ? { ...v, value } : v);
+    setVars(updated);
+    await persistVars(updated);
+  };
+
+  const handleDeleteVar = async () => {
+    if (!deleteVar) return;
+    setDeleteLoading(true);
+    try {
+      const updated = vars.filter((v) => v.id !== deleteVar.id);
+      setVars(updated);
+      await persistVars(updated);
+      setDeleteVar(null);
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const toggleVar = (id: string) => {
     setSelectedVars(prev =>
       prev.includes(id) ? prev.filter(vId => vId !== id) : [...prev, id]
@@ -108,10 +166,14 @@ export function EnvironmentsPage() {
     },
     {
       header: 'Actions',
-      render: (_item: EnvVar) => (
+      render: (item: EnvVar) => (
         <div className="flex gap-[5px]">
-          <ActionButton>Edit</ActionButton>
-          <ActionButton>Delete</ActionButton>
+          <ActionButton onClick={() => {
+            setEditVar(item);
+            setVarSheetMode('edit');
+            setVarSheetOpen(true);
+          }}>Edit</ActionButton>
+          <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
         </div>
       ),
       className: 'w-[150px]',
@@ -121,10 +183,16 @@ export function EnvironmentsPage() {
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
       {/* Page Title Header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646]">
+      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between">
         <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           VARIABLES
         </p>
+        {saving && (
+          <div className="flex items-center gap-[6px]">
+            <Icon icon="solar:refresh-linear" className="text-[#F881A9] text-[14px] animate-spin" />
+            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[rgba(255,255,255,0.4)]">Saving…</p>
+          </div>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -147,6 +215,11 @@ export function EnvironmentsPage() {
             variant="secondary"
             className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
             icon={<Icon icon="solar:add-circle-linear" className="text-xl" />}
+            onClick={() => {
+              setVarSheetMode('create');
+              setEditVar(null);
+              setVarSheetOpen(true);
+            }}
           >
             New Variable
           </Button>
@@ -178,6 +251,32 @@ export function EnvironmentsPage() {
           />
         )}
       </div>
+
+      {/* Variable create/edit sheet */}
+      <VarFormSheet
+        open={varSheetOpen}
+        onOpenChange={setVarSheetOpen}
+        mode={varSheetMode}
+        initialLabel={varSheetMode === 'edit' ? (editVar?.label ?? '') : ''}
+        initialValue={varSheetMode === 'edit' ? (editVar?.value ?? '') : ''}
+        onSubmit={varSheetMode === 'create' ? handleCreateVar : handleEditVar}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        open={Boolean(deleteVar)}
+        onOpenChange={(open) => { if (!open) setDeleteVar(null); }}
+        title="Delete Variable"
+        description={
+          <>
+            Delete <span className="text-white font-['JetBrains_Mono',sans-serif]">{deleteVar?.label}</span>?
+            This cannot be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        loading={deleteLoading}
+        onConfirm={handleDeleteVar}
+      />
     </div>
   );
 }
