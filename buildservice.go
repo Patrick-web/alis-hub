@@ -354,8 +354,8 @@ func extractBuildLogText(pageHTML string) string {
 // and returns only the characters past textOffset. Pass 0 on the first call;
 // pass the returned NextOffset on each subsequent call to stream only new lines.
 func (s *BuildService) FetchBuildLogs(logsUrl string, textOffset int64) (*BuildLogsResult, error) {
-	if s.alisClient == nil {
-		return nil, fmt.Errorf("not connected to Alis backend")
+	if err := s.initClient(); err != nil {
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -384,8 +384,8 @@ func (s *BuildService) FetchBuildLogs(logsUrl string, textOffset int64) (*BuildL
 // PollBuildOperation checks the status of a running Build operation.
 // neuron is the full neuron resource name (needed to construct the logs URL when the API doesn't return one).
 func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult, error) {
-	if s.alisClient == nil {
-		return nil, fmt.Errorf("not connected to Alis backend")
+	if err := s.initClient(); err != nil {
+		return nil, err
 	}
 
 	log.Printf("[build] PollBuildOperation: polling %s", name)

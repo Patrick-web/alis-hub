@@ -17,7 +17,6 @@ interface EnvVar {
 
 export function EnvironmentsPage() {
   const { state, setLoadedEnvs, setActiveEnv } = useWorkspace();
-  const [selectedVars, setSelectedVars] = useState<string[]>([]);
   const [filterText, setFilterText] = useState('');
   const [vars, setVars] = useState<EnvVar[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +63,6 @@ export function EnvironmentsPage() {
     if (!envName) return;
     setLoading(true);
     setError(null);
-    setSelectedVars([]);
     (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(envName)
       .then((result) => {
         const mapped: EnvVar[] = result.map((v: any, i: number) => ({
@@ -128,18 +126,6 @@ export function EnvironmentsPage() {
     } finally {
       setDeleteLoading(false);
     }
-  };
-
-  const toggleVar = (id: string) => {
-    setSelectedVars(prev =>
-      prev.includes(id) ? prev.filter(vId => vId !== id) : [...prev, id]
-    );
-  };
-
-  const toggleAll = () => {
-    setSelectedVars(prev =>
-      prev.length === filteredVars.length ? [] : filteredVars.map(v => v.id)
-    );
   };
 
   const filteredVars = vars.filter(v =>
@@ -245,9 +231,6 @@ export function EnvironmentsPage() {
             columns={columns}
             data={filteredVars}
             rowId={(v) => v.id}
-            selectedIds={selectedVars}
-            onSelectRow={toggleVar}
-            onSelectAll={toggleAll}
           />
         )}
       </div>

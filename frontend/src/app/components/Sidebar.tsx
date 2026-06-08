@@ -22,16 +22,6 @@ const envNavItems = [
   { id: 'development', label: 'Development', icon: <Icon icon="solar:code-linear" className="text-white text-xl" /> },
 ];
 
-const buildNavItems = [
-  { id: 'bookings-v1', label: 'bookings-v1', icon: <Icon icon="solar:delta-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'bundles-v1', label: 'bundles-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'charters-v1', label: 'charters-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'chartertypes-v1', label: 'chartertypes-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'commissions-v1', label: 'commissions-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'iam-v1', label: 'iam-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'products-v1', label: 'products-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-  { id: 'packages-v1', label: 'packages-v1', icon: <Icon icon="solar:delta-linear" className="text-white text-xl" /> },
-];
 
 const codeblockNavItems = [
   { id: 'all', label: 'All Codeblocks', icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" /> },
@@ -42,8 +32,8 @@ const codeblockNavItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, setActiveEnv, setLoadedEnvs } = useWorkspace();
-  const [activeBuildItem, setActiveBuildItem] = useState('');
+  const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } = useWorkspace();
+  const [activeBuildItem] = useState('');
   const [activeCodeblockItem, setActiveCodeblockItem] = useState('');
 
   // Env CRUD state
@@ -83,7 +73,11 @@ export function Sidebar() {
       setSheetOpen(true);
     };
   } else if (isBuilds) {
-    items = buildNavItems;
+    items = state.neurons.map(n => ({
+      id: n.name,
+      label: n.name,
+      icon: <Icon icon="solar:delta-linear" className="text-xl" style={{ color: state.activeNeuronIds[0] === n.name ? '#F881A9' : 'white' }} />,
+    }));
     header = 'BUILDS';
     bottomButtonLabel = 'New Service';
     bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
@@ -99,7 +93,7 @@ export function Sidebar() {
       if (dynamicEnvItems.length > 0) return state.activeEnvName || dynamicEnvItems[0]?.id;
       return envNavItems[0]?.id;
     }
-    if (isBuilds) return activeBuildItem || buildNavItems[0]?.id;
+    if (isBuilds) return state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem;
     if (isCodeblocks) return activeCodeblockItem || codeblockNavItems[0]?.id;
     return activeDevelopId;
   };
@@ -108,7 +102,7 @@ export function Sidebar() {
     if (isEnvironments && dynamicEnvItems.length > 0) {
       setActiveEnv(item.id);
     } else if (isBuilds) {
-      setActiveBuildItem(item.id);
+      setActiveNeurons([item.id]);
     } else if (isCodeblocks) {
       setActiveCodeblockItem(item.id);
     }

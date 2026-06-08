@@ -987,13 +987,16 @@ func parseDeployInfo(data []byte) *DeployInfo {
 }
 
 // NeuronVersionItem is a single entry from ListNeuronVersions.
-// Proto (alis.os.neurons.v1.NeuronVersion): 1=name, 2=version, 7=state (enum), 98=create_time (Timestamp).
+// Proto (alis.os.neurons.v1.NeuronVersion): 1=name, 2=version, 3=protoCommit, 4=buildCommit,
+// 7=state (enum), 8=logsUrl, 98=create_time (Timestamp).
 // State enum: BUILT=1, RETAGGED=2, BUILDING=3, FAILED=4.
 type NeuronVersionItem struct {
-	Name       string
-	Version    string
-	State      int32
-	CreateTime int64 // unix seconds from Timestamp.seconds (field 1)
+	Name        string
+	Version     string
+	BuildCommit string
+	LogsURL     string
+	State       int32
+	CreateTime  int64 // unix seconds from Timestamp.seconds (field 1)
 }
 
 // ListNeuronVersions returns available built/retagged versions for a neuron.
@@ -1067,6 +1070,10 @@ func parseNeuronVersion(data []byte) *NeuronVersionItem {
 				item.Name = string(b)
 			case 2:
 				item.Version = string(b)
+			case 4:
+				item.BuildCommit = string(b)
+			case 8:
+				item.LogsURL = string(b)
 			case 98: // create_time Timestamp: field 1=seconds
 				item.CreateTime = parseTimestampSeconds(b)
 			}

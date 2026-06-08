@@ -11,34 +11,16 @@ interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
   rowId: (item: T) => string;
-  selectedIds?: string[];
-  onSelectRow?: (id: string) => void;
-  onSelectAll?: () => void;
+  onRowClick?: (item: T) => void;
+  activeRowId?: string;
 }
 
-export function Table<T>({ 
-  columns, 
-  data, 
-  rowId, 
-  selectedIds = [], 
-  onSelectRow, 
-  onSelectAll 
-}: TableProps<T>) {
-  const isAllSelected = data.length > 0 && selectedIds.length === data.length;
-
+export function Table<T>({ columns, data, rowId, onRowClick, activeRowId }: TableProps<T>) {
   return (
     <div className="w-full h-full overflow-auto bg-[#1e1e1e]">
       <table className="w-full border-collapse">
         <thead className="sticky top-0 z-10 bg-[#1e1e1e]">
           <tr className="border-b border-[#464646]">
-            <th className="w-[40px] p-[10px] border-r border-[#464646] text-center">
-              <input
-                type="checkbox"
-                checked={isAllSelected}
-                onChange={onSelectAll}
-                className="size-[15px] cursor-pointer accent-[#f881a9]"
-              />
-            </th>
             {columns.map((column, index) => (
               <th
                 key={index}
@@ -52,21 +34,13 @@ export function Table<T>({
         <tbody>
           {data.map((item) => {
             const id = rowId(item);
-            const isSelected = selectedIds.includes(id);
+            const isActive = activeRowId === id;
             return (
-              <tr 
-                key={id} 
-                className={`border-b border-[#464646] hover:bg-[rgba(255,255,255,0.02)] transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.05)]' : ''}`}
-                onClick={() => onSelectRow?.(id)}
+              <tr
+                key={id}
+                onClick={onRowClick ? () => onRowClick(item) : undefined}
+                className={`border-b border-[#464646] transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${isActive ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
               >
-                <td className="w-[40px] p-[10px] border-r border-[#464646] text-center" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onSelectRow?.(id)}
-                    className="size-[15px] cursor-pointer accent-[#f881a9]"
-                  />
-                </td>
                 {columns.map((column, index) => (
                   <td
                     key={index}

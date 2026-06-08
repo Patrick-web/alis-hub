@@ -51,8 +51,10 @@ type DeployItem struct {
 
 // NeuronVersionSummary is a built/retagged neuron version returned to the frontend.
 type NeuronVersionSummary struct {
-	Version    string `json:"version"`
-	CreateTime int64  `json:"createTime"` // unix seconds
+	Version     string `json:"version"`
+	CreateTime  int64  `json:"createTime"` // unix seconds
+	BuildCommit string `json:"buildCommit"`
+	LogsURL     string `json:"logsUrl"`
 }
 
 // ListNeuronVersions returns built/retagged versions for a neuron, newest first.
@@ -75,8 +77,10 @@ func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSumma
 		// state: BUILT=1, RETAGGED=2
 		if item.State == 1 || item.State == 2 {
 			out = append(out, &NeuronVersionSummary{
-				Version:    item.Version,
-				CreateTime: item.CreateTime,
+				Version:     item.Version,
+				CreateTime:  item.CreateTime,
+				BuildCommit: item.BuildCommit,
+				LogsURL:     item.LogsURL,
 			})
 		}
 	}

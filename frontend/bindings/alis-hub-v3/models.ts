@@ -35,6 +35,59 @@ export class BuildLogsResult {
     }
 }
 
+export class Codeblock {
+    "name": string;
+    "displayName": string;
+    "releaseLevel": number;
+    "publisher": string;
+    "latestVersion": string;
+    "headline": string;
+    "description": string;
+    "bannerUrl": string;
+    "installCount": number;
+
+    /** Creates a new Codeblock instance. */
+    constructor($$source: Partial<Codeblock> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("releaseLevel" in $$source)) {
+            this["releaseLevel"] = 0;
+        }
+        if (!("publisher" in $$source)) {
+            this["publisher"] = "";
+        }
+        if (!("latestVersion" in $$source)) {
+            this["latestVersion"] = "";
+        }
+        if (!("headline" in $$source)) {
+            this["headline"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("bannerUrl" in $$source)) {
+            this["bannerUrl"] = "";
+        }
+        if (!("installCount" in $$source)) {
+            this["installCount"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Codeblock instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Codeblock {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Codeblock($$parsedSource as Partial<Codeblock>);
+    }
+}
+
 /**
  * DefineCommit represents a git commit in the define repository.
  */
@@ -653,6 +706,8 @@ export class NeuronVersionSummary {
      * unix seconds
      */
     "createTime": number;
+    "buildCommit": string;
+    "logsUrl": string;
 
     /** Creates a new NeuronVersionSummary instance. */
     constructor($$source: Partial<NeuronVersionSummary> = {}) {
@@ -661,6 +716,12 @@ export class NeuronVersionSummary {
         }
         if (!("createTime" in $$source)) {
             this["createTime"] = 0;
+        }
+        if (!("buildCommit" in $$source)) {
+            this["buildCommit"] = "";
+        }
+        if (!("logsUrl" in $$source)) {
+            this["logsUrl"] = "";
         }
 
         Object.assign(this, $$source);
