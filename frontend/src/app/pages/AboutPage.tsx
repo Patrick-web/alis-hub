@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Browser } from '@wailsio/runtime';
 import { Card, CardListItem } from '../components/Card';
 import { ListItem } from '../components/ListItem';
+import { Loader } from '../components/Loader';
 import { Button } from '../components/Button';
 import { useWorkspace } from '../stores/workspace';
 import * as PS from '../../../bindings/alis-hub-v3/productservice';
@@ -240,8 +241,8 @@ export function AboutPage() {
 
 function LoadingRow() {
   return (
-    <div className="px-[10px] py-[8px] text-[11px] text-[rgba(255,255,255,0.3)] animate-pulse">
-      Loading...
+    <div className="px-[10px] py-[10px] flex items-center justify-center">
+      <Loader size={24} />
     </div>
   );
 }

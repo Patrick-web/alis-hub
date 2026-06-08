@@ -7,6 +7,7 @@ import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
+import { Loader } from './components/Loader';
 
 export function RootLayout() {
   const location = useLocation();
@@ -26,11 +27,7 @@ export function RootLayout() {
   if (state.phase === 'init') {
     return (
       <div className="bg-[#1e1e1e] flex items-center justify-center h-screen w-full">
-        <div className="flex items-center gap-[10px]">
-          <div className="size-[8px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="size-[8px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="size-[8px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '300ms' }} />
-        </div>
+        <Loader />
       </div>
     );
   }
@@ -75,7 +72,7 @@ export function RootLayout() {
       <TopNav />
       <div className="flex flex-1 overflow-hidden">
         {showSidebar && <Sidebar />}
-        <Outlet />
+        <Outlet key={`${state.organisation}/${state.product}`} />
       </div>
     </div>
   );

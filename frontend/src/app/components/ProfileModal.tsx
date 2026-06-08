@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
 import { Browser, Events } from '@wailsio/runtime';
 import {
@@ -335,7 +336,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     className="flex items-center justify-center gap-[8px] h-[34px] rounded-[6px] bg-[#3a3a3a] hover:bg-[#464646] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-white font-['JetBrains_Mono',sans-serif]"
                   >
                     {checkingUpdate ? (
-                      <Icon icon="solar:spinner-linear" className="text-base animate-spin" />
+                      <Loader size={16} />
                     ) : (
                       <Icon icon="solar:refresh-linear" className="text-base" />
                     )}

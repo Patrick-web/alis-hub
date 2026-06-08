@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { Loader } from '../components/Loader';
 
 type NeuronItem = { id: string; version: string; state: number };
 type DeploymentItem = { neuronId: string; version: string; state: number; logsUrl: string };
@@ -175,9 +176,8 @@ export function ServicesPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {loading && (
-          <div className="flex items-center justify-center h-full gap-[8px]">
-            <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-xl animate-spin" />
-            <span className="text-[12px] text-[rgba(255,255,255,0.5)]">Loading services...</span>
+          <div className="flex items-center justify-center h-full">
+            <Loader />
           </div>
         )}
 

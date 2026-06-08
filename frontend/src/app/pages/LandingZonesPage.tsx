@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useWorkspace, type Organisation } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { Loader } from '../components/Loader';
 
 type LandingZonesData = {
   own: Organisation[];
@@ -125,9 +126,8 @@ export function LandingZonesPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto px-[24px] pb-[24px]">
         {loading && (
-          <div className="flex items-center justify-center h-full gap-[8px]">
-            <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-xl animate-spin" />
-            <span className="text-[12px] text-[rgba(255,255,255,0.5)]">Loading…</span>
+          <div className="flex items-center justify-center h-full">
+            <Loader />
           </div>
         )}
 
