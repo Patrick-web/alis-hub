@@ -636,7 +636,7 @@ export function DevelopPage() {
   };
 
 
-  const activeNeuronName = state.activeNeuronIds[0] || state.neurons[0]?.name || null;
+  const activeNeuronName = state.activeNeuronIds[0] || null;
   const activeNeuronData = state.neurons.find(n => n.name === activeNeuronName || n.id === activeNeuronName);
 
   const formatTimestamp = (ts: number) => {
