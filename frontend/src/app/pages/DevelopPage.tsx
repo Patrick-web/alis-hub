@@ -1,10 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
-import { Input } from '../components/Input';
 import { Button } from '../components/Button';
-import { ActionButton } from '../components/ActionButton';
-import { Table } from '../components/Table';
 import { RightPane } from '../components/RightPane';
 import { PackageTerminalPane, type TerminalSession, type PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable';
@@ -93,10 +89,7 @@ function formatRelativeTime(unixSeconds: number): string {
 }
 
 export function DevelopPage() {
-  const { state, setNeurons, updateWorkspace } = useWorkspace();
-  const navigate = useNavigate();
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [filterText, setFilterText] = useState('');
+  const { state, setNeurons } = useWorkspace();
   // Define pane state
   const [defineNeuron, setDefineNeuron] = useState<string | null>(null);
   const [defineStep, setDefineStep] = useState<DefineStep>('commits');
@@ -642,171 +635,86 @@ export function DevelopPage() {
     setPackageSessions(prev => prev.filter(s => s.runID !== runID));
   };
 
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
 
-  const toggleAll = () => {
-    setSelectedIds(prev =>
-      prev.length === state.neurons.length ? [] : state.neurons.map(n => n.id)
-    );
-  };
-
-  const filteredNeurons = state.neurons.filter(n =>
-    n.name.toLowerCase().includes(filterText.toLowerCase())
-  );
-
-  const selectedNeuronNames = selectedIds
-    .map(id => state.neurons.find(n => n.id === id))
-    .filter(Boolean)
-    .map(n => n!.name);
-
-  const handleNeuronAction = (neuronName: string, stage: string) => {
-    if (stage === 'define') {
-      openDefinePane(neuronName);
-    } else if (stage === 'build') {
-      openBuildPane(neuronName);
-    } else if (stage === 'deploy') {
-      openDeployPane(neuronName);
-    } else {
-      updateWorkspace({ activeNeuronIds: [neuronName] });
-      navigate(`/deployments?neuron=${encodeURIComponent(neuronName)}&stage=${stage}`);
-    }
-  };
-
-  const handleGlobalAction = (stage: string) => {
-    const target = selectedNeuronNames[0] || state.neurons[0]?.name;
-    if (!target) return;
-    if (stage === 'define') {
-      openDefinePane(target);
-    } else if (stage === 'build') {
-      openBuildPane(target);
-    } else if (stage === 'deploy') {
-      openDeployPane(target);
-    } else if (stage === 'packages') {
-      openPackagesPane(selectedNeuronNames.length > 0 ? selectedNeuronNames : [target]);
-    } else {
-      updateWorkspace({ activeNeuronIds: selectedNeuronNames });
-      navigate(`/deployments?neuron=${encodeURIComponent(target)}&stage=${stage}`);
-    }
-  };
+  const activeNeuronName = state.activeNeuronIds[0] || state.neurons[0]?.name || null;
+  const activeNeuronData = state.neurons.find(n => n.name === activeNeuronName || n.id === activeNeuronName);
 
   const formatTimestamp = (ts: number) => {
     const d = new Date(ts * 1000);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const columns = [
-    {
-      header: 'NEURON',
-      render: (item: typeof state.neurons[0]) => (
-        <div className="flex items-center gap-[8px]">
-          <div className={`size-[8px] rounded-full ${item.state === 1 ? 'bg-[#34C759]' : item.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
-          <span>{item.name}</span>
-        </div>
-      ),
-      className: 'w-[200px]',
-    },
-    {
-      header: 'TYPE',
-      render: (item: typeof state.neurons[0]) => (
-        <span className="text-[rgba(255,255,255,0.5)]">{item.type === 2 ? 'SERVICE' : 'RESOURCE'}</span>
-      ),
-      className: 'w-[100px]',
-    },
-    {
-      header: 'LATEST BUILD',
-      render: (item: typeof state.neurons[0]) => item.latestBuild,
-      className: 'w-[120px]',
-    },
-    {
-      header: 'Actions',
-      render: (item: typeof state.neurons[0]) => (
-        <div className="flex gap-[5px]">
-          <ActionButton onClick={() => handleNeuronAction(item.name, 'define')}>Define</ActionButton>
-          <ActionButton onClick={() => handleNeuronAction(item.name, 'build')}>Build</ActionButton>
-          <ActionButton onClick={() => handleNeuronAction(item.name, 'deploy')}>Deploy</ActionButton>
-        </div>
-      ),
-      className: 'min-w-[280px]',
-    },
-  ];
-
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
-      {/* Toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center justify-between shrink-0">
-        <div className="flex items-center h-[34px]">
-          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-white">/</p>
-          </div>
-          <Input
-            placeholder="Filter..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-[200px] border-l-0 rounded-l-none h-full"
-            containerClassName="h-full"
-          />
-        </div>
-
-        <div className="flex items-center gap-[10px]">
-          <Button
-            variant="secondary"
-            className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
-            icon={<Icon icon="solar:document-text-linear" className="text-base" />}
-            onClick={() => handleGlobalAction('define')}
-          >
-            DEFINE
-          </Button>
-          <Button
-            variant="secondary"
-            className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
-            icon={<Icon icon="solar:code-linear" className="text-base" />}
-            onClick={() => handleGlobalAction('build')}
-          >
-            BUILD
-          </Button>
-          <Button
-            variant="secondary"
-            className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
-            icon={<Icon icon="solar:cloud-upload-linear" className="text-base" />}
-            onClick={() => handleGlobalAction('deploy')}
-          >
-            DEPLOY
-          </Button>
-          <Button
-            variant="secondary"
-            className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
-            icon={<Icon icon="solar:box-linear" className="text-base" />}
-            onClick={() => handleGlobalAction('packages')}
-          >
-            PACKAGES
-          </Button>
-          <Button
-            variant="primary"
-            icon={<Icon icon="solar:add-circle-linear" className="text-xl" />}
-            className="h-[34px] uppercase text-[10px] font-bold"
-            onClick={() => navigate('/deployments?stage=quickstart')}
-          >
-            New Neuron
-          </Button>
-        </div>
+      {/* Page header */}
+      <div className="px-[20px] py-[6px] border-b border-[#464646]">
+        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+          SERVICES
+        </p>
       </div>
 
-      {/* Main content: table + optional right pane + optional terminal bottom pane */}
+      {/* Main content: detail + optional right pane + optional terminal bottom pane */}
       <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
         <ResizablePanel defaultSize={packageSessions.length > 0 ? 65 : 100} minSize={25}>
           <div className="flex h-full overflow-hidden">
-        {/* Services table */}
-        <div className="flex-1 overflow-hidden">
-          <Table
-            columns={columns}
-            data={filteredNeurons}
-            rowId={(n) => n.id}
-            selectedIds={selectedIds}
-            onSelectRow={toggleSelect}
-            onSelectAll={toggleAll}
-          />
+            {/* Service detail — left side */}
+            <div className="flex-1 overflow-y-auto">
+              {activeNeuronName ? (
+                <div className="p-[24px] flex flex-col gap-[24px]">
+                  {/* Neuron header */}
+                  <div className="flex items-center gap-[12px]">
+                    <div className={`size-[10px] rounded-full shrink-0 ${activeNeuronData?.state === 1 ? 'bg-[#34C759]' : activeNeuronData?.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
+                    <h1 className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-white">{activeNeuronName}</h1>
+                    {activeNeuronData?.latestBuild && (
+                      <span className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.4)] bg-[#2c2c2c] border border-[#464646] px-[8px] py-[3px] rounded-[4px]">
+                        {activeNeuronData.latestBuild}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-[8px]">
+                    <Button
+                      variant="secondary"
+                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
+                      icon={<Icon icon="solar:document-text-linear" className="text-base" />}
+                      onClick={() => openDefinePane(activeNeuronName)}
+                    >
+                      DEFINE
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
+                      icon={<Icon icon="solar:code-linear" className="text-base" />}
+                      onClick={() => openBuildPane(activeNeuronName)}
+                    >
+                      BUILD
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
+                      icon={<Icon icon="solar:cloud-upload-linear" className="text-base" />}
+                      onClick={() => openDeployPane(activeNeuronName)}
+                    >
+                      DEPLOY
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
+                      icon={<Icon icon="solar:box-linear" className="text-base" />}
+                      onClick={() => openPackagesPane([activeNeuronName])}
+                    >
+                      PACKAGES
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-[12px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
+                    Select a service from the sidebar
+                  </p>
+                </div>
+              )}
         </div>
 
         {/* Define pane */}
