@@ -62,6 +62,16 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
 }
 
 /**
+ * GetUserProfile fetches name and photo for the logged-in user via
+ * BatchRetrieveMaskedUsers, using the sub from the stored token as the user ID.
+ */
+export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
+    return $Call.ByID(1754949162).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
  * IsLoggedIn returns true when console credentials exist.
  */
 export function IsLoggedIn(): $CancellablePromise<boolean> {
@@ -73,31 +83,31 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType20($result);
     });
 }
 
@@ -107,6 +117,13 @@ export function ListProducts(org: string): $CancellablePromise<$models.ProductSu
  */
 export function Login(): $CancellablePromise<void> {
     return $Call.ByID(1314230687);
+}
+
+/**
+ * Logout removes the stored console credentials, signing the user out.
+ */
+export function Logout(): $CancellablePromise<void> {
+    return $Call.ByID(3281387172);
 }
 
 /**
@@ -139,12 +156,14 @@ const $$createType6 = $models.ServicesOverview.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
 const $$createType8 = $models.ShareData.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $models.Codeblock.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = $Create.Array($$createType0);
-const $$createType13 = $models.InviteInfo.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $models.LandingZonesData.createFrom;
-const $$createType16 = $Create.Nullable($$createType15);
-const $$createType17 = $models.ProductSummary.createFrom;
-const $$createType18 = $Create.Array($$createType17);
+const $$createType10 = $models.UserProfile.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $models.Codeblock.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = $Create.Array($$createType0);
+const $$createType15 = $models.InviteInfo.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = $models.LandingZonesData.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);
+const $$createType19 = $models.ProductSummary.createFrom;
+const $$createType20 = $Create.Array($$createType19);

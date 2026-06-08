@@ -3,6 +3,7 @@ module alis-hub-v3
 go 1.25.0
 
 require (
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.24
 	github.com/wailsapp/wails/v3 v3.0.0-alpha.74
 	google.golang.org/protobuf v1.36.11
