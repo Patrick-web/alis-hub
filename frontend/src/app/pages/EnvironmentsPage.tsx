@@ -8,6 +8,7 @@ import { VarFormSheet } from '../components/VarFormSheet';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { Loader } from '../components/Loader';
 
 interface EnvVar {
   id: string;
@@ -173,12 +174,7 @@ export function EnvironmentsPage() {
         <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           VARIABLES
         </p>
-        {saving && (
-          <div className="flex items-center gap-[6px]">
-            <Icon icon="solar:refresh-linear" className="text-[#F881A9] text-[14px] animate-spin" />
-            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[rgba(255,255,255,0.4)]">Saving…</p>
-          </div>
-        )}
+        {saving && <Loader size={20} />}
       </div>
 
       {/* Toolbar */}
@@ -216,11 +212,7 @@ export function EnvironmentsPage() {
       <div className="flex-1 overflow-hidden">
         {loading || envsLoading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="flex items-center gap-[10px]">
-              <div className="size-[6px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '0ms' }} />
-              <div className="size-[6px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '150ms' }} />
-              <div className="size-[6px] rounded-full bg-[#F881A9] animate-bounce" style={{ animationDelay: '300ms' }} />
-            </div>
+            <Loader />
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-full px-[20px]">

@@ -1,3 +1,4 @@
+import { Loader } from '../components/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
@@ -554,7 +555,7 @@ export function BuildsPage() {
         <div className="flex-1 overflow-hidden">
           {versionsLoading ? (
             <div className="flex items-center gap-[10px] px-[20px] py-[20px]">
-              <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+              <Loader size={20} />
               <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading versions...</span>
             </div>
           ) : !activeNeuron ? (
@@ -733,7 +734,7 @@ export function BuildsPage() {
                       </div>
                     ) : logsLoading ? (
                       <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                        <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                        <Loader size={20} />
                         <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading logs...</span>
                       </div>
                     ) : logsError ? (
@@ -756,7 +757,7 @@ export function BuildsPage() {
                   <div className="flex-1 overflow-y-auto">
                     {changelogLoading ? (
                       <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                        <Icon icon="solar:spinner-linear" className="text-[rgba(255,255,255,0.3)] animate-spin text-base" />
+                        <Loader size={20} />
                         <span className="text-[11px] text-[rgba(255,255,255,0.3)]">Loading commits...</span>
                       </div>
                     ) : changelogCommits.length === 0 ? (
@@ -822,7 +823,7 @@ export function BuildsPage() {
             <div className="flex-1 overflow-y-auto">
               {buildCommitsLoading ? (
                 <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                  <Loader size={20} />
                   <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
                 </div>
               ) : buildCommits.length === 0 ? (
@@ -947,7 +948,7 @@ export function BuildsPage() {
           <div className="flex-1 flex flex-col min-h-0">
             {deployStep === 'running' && (
               <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
-                <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                <Loader size={20} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold text-white leading-tight">Deploying · {activeVersionId}</p>
                   <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
@@ -1008,7 +1009,7 @@ export function BuildsPage() {
             {/* Running header */}
             {buildStep === 'running' && (
               <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
-                <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                <Loader size={20} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold text-white leading-tight">Running Build · {activeNeuron}</p>
                   <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>

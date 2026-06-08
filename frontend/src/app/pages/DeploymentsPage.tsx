@@ -1,3 +1,4 @@
+import { Loader } from '../components/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router';
 import { Icon } from '@iconify/react';
@@ -437,7 +438,7 @@ export function DeploymentsPage() {
               <StageCard title="Select Commit" step={1} className="mb-[16px]">
                 {loading && commits.length === 0 ? (
                   <div className="flex items-center gap-[8px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                    <Loader size={20} />
                     <span className="text-[11px] text-[rgba(255,255,255,0.7)]">Loading commits...</span>
                   </div>
                 ) : commits.length === 0 ? (
@@ -512,7 +513,7 @@ export function DeploymentsPage() {
               {statusMessage && (
                 <div className="mt-[16px] p-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
                   <div className="flex items-center gap-[8px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                    <Loader size={20} />
                     <p className="text-[11px] text-[rgba(255,255,255,0.8)]">{statusMessage}</p>
                   </div>
                 </div>
@@ -548,7 +549,7 @@ export function DeploymentsPage() {
                 <StageCard title="Glass" step={3} className="mt-[16px]">
                   {glassLoading ? (
                     <div className="flex items-center gap-[8px]">
-                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                      <Loader size={20} />
                       <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading Glass...</span>
                     </div>
                   ) : glassResult && (
@@ -685,7 +686,7 @@ export function DeploymentsPage() {
               <StageCard title="Select Environments" step={1} className="mb-[16px]">
                 {envsLoading ? (
                   <div className="flex items-center gap-[8px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin" />
+                    <Loader size={20} />
                     <span className="text-[11px] text-[rgba(255,255,255,0.7)]">Loading environments...</span>
                   </div>
                 ) : environments.length === 0 ? (
@@ -769,7 +770,7 @@ export function DeploymentsPage() {
                 <div className="mb-[16px] p-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
                   <div className="flex items-center gap-[8px]">
                     {deployResult && !deployResult.done && (
-                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-lg animate-spin shrink-0" />
+                      <Loader size={20} />
                     )}
                     <p className="text-[11px] text-[rgba(255,255,255,0.8)]">{deployStatusMessage}</p>
                   </div>

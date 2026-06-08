@@ -1,3 +1,4 @@
+import { Loader } from '../components/Loader';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
@@ -726,7 +727,7 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto">
                 {commitsLoading ? (
                   <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                    <Loader size={20} />
                     <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
                   </div>
                 ) : commits.length === 0 ? (
@@ -798,7 +799,7 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto px-[16px] py-[24px]">
                 <div className="flex flex-col items-center gap-[16px]">
                   <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] text-2xl animate-spin" />
+                    <Loader size={20} />
                   </div>
                   <div className="text-center">
                     <p className="text-[12px] font-bold text-white mb-[6px]">Running Define</p>
@@ -848,7 +849,7 @@ export function DevelopPage() {
                 {/* Glass loading */}
                 {glassLoading && (
                   <div className="flex items-center gap-[10px] px-[16px] py-[16px]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-sm" />
+                    <Loader size={20} />
                     <span className="text-[10px] text-[rgba(255,255,255,0.4)]">Loading Glass...</span>
                   </div>
                 )}
@@ -964,7 +965,7 @@ export function DevelopPage() {
             {deployStep === 'loading' && (
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
-                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <Loader size={20} />
                   <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Loading deployment info...</p>
                 </div>
               </div>
@@ -1140,7 +1141,7 @@ export function DevelopPage() {
                 {/* Running header */}
                 {deployStep === 'running' && (
                   <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                    <Loader size={20} />
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold text-white leading-tight">
                         {deployPlanOnly ? 'Planning' : 'Deploying'} · {deployVersion}
@@ -1235,7 +1236,7 @@ export function DevelopPage() {
                 <div className="flex-1 overflow-y-auto">
                   {buildCommitsLoading ? (
                     <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                      <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-base" />
+                      <Loader size={20} />
                       <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
                     </div>
                   ) : buildCommits.length === 0 ? (
@@ -1337,7 +1338,7 @@ export function DevelopPage() {
                 {/* Running header */}
                 {buildStep === 'running' && (
                   <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
-                    <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin shrink-0" />
+                    <Loader size={20} />
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold text-white leading-tight">Running Build</p>
                       <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
@@ -1421,7 +1422,7 @@ export function DevelopPage() {
             {packagesStep === 'scan' && (
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
-                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <Loader size={20} />
                   <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Scanning packages...</p>
                 </div>
               </div>
@@ -1580,7 +1581,7 @@ export function DevelopPage() {
             {packagesStep === 'preparing' && (
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
-                  <Icon icon="solar:spinner-linear" className="text-[#f881a9] animate-spin text-2xl" />
+                  <Loader size={20} />
                   <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Starting scripts...</p>
                 </div>
               </div>

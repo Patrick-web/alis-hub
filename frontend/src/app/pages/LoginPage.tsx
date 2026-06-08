@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
+import { Loader } from '../components/Loader';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
@@ -48,7 +49,7 @@ export function LoginPage() {
         >
           {loading ? (
             <>
-              <Icon icon="solar:spinner-linear" className="text-base animate-spin" />
+              <Loader size={16} color="#ffffff" />
               Opening browser…
             </>
           ) : (

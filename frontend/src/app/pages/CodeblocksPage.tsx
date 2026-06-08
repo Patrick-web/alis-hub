@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { Loader } from '../components/Loader';
 
 const RELEASE_LEVELS = ['All', 'Stable', 'Release Candidate', 'Beta', 'Alpha', 'Experimental'] as const;
 type ReleaseFilter = typeof RELEASE_LEVELS[number];
@@ -107,7 +108,7 @@ export function CodeblocksPage() {
       <div className="flex-1 overflow-auto p-[20px]">
         {loading ? (
           <div className="flex items-center justify-center h-[200px]">
-            <Icon icon="solar:refresh-linear" className="text-white opacity-30 text-3xl animate-spin" />
+            <Loader />
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex items-center justify-center h-[200px]">
