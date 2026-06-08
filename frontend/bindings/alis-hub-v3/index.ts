@@ -20,6 +20,7 @@ export {
 
 export {
     BuildLogsResult,
+    Codeblock,
     DefineCommit,
     DeployItem,
     DeploymentItem,

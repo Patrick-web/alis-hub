@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -659,6 +660,150 @@ func TestGetServicesOverviewLive(t *testing.T) {
 	}
 }
 
+// TestProbeListBlocks tries candidate gRPC methods for the blocks service to discover the correct endpoint.
+func TestProbeListBlocks(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	candidates := []string{
+		// More namespace guesses
+		"alis.hub.v1.HubService/ListBlocks",
+		"alis.hub.v1.HubService/ListCodeblocks",
+		"alis.os.marketplace.v1.MarketplaceService/ListBlocks",
+		"alis.os.marketplace.v1.MarketplaceService/ListCodeblocks",
+		"alis.os.products.v1.OrganisationsService/ListBlocks",
+		"alis.os.packages.v1.PackagesService/ListBlocks",
+		"alis.os.packages.v1.PackagesService/ListCodeblocks",
+		"alis.os.neurons.v1.BlocksService/ListBlocks",
+		// Singular/different capitalisation
+		"alis.os.block.v1.BlockService/ListBlocks",
+		"alis.os.codeblock.v1.CodeblockService/ListCodeblocks",
+		"alis.build.block.v1.BlockService/ListBlocks",
+		// Version variations
+		"alis.os.blocks.v2.BlocksService/ListBlocks",
+		// Store/registry pattern
+		"alis.os.store.v1.StoreService/ListBlocks",
+		"alis.os.registry.v1.RegistryService/ListBlocks",
+		// Raw resource names
+		"alis.os.products.v1.ProductsService/ListCodeblocks",
+	}
+
+	for _, method := range candidates {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, method, nil)
+		cancel()
+		t.Logf("%-65s → err=%v grpcStatus=%d grpcMsg=%q bodyLen=%d",
+			method, reqErr, grpcStatus, truncateStr(grpcMsg, 60), len(body))
+	}
+}
+
+// TestProbeGetBlock fetches one block and dumps all proto field numbers to discover the schema.
+// Update the blockName constant after TestProbeListBlocks reveals valid block resource names.
+func TestProbeGetBlock(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	// First discover a block name from ListBlocks
+	method := "alis.build.blocks.v1.BlocksService/ListBlocks"
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, method, nil)
+	cancel()
+	if reqErr != nil || grpcStatus != 0 || len(body) < 5 {
+		t.Skipf("ListBlocks failed: err=%v grpcStatus=%d grpcMsg=%q", reqErr, grpcStatus, grpcMsg)
+	}
+
+	t.Logf("ListBlocks body len=%d", len(body))
+	// Dump top-level fields of the list response
+	data := body[5:]
+	blockCount := 0
+	var firstBlockName string
+	for len(data) > 0 && blockCount < 3 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 1 {
+			continue
+		}
+		blockCount++
+		t.Logf("=== block[%d] raw (%d bytes) ===", blockCount, len(b))
+		inner := b
+		for len(inner) > 0 {
+			fn, ft, fn2 := protowire.ConsumeTag(inner)
+			if fn2 < 0 {
+				break
+			}
+			inner = inner[fn2:]
+			switch ft {
+			case protowire.VarintType:
+				v, m2 := protowire.ConsumeVarint(inner)
+				if m2 < 0 {
+					break
+				}
+				t.Logf("  field %d (varint) = %d", fn, v)
+				inner = inner[m2:]
+			case protowire.BytesType:
+				bv, m2 := protowire.ConsumeBytes(inner)
+				if m2 < 0 {
+					break
+				}
+				printable := true
+				for _, c := range bv {
+					if c < 32 && c != '\n' && c != '\r' {
+						printable = false
+						break
+					}
+				}
+				s := string(bv)
+				if printable && len(bv) < 300 {
+					t.Logf("  field %d (string, %d) = %q", fn, len(bv), s)
+					if fn == 1 && firstBlockName == "" {
+						firstBlockName = s
+					}
+				} else {
+					t.Logf("  field %d (bytes, %d) hex=%x", fn, len(bv), bv[:min(30, len(bv))])
+				}
+				inner = inner[m2:]
+			default:
+				m2 := protowire.ConsumeFieldValue(fn, ft, inner)
+				if m2 < 0 {
+					break
+				}
+				t.Logf("  field %d (type %d, skip %d)", fn, ft, m2)
+				inner = inner[m2:]
+			}
+		}
+	}
+
+	if firstBlockName == "" {
+		t.Log("could not extract a block resource name from ListBlocks response")
+		return
+	}
+	t.Logf("first block name: %q", firstBlockName)
+}
+
 // TestPKCELoginFlow opens a browser window and completes the real OAuth2 login.
 // Run manually: go test -v -run TestPKCELoginFlow -timeout 2m .
 func TestPKCELoginFlow(t *testing.T) {
@@ -756,4 +901,297 @@ func TestGetEnvironmentVariablesLive(t *testing.T) {
 		}
 		t.Logf("  %-40s = %s", v.Label, truncateStr(v.Value, 50))
 	}
+}
+
+// TestProbeVariableCRUDMethods probes what variable CRUD methods exist on EnvironmentsService.
+func TestProbeVariableCRUDMethods(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	envs, err := svc.ListEnvironments("voyage", "vp")
+	if err != nil || len(envs) == 0 {
+		t.Skipf("ListEnvironments: %v", err)
+	}
+	envName := envs[0].Name // staging
+	t.Logf("Using env: %s", envName)
+
+	// Try common method names with a minimal request (just the env name / parent)
+	methods := []string{
+		"alis.os.products.v1.EnvironmentsService/CreateVariable",
+		"alis.os.products.v1.EnvironmentsService/UpdateVariable",
+		"alis.os.products.v1.EnvironmentsService/DeleteVariable",
+		"alis.os.products.v1.EnvironmentsService/SetVariable",
+		"alis.os.products.v1.EnvironmentsService/UpsertVariable",
+		"alis.os.products.v1.EnvironmentsService/ListVariables",
+		"alis.os.products.v1.EnvironmentsService/GetVariable",
+		"alis.os.products.v1.EnvironmentsService/UpdateEnvironment",
+		"alis.os.products.v1.EnvironmentsService/BatchUpdateVariables",
+		"alis.os.products.v1.EnvironmentsService/PatchVariable",
+	}
+
+	for _, method := range methods {
+		// Send a minimal request: field 1 = env name (parent or name)
+		var buf []byte
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, envName)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, method, buf)
+		cancel()
+
+		t.Logf("%-70s → http_err=%v grpcStatus=%d grpcMsg=%q bodyLen=%d",
+			method, reqErr, grpcStatus, truncateStr(grpcMsg, 60), len(body))
+	}
+}
+
+// TestProbeBuildsPageBackend exercises every backend call made by BuildsPage
+// against the real voyage/vp/bff-v1 stack so we know what works before running the app.
+func TestProbeBuildsPageBackend(t *testing.T) {
+	const org, product, neuron = "voyage", "vp", "bff-v1"
+
+	svc := NewProductService()
+	buildSvc := &BuildService{}
+
+	t.Run("GetServicesOverview — neurons and deployed-envs map", func(t *testing.T) {
+		overview, err := svc.GetServicesOverview(org, product)
+		if err != nil {
+			t.Fatalf("GetServicesOverview: %v", err)
+		}
+		t.Logf("neurons (%d):", len(overview.Neurons))
+		for _, n := range overview.Neurons {
+			t.Logf("  id=%q version=%q state=%d", n.ID, n.Version, n.State)
+		}
+		t.Logf("environments (%d):", len(overview.Environments))
+		for _, env := range overview.Environments {
+			t.Logf("  env=%q (%s) deployments=%d", env.DisplayName, env.Name, len(env.Deployments))
+			for _, d := range env.Deployments {
+				t.Logf("    neuronId=%q version=%q state=%d", d.NeuronID, d.Version, d.State)
+			}
+		}
+		// Verify the deployedEnvsMap key format used by BuildsPage: "neuronId::version"
+		for _, env := range overview.Environments {
+			for _, d := range env.Deployments {
+				key := d.NeuronID + "::" + d.Version
+				t.Logf("  deployedEnvsMap key=%q → %q", key, env.DisplayName)
+			}
+		}
+	})
+
+	t.Run("GetProductOverview — gitRepo.remoteUri for GCSR links", func(t *testing.T) {
+		overview, err := svc.GetProductOverview(org, product)
+		if err != nil {
+			t.Fatalf("GetProductOverview: %v", err)
+		}
+		t.Logf("product: displayName=%q", overview.DisplayName)
+		if overview.GitRepo != nil {
+			t.Logf("gitRepo.remoteUri=%q", overview.GitRepo.RemoteURI)
+			// Test the buildGCSRUrl helper with a fake SHA
+			if overview.GitRepo.RemoteURI != "" {
+				url := buildGCSRUrlTest(overview.GitRepo.RemoteURI, "abc123def456")
+				t.Logf("buildGCSRUrl result: %q", url)
+				if url == "" {
+					t.Log("  WARNING: remoteUri did not match expected Google Cloud Source Repositories format")
+					t.Logf("  remoteUri pattern: %q", overview.GitRepo.RemoteURI)
+				}
+			}
+		} else {
+			t.Log("gitRepo is nil — 'View commit' and 'View changes' buttons will not appear")
+		}
+	})
+
+	t.Run("GetBuildCommits — changelog data", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		client, err := NewAlisClient(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bsvc := &BuildService{alisClient: client}
+		// bff → id="bff", version="v1"
+		commits, err := bsvc.GetBuildCommits(org, product, "bff", "v1", "master", 10)
+		if err != nil {
+			t.Fatalf("GetBuildCommits: %v", err)
+		}
+		t.Logf("commits on master (%d):", len(commits))
+		for i, c := range commits {
+			if i >= 5 { break }
+			t.Logf("  sha=%s author=%q ts=%d msg=%q", c.SHA[:7], c.Author, c.Timestamp, truncateStr(c.Message, 60))
+		}
+	})
+
+	t.Run("FetchBuildLogs — full pipeline for latest and an old version", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		client, err := NewAlisClient(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		vers, err := client.ListNeuronVersions(ctx,
+			fmt.Sprintf("organisations/%s/products/%s/neurons/%s", org, product, neuron))
+		if err != nil || len(vers) == 0 {
+			t.Fatalf("ListNeuronVersions: %v count=%d", err, len(vers))
+		}
+
+		probes := []int{0, 5, 20}
+		for _, i := range probes {
+			if i >= len(vers) { continue }
+			v := vers[i]
+			if v.LogsURL == "" {
+				t.Logf("[%d] version=%s — no logsUrl (retagged)", i, v.Version)
+				continue
+			}
+			result, fetchErr := buildSvc.FetchBuildLogs(v.LogsURL, 0)
+			if fetchErr != nil {
+				t.Logf("[%d] version=%s — FetchBuildLogs ERROR: %v", i, v.Version, fetchErr)
+				continue
+			}
+			t.Logf("[%d] version=%s — OK: %d chars", i, v.Version, len(result.Content))
+			if len(result.Content) > 0 {
+				snippet := result.Content
+				if len(snippet) > 200 { snippet = snippet[:200] }
+				t.Logf("  first 200 chars:\n%s", snippet)
+			}
+		}
+	})
+}
+
+// buildGCSRUrlTest is the same pure function used in BuildsPage — copied here for testing.
+func buildGCSRUrlTest(remoteUri string, sha string) string {
+	m := regexp.MustCompile(`source\.developers\.google\.com/p/([^/]+)/r/([^/]+)`).FindStringSubmatch(remoteUri)
+	if m == nil { return "" }
+	return fmt.Sprintf("https://source.cloud.google.com/%s/%s/+/%s", m[1], m[2], sha)
+}
+
+// TestProbeBFFNeuronVersionLogs tests the full FetchBuildLogs pipeline against
+// bff-v1 versions — checking recent, mid, and old builds to find the retention
+// cutoff, and confirming the parsed log text is usable for in-app display.
+func TestProbeBFFNeuronVersionLogs(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	client, err := NewAlisClient(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := &BuildService{alisClient: client}
+
+	vers, err := client.ListNeuronVersions(ctx, "organisations/voyage/products/vp/neurons/bff-v1")
+	if err != nil || len(vers) == 0 {
+		t.Fatalf("ListNeuronVersions: err=%v count=%d", err, len(vers))
+	}
+	t.Logf("Total versions: %d (newest: %s, oldest: %s)", len(vers), vers[0].Version, vers[len(vers)-1].Version)
+
+	// Test a spread: index 0 (newest), 10, 30, 64 (oldest)
+	probeIdxs := []int{0, 10, 30, len(vers) - 1}
+	for _, i := range probeIdxs {
+		if i >= len(vers) {
+			continue
+		}
+		v := vers[i]
+		t.Logf("\n--- [%d] version=%s createTime=%d logsUrl=%s", i, v.Version, v.CreateTime, v.LogsURL)
+
+		result, fetchErr := svc.FetchBuildLogs(v.LogsURL, 0)
+		if fetchErr != nil {
+			t.Logf("  FetchBuildLogs ERROR: %v", fetchErr)
+			continue
+		}
+		t.Logf("  FetchBuildLogs OK: nextOffset=%d contentLen=%d", result.NextOffset, len(result.Content))
+		if len(result.Content) > 0 {
+			// Show first 300 chars of parsed log text
+			snippet := result.Content
+			if len(snippet) > 300 {
+				snippet = snippet[:300]
+			}
+			t.Logf("  content snippet:\n%s", snippet)
+		} else {
+			t.Logf("  (no content extracted from HTML)")
+		}
+	}
+}
+
+func dumpAllFields(t *testing.T, data []byte, indent string) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return
+			}
+			s := string(b)
+			if len(s) > 200 {
+				s = s[:200] + "…"
+			}
+			t.Logf("%sfield %d (bytes len=%d): %q", indent, num, len(b), s)
+			// Try to recursively parse as a sub-message if it looks like proto
+			if len(b) > 2 && b[0] != 0 {
+				sub := tryParseSubMessage(b)
+				if sub != "" {
+					t.Logf("%s  [sub-message]: %s", indent, sub)
+				}
+			}
+			data = data[m:]
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return
+			}
+			t.Logf("%sfield %d (varint): %d", indent, num, v)
+			data = data[m:]
+		case protowire.Fixed64Type:
+			v, m := protowire.ConsumeFixed64(data)
+			if m < 0 {
+				return
+			}
+			t.Logf("%sfield %d (fixed64): %d", indent, num, v)
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return
+			}
+			data = data[m:]
+		}
+	}
+}
+
+func tryParseSubMessage(data []byte) string {
+	var parts []string
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			return ""
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return ""
+			}
+			s := string(b)
+			if len(s) > 100 {
+				s = s[:100]
+			}
+			parts = append(parts, fmt.Sprintf("f%d=%q", num, s))
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return ""
+			}
+			data = data[m:]
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, " ")
 }
