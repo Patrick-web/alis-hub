@@ -32,6 +32,10 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
+          if [ -z "$MACOS_CERTIFICATE" ] || [ -z "$MACOS_CERTIFICATE_PWD" ]; then
+            echo "::warning::MACOS_CERTIFICATE or MACOS_CERTIFICATE_PWD not set; skipping import. Binary will be ad-hoc signed."
+            exit 0
+          fi
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "" "$KEYCHAIN_PATH"
