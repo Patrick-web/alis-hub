@@ -53,8 +53,12 @@ jobs:
 
           rm /tmp/certificate.p12 /tmp/DevIDG2.cer /tmp/WWDRG3.cer
       - name: Build binary
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$REF_NAME" -o alis-hub-v3 .
       - name: Create .app bundle and sign
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           APP="Alis Hub.app"
           mkdir -p "$APP/Contents/MacOS"
@@ -62,8 +66,9 @@ jobs:
           cp alis-hub-v3 "$APP/Contents/MacOS/"
           cp build/darwin/icons.icns "$APP/Contents/Resources/"
           cp build/darwin/Info.plist "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.ref_name }}" "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ github.ref_name }}" "$APP/Contents/Info.plist"
+          VERSION_NUM="${REF_NAME#v}"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION_NUM" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NUM" "$APP/Contents/Info.plist"
           # Try Developer ID signing; fall back to ad-hoc if cert unavailable
           IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/' || true)
           if [ -n "$IDENTITY" ]; then
@@ -74,7 +79,9 @@ jobs:
             codesign --force --sign "$IDENTITY" --options runtime --timestamp \
               --entitlements build/darwin/entitlements.plist \
               "$APP/Contents/MacOS/alis-hub-v3"
+            # Sign the app bundle itself — also needs entitlements for hardened runtime.
             codesign --force --sign "$IDENTITY" --options runtime --timestamp \
+              --entitlements build/darwin/entitlements.plist \
               "$APP"
             codesign --verify --strict --verbose=2 "$APP"
           else
@@ -115,9 +122,11 @@ jobs:
           spctl -a -vvv -t execute "$APP" || true
           rm /tmp/AlisHub-notarize.zip
       - name: Create zip + DMG with Applications shortcut
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
           APP="Alis Hub.app"
-          VERSION=${{ github.ref_name }}
+          VERSION="$REF_NAME"
           ditto -c -k --sequesterRsrc --keepParent "$APP" "AlisHub-macOS-${VERSION}.zip"
 
           hdiutil create -size 200m -volname "Alis Hub" -fs HFS+ -ov /tmp/alishub-rw.dmg
@@ -157,10 +166,14 @@ jobs:
       - name: Build frontend
         run: npm --prefix frontend run build
       - name: Build binary
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$REF_NAME" -o alis-hub-v3 .
       - name: Package
+        env:
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          VERSION=${{ github.ref_name }}
+          VERSION="$REF_NAME"
           mkdir -p AlisHub-linux
           cp alis-hub-v3 AlisHub-linux/
           cp build/appicon.png AlisHub-linux/alishub.png
@@ -189,9 +202,13 @@ jobs:
       - name: Build frontend
         run: cd frontend && npm run build
       - name: Build binary
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3.exe .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$env:REF_NAME" -o alis-hub-v3.exe .
       - name: Package
-        run: Compress-Archive -Path alis-hub-v3.exe -DestinationPath "AlisHub-windows-${{ github.ref_name }}.zip"
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: Compress-Archive -Path alis-hub-v3.exe -DestinationPath "AlisHub-windows-$env:REF_NAME.zip"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
