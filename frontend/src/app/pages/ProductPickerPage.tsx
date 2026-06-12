@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import type { SyncReposResult } from '../../../bindings/alis-hub-v3/models';
 import { Loader } from '../components/Loader';
 
 type ProductSummary = {
@@ -36,6 +37,9 @@ export function ProductPickerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'error'>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [pendingProduct, setPendingProduct] = useState<ProductSummary | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -54,9 +58,33 @@ export function ProductPickerPage() {
     return p.displayName.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
   });
 
-  const handleSelect = (p: ProductSummary) => {
+  const handleSelect = async (p: ProductSummary) => {
     const productId = p.name.split('/products/')[1] ?? p.name;
+    setSyncState('syncing');
+    setSyncError(null);
+    setPendingProduct(p);
+    try {
+      const result = await (ProductService.SyncRepos as (org: string, product: string) => Promise<SyncReposResult | null>)(orgId, productId);
+      if (result?.error) {
+        setSyncState('error');
+        setSyncError(result.error);
+        return;
+      }
+    } catch (e) {
+      setSyncState('error');
+      setSyncError(String(e));
+      return;
+    }
+    setSyncState('idle');
     setProduct(orgId, org.displayName, productId, p.displayName);
+  };
+
+  const proceedAnyway = () => {
+    if (!pendingProduct) return;
+    const productId = pendingProduct.name.split('/products/')[1] ?? pendingProduct.name;
+    setSyncState('idle');
+    setSyncError(null);
+    setProduct(orgId, org.displayName, productId, pendingProduct.displayName);
   };
 
   return (
@@ -144,13 +172,24 @@ export function ProductPickerPage() {
 
         {!loading && !error && (
           <div className="flex flex-col gap-[4px]">
+            {syncState === 'error' && syncError && (
+              <div className="mb-[8px] p-[12px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px]">
+                <p className="text-[11px] text-[rgba(255,255,255,0.7)] mb-[8px]">Failed to sync repositories: {syncError}</p>
+                <div className="flex gap-[8px]">
+                  <button onClick={proceedAnyway} className="text-[10px] text-[#F881A9] hover:underline">Proceed anyway</button>
+                  <button onClick={() => { setSyncState('idle'); setSyncError(null); }} className="text-[10px] text-[rgba(255,255,255,0.4)] hover:underline">Cancel</button>
+                </div>
+              </div>
+            )}
             {filtered.map(p => {
               const productId = p.name.split('/products/')[1] ?? p.name;
+              const isSyncing = syncState === 'syncing' && pendingProduct?.name === p.name;
               return (
                 <button
                   key={p.name}
                   onClick={() => handleSelect(p)}
-                  className="flex items-center gap-[14px] px-[14px] py-[12px] rounded-[8px] bg-[#2c2c2c] border border-[#3a3a3a] hover:border-[#F881A9] hover:bg-[#333] transition-all text-left group"
+                  disabled={syncState === 'syncing'}
+                  className="flex items-center gap-[14px] px-[14px] py-[12px] rounded-[8px] bg-[#2c2c2c] border border-[#3a3a3a] hover:border-[#F881A9] hover:bg-[#333] transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:border-[#3a3a3a] disabled:hover:bg-[#2c2c2c]"
                 >
                   <div className="size-[32px] rounded-[7px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.15)] flex items-center justify-center shrink-0">
                     <Icon icon="solar:box-linear" className="text-[#F881A9] text-base" />
@@ -160,11 +199,14 @@ export function ProductPickerPage() {
                       {p.displayName}
                     </p>
                     <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] mt-[1px]">
-                      {productId}
+                      {isSyncing ? 'Syncing repositories…' : productId}
                     </p>
                   </div>
                   <StateIndicator state={p.state} />
-                  <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base shrink-0 transition-colors" />
+                  {isSyncing
+                    ? <Loader size={16} />
+                    : <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base shrink-0 transition-colors" />
+                  }
                 </button>
               );
             })}
