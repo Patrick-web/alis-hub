@@ -44,6 +44,16 @@ type LandingZonesData struct {
 	Shared []Organisation `json:"shared"`
 }
 
+// ── Sync repos ───────────────────────────────────────────────────────────────
+
+type SyncReposResult struct {
+	DefineDir    string `json:"defineDir"`
+	BuildDir     string `json:"buildDir"`
+	DefineAction string `json:"defineAction"`
+	BuildAction  string `json:"buildAction"`
+	Error        string `json:"error,omitempty"`
+}
+
 // ── Product overview ──────────────────────────────────────────────────────────
 
 type ProductOverview struct {
@@ -381,6 +391,72 @@ func (s *ProductService) ListEnvironments(org, product string) ([]EnvInfo, error
 		return nil, fmt.Errorf("ListEnvironments: response too short (%d bytes)", len(body))
 	}
 	return parseListEnvironmentsResponse(body[5:])
+}
+
+func (s *ProductService) getOrganisationGitRepo(org string) (string, error) {
+	name := fmt.Sprintf("organisations/%s", org)
+	protoBytes := marshalGetOrganisationRequest(name, []string{"git_repo"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.OrganisationsService/GetOrganisation", protoBytes)
+	if err != nil {
+		return "", fmt.Errorf("GetOrganisation: %w", err)
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("GetOrganisation: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("GetOrganisation: response too short (%d bytes)", len(body))
+	}
+	return parseOrganisationGitRepo(body[5:])
+}
+
+func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	overview, err := s.GetProductOverview(org, product)
+	if err != nil {
+		return &SyncReposResult{Error: fmt.Sprintf("get product: %s", err)}, nil
+	}
+	if overview.GitRepo == nil || overview.GitRepo.RemoteURI == "" {
+		return &SyncReposResult{Error: "product has no git repo configured"}, nil
+	}
+	buildRepoURL := overview.GitRepo.RemoteURI
+
+	defineRepoURL, err := s.getOrganisationGitRepo(org)
+	if err != nil {
+		return &SyncReposResult{Error: fmt.Sprintf("get organisation: %s", err)}, nil
+	}
+	if defineRepoURL == "" {
+		return &SyncReposResult{Error: "organisation has no git repo configured"}, nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("home dir: %w", err)
+	}
+	defineDir := filepath.Join(home, "alis.build", org, "define")
+	buildDir := filepath.Join(home, "alis.build", org, "build", product)
+
+	result := &SyncReposResult{DefineDir: defineDir, BuildDir: buildDir}
+
+	result.DefineAction, err = syncOneRepo(defineDir, defineRepoURL)
+	if err != nil {
+		result.Error = fmt.Sprintf("define repo: %s", err)
+		return result, nil
+	}
+
+	result.BuildAction, err = syncOneRepo(buildDir, buildRepoURL)
+	if err != nil {
+		result.Error = fmt.Sprintf("build repo: %s", err)
+		return result, nil
+	}
+
+	return result, nil
 }
 
 // GetEnvironmentVariables fetches the variables for a single environment.
@@ -900,6 +976,69 @@ func marshalGetProductRequest(name string, fields []string) []byte {
 		buf = protowire.AppendBytes(buf, fm)
 	}
 	return buf
+}
+
+func marshalGetOrganisationRequest(name string, fields []string) []byte {
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, name)
+	if len(fields) > 0 {
+		fm := marshalFieldMask(fields)
+		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+		buf = protowire.AppendBytes(buf, fm)
+	}
+	return buf
+}
+
+// parseOrganisationGitRepo extracts remoteUri from Organisation field 9 (git_repo).
+func parseOrganisationGitRepo(data []byte) (string, error) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return "", nil
+			}
+			if num == 9 {
+				gr, _ := parseGitRepo(b)
+				if gr != nil {
+					return gr.RemoteURI, nil
+				}
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return "", nil
+			}
+			data = data[m:]
+		}
+	}
+	return "", nil
+}
+
+func syncOneRepo(dir, remoteURL string) (string, error) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+			return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(dir), err)
+		}
+		cmd := exec.Command("git", "clone", remoteURL, dir)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("git clone: %w\n%s", err, out)
+		}
+		return "cloned", nil
+	}
+	cmd := exec.Command("git", "fetch", "origin")
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("git fetch: %w\n%s", err, out)
+	}
+	return "fetched", nil
 }
 
 func marshalListEnvironmentsRequest(parent string, fields []string) []byte {
