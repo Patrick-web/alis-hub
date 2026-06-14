@@ -4,6 +4,11 @@ import { useWorkspace, type Organisation } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 type LandingZonesData = {
   own: Organisation[];
   shared: Organisation[];
@@ -49,7 +54,7 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
 }
 
 export function LandingZonesPage() {
-  const { setOrg } = useWorkspace();
+  const { setOrg, setPhase } = useWorkspace();
   const [data, setData] = useState<LandingZonesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +65,10 @@ export function LandingZonesPage() {
     setError(null);
     (ProductService.ListLandingZones as () => Promise<LandingZonesData>)()
       .then(result => setData(result ?? { own: [], shared: [] }))
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => {
+        if (isAuthError(e)) { setPhase('login'); return; }
+        setError(String(e));
+      })
       .finally(() => setLoading(false));
   };
 
