@@ -572,6 +572,67 @@ export class GCSObjectList {
     }
 }
 
+export class GCSObjectMetadata {
+    "name": string;
+    "bucket": string;
+    "size": string;
+    "contentType": string;
+    "md5Hash": string;
+    "crc32c": string;
+    "timeCreated": string;
+    "updated": string;
+    "storageClass": string;
+    "etag": string;
+    "generation": string;
+
+    /** Creates a new GCSObjectMetadata instance. */
+    constructor($$source: Partial<GCSObjectMetadata> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("bucket" in $$source)) {
+            this["bucket"] = "";
+        }
+        if (!("size" in $$source)) {
+            this["size"] = "";
+        }
+        if (!("contentType" in $$source)) {
+            this["contentType"] = "";
+        }
+        if (!("md5Hash" in $$source)) {
+            this["md5Hash"] = "";
+        }
+        if (!("crc32c" in $$source)) {
+            this["crc32c"] = "";
+        }
+        if (!("timeCreated" in $$source)) {
+            this["timeCreated"] = "";
+        }
+        if (!("updated" in $$source)) {
+            this["updated"] = "";
+        }
+        if (!("storageClass" in $$source)) {
+            this["storageClass"] = "";
+        }
+        if (!("etag" in $$source)) {
+            this["etag"] = "";
+        }
+        if (!("generation" in $$source)) {
+            this["generation"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GCSObjectMetadata instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GCSObjectMetadata {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GCSObjectMetadata($$parsedSource as Partial<GCSObjectMetadata>);
+    }
+}
+
 export class GCloudStatus {
     "gcloudInstalled": boolean;
     "gcloudPath"?: string;

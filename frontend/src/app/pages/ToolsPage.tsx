@@ -12,6 +12,13 @@ import * as PS from '../../../bindings/alis-hub-v3/productservice';
 
 type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets';
 
+type ProjectContext = {
+  id: string;
+  label: string;
+  projectID: string;
+  region: string;
+};
+
 const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = [
   { id: 'buckets', label: 'Buckets', subtitle: 'Cloud Storage', icon: 'solar:cloud-storage-bold' },
   { id: 'logs', label: 'Logs', subtitle: 'Cloud Logging', icon: 'solar:document-text-bold' },
@@ -22,32 +29,61 @@ const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = 
 export function ToolsPage() {
   const { state } = useWorkspace();
   const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
-  const [projectID, setProjectID] = useState('');
-  const [region, setRegion] = useState('');
-  const [overviewLoading, setOverviewLoading] = useState(true);
-  const [overviewError, setOverviewError] = useState<string | null>(null);
   const [gcloudReady, setGcloudReady] = useState(false);
 
-  const loadOverview = useCallback(() => {
+  const [contexts, setContexts] = useState<ProjectContext[]>([]);
+  const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
+  const [contextsLoading, setContextsLoading] = useState(true);
+  const [contextsError, setContextsError] = useState<string | null>(null);
+
+  const loadContexts = useCallback(() => {
     if (!state.organisation || !state.product) return;
-    setOverviewLoading(true);
-    setOverviewError(null);
-    PS.GetProductOverview(state.organisation, state.product)
-      .then((overview) => {
-        setProjectID(overview?.googleProject?.id ?? '');
-        setRegion(overview?.googleProject?.region ?? '');
+    setContextsLoading(true);
+    setContextsError(null);
+
+    Promise.all([
+      PS.GetProductOverview(state.organisation, state.product),
+      PS.ListEnvironments(state.organisation, state.product),
+    ])
+      .then(([overview, envs]) => {
+        const list: ProjectContext[] = [];
+        if (overview?.googleProject?.id) {
+          list.push({
+            id: 'product',
+            label: 'Product',
+            projectID: overview.googleProject.id,
+            region: overview.googleProject.region ?? '',
+          });
+        }
+        for (const env of envs ?? []) {
+          if (env.gcpProject?.id) {
+            list.push({
+              id: env.name,
+              label: env.displayName || env.name?.split('/').pop() || env.name,
+              projectID: env.gcpProject.id,
+              region: env.gcpProject.region ?? '',
+            });
+          }
+        }
+        setContexts(list);
+        setSelectedCtx((prev) => {
+          if (prev) {
+            const still = list.find((c) => c.id === prev.id);
+            return still ?? list[0] ?? null;
+          }
+          return list[0] ?? null;
+        });
       })
-      .catch((e: unknown) => setOverviewError(String(e)))
-      .finally(() => setOverviewLoading(false));
+      .catch((e: unknown) => setContextsError(String(e)))
+      .finally(() => setContextsLoading(false));
   }, [state.organisation, state.product]);
 
   useEffect(() => {
-    loadOverview();
-  }, [loadOverview]);
+    loadContexts();
+  }, [loadContexts]);
 
-  function handleGCloudReady() {
-    setGcloudReady(true);
-  }
+  const projectID = selectedCtx?.projectID ?? '';
+  const region = selectedCtx?.region ?? '';
 
   return (
     <PageLayout
@@ -56,10 +92,51 @@ export function ToolsPage() {
       parentRoute="/"
     >
       <div className="flex h-full">
-        {/* Sidebar — only shown when gcloud is ready */}
         {gcloudReady && (
-          <div className="w-[200px] border-r border-[#464646] shrink-0 p-[16px] flex flex-col gap-[4px]">
-            <div className="flex flex-col gap-[4px] flex-1">
+          <div className="w-[200px] border-r border-[#464646] shrink-0 flex flex-col">
+            {/* Project context selector */}
+            <div className="px-[12px] py-[10px] border-b border-[#464646]">
+              <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] mb-[6px]">Project</p>
+              {contextsLoading ? (
+                <div className="flex items-center gap-[6px]">
+                  <Loader size={12} />
+                  <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">Loading...</span>
+                </div>
+              ) : contextsError ? (
+                <p className="text-[9px] text-red-400 font-['JetBrains_Mono',sans-serif]">{contextsError}</p>
+              ) : contexts.length === 0 ? (
+                <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">No projects found</p>
+              ) : (
+                <div className="flex flex-col gap-[2px]">
+                  {contexts.map((ctx, i) => {
+                    const isActive = selectedCtx?.id === ctx.id;
+                    const isProduct = i === 0 && ctx.id === 'product';
+                    return (
+                      <button
+                        key={ctx.id}
+                        onClick={() => setSelectedCtx(ctx)}
+                        className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[3px] text-left transition-all ${
+                          isActive
+                            ? 'bg-[rgba(248,129,169,0.12)] border border-[#f881a9]'
+                            : 'hover:bg-[rgba(255,255,255,0.04)] border border-transparent'
+                        }`}
+                      >
+                        <Icon
+                          icon={isProduct ? 'solar:box-linear' : 'solar:server-minimalistic-linear'}
+                          className={`text-xs shrink-0 ${isActive ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.3)]'}`}
+                        />
+                        <span className={`text-[10px] font-['JetBrains_Mono',sans-serif] truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
+                          {ctx.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Tool list */}
+            <div className="flex flex-col gap-[4px] flex-1 p-[12px]">
               {TOOLS.map((tool) => {
                 const isActive = activeTab === tool.id;
                 return (
@@ -86,31 +163,33 @@ export function ToolsPage() {
                 );
               })}
             </div>
+
             {/* Back to setup */}
-            <button
-              onClick={() => setGcloudReady(false)}
-              className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left hover:bg-[rgba(255,255,255,0.03)] border border-transparent transition-all mt-[8px]"
-            >
-              <Icon icon="solar:settings-linear" className="text-sm text-[rgba(255,255,255,0.2)]" />
-              <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-['JetBrains_Mono',sans-serif]">Setup</span>
-            </button>
+            <div className="px-[12px] pb-[12px]">
+              <button
+                onClick={() => setGcloudReady(false)}
+                className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left hover:bg-[rgba(255,255,255,0.03)] border border-transparent transition-all w-full"
+              >
+                <Icon icon="solar:settings-linear" className="text-sm text-[rgba(255,255,255,0.2)]" />
+                <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-['JetBrains_Mono',sans-serif]">Setup</span>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col min-w-0">
-          {/* Setup gate — shown until gcloud is installed + authenticated */}
           {!gcloudReady ? (
             <GCloudSetup onReady={handleGCloudReady} />
-          ) : overviewLoading ? (
+          ) : contextsLoading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader size={32} />
             </div>
-          ) : overviewError ? (
+          ) : contextsError ? (
             <div className="flex-1 flex items-center justify-center p-[24px]">
               <div className="text-center max-w-[320px]">
                 <Icon icon="solar:cloud-cross-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[8px]" />
-                <p className="text-[11px] text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">{overviewError}</p>
+                <p className="text-[11px] text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">{contextsError}</p>
               </div>
             </div>
           ) : !projectID ? (
@@ -131,4 +210,8 @@ export function ToolsPage() {
       </div>
     </PageLayout>
   );
+
+  function handleGCloudReady() {
+    setGcloudReady(true);
+  }
 }
