@@ -140,9 +140,10 @@ export function Logout(): $CancellablePromise<void> {
 
 /**
  * OpenForgejoWindow opens a new WebView window pointed at the given Forgejo URL.
+ * It routes the request through a local proxy that injects auth headers.
  */
-export function OpenForgejoWindow(url: string): $CancellablePromise<void> {
-    return $Call.ByID(3555025818, url);
+export function OpenForgejoWindow(repoURL: string): $CancellablePromise<void> {
+    return $Call.ByID(3555025818, repoURL);
 }
 
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
