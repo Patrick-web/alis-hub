@@ -17,6 +17,7 @@ var assets embed.FS
 
 func main() {
 	updaterSvc := updater.NewService(version)
+	productSvc := NewProductService()
 
 	app := application.New(application.Options{
 		Name:        "Alis Hub",
@@ -27,8 +28,9 @@ func main() {
 			application.NewService(NewDefineService()),
 			application.NewService(NewBuildService()),
 			application.NewService(NewDeployService()),
-			application.NewService(NewProductService()),
+			application.NewService(productSvc),
 			application.NewService(NewPackageService()),
+			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
 		},
 		Assets: application.AssetOptions{
@@ -99,6 +101,7 @@ func main() {
 	tray.SetMenu(trayMenu)
 
 	updaterSvc.SetApp(app)
+	productSvc.SetApp(app)
 	updater.BackgroundCheck(app, version, 30*time.Second)
 
 	err := app.Run()

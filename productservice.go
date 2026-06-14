@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -118,10 +119,26 @@ type Codeblock struct {
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
+	app    *application.App
 }
 
 func NewProductService() *ProductService {
 	return &ProductService{}
+}
+
+func (s *ProductService) SetApp(app *application.App) {
+	s.mu.Lock()
+	s.app = app
+	s.mu.Unlock()
+}
+
+func (s *ProductService) emitSyncLog(text string) {
+	s.mu.Lock()
+	app := s.app
+	s.mu.Unlock()
+	if app != nil {
+		app.Event.Emit("sync:log", text)
+	}
 }
 
 func (s *ProductService) initTokens() error {
@@ -425,15 +442,18 @@ func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error
 	if overview.GitRepo == nil || overview.GitRepo.RemoteURI == "" {
 		return &SyncReposResult{Error: "product has no git repo configured"}, nil
 	}
-	buildRepoURL := overview.GitRepo.RemoteURI
+	// The API returns the org base URL (e.g. https://host/org); the build repo
+	// is named after the product and the define repo is always "proto".
+	buildRepoURL := strings.TrimRight(overview.GitRepo.RemoteURI, "/") + "/" + product
 
-	defineRepoURL, err := s.getOrganisationGitRepo(org)
+	orgBaseURL, err := s.getOrganisationGitRepo(org)
 	if err != nil {
 		return &SyncReposResult{Error: fmt.Sprintf("get organisation: %s", err)}, nil
 	}
-	if defineRepoURL == "" {
+	if orgBaseURL == "" {
 		return &SyncReposResult{Error: "organisation has no git repo configured"}, nil
 	}
+	defineRepoURL := strings.TrimRight(orgBaseURL, "/") + "/proto"
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -442,15 +462,18 @@ func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error
 	defineDir := filepath.Join(home, "alis.build", org, "define")
 	buildDir := filepath.Join(home, "alis.build", org, "build", product)
 
+	gitToken, _ := s.tokens.Token()
+	emit := func(text string) { s.emitSyncLog(text) }
+
 	result := &SyncReposResult{DefineDir: defineDir, BuildDir: buildDir}
 
-	result.DefineAction, err = syncOneRepo(defineDir, defineRepoURL)
+	result.DefineAction, err = syncOneRepo(defineDir, defineRepoURL, gitToken, emit)
 	if err != nil {
 		result.Error = fmt.Sprintf("define repo: %s", err)
 		return result, nil
 	}
 
-	result.BuildAction, err = syncOneRepo(buildDir, buildRepoURL)
+	result.BuildAction, err = syncOneRepo(buildDir, buildRepoURL, gitToken, emit)
 	if err != nil {
 		result.Error = fmt.Sprintf("build repo: %s", err)
 		return result, nil
@@ -1022,21 +1045,46 @@ func parseOrganisationGitRepo(data []byte) (string, error) {
 	return "", nil
 }
 
-func syncOneRepo(dir, remoteURL string) (string, error) {
+type emitWriter struct{ emit func(string) }
+
+func (w *emitWriter) Write(p []byte) (int, error) {
+	w.emit(string(p))
+	return len(p), nil
+}
+
+func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error) {
+	gitEnv := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	ew := &emitWriter{emit: emit}
+
+	// Build the common git flags: inject the token as a Bearer header so it
+	// never gets persisted to .git/config or the credential store.
+	baseArgs := []string{}
+	if token != "" {
+		baseArgs = []string{"-c", "http.extraHeader=Authorization: Bearer " + token}
+	}
+
+	runGit := func(subcmd ...string) error {
+		args := append(baseArgs, subcmd...)
+		cmd := exec.Command("git", args...)
+		cmd.Env = gitEnv
+		cmd.Stdin = nil
+		cmd.Stdout = ew
+		cmd.Stderr = ew
+		return cmd.Run()
+	}
+
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 			return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(dir), err)
 		}
-		cmd := exec.Command("git", "clone", remoteURL, dir)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			return "", fmt.Errorf("git clone: %w\n%s", err, out)
+		if err := runGit("clone", remoteURL, dir); err != nil {
+			return "", fmt.Errorf("git clone: %w", err)
 		}
 		return "cloned", nil
 	}
-	cmd := exec.Command("git", "fetch", "origin")
-	cmd.Dir = dir
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("git fetch: %w\n%s", err, out)
+
+	if err := runGit("-C", dir, "fetch", remoteURL); err != nil {
+		return "", fmt.Errorf("git fetch: %w", err)
 	}
 	return "fetched", nil
 }
