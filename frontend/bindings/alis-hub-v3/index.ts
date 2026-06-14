@@ -28,6 +28,7 @@ export {
     ARVersion,
     BuildLogsResult,
     BuildSpecItem,
+    CloudRunService,
     Codeblock,
     DefineCommit,
     DeployItem,
