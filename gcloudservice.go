@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -362,20 +363,33 @@ type GCSBucket struct {
 	TimeCreated  string `json:"timeCreated"`
 }
 
-type gcsListBucketsResp struct {
-	Items []GCSBucket `json:"items"`
-}
 
 func (g *GCloudService) ListBuckets(projectID string) ([]GCSBucket, error) {
-	u := "https://storage.googleapis.com/storage/v1/b?project=" + url.QueryEscape(projectID) + "&maxResults=100"
-	var result gcsListBucketsResp
-	if err := g.apiGet(u, &result); err != nil {
-		return nil, err
+	base := "https://storage.googleapis.com/storage/v1/b?project=" + url.QueryEscape(projectID) + "&maxResults=250"
+	var all []GCSBucket
+	pageToken := ""
+	for {
+		u := base
+		if pageToken != "" {
+			u += "&pageToken=" + url.QueryEscape(pageToken)
+		}
+		var result struct {
+			Items         []GCSBucket `json:"items"`
+			NextPageToken string      `json:"nextPageToken"`
+		}
+		if err := g.apiGet(u, &result); err != nil {
+			return nil, err
+		}
+		all = append(all, result.Items...)
+		if result.NextPageToken == "" {
+			break
+		}
+		pageToken = result.NextPageToken
 	}
-	if result.Items == nil {
+	if all == nil {
 		return []GCSBucket{}, nil
 	}
-	return result.Items, nil
+	return all, nil
 }
 
 type GCSObject struct {
@@ -410,6 +424,63 @@ func (g *GCloudService) ListObjects(bucket, prefix, pageToken string) (GCSObject
 		result.Prefixes = []string{}
 	}
 	return result, nil
+}
+
+type GCSObjectMetadata struct {
+	Name         string `json:"name"`
+	Bucket       string `json:"bucket"`
+	Size         string `json:"size"`
+	ContentType  string `json:"contentType"`
+	MD5Hash      string `json:"md5Hash"`
+	CRC32C       string `json:"crc32c"`
+	TimeCreated  string `json:"timeCreated"`
+	Updated      string `json:"updated"`
+	StorageClass string `json:"storageClass"`
+	Etag         string `json:"etag"`
+	Generation   string `json:"generation"`
+}
+
+func (g *GCloudService) GetObjectMetadata(bucket, object string) (*GCSObjectMetadata, error) {
+	u := "https://storage.googleapis.com/storage/v1/b/" + url.PathEscape(bucket) + "/o/" + url.PathEscape(object)
+	var result GCSObjectMetadata
+	if err := g.apiGet(u, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// GetObjectContent downloads a GCS object and returns its content as a base64 string.
+// Returns an error if the object exceeds 20 MB.
+func (g *GCloudService) GetObjectContent(bucket, object string) (string, error) {
+	token, err := g.accessToken()
+	if err != nil {
+		return "", err
+	}
+	u := "https://storage.googleapis.com/download/storage/v1/b/" + url.PathEscape(bucket) + "/o/" + url.PathEscape(object) + "?alt=media"
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
+	}
+	const maxSize = 20 * 1024 * 1024
+	lr := io.LimitReader(resp.Body, maxSize+1)
+	data, err := io.ReadAll(lr)
+	if err != nil {
+		return "", err
+	}
+	if len(data) > maxSize {
+		return "", fmt.Errorf("file exceeds 20 MB preview limit")
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
 }
 
 // ── Cloud Logging ─────────────────────────────────────────────────────────────

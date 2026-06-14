@@ -39,6 +39,7 @@ export {
     GCSBucket,
     GCSObject,
     GCSObjectList,
+    GCSObjectMetadata,
     GCloudStatus,
     GitRepoInfo,
     GlassArtifact,
