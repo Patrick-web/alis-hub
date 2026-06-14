@@ -182,6 +182,46 @@ export class BuildSpecItem {
     }
 }
 
+export class CloudRunService {
+    /**
+     * Full resource name: projects/P/locations/L/services/S
+     */
+    "name": string;
+
+    /**
+     * short name extracted from Name
+     */
+    "serviceName": string;
+
+    /**
+     * location extracted from Name
+     */
+    "region": string;
+
+    /** Creates a new CloudRunService instance. */
+    constructor($$source: Partial<CloudRunService> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("serviceName" in $$source)) {
+            this["serviceName"] = "";
+        }
+        if (!("region" in $$source)) {
+            this["region"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloudRunService instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloudRunService {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CloudRunService($$parsedSource as Partial<CloudRunService>);
+    }
+}
+
 export class Codeblock {
     "name": string;
     "displayName": string;

@@ -46,27 +46,36 @@ export function ListBuckets(projectID: string): $CancellablePromise<$models.GCSB
     });
 }
 
+/**
+ * ListCloudRunServices returns all Cloud Run services in the project across all regions.
+ */
+export function ListCloudRunServices(projectID: string): $CancellablePromise<$models.CloudRunService[]> {
+    return $Call.ByID(2635577109, projectID).then(($result: any) => {
+        return $$createType6($result);
+    });
+}
+
 export function ListLogEntries(projectID: string, filter: string, pageToken: string): $CancellablePromise<$models.LogPage> {
     return $Call.ByID(1181900761, projectID, filter, pageToken).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
 export function ListObjects(bucket: string, prefix: string, pageToken: string): $CancellablePromise<$models.GCSObjectList> {
     return $Call.ByID(4097624265, bucket, prefix, pageToken).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType8($result);
     });
 }
 
 export function ListPackages(projectID: string, region: string, repoName: string): $CancellablePromise<$models.ARPackage[]> {
     return $Call.ByID(2958372494, projectID, region, repoName).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType10($result);
     });
 }
 
 export function ListRepositories(projectID: string, region: string): $CancellablePromise<$models.ARRepository[]> {
     return $Call.ByID(3391911399, projectID, region).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType12($result);
     });
 }
 
@@ -76,13 +85,13 @@ export function ListRepositories(projectID: string, region: string): $Cancellabl
  */
 export function ListSecretVersions(secretResourceName: string): $CancellablePromise<$models.SMSecretVersion[]> {
     return $Call.ByID(1703252290, secretResourceName).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
 export function ListSecrets(projectID: string): $CancellablePromise<$models.SMSecret[]> {
     return $Call.ByID(2564033992, projectID).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
@@ -92,7 +101,7 @@ export function ListSecrets(projectID: string): $CancellablePromise<$models.SMSe
  */
 export function ListVersions(packageResourceName: string): $CancellablePromise<$models.ARVersion[]> {
     return $Call.ByID(2139956354, packageResourceName).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -109,7 +118,7 @@ export function OpenInConsole(section: string, projectID: string, resource: stri
  */
 export function PollSetupOutput(runID: string, offset: number): $CancellablePromise<$models.SetupChunk | null> {
     return $Call.ByID(16531906, runID, offset).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType20($result);
     });
 }
 
@@ -148,17 +157,19 @@ const $$createType1 = $models.GCSObjectMetadata.createFrom;
 const $$createType2 = $Create.Nullable($$createType1);
 const $$createType3 = $models.GCSBucket.createFrom;
 const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $models.LogPage.createFrom;
-const $$createType6 = $models.GCSObjectList.createFrom;
-const $$createType7 = $models.ARPackage.createFrom;
-const $$createType8 = $Create.Array($$createType7);
-const $$createType9 = $models.ARRepository.createFrom;
+const $$createType5 = $models.CloudRunService.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = $models.LogPage.createFrom;
+const $$createType8 = $models.GCSObjectList.createFrom;
+const $$createType9 = $models.ARPackage.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = $models.SMSecretVersion.createFrom;
+const $$createType11 = $models.ARRepository.createFrom;
 const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = $models.SMSecret.createFrom;
+const $$createType13 = $models.SMSecretVersion.createFrom;
 const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $models.ARVersion.createFrom;
+const $$createType15 = $models.SMSecret.createFrom;
 const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.SetupChunk.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
+const $$createType17 = $models.ARVersion.createFrom;
+const $$createType18 = $Create.Array($$createType17);
+const $$createType19 = $models.SetupChunk.createFrom;
+const $$createType20 = $Create.Nullable($$createType19);
