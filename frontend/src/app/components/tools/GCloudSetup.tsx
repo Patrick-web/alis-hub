@@ -1,0 +1,383 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Icon } from '@iconify/react';
+import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
+import { Button } from '../Button';
+import { Loader } from '../Loader';
+import { Browser } from '@wailsio/runtime';
+import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
+import type { GCloudStatus } from '../../../../bindings/alis-hub-v3/models';
+
+interface Props {
+  onReady: () => void;
+}
+
+const INSTALL_URL = 'https://cloud.google.com/sdk/docs/install';
+
+const INSTALL_COMMAND =
+  'curl https://sdk.cloud.google.com | bash && exec -l $SHELL';
+
+const SESSION_ID = 'gcloud-setup';
+
+function StepCard({
+  step,
+  title,
+  subtitle,
+  status,
+  children,
+}: {
+  step: number;
+  title: string;
+  subtitle: string;
+  status: 'ok' | 'error' | 'pending';
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-[#464646] rounded-[6px] bg-[#1e1e1e] overflow-hidden">
+      <div className="flex items-center gap-[12px] px-[16px] py-[14px] border-b border-[#2a2a2a]">
+        <div
+          className={`w-[24px] h-[24px] rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold font-['JetBrains_Mono',sans-serif] ${
+            status === 'ok'
+              ? 'bg-green-500/20 text-green-400'
+              : status === 'error'
+              ? 'bg-red-500/20 text-red-400'
+              : 'bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]'
+          }`}
+        >
+          {status === 'ok' ? (
+            <Icon icon="solar:check-circle-bold" className="text-sm" />
+          ) : status === 'error' ? (
+            <Icon icon="solar:close-circle-bold" className="text-sm" />
+          ) : (
+            step
+          )}
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">
+            {title}
+          </p>
+          <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase">{subtitle}</p>
+        </div>
+      </div>
+      <div className="px-[16px] py-[14px]">{children}</div>
+    </div>
+  );
+}
+
+export function GCloudSetup({ onReady }: Props) {
+  const [status, setStatus] = useState<GCloudStatus | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const termRef = useRef<BuildTerminalHandle | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const outputBuf = useRef('');    // accumulated raw terminal output for pattern matching
+  const recheckPending = useRef(false);
+
+  const check = useCallback(() => {
+    setChecking(true);
+    GS.CheckGCloudStatus()
+      .then((s) => setStatus(s))
+      .catch(() => setStatus({ gcloudInstalled: false, authenticated: false }))
+      .finally(() => setChecking(false));
+  }, []);
+
+  useEffect(() => {
+    check();
+  }, [check]);
+
+  // Patterns in gcloud output that signal a step has just completed.
+  // We strip ANSI codes before matching so colour sequences don't interfere.
+  function stripAnsi(s: string) {
+    // eslint-disable-next-line no-control-regex
+    return s.replace(/\x1b\[[0-9;]*[mGKHF]/g, '');
+  }
+
+  const AUTH_SUCCESS = [
+    'you are now logged in as',
+    'credentials saved to file',
+    'your current project is',        // appears right after auth completes
+    'access token is valid',
+  ];
+
+  const INSTALL_SUCCESS = [
+    'installation complete',
+    'google-cloud-sdk installed',
+    'update done',
+  ];
+
+  // Poll terminal output while session is active
+  useEffect(() => {
+    if (!sessionActive) return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const chunk = await GS.PollSetupOutput(SESSION_ID, offset);
+        if (!chunk) return;
+        if (chunk.data) {
+          termRef.current?.write(chunk.data);
+          setOffset((o) => o + chunk.data.length);
+
+          // Accumulate and scan for success patterns (keep last 2 KB to bound memory)
+          outputBuf.current = (outputBuf.current + chunk.data).slice(-2048);
+          const plain = stripAnsi(outputBuf.current).toLowerCase();
+
+          const authDone = AUTH_SUCCESS.some((p) => plain.includes(p));
+          const installDone = INSTALL_SUCCESS.some((p) => plain.includes(p));
+
+          if ((authDone || installDone) && !recheckPending.current) {
+            recheckPending.current = true;
+            setTimeout(() => {
+              check();
+              recheckPending.current = false;
+            }, 1200);
+          }
+        }
+        if (chunk.done) {
+          setSessionActive(false);
+          clearInterval(pollRef.current!);
+          // Always recheck when the session process exits
+          setTimeout(check, 800);
+        }
+      } catch {
+        // ignore poll errors
+      }
+    }, 80);
+    return () => clearInterval(pollRef.current!);
+  }, [sessionActive, offset, check]);
+
+  // Cleanup session on unmount
+  useEffect(() => {
+    return () => {
+      GS.StopSetupSession(SESSION_ID);
+    };
+  }, []);
+
+  function copyToClipboard(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  function openTerminal(command?: string) {
+    if (!terminalOpen) {
+      setTerminalOpen(true);
+    }
+    GS.StopSetupSession(SESSION_ID).then(() => {
+      setSessionActive(false);
+      setOffset(0);
+      outputBuf.current = '';
+      recheckPending.current = false;
+      termRef.current?.clear();
+      return GS.StartSetupSession(SESSION_ID, command ?? '');
+    }).then(() => {
+      setSessionActive(true);
+    }).catch(console.error);
+  }
+
+  if (checking && !status) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader size={32} />
+      </div>
+    );
+  }
+
+  const gcloudOk = status?.gcloudInstalled ?? false;
+  const authOk = status?.authenticated ?? false;
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Setup content */}
+      <div className="flex-1 overflow-y-auto p-[24px]">
+        <div className="max-w-[640px] mx-auto">
+          <div className="mb-[24px]">
+            <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              Prerequisites
+            </p>
+            <h2 className="text-[16px] font-bold text-white font-['JetBrains_Mono',sans-serif]">
+              GCloud Tools Setup
+            </h2>
+            <p className="text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px] leading-[1.6]">
+              Complete the steps below to enable Cloud Storage, Logging, Artifact Registry and Secret Manager tools.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-[12px]">
+            {/* Step 1: Install gcloud */}
+            <StepCard
+              step={1}
+              title="Install Google Cloud SDK"
+              subtitle="Required — gcloud CLI"
+              status={gcloudOk ? 'ok' : 'error'}
+            >
+              {gcloudOk ? (
+                <div className="flex items-center gap-[8px]">
+                  <Icon icon="solar:check-circle-bold" className="text-sm text-green-400" />
+                  <p className="text-[10px] text-green-400 font-['JetBrains_Mono',sans-serif]">
+                    Found at {status?.gcloudPath}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.6] mb-[12px]">
+                    The Google Cloud SDK provides the{' '}
+                    <code className="text-[#f881a9] font-['JetBrains_Mono',sans-serif]">gcloud</code>{' '}
+                    CLI used to authenticate and call GCP APIs.
+                  </p>
+
+                  {/* Install command */}
+                  <div className="bg-[#141414] border border-[#3a3a3a] rounded-[4px] flex items-center gap-[8px] px-[12px] py-[8px] mb-[10px]">
+                    <Icon icon="solar:terminal-linear" className="text-sm text-[rgba(255,255,255,0.3)] shrink-0" />
+                    <code className="text-[10px] text-[rgba(255,255,255,0.7)] font-['JetBrains_Mono',sans-serif] flex-1 truncate">
+                      {INSTALL_COMMAND}
+                    </code>
+                  </div>
+
+                  <div className="flex gap-[8px]">
+                    <Button
+                      variant="primary"
+                      onClick={() => openTerminal(INSTALL_COMMAND)}
+                      icon={<Icon icon="solar:play-linear" className="text-xs" />}
+                    >
+                      Run in Terminal
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => copyToClipboard(INSTALL_COMMAND, 'install')}
+                      icon={<Icon icon={copied === 'install' ? 'solar:check-linear' : 'solar:copy-linear'} className="text-xs" />}
+                    >
+                      {copied === 'install' ? 'Copied' : 'Copy Command'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => Browser.OpenURL(INSTALL_URL)}
+                      icon={<Icon icon="solar:export-linear" className="text-xs" />}
+                    >
+                      Open Docs
+                    </Button>
+                  </div>
+                </>
+              )}
+            </StepCard>
+
+            {/* Step 2: Authenticate */}
+            <StepCard
+              step={2}
+              title="Authenticate with Google Cloud"
+              subtitle={authOk ? `Signed in as ${status?.authAccount}` : 'Not authenticated'}
+              status={!gcloudOk ? 'pending' : authOk ? 'ok' : 'error'}
+            >
+              {authOk ? (
+                <div className="flex items-center gap-[8px]">
+                  <Icon icon="solar:check-circle-bold" className="text-sm text-green-400" />
+                  <p className="text-[10px] text-green-400 font-['JetBrains_Mono',sans-serif]">
+                    Authenticated as {status?.authAccount}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.6] mb-[12px]">
+                    Authenticate with your Google account. Your browser will open to complete the login — the terminal below stays interactive for any prompts.
+                  </p>
+
+                  <div className="bg-[#141414] border border-[#3a3a3a] rounded-[4px] flex items-center gap-[8px] px-[12px] py-[8px] mb-[10px]">
+                    <Icon icon="solar:terminal-linear" className="text-sm text-[rgba(255,255,255,0.3)] shrink-0" />
+                    <code className="text-[10px] text-[rgba(255,255,255,0.7)] font-['JetBrains_Mono',sans-serif]">
+                      gcloud auth login
+                    </code>
+                  </div>
+
+                  <div className="flex gap-[8px]">
+                    <Button
+                      variant="primary"
+                      disabled={!gcloudOk}
+                      onClick={() => openTerminal('gcloud auth login')}
+                      icon={<Icon icon="solar:play-linear" className="text-xs" />}
+                    >
+                      Run in Terminal
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => copyToClipboard('gcloud auth login', 'auth')}
+                      icon={<Icon icon={copied === 'auth' ? 'solar:check-linear' : 'solar:copy-linear'} className="text-xs" />}
+                    >
+                      {copied === 'auth' ? 'Copied' : 'Copy Command'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </StepCard>
+
+            {/* Actions */}
+            <div className="flex items-center gap-[10px] pt-[4px]">
+              <Button
+                variant="secondary"
+                onClick={check}
+                disabled={checking}
+                icon={<Icon icon={checking ? 'solar:refresh-bold' : 'solar:refresh-linear'} className={`text-xs ${checking ? 'animate-spin' : ''}`} />}
+              >
+                {checking ? 'Checking…' : 'Re-check'}
+              </Button>
+
+              <Button
+                variant="primary"
+                disabled={!gcloudOk || !authOk || checking}
+                onClick={onReady}
+                icon={<Icon icon="solar:alt-arrow-right-linear" className="text-xs" />}
+              >
+                {gcloudOk && authOk ? 'Continue to Tools' : 'Complete steps above'}
+              </Button>
+
+              {gcloudOk && authOk && (
+                <p className="text-[10px] text-green-400 font-['JetBrains_Mono',sans-serif]">
+                  All prerequisites met
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Terminal pane */}
+      {terminalOpen && (
+        <div className="border-t border-[#464646] flex flex-col" style={{ height: '280px' }}>
+          <div className="flex items-center justify-between px-[12px] h-[30px] border-b border-[#464646] shrink-0">
+            <div className="flex items-center gap-[8px]">
+              <Icon icon="solar:terminal-bold" className="text-xs text-[rgba(255,255,255,0.4)]" />
+              <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">
+                Setup Terminal
+              </p>
+              {sessionActive && (
+                <span className="w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse" />
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setTerminalOpen(false);
+                GS.StopSetupSession(SESSION_ID);
+                setSessionActive(false);
+              }}
+              className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.3)] hover:text-white hover:bg-[#3c3c3c] transition-colors"
+            >
+              <Icon icon="solar:close-linear" className="text-xs" />
+            </button>
+          </div>
+          <div className="flex-1 min-h-0">
+            <BuildTerminal
+              ref={termRef}
+              className="w-full h-full"
+              onInput={(data) => {
+                if (sessionActive) GS.WriteSetupInput(SESSION_ID, data);
+              }}
+              onResize={(cols, rows) => {
+                if (sessionActive) GS.ResizeSetupTerminal(SESSION_ID, cols, rows);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
