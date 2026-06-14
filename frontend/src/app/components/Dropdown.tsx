@@ -7,9 +7,10 @@ interface DropdownProps {
   onSelect?: (option: string) => void;
   onSettingsClick?: () => void;
   loading?: boolean;
+  error?: string | null;
 }
 
-export function Dropdown({ label, options = [], onSelect, onSettingsClick, loading }: DropdownProps) {
+export function Dropdown({ label, options = [], onSelect, onSettingsClick, loading, error }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -33,6 +34,8 @@ export function Dropdown({ label, options = [], onSelect, onSettingsClick, loadi
         <div className="absolute top-full right-0 mt-0 bg-[#2c2c2c] border border-[#464646] z-50 min-w-[150px] shadow-xl">
           {loading ? (
             <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">Loading…</div>
+          ) : error ? (
+            <div className="px-[12px] py-[10px] text-[11px] text-[#ff5c5f] font-['JetBrains_Mono',sans-serif] max-w-[260px] leading-[1.5]">Session expired — sign in again via your profile.</div>
           ) : options.length === 0 ? (
             <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">No environments</div>
           ) : (
