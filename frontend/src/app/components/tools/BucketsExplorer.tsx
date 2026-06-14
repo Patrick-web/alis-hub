@@ -384,12 +384,21 @@ export function BucketsExplorer({ projectID }: Props) {
               {/* Panel header */}
               <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-[#464646] shrink-0">
                 <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">File Info</p>
-                <button
-                  onClick={() => setSelectedObject(null)}
-                  className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
-                >
-                  <Icon icon="solar:close-square-linear" className="text-sm" />
-                </button>
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    onClick={() => GS.OpenInConsole('storage-object', projectID, `${selectedBucket}/${selectedObject.name}`)}
+                    className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+                    title="Open in Google Cloud Console"
+                  >
+                    <Icon icon="solar:export-linear" className="text-sm" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedObject(null)}
+                    className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+                  >
+                    <Icon icon="solar:close-square-linear" className="text-sm" />
+                  </button>
+                </div>
               </div>
 
               {/* Mini preview */}
