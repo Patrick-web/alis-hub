@@ -51,15 +51,24 @@ export function GetEnvironmentVariables(envName: string): $CancellablePromise<$m
     });
 }
 
+/**
+ * GetOrganisationProject returns the GCP project associated with an organisation.
+ */
+export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
+    return $Call.ByID(1082294977, org).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType11($result);
     });
 }
 
@@ -69,7 +78,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
@@ -79,7 +88,7 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType15($result);
     });
 }
 
@@ -95,31 +104,31 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType17($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType20($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -161,7 +170,7 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
@@ -182,22 +191,24 @@ const $$createType2 = $models.NeuronItem.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = $models.EnvVariable.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.ProductOverview.createFrom;
+const $$createType6 = $models.GCPProject.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.ServicesOverview.createFrom;
+const $$createType8 = $models.ProductOverview.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $models.ShareData.createFrom;
+const $$createType10 = $models.ServicesOverview.createFrom;
 const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.UserProfile.createFrom;
+const $$createType12 = $models.ShareData.createFrom;
 const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $models.Codeblock.createFrom;
-const $$createType15 = $Create.Array($$createType14);
-const $$createType16 = $Create.Array($$createType0);
-const $$createType17 = $models.InviteInfo.createFrom;
-const $$createType18 = $Create.Array($$createType17);
-const $$createType19 = $models.LandingZonesData.createFrom;
-const $$createType20 = $Create.Nullable($$createType19);
-const $$createType21 = $models.ProductSummary.createFrom;
-const $$createType22 = $Create.Array($$createType21);
-const $$createType23 = $models.SyncReposResult.createFrom;
-const $$createType24 = $Create.Nullable($$createType23);
+const $$createType14 = $models.UserProfile.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = $models.Codeblock.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = $Create.Array($$createType0);
+const $$createType19 = $models.InviteInfo.createFrom;
+const $$createType20 = $Create.Array($$createType19);
+const $$createType21 = $models.LandingZonesData.createFrom;
+const $$createType22 = $Create.Nullable($$createType21);
+const $$createType23 = $models.ProductSummary.createFrom;
+const $$createType24 = $Create.Array($$createType23);
+const $$createType25 = $models.SyncReposResult.createFrom;
+const $$createType26 = $Create.Nullable($$createType25);

@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -693,6 +694,220 @@ func (g *GCloudService) ListSecretVersions(secretResourceName string) ([]SMSecre
 	return result.Versions, nil
 }
 
+// ── Cloud Spanner ─────────────────────────────────────────────────────────────
+
+type SpannerInstance struct {
+	Name            string `json:"name"`
+	DisplayName     string `json:"displayName"`
+	Config          string `json:"config"`
+	State           string `json:"state"`
+	NodeCount       int    `json:"nodeCount"`
+	ProcessingUnits int    `json:"processingUnits"`
+}
+
+type spannerInstanceListResp struct {
+	Instances []SpannerInstance `json:"instances"`
+}
+
+type SpannerDatabase struct {
+	Name                   string `json:"name"`
+	State                  string `json:"state"`
+	CreateTime             string `json:"createTime"`
+	VersionRetentionPeriod string `json:"versionRetentionPeriod"`
+}
+
+type spannerDatabaseListResp struct {
+	Databases []SpannerDatabase `json:"databases"`
+}
+
+type SpannerTable struct {
+	Name string `json:"name"`
+}
+
+type spannerDDLResp struct {
+	Statements []string `json:"statements"`
+}
+
+type SpannerQueryResult struct {
+	Columns []string   `json:"columns"`
+	Rows    [][]string `json:"rows"`
+}
+
+type spannerField struct {
+	Name string `json:"name"`
+}
+
+type spannerRowType struct {
+	Fields []spannerField `json:"fields"`
+}
+
+type spannerMetadata struct {
+	RowType spannerRowType `json:"rowType"`
+}
+
+type spannerExecuteSQLResp struct {
+	Metadata spannerMetadata `json:"metadata"`
+	Rows     [][]interface{} `json:"rows"`
+}
+
+func (g *GCloudService) ListSpannerInstances(projectID string) ([]SpannerInstance, error) {
+	u := fmt.Sprintf("https://spanner.googleapis.com/v1/projects/%s/instances", url.PathEscape(projectID))
+	var result spannerInstanceListResp
+	if err := g.apiGet(u, &result); err != nil {
+		return nil, err
+	}
+	if result.Instances == nil {
+		return []SpannerInstance{}, nil
+	}
+	return result.Instances, nil
+}
+
+// ListSpannerDatabases lists databases in a Spanner instance.
+// instanceResourceName is the full name e.g. "projects/{project}/instances/{instance}".
+func (g *GCloudService) ListSpannerDatabases(instanceResourceName string) ([]SpannerDatabase, error) {
+	u := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/databases", instanceResourceName)
+	var result spannerDatabaseListResp
+	if err := g.apiGet(u, &result); err != nil {
+		return nil, err
+	}
+	if result.Databases == nil {
+		return []SpannerDatabase{}, nil
+	}
+	return result.Databases, nil
+}
+
+// ListSpannerTables lists tables in a Spanner database by parsing its DDL.
+// databaseResourceName is the full name e.g. "projects/{p}/instances/{i}/databases/{d}".
+func (g *GCloudService) ListSpannerTables(databaseResourceName string) ([]SpannerTable, error) {
+	u := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/ddl", databaseResourceName)
+	var result spannerDDLResp
+	if err := g.apiGet(u, &result); err != nil {
+		return nil, err
+	}
+	re := regexp.MustCompile(`(?i)CREATE TABLE\s+` + "`?" + `(\w+)` + "`?")
+	seen := map[string]bool{}
+	var tables []SpannerTable
+	for _, stmt := range result.Statements {
+		if m := re.FindStringSubmatch(stmt); len(m) > 1 {
+			name := m[1]
+			if !seen[name] {
+				seen[name] = true
+				tables = append(tables, SpannerTable{Name: name})
+			}
+		}
+	}
+	if tables == nil {
+		return []SpannerTable{}, nil
+	}
+	return tables, nil
+}
+
+// ExecuteSpannerQuery runs a read-only SQL query against a Spanner database.
+// databaseResourceName is the full name e.g. "projects/{p}/instances/{i}/databases/{d}".
+// Spanner's executeSql is session-scoped: we create a session, run the query, then delete it.
+func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*SpannerQueryResult, error) {
+	// Create a temporary session.
+	sessionURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/sessions", databaseResourceName)
+	var sessionResp struct {
+		Name string `json:"name"`
+	}
+	if err := g.apiPost(sessionURL, map[string]interface{}{}, &sessionResp); err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+	sessionName := sessionResp.Name
+	defer g.deleteSpannerSession(sessionName)
+
+	execURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeSql", sessionName)
+	payload := map[string]interface{}{
+		"sql": sql,
+		"transaction": map[string]interface{}{
+			"singleUse": map[string]interface{}{
+				"readOnly": map[string]interface{}{},
+			},
+		},
+	}
+	var resp spannerExecuteSQLResp
+	if err := g.apiPost(execURL, payload, &resp); err != nil {
+		return nil, err
+	}
+	columns := make([]string, len(resp.Metadata.RowType.Fields))
+	for i, f := range resp.Metadata.RowType.Fields {
+		columns[i] = f.Name
+	}
+	rows := make([][]string, len(resp.Rows))
+	for i, row := range resp.Rows {
+		cells := make([]string, len(row))
+		for j, cell := range row {
+			if cell == nil {
+				cells[j] = "NULL"
+			} else {
+				cells[j] = fmt.Sprintf("%v", cell)
+			}
+		}
+		rows[i] = cells
+	}
+	return &SpannerQueryResult{Columns: columns, Rows: rows}, nil
+}
+
+// SpannerDMLResult holds the outcome of a partitioned DML statement.
+type SpannerDMLResult struct {
+	RowsAffected int64 `json:"rowsAffected"`
+}
+
+// ExecuteSpannerDML runs a DELETE or UPDATE statement using a partitioned DML
+// transaction, which does not require an explicit commit.
+func (g *GCloudService) ExecuteSpannerDML(databaseResourceName, sql string) (*SpannerDMLResult, error) {
+	sessionURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/sessions", databaseResourceName)
+	var sessionResp struct {
+		Name string `json:"name"`
+	}
+	if err := g.apiPost(sessionURL, map[string]interface{}{}, &sessionResp); err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+	sessionName := sessionResp.Name
+	defer g.deleteSpannerSession(sessionName)
+
+	execURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeSql", sessionName)
+	payload := map[string]interface{}{
+		"sql": sql,
+		"transaction": map[string]interface{}{
+			"partitionedDml": map[string]interface{}{},
+		},
+	}
+	var resp struct {
+		Stats struct {
+			RowCountExact string `json:"rowCountExact"`
+		} `json:"stats"`
+	}
+	if err := g.apiPost(execURL, payload, &resp); err != nil {
+		return nil, err
+	}
+	var rowsAffected int64
+	if resp.Stats.RowCountExact != "" {
+		fmt.Sscanf(resp.Stats.RowCountExact, "%d", &rowsAffected)
+	}
+	return &SpannerDMLResult{RowsAffected: rowsAffected}, nil
+}
+
+func (g *GCloudService) deleteSpannerSession(sessionName string) {
+	if sessionName == "" {
+		return
+	}
+	token, err := g.accessToken()
+	if err != nil {
+		return
+	}
+	req, err := http.NewRequest("DELETE", "https://spanner.googleapis.com/v1/"+sessionName, nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err == nil {
+		resp.Body.Close()
+	}
+}
+
 // ── Console Links ─────────────────────────────────────────────────────────────
 
 // OpenInConsole opens the Google Cloud Console page for the given section in the system browser.
@@ -717,6 +932,8 @@ func (g *GCloudService) OpenInConsole(section, projectID, resource string) {
 		consoleURL = "https://console.cloud.google.com/artifacts?project=" + url.QueryEscape(projectID)
 	case "secrets":
 		consoleURL = "https://console.cloud.google.com/security/secret-manager?project=" + url.QueryEscape(projectID)
+	case "spanner":
+		consoleURL = "https://console.cloud.google.com/spanner/instances?project=" + url.QueryEscape(projectID)
 	default:
 		consoleURL = "https://console.cloud.google.com/?project=" + url.QueryEscape(projectID)
 	}
