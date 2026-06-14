@@ -47,6 +47,7 @@ const tabs = [
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
   { id: 'agents', label: 'Agents', icon: <Icon icon="solar:users-group-two-rounded-linear" className="text-lg" /> },
   { id: 'codeblocks', label: 'Codeblocks', icon: <Icon icon="solar:code-linear" className="text-lg" /> },
+  { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-launch-linear" className="text-lg" /> },
 ];
 
 export function TopNav() {
@@ -116,7 +117,7 @@ export function TopNav() {
 
   return (
     <div
-      className="bg-[#2c2c2c] border-b border-[#464646] h-[40px] flex items-center shrink-0 w-full overflow-hidden"
+      className="bg-[#2c2c2c] border-b border-[#464646] h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: Window controls and breadcrumb */}
