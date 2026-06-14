@@ -5,6 +5,11 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import type { SyncReposResult } from '../../../bindings/alis-hub-v3/models';
 import { Loader } from '../components/Loader';
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 type ProductSummary = {
   name: string;
   displayName: string;
@@ -46,7 +51,10 @@ export function ProductPickerPage() {
     setError(null);
     (ProductService.ListProducts as (org: string) => Promise<ProductSummary[]>)(orgId)
       .then(result => setProducts(result ?? []))
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => {
+        if (isAuthError(e)) { setPhase('login'); return; }
+        setError(String(e));
+      })
       .finally(() => setLoading(false));
   };
 
