@@ -114,18 +114,25 @@ export function AboutPage() {
             ) : (
               <>
                 {overview?.gitRepo?.remoteUri && (
-                  <div className="flex items-center justify-between px-[10px] py-[8px] border-b border-[#2c2c2c]">
-                    <span className="text-[10px] text-[rgba(255,255,255,0.5)] uppercase font-bold w-[100px] shrink-0">Remote</span>
-                    <div className="flex items-center gap-[6px] min-w-0">
-                      <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] truncate">{overview.gitRepo.remoteUri}</span>
-                      <button
-                        onClick={() => copyToClipboard(overview.gitRepo.remoteUri)}
-                        className="shrink-0 text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
-                      >
-                        <Icon icon="solar:copy-linear" className="text-sm" />
-                      </button>
+                  <>
+                    <div className="flex items-center justify-between px-[10px] py-[8px] border-b border-[#2c2c2c]">
+                      <span className="text-[10px] text-[rgba(255,255,255,0.5)] uppercase font-bold w-[100px] shrink-0">Remote</span>
+                      <div className="flex items-center gap-[6px] min-w-0">
+                        <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] truncate">{overview.gitRepo.remoteUri}</span>
+                        <button
+                          onClick={() => copyToClipboard(overview.gitRepo.remoteUri)}
+                          className="shrink-0 text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                        >
+                          <Icon icon="solar:copy-linear" className="text-sm" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                    <ListItem
+                      label="Browse Repository"
+                      icon={<Icon icon="solar:code-square-linear" className="text-[#f881a9] text-xl" />}
+                      onClick={() => PS.OpenForgejoWindow(overview.gitRepo.remoteUri.replace(/\.git$/, ''))}
+                    />
+                  </>
                 )}
                 {overview?.gitRepo?.cloudRunUri ? (
                   <ListItem

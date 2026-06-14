@@ -142,9 +142,6 @@ export function DevelopPage() {
   const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
   const [packagesError, setPackagesError] = useState('');
 
-  // Forgejo repo URL (derived from product overview)
-  const [forgeRepoUrl, setForgeRepoUrl] = useState<string | null>(null);
-
   // Terminal sessions (bottom pane)
   const [packageSessions, setPackageSessions] = useState<TerminalSession[]>([]);
   const paneRef = useRef<PackageTerminalPaneHandle>(null);
@@ -171,21 +168,6 @@ export function DevelopPage() {
     };
     load();
   }, [state.organisation, state.product]);
-
-  useEffect(() => {
-    if (!state.organisation || !state.product) return;
-    ProductService.GetProductOverview(state.organisation, state.product)
-      .then((overview) => {
-        const uri = overview?.gitRepo?.remoteUri;
-        setForgeRepoUrl(uri ? uri.replace(/\.git$/, '') : null);
-      })
-      .catch(() => setForgeRepoUrl(null));
-  }, [state.organisation, state.product]);
-
-  const openForgejoRepo = useCallback(() => {
-    if (!forgeRepoUrl) return;
-    ProductService.OpenForgejoWindow(forgeRepoUrl).catch(() => {});
-  }, [forgeRepoUrl]);
 
   const parseNeuron = (name: string) => {
     // Dot notation from alis API: "bookings.v2" → { id: 'bookings', version: 'v2' }
@@ -693,16 +675,6 @@ export function DevelopPage() {
 
                   {/* Action buttons */}
                   <div className="flex flex-wrap gap-[8px]">
-                    {forgeRepoUrl && (
-                      <Button
-                        variant="secondary"
-                        className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
-                        icon={<Icon icon="solar:code-square-linear" className="text-base" />}
-                        onClick={openForgejoRepo}
-                      >
-                        CODE
-                      </Button>
-                    )}
                     <Button
                       variant="secondary"
                       className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
