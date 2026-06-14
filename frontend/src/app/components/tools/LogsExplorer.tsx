@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Icon } from '@iconify/react';
 import { Loader } from '../Loader';
 import { Button } from '../Button';
+import { FilterSelect, type FilterSelectOption } from '../FilterSelect';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { LogEntry } from '../../../../bindings/alis-hub-v3/models';
 
@@ -24,7 +25,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   DEFAULT: 'text-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.05)]',
 };
 
-const RESOURCE_TYPES = [
+const RESOURCE_TYPE_OPTIONS: FilterSelectOption[] = [
   { label: 'All resources', value: '' },
   { label: 'Cloud Run', value: 'cloud_run_revision' },
   { label: 'Cloud Run Job', value: 'cloud_run_job' },
@@ -34,7 +35,7 @@ const RESOURCE_TYPES = [
   { label: 'VM Instance', value: 'gce_instance' },
 ];
 
-const LOG_NAMES = [
+const LOG_NAME_OPTIONS: FilterSelectOption[] = [
   { label: 'All logs', value: '' },
   { label: 'stdout', value: 'stdout' },
   { label: 'stderr', value: 'stderr' },
@@ -44,7 +45,7 @@ const LOG_NAMES = [
   { label: 'Audit: system_event', value: 'cloudaudit.googleapis.com%2Fsystem_event' },
 ];
 
-const SEVERITY_LEVELS = [
+const SEVERITY_OPTIONS: FilterSelectOption[] = [
   { label: 'All severities', value: 'DEFAULT' },
   { label: 'Debug+', value: 'DEBUG' },
   { label: 'Info+', value: 'INFO' },
@@ -56,24 +57,23 @@ const SEVERITY_LEVELS = [
   { label: 'Emergency', value: 'EMERGENCY' },
 ];
 
-const TIME_RANGES = [
-  { label: '5m', minutes: 5 },
-  { label: '15m', minutes: 15 },
-  { label: '30m', minutes: 30 },
-  { label: '1h', minutes: 60 },
-  { label: '3h', minutes: 180 },
-  { label: '6h', minutes: 360 },
-  { label: '24h', minutes: 1440 },
-  { label: '7d', minutes: 10080 },
+const TIME_OPTIONS: FilterSelectOption[] = [
+  { label: '5m', value: '5' },
+  { label: '15m', value: '15' },
+  { label: '30m', value: '30' },
+  { label: '1h', value: '60' },
+  { label: '3h', value: '180' },
+  { label: '6h', value: '360' },
+  { label: '24h', value: '1440' },
+  { label: '7d', value: '10080' },
 ];
-
-const SELECT_CLASS = "bg-[#2c2c2c] border border-[#464646] rounded-[3px] px-[6px] py-[3px] text-[9px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.6)] outline-none focus:border-[#f881a9] cursor-pointer";
 
 function buildFilter(
   severity: string,
   minutes: number,
   text: string,
   resourceType: string,
+  cloudRunService: string,
   logName: string,
   projectID: string,
 ): string {
@@ -81,7 +81,13 @@ function buildFilter(
   const since = new Date(Date.now() - minutes * 60 * 1000).toISOString();
   parts.push(`timestamp>="${since}"`);
   if (severity !== 'DEFAULT') parts.push(`severity>=${severity}`);
-  if (resourceType) parts.push(`resource.type="${resourceType}"`);
+  // Cloud Run service implies resource type — takes precedence over the resource dropdown
+  if (cloudRunService) {
+    parts.push(`resource.type="cloud_run_revision"`);
+    parts.push(`resource.labels.service_name="${cloudRunService}"`);
+  } else if (resourceType) {
+    parts.push(`resource.type="${resourceType}"`);
+  }
   if (logName) parts.push(`logName="projects/${projectID}/logs/${logName}"`);
   if (text.trim()) parts.push(`(textPayload:"${text.trim()}" OR jsonPayload.message:"${text.trim()}")`);
   return parts.join(' ');
@@ -106,11 +112,30 @@ export function LogsExplorer({ projectID }: Props) {
   const [capped, setCapped] = useState(false);
 
   const [severity, setSeverity] = useState('DEFAULT');
-  const [timeRange, setTimeRange] = useState(60);
+  const [timeRange, setTimeRange] = useState('60');
   const [searchText, setSearchText] = useState('');
   const [resourceType, setResourceType] = useState('');
+  const [cloudRunService, setCloudRunService] = useState('');
   const [logName, setLogName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Cloud Run services list
+  const [crServices, setCrServices] = useState<FilterSelectOption[]>([]);
+  const [crLoading, setCrLoading] = useState(false);
+
+  useEffect(() => {
+    setCrLoading(true);
+    GS.ListCloudRunServices(projectID)
+      .then((svcs) => {
+        const opts: FilterSelectOption[] = [{ label: 'All services', value: '' }];
+        for (const s of svcs) {
+          if (s.serviceName) opts.push({ label: s.serviceName, value: s.serviceName });
+        }
+        setCrServices(opts);
+      })
+      .catch(() => setCrServices([{ label: 'All services', value: '' }]))
+      .finally(() => setCrLoading(false));
+  }, [projectID]);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -122,7 +147,7 @@ export function LogsExplorer({ projectID }: Props) {
   });
 
   const load = useCallback((append = false) => {
-    const filter = buildFilter(severity, timeRange, searchText, resourceType, logName, projectID);
+    const filter = buildFilter(severity, Number(timeRange), searchText, resourceType, cloudRunService, logName, projectID);
     setLoading(true);
     setError(null);
     GS.ListLogEntries(projectID, filter, append ? nextPageToken : '')
@@ -142,7 +167,7 @@ export function LogsExplorer({ projectID }: Props) {
       })
       .catch((e: unknown) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, [projectID, severity, timeRange, searchText, resourceType, logName, nextPageToken]);
+  }, [projectID, severity, timeRange, searchText, resourceType, cloudRunService, logName, nextPageToken]);
 
   const virtualItems = virtualizer.getVirtualItems();
 
@@ -150,35 +175,27 @@ export function LogsExplorer({ projectID }: Props) {
     <div className="flex flex-col h-full">
       {/* Filter bar */}
       <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-[#464646] flex-wrap">
-        <select value={resourceType} onChange={(e) => setResourceType(e.target.value)} className={SELECT_CLASS}>
-          {RESOURCE_TYPES.map(({ label, value }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
+        <FilterSelect
+          value={cloudRunService}
+          options={crServices}
+          onChange={setCloudRunService}
+          loading={crLoading}
+          emptyLabel="No services found"
+        />
+
+        {/* Resource type — disabled when a specific CR service is selected */}
+        <FilterSelect
+          value={cloudRunService ? 'cloud_run_revision' : resourceType}
+          options={RESOURCE_TYPE_OPTIONS}
+          onChange={setResourceType}
+          disabled={!!cloudRunService}
+        />
 
         <div className="w-px h-[20px] bg-[#464646]" />
 
-        <select value={logName} onChange={(e) => setLogName(e.target.value)} className={SELECT_CLASS}>
-          {LOG_NAMES.map(({ label, value }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-
-        <div className="w-px h-[20px] bg-[#464646]" />
-
-        <select value={severity} onChange={(e) => setSeverity(e.target.value)} className={SELECT_CLASS}>
-          {SEVERITY_LEVELS.map(({ label, value }) => (
-            <option key={value} value={value}>{label}</option>
-          ))}
-        </select>
-
-        <div className="w-px h-[20px] bg-[#464646]" />
-
-        <select value={timeRange} onChange={(e) => setTimeRange(Number(e.target.value))} className={SELECT_CLASS}>
-          {TIME_RANGES.map(({ label, minutes }) => (
-            <option key={label} value={minutes}>{label}</option>
-          ))}
-        </select>
+        <FilterSelect value={logName} options={LOG_NAME_OPTIONS} onChange={setLogName} />
+        <FilterSelect value={severity} options={SEVERITY_OPTIONS} onChange={setSeverity} />
+        <FilterSelect value={timeRange} options={TIME_OPTIONS} onChange={setTimeRange} />
 
         <div className="w-px h-[20px] bg-[#464646]" />
 
@@ -214,7 +231,6 @@ export function LogsExplorer({ projectID }: Props) {
 
       {/* Log list */}
       <div ref={parentRef} className="flex-1 overflow-y-auto relative font-['JetBrains_Mono',sans-serif]">
-        {/* Empty / initial states */}
         {entries.length === 0 && !error && (
           <>
             {!hasLoaded && !loading && (
@@ -240,16 +256,14 @@ export function LogsExplorer({ projectID }: Props) {
           </div>
         )}
 
-        {/* Cap notice */}
         {capped && (
           <div className="px-[16px] py-[6px] bg-[#2a2200] border-b border-[#464600]">
-            <p className="text-[9px] text-yellow-500/70 font-['JetBrains_Mono',sans-serif]">
+            <p className="text-[9px] text-yellow-500/70">
               Showing most recent {MAX_ENTRIES} entries — oldest dropped to preserve performance
             </p>
           </div>
         )}
 
-        {/* Virtual list */}
         {entries.length > 0 && (
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualItems.map((virtualRow) => {
@@ -300,7 +314,6 @@ export function LogsExplorer({ projectID }: Props) {
           </div>
         )}
 
-        {/* Load more */}
         {entries.length > 0 && nextPageToken && (
           <div className="flex justify-center py-[16px]">
             <Button variant="secondary" onClick={() => load(true)} disabled={loading}>

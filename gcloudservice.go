@@ -528,6 +528,42 @@ func (g *GCloudService) ListLogEntries(projectID, filter, pageToken string) (Log
 	return result, nil
 }
 
+// ── Cloud Run ─────────────────────────────────────────────────────────────────
+
+type CloudRunService struct {
+	// Full resource name: projects/P/locations/L/services/S
+	Name        string `json:"name"`
+	ServiceName string `json:"serviceName"` // short name extracted from Name
+	Region      string `json:"region"`      // location extracted from Name
+}
+
+type cloudRunServiceListResp struct {
+	Services      []struct{ Name string `json:"name"` } `json:"services"`
+	NextPageToken string                                 `json:"nextPageToken"`
+}
+
+// ListCloudRunServices returns all Cloud Run services in the project across all regions.
+func (g *GCloudService) ListCloudRunServices(projectID string) ([]CloudRunService, error) {
+	u := fmt.Sprintf("https://run.googleapis.com/v2/projects/%s/locations/-/services?pageSize=200",
+		url.PathEscape(projectID))
+	var raw cloudRunServiceListResp
+	if err := g.apiGet(u, &raw); err != nil {
+		return nil, err
+	}
+	out := make([]CloudRunService, 0, len(raw.Services))
+	for _, s := range raw.Services {
+		// name = "projects/P/locations/L/services/S"
+		parts := strings.Split(s.Name, "/")
+		svc := CloudRunService{Name: s.Name}
+		if len(parts) >= 6 {
+			svc.Region = parts[3]
+			svc.ServiceName = parts[5]
+		}
+		out = append(out, svc)
+	}
+	return out, nil
+}
+
 // ── Artifact Registry ─────────────────────────────────────────────────────────
 
 type ARRepository struct {
