@@ -77,12 +77,14 @@ export function TopNav() {
   }, []);
 
   const [envsLoading, setEnvsLoading] = useState(false);
+  const [envsError, setEnvsError] = useState<string | null>(null);
   const envsLoadingRef = useRef(false);
   useEffect(() => {
     if (!state.organisation || !state.product) return;
     if (state.loadedEnvs.length > 0 || envsLoadingRef.current) return;
     envsLoadingRef.current = true;
     setEnvsLoading(true);
+    setEnvsError(null);
     (ProductService.ListEnvironments as (org: string, product: string) => Promise<any[]>)(
       state.organisation,
       state.product,
@@ -90,7 +92,9 @@ export function TopNav() {
       const loaded = envs.map((e: any) => ({ name: e.name as string, displayName: e.displayName as string, state: e.state as number }));
       setLoadedEnvs(loaded);
       if (!state.activeEnvName && loaded.length > 0) setActiveEnv(loaded[0].name);
-    }).catch(() => {}).finally(() => { envsLoadingRef.current = false; setEnvsLoading(false); });
+    }).catch((err) => {
+      setEnvsError(String(err));
+    }).finally(() => { envsLoadingRef.current = false; setEnvsLoading(false); });
   }, [state.organisation, state.product, state.loadedEnvs.length]);
 
   const activeEnvDisplay = state.loadedEnvs.find(e => e.name === state.activeEnvName)?.displayName ?? 'Environment';
@@ -175,6 +179,7 @@ export function TopNav() {
           label={activeEnvDisplay}
           options={state.loadedEnvs.map(e => e.displayName)}
           loading={envsLoading}
+          error={envsError}
           onSelect={(displayName) => {
             const env = state.loadedEnvs.find(e => e.displayName === displayName);
             if (env) setActiveEnv(env.name);
