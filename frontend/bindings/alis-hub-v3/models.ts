@@ -1227,6 +1227,7 @@ export class Organisation {
     "description": string;
     "logo": string;
     "account": string;
+    "googleProject"?: GCPProject | null;
 
     /** Creates a new Organisation instance. */
     constructor($$source: Partial<Organisation> = {}) {
@@ -1253,7 +1254,11 @@ export class Organisation {
      * Creates a new Organisation instance from a string or object.
      */
     static createFrom($$source: any = {}): Organisation {
+        const $$createField5_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("googleProject" in $$parsedSource) {
+            $$parsedSource["googleProject"] = $$createField5_0($$parsedSource["googleProject"]);
+        }
         return new Organisation($$parsedSource as Partial<Organisation>);
     }
 }
@@ -1861,6 +1866,158 @@ export class SharePerson {
     }
 }
 
+/**
+ * SpannerDMLResult holds the outcome of a partitioned DML statement.
+ */
+export class SpannerDMLResult {
+    "rowsAffected": number;
+
+    /** Creates a new SpannerDMLResult instance. */
+    constructor($$source: Partial<SpannerDMLResult> = {}) {
+        if (!("rowsAffected" in $$source)) {
+            this["rowsAffected"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerDMLResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerDMLResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SpannerDMLResult($$parsedSource as Partial<SpannerDMLResult>);
+    }
+}
+
+export class SpannerDatabase {
+    "name": string;
+    "state": string;
+    "createTime": string;
+    "versionRetentionPeriod": string;
+
+    /** Creates a new SpannerDatabase instance. */
+    constructor($$source: Partial<SpannerDatabase> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("createTime" in $$source)) {
+            this["createTime"] = "";
+        }
+        if (!("versionRetentionPeriod" in $$source)) {
+            this["versionRetentionPeriod"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerDatabase instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerDatabase {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SpannerDatabase($$parsedSource as Partial<SpannerDatabase>);
+    }
+}
+
+export class SpannerInstance {
+    "name": string;
+    "displayName": string;
+    "config": string;
+    "state": string;
+    "nodeCount": number;
+    "processingUnits": number;
+
+    /** Creates a new SpannerInstance instance. */
+    constructor($$source: Partial<SpannerInstance> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("config" in $$source)) {
+            this["config"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("nodeCount" in $$source)) {
+            this["nodeCount"] = 0;
+        }
+        if (!("processingUnits" in $$source)) {
+            this["processingUnits"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerInstance instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerInstance {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SpannerInstance($$parsedSource as Partial<SpannerInstance>);
+    }
+}
+
+export class SpannerQueryResult {
+    "columns": string[];
+    "rows": string[][];
+
+    /** Creates a new SpannerQueryResult instance. */
+    constructor($$source: Partial<SpannerQueryResult> = {}) {
+        if (!("columns" in $$source)) {
+            this["columns"] = [];
+        }
+        if (!("rows" in $$source)) {
+            this["rows"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerQueryResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerQueryResult {
+        const $$createField0_0 = $$createType0;
+        const $$createField1_0 = $$createType35;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("columns" in $$parsedSource) {
+            $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
+        }
+        if ("rows" in $$parsedSource) {
+            $$parsedSource["rows"] = $$createField1_0($$parsedSource["rows"]);
+        }
+        return new SpannerQueryResult($$parsedSource as Partial<SpannerQueryResult>);
+    }
+}
+
+export class SpannerTable {
+    "name": string;
+
+    /** Creates a new SpannerTable instance. */
+    constructor($$source: Partial<SpannerTable> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerTable instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerTable {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SpannerTable($$parsedSource as Partial<SpannerTable>);
+    }
+}
+
 export class SyncReposResult {
     "defineDir": string;
     "buildDir": string;
@@ -2013,3 +2170,4 @@ const $$createType31 = SharePerson.createFrom;
 const $$createType32 = $Create.Array($$createType31);
 const $$createType33 = ShareAccount.createFrom;
 const $$createType34 = $Create.Array($$createType33);
+const $$createType35 = $Create.Array($$createType0);

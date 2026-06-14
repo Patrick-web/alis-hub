@@ -1,0 +1,150 @@
+import { useNavigate } from 'react-router';
+import { Icon } from '@iconify/react';
+import { PageLayout } from '../components/PageLayout';
+import { Button } from '../components/Button';
+import { StageCard } from '../components/StageCard';
+
+const examples = [
+  {
+    title: 'Define',
+    description: 'Inspect generated packages, synchronised schemas, locked commits, install commands, and developer usage examples after a Define run.',
+    icon: 'solar:document-text-linear',
+    route: '/builds',
+  },
+  {
+    title: 'Build',
+    description: 'Review what changed during a build, which artifacts were produced, and what a developer should check next.',
+    icon: 'solar:hammer-linear',
+    route: '/builds',
+  },
+  {
+    title: 'Deploy',
+    description: 'Understand deployed resources, environment outcomes, URLs, health signals, and follow-up actions after deployment.',
+    icon: 'solar:cloud-upload-linear',
+    route: '/builds',
+  },
+];
+
+const principles = [
+  {
+    title: 'Transparent outcomes',
+    description: 'Glass Mode explains what the platform did instead of only reporting that an action succeeded.',
+    icon: 'solar:eye-linear',
+  },
+  {
+    title: 'Pinned evidence',
+    description: 'Where possible, explanations point to commits, generated artifacts, resources, registry locations, and configuration values.',
+    icon: 'solar:pin-linear',
+  },
+  {
+    title: 'Developer next steps',
+    description: 'The view is designed to answer what changed, why it matters, where it lives, and what to do next.',
+    icon: 'solar:arrow-right-linear',
+  },
+];
+
+export function BuildKitGlassModePage() {
+  const navigate = useNavigate();
+
+  return (
+    <PageLayout
+      title="Glass Mode"
+      subtitle="Understand the transparent explanation layer behind Alis Build actions and generated outputs."
+      parentRoute="/buildkit"
+      actions={
+        <Button variant="secondary" onClick={() => navigate('/builds')}>
+          <Icon icon="solar:eye-linear" className="text-sm mr-[4px]" />
+          Open Builds
+        </Button>
+      }
+    >
+      <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
+        <div className="flex flex-col gap-[16px]">
+          {/* Hero */}
+          <div className="p-[20px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
+            <div className="flex items-center gap-[8px] mb-[8px]">
+              <Icon icon="solar:eye-linear" className="text-[#f881a9] text-[16px]" />
+              <span className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif]">Glass Mode</span>
+            </div>
+            <h2 className="text-[15px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[8px]">
+              Understand what Alis Build just did
+            </h2>
+            <p className="text-[12px] text-[rgba(255,255,255,0.65)] leading-[1.6]">
+              Glass Mode is a just-in-time explanation layer for Alis Build actions. It opens a transparent view of the
+              generated code, artifacts, resources, commits, and follow-up work behind a platform operation.
+            </p>
+          </div>
+
+          {/* Where to find it */}
+          <StageCard
+            title="Where to find it"
+            icon={<Icon icon="solar:eye-scan-linear" className="text-[#f881a9]" />}
+          >
+            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              Look for <strong className="text-white">Glass Mode</strong> buttons that appear after an action completes
+              in the Builds tab. These open a detailed explanation of exactly what the platform did and what to do next.
+            </p>
+            <div className="flex items-center gap-[10px] flex-wrap">
+              <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.4)] rounded-[4px]">
+                <Icon icon="solar:eye-linear" className="text-[#f881a9] text-[13px]" />
+                <span className="text-[11px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">Glass Mode</span>
+              </div>
+              <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
+                <Icon icon="solar:eye-linear" className="text-[rgba(255,255,255,0.5)] text-[13px]" />
+                <span className="text-[11px] font-bold text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">View Explanation</span>
+              </div>
+            </div>
+            <div className="mt-[12px]">
+              <Button variant="primary" onClick={() => navigate('/builds')}>
+                <Icon icon="solar:box-linear" className="text-sm mr-[4px]" />
+                Go to Builds
+              </Button>
+            </div>
+          </StageCard>
+
+          {/* Examples */}
+          <div>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[10px]">
+              Where Glass Mode appears
+            </p>
+            <div className="flex flex-col gap-[8px]">
+              {examples.map((ex) => (
+                <div
+                  key={ex.title}
+                  className="flex items-start gap-[12px] px-[14px] py-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]"
+                >
+                  <div className="size-[28px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0 mt-[1px]">
+                    <Icon icon={ex.icon} className="text-[#f881a9] text-[14px]" />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{ex.title}</p>
+                    <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5] mt-[2px]">{ex.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Principles */}
+          <div>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[10px]">
+              Design principles
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
+              {principles.map((p) => (
+                <div
+                  key={p.title}
+                  className="p-[14px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]"
+                >
+                  <Icon icon={p.icon} className="text-[#f881a9] text-[18px] mb-[8px]" />
+                  <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[4px]">{p.title}</p>
+                  <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{p.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </PageLayout>
+  );
+}

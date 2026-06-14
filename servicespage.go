@@ -35,6 +35,42 @@ type ServicesOverview struct {
 }
 
 // GetServicesOverview fetches neurons and per-environment deployments in parallel.
+// CreateNeuron creates a new neuron (service) under the given org/product.
+// neuronId must follow the pattern: lowercase letters/digits/hyphens, ending with -v{N}.
+func (s *ProductService) CreateNeuron(org, product, neuronId string) (*NeuronItem, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
+
+	// CreateNeuronRequest: field 1=parent, field 3=neuronId
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, parent)
+	buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+	buf = protowire.AppendString(buf, neuronId)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.neurons.v1.NeuronsService/CreateNeuron", buf)
+	if err != nil {
+		return nil, fmt.Errorf("CreateNeuron: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("CreateNeuron: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("CreateNeuron: response too short (%d bytes)", len(body))
+	}
+	neuron, err := parseNeuronItem(body[5:])
+	if err != nil {
+		return nil, fmt.Errorf("CreateNeuron: parse response: %w", err)
+	}
+	return neuron, nil
+}
+
 func (s *ProductService) GetServicesOverview(org, product string) (*ServicesOverview, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err

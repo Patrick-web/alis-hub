@@ -73,6 +73,11 @@ export {
     ShareAccount,
     ShareData,
     SharePerson,
+    SpannerDMLResult,
+    SpannerDatabase,
+    SpannerInstance,
+    SpannerQueryResult,
+    SpannerTable,
     SyncReposResult,
     UserProfile,
     WorkspaceInfo

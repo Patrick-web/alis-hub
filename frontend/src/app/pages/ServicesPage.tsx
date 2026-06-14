@@ -4,6 +4,7 @@ import { Input } from '../components/Input';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
+import { NewServiceModal } from '../components/NewServiceModal';
 
 type NeuronItem = { id: string; version: string; state: number };
 type DeploymentItem = { neuronId: string; version: string; state: number; logsUrl: string };
@@ -108,19 +109,25 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
+  const [newServiceOpen, setNewServiceOpen] = useState(false);
 
-  useEffect(() => {
+  const refresh = () => {
     setLoading(true);
     setError(null);
     ProductService.GetServicesOverview(state.organisation, state.product)
-      .then((result: any) => {
-        setOverview(result);
-      })
-      .catch((err: any) => {
-        setError(String(err));
-      })
+      .then((result: any) => setOverview(result))
+      .catch((err: any) => setError(String(err)))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refresh();
   }, [state.organisation, state.product]);
+
+  const handleCreateService = async (neuronId: string) => {
+    await ProductService.CreateNeuron(state.organisation, state.product, neuronId);
+    refresh();
+  };
 
   const filtered = useMemo(() => {
     if (!overview) return [];
@@ -158,20 +165,29 @@ export function ServicesPage() {
         </div>
         {!loading && !error && (
           <button
-            onClick={() => {
-              setLoading(true);
-              ProductService.GetServicesOverview(state.organisation, state.product)
-                .then((r: any) => setOverview(r))
-                .catch((e: any) => setError(String(e)))
-                .finally(() => setLoading(false));
-            }}
+            onClick={refresh}
             className="flex items-center gap-[4px] px-[8px] h-[34px] text-[rgba(255,255,255,0.5)] hover:text-white transition-colors text-[10px]"
             title="Refresh"
           >
             <Icon icon="solar:refresh-linear" className="text-base" />
           </button>
         )}
+        <div className="ml-auto">
+          <button
+            onClick={() => setNewServiceOpen(true)}
+            className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-[#F881A9] hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-['JetBrains_Mono',sans-serif] uppercase"
+          >
+            <Icon icon="solar:add-circle-linear" className="text-base" />
+            New Service
+          </button>
+        </div>
       </div>
+
+      <NewServiceModal
+        open={newServiceOpen}
+        onOpenChange={setNewServiceOpen}
+        onSubmit={handleCreateService}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-auto">

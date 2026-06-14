@@ -7,10 +7,11 @@ import { BucketsExplorer } from '../components/tools/BucketsExplorer';
 import { LogsExplorer } from '../components/tools/LogsExplorer';
 import { ArtifactRegistry } from '../components/tools/ArtifactRegistry';
 import { SecretManager } from '../components/tools/SecretManager';
+import { SpannerExplorer } from '../components/tools/SpannerExplorer';
 import { GCloudSetup } from '../components/tools/GCloudSetup';
 import * as PS from '../../../bindings/alis-hub-v3/productservice';
 
-type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets';
+type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner';
 
 type ProjectContext = {
   id: string;
@@ -24,6 +25,7 @@ const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = 
   { id: 'logs', label: 'Logs', subtitle: 'Cloud Logging', icon: 'solar:document-text-bold' },
   { id: 'artifactregistry', label: 'Artifact Registry', subtitle: 'Packages', icon: 'solar:archive-bold' },
   { id: 'secrets', label: 'Secret Manager', subtitle: 'Secrets', icon: 'solar:lock-keyhole-bold' },
+  { id: 'spanner', label: 'Spanner', subtitle: 'Cloud Spanner', icon: 'solar:database-bold' },
 ];
 
 export function ToolsPage() {
@@ -44,9 +46,18 @@ export function ToolsPage() {
     Promise.all([
       PS.GetProductOverview(state.organisation, state.product),
       PS.ListEnvironments(state.organisation, state.product),
+      PS.GetOrganisationProject(state.organisation),
     ])
-      .then(([overview, envs]) => {
+      .then(([overview, envs, orgProject]) => {
         const list: ProjectContext[] = [];
+        if (orgProject?.id) {
+          list.push({
+            id: 'org',
+            label: 'Org',
+            projectID: orgProject.id,
+            region: orgProject.region ?? '',
+          });
+        }
         if (overview?.googleProject?.id) {
           list.push({
             id: 'product',
@@ -108,9 +119,13 @@ export function ToolsPage() {
                 <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">No projects found</p>
               ) : (
                 <div className="flex flex-col gap-[2px]">
-                  {contexts.map((ctx, i) => {
+                  {contexts.map((ctx) => {
                     const isActive = selectedCtx?.id === ctx.id;
-                    const isProduct = i === 0 && ctx.id === 'product';
+                    const icon = ctx.id === 'org'
+                      ? 'solar:buildings-linear'
+                      : ctx.id === 'product'
+                        ? 'solar:box-linear'
+                        : 'solar:server-minimalistic-linear';
                     return (
                       <button
                         key={ctx.id}
@@ -122,7 +137,7 @@ export function ToolsPage() {
                         }`}
                       >
                         <Icon
-                          icon={isProduct ? 'solar:box-linear' : 'solar:server-minimalistic-linear'}
+                          icon={icon}
                           className={`text-xs shrink-0 ${isActive ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.3)]'}`}
                         />
                         <span className={`text-[10px] font-['JetBrains_Mono',sans-serif] truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
@@ -204,6 +219,7 @@ export function ToolsPage() {
               {activeTab === 'logs' && <LogsExplorer projectID={projectID} />}
               {activeTab === 'artifactregistry' && <ArtifactRegistry projectID={projectID} region={region} />}
               {activeTab === 'secrets' && <SecretManager projectID={projectID} />}
+              {activeTab === 'spanner' && <SpannerExplorer projectID={projectID} />}
             </>
           )}
         </div>

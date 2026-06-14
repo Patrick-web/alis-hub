@@ -36,11 +36,12 @@ type ProductSummary struct {
 // ── Landing zones ─────────────────────────────────────────────────────────────
 
 type Organisation struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"displayName"`
-	Description string `json:"description"`
-	Logo        string `json:"logo"`
-	Account     string `json:"account"`
+	Name          string      `json:"name"`
+	DisplayName   string      `json:"displayName"`
+	Description   string      `json:"description"`
+	Logo          string      `json:"logo"`
+	Account       string      `json:"account"`
+	GoogleProject *GCPProject `json:"googleProject,omitempty"`
 }
 
 type LandingZonesData struct {
@@ -587,6 +588,34 @@ func (s *ProductService) getOrganisationGitRepo(org string) (string, error) {
 	return parseOrganisationGitRepo(body[5:])
 }
 
+// GetOrganisationProject returns the GCP project associated with an organisation.
+func (s *ProductService) GetOrganisationProject(org string) (*GCPProject, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	name := fmt.Sprintf("organisations/%s", org)
+	protoBytes := marshalGetOrganisationRequest(name, []string{"google_project"})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.OrganisationsService/GetOrganisation", protoBytes)
+	if err != nil {
+		return nil, fmt.Errorf("GetOrganisation: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("GetOrganisation: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("GetOrganisation: response too short (%d bytes)", len(body))
+	}
+	org2, err := parseOrganisation(body[5:])
+	if err != nil || org2 == nil {
+		return nil, err
+	}
+	return org2.GoogleProject, nil
+}
+
 func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
@@ -1122,6 +1151,9 @@ func parseOrganisation(data []byte) (*Organisation, error) {
 				org.Description = string(b)
 			case 4:
 				org.Logo = string(b)
+			case 5:
+				gp, _ := parseGoogleProject(b)
+				org.GoogleProject = gp
 			case 12:
 				org.Account = string(b)
 			}
