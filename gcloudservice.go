@@ -671,6 +671,10 @@ func (g *GCloudService) OpenInConsole(section, projectID, resource string) {
 		} else {
 			consoleURL = "https://console.cloud.google.com/storage/browser?project=" + url.QueryEscape(projectID)
 		}
+	case "storage-object":
+		// resource is "bucket/objectName"
+		consoleURL = fmt.Sprintf("https://console.cloud.google.com/storage/browser/_details/%s;tab=live_object?project=%s",
+			resource, url.QueryEscape(projectID))
 	case "logs":
 		consoleURL = "https://console.cloud.google.com/logs/query?project=" + url.QueryEscape(projectID)
 	case "artifactregistry":
