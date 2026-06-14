@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -120,6 +123,89 @@ type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
 	app    *application.App
+	proxy  *forgeProxy
+}
+
+// forgeProxy holds the local reverse-proxy server for one Forgejo host.
+type forgeProxy struct {
+	server    *http.Server
+	port      int
+	forgeBase string
+}
+
+// forgeProxyHandler is the http.Handler for the local Forgejo reverse proxy.
+// It injects a fresh Bearer token on every outbound request and strips headers
+// that would prevent the WebView from rendering the response correctly.
+type forgeProxyHandler struct {
+	forgeBase string
+	port      int
+	tokens    *ConsoleTokenSource
+	client    *http.Client
+}
+
+func (h *forgeProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	target := h.forgeBase + r.RequestURI
+
+	var body []byte
+	if r.Body != nil {
+		body, _ = io.ReadAll(r.Body)
+	}
+	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, target, bytes.NewReader(body))
+	if err != nil {
+		http.Error(w, "proxy: bad request", http.StatusBadGateway)
+		return
+	}
+
+	// Forward request headers, rewriting any self-referencing Referer/Origin.
+	proxyBase := fmt.Sprintf("http://127.0.0.1:%d", h.port)
+	for name, vals := range r.Header {
+		switch name {
+		case "Host", "Content-Length":
+			// Let the http.Client set these correctly.
+		case "Referer", "Origin":
+			for _, v := range vals {
+				outReq.Header.Add(name, strings.ReplaceAll(v, proxyBase, h.forgeBase))
+			}
+		default:
+			outReq.Header[name] = vals
+		}
+	}
+
+	// Inject the alis Bearer token so Forgejo authenticates without OAuth redirect.
+	if token, tokErr := h.tokens.AccessToken(); tokErr == nil && token != "" {
+		outReq.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := h.client.Do(outReq)
+	if err != nil {
+		http.Error(w, "proxy: upstream error", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Copy response headers with selective modifications.
+	for name, vals := range resp.Header {
+		switch name {
+		case "X-Frame-Options", "Content-Security-Policy":
+			// Strip: these would block the WebView from rendering.
+		case "Set-Cookie":
+			// Strip Secure flag so the browser accepts cookies over http://127.0.0.1.
+			for _, v := range vals {
+				v = strings.ReplaceAll(v, "; Secure", "")
+				v = strings.ReplaceAll(v, ";Secure", "")
+				w.Header().Add("Set-Cookie", v)
+			}
+		case "Location":
+			// Rewrite redirect targets to stay within the proxy.
+			for _, v := range vals {
+				w.Header().Add("Location", strings.ReplaceAll(v, h.forgeBase, proxyBase))
+			}
+		default:
+			w.Header()[name] = vals
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body) //nolint:errcheck
 }
 
 func NewProductService() *ProductService {
@@ -132,8 +218,45 @@ func (s *ProductService) SetApp(app *application.App) {
 	s.mu.Unlock()
 }
 
+// ensureForgeProxy starts (or reuses) a local HTTP proxy for forgeBase and
+// returns the port it is listening on. The proxy injects a fresh Bearer token
+// on every outbound request so Forgejo authenticates without an OAuth redirect.
+func (s *ProductService) ensureForgeProxy(forgeBase string) (int, error) {
+	if err := s.initTokens(); err != nil {
+		return 0, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.proxy != nil {
+		if s.proxy.forgeBase == forgeBase {
+			return s.proxy.port, nil
+		}
+		s.proxy.server.Close()
+		s.proxy = nil
+	}
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	port := ln.Addr().(*net.TCPAddr).Port
+	h := &forgeProxyHandler{
+		forgeBase: forgeBase,
+		port:      port,
+		tokens:    s.tokens,
+		client: &http.Client{
+			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		},
+	}
+	srv := &http.Server{Handler: h}
+	go srv.Serve(ln) //nolint:errcheck
+	s.proxy = &forgeProxy{server: srv, port: port, forgeBase: forgeBase}
+	return port, nil
+}
+
 // OpenForgejoWindow opens a new WebView window pointed at the given Forgejo URL.
-// The access token is appended as ?token=... so Forgejo auto-authenticates the session.
+// It routes the request through a local proxy that injects auth headers.
 func (s *ProductService) OpenForgejoWindow(repoURL string) {
 	s.mu.Lock()
 	app := s.app
@@ -141,16 +264,23 @@ func (s *ProductService) OpenForgejoWindow(repoURL string) {
 	if app == nil {
 		return
 	}
-	if err := s.initTokens(); err == nil {
-		if token, err := s.tokens.AccessToken(); err == nil && token != "" {
-			repoURL = repoURL + "?token=" + token
+
+	localURL := repoURL
+	if u, err := url.Parse(repoURL); err == nil {
+		forgeBase := u.Scheme + "://" + u.Host
+		if port, proxyErr := s.ensureForgeProxy(forgeBase); proxyErr == nil {
+			localURL = fmt.Sprintf("http://127.0.0.1:%d%s", port, u.Path)
+			if u.RawQuery != "" {
+				localURL += "?" + u.RawQuery
+			}
 		}
 	}
+
 	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:  "Repository",
 		Width:  1280,
 		Height: 900,
-		URL:    repoURL,
+		URL:    localURL,
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropNormal,
 		},
