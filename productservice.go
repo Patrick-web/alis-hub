@@ -132,6 +132,33 @@ func (s *ProductService) SetApp(app *application.App) {
 	s.mu.Unlock()
 }
 
+// OpenForgejoWindow opens a new WebView window pointed at the given Forgejo URL.
+// The access token is appended as ?token=... so Forgejo auto-authenticates the session.
+func (s *ProductService) OpenForgejoWindow(repoURL string) {
+	s.mu.Lock()
+	app := s.app
+	s.mu.Unlock()
+	if app == nil {
+		return
+	}
+	if err := s.initTokens(); err == nil {
+		if token, err := s.tokens.AccessToken(); err == nil && token != "" {
+			repoURL = repoURL + "?token=" + token
+		}
+	}
+	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:  "Repository",
+		Width:  1280,
+		Height: 900,
+		URL:    repoURL,
+		Mac: application.MacWindow{
+			Backdrop: application.MacBackdropNormal,
+		},
+	})
+	win.Show()
+	win.Focus()
+}
+
 func (s *ProductService) emitSyncLog(text string) {
 	s.mu.Lock()
 	app := s.app
