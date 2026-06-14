@@ -140,16 +140,16 @@ export function EnvironmentsPage() {
       render: (item: EnvVar) => (
         <span className="font-['JetBrains_Mono',sans-serif] text-[11px]">{item.label}</span>
       ),
-      className: 'w-[300px]',
+      className: 'w-[220px]',
     },
     {
       header: 'VALUE',
       render: (item: EnvVar) => (
-        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.6)] truncate block max-w-full">
+        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.6)] break-all">
           {item.value}
         </span>
       ),
-      className: 'flex-1 min-w-0',
+      className: 'w-[260px]',
     },
     {
       header: 'Actions',
@@ -163,7 +163,7 @@ export function EnvironmentsPage() {
           <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
         </div>
       ),
-      className: 'w-[150px]',
+      className: 'w-[120px]',
     },
   ];
 

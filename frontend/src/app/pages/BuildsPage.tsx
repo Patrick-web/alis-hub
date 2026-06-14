@@ -458,7 +458,7 @@ export function BuildsPage() {
           {item.version}
         </span>
       ),
-      className: 'w-[140px]',
+      className: 'w-[120px]',
     },
     {
       header: 'COMMIT',
@@ -474,7 +474,7 @@ export function BuildsPage() {
       render: (item: VersionEntry) => (
         <span className="opacity-70 text-[11px]">{formatDate(item.createTime)}</span>
       ),
-      className: 'flex-1',
+      className: 'w-[160px]',
     },
     {
       header: 'ENVS',
@@ -490,7 +490,7 @@ export function BuildsPage() {
           </div>
         ) : <span className="text-[9px] text-[rgba(255,255,255,0.15)]">—</span>;
       },
-      className: 'w-[90px]',
+      className: 'w-[100px]',
     },
     {
       header: '',
@@ -500,7 +500,7 @@ export function BuildsPage() {
           {isLatest(item) && <span className="ml-[6px] text-[#F881A9]">LATEST</span>}
         </span>
       ),
-      className: 'w-[90px] text-right',
+      className: 'w-[110px] text-right',
     },
   ];
 
@@ -554,7 +554,7 @@ export function BuildsPage() {
         {/* Table Content */}
         <div className="flex-1 overflow-hidden">
           {versionsLoading ? (
-            <div className="flex items-center gap-[10px] px-[20px] py-[20px]">
+            <div className="flex items-center justify-center h-full gap-[10px]">
               <Loader size={20} />
               <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading versions...</span>
             </div>
@@ -685,38 +685,51 @@ export function BuildsPage() {
                 {/* Details tab */}
                 {detailTab === 'details' && (
                   <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
-                    <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px]">
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[12px]">
-                        Build Version
-                      </p>
-                      <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[20px] text-white mb-[6px]">
-                        {selectedVersion.version}
-                      </p>
+                    <div className="flex flex-col gap-[14px]">
+                      <div>
+                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Version</p>
+                        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white">{selectedVersion.version}</p>
+                      </div>
                       {selectedVersion.createTime > 0 && (
-                        <p className="text-[10px] text-[rgba(255,255,255,0.45)] mb-[12px]">
-                          {formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}
-                        </p>
-                      )}
-                      {selectedVersion.buildCommit && (
-                        <div className="flex items-center gap-[8px] mt-[4px]">
-                          <Icon icon="solar:code-square-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
-                          <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)]">
-                            {selectedVersion.buildCommit.substring(0, 12)}
-                          </span>
+                        <div>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Built</p>
+                          <p className="text-[11px] text-[rgba(255,255,255,0.5)]">{formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}</p>
                         </div>
                       )}
+                      {selectedVersion.buildCommit && (
+                        <div>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit</p>
+                          <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)]">{selectedVersion.buildCommit.substring(0, 12)}</p>
+                        </div>
+                      )}
+                      {selectedVersion.buildCommit && (() => {
+                        const msg = changelogCommits.find(c => c.sha === selectedVersion.buildCommit)?.message;
+                        if (changelogLoading) return (
+                          <div>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit Message</p>
+                            <p className="text-[11px] text-[rgba(255,255,255,0.25)] italic">Loading...</p>
+                          </div>
+                        );
+                        if (!msg) return null;
+                        return (
+                          <div>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit Message</p>
+                            <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.5]">{msg}</p>
+                          </div>
+                        );
+                      })()}
                       {(() => {
                         const envNames = deployedEnvsForVersion(selectedVersion.version);
                         return envNames.length > 0 ? (
-                          <div className="flex items-center gap-[6px] mt-[10px] flex-wrap">
-                            <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-['JetBrains_Mono',sans-serif] shrink-0">
-                              Deployed in
-                            </span>
-                            {envNames.map(name => (
-                              <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">
-                                {name}
-                              </span>
-                            ))}
+                          <div>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[6px]">Deployed In</p>
+                            <div className="flex flex-wrap gap-[4px]">
+                              {envNames.map(name => (
+                                <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">
+                                  {name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         ) : null;
                       })()}

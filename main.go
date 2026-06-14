@@ -46,7 +46,12 @@ func main() {
 		Height: 768,
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTranslucent,
-			TitleBar: application.MacTitleBarHiddenInset,
+			TitleBar: application.MacTitleBar{
+				AppearsTransparent: true,
+				Hide:               true,
+				HideTitle:          true,
+				FullSizeContent:    true,
+			},
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",

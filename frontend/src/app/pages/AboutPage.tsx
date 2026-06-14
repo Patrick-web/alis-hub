@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { Browser } from '@wailsio/runtime';
+import { useNavigate } from 'react-router';
 import { Card, CardListItem } from '../components/Card';
 import { ListItem } from '../components/ListItem';
 import { Loader } from '../components/Loader';
@@ -9,6 +10,7 @@ import { useWorkspace } from '../stores/workspace';
 import * as PS from '../../../bindings/alis-hub-v3/productservice';
 
 export function AboutPage() {
+  const navigate = useNavigate();
   const { state } = useWorkspace();
   const [overview, setOverview] = useState<any>(null);
   const [environments, setEnvironments] = useState<any[]>([]);
@@ -16,6 +18,8 @@ export function AboutPage() {
   const [error, setError] = useState<string | null>(null);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
+  const [activeEnvVars, setActiveEnvVars] = useState<{ label: string; value: string }[]>([]);
+  const [envVarsLoading, setEnvVarsLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -41,6 +45,15 @@ export function AboutPage() {
       else setLoading(false);
     }).catch(() => { setLoggedIn(false); setLoading(false); });
   }, [loadData]);
+
+  useEffect(() => {
+    if (!state.activeEnvName) return;
+    setEnvVarsLoading(true);
+    (PS.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(state.activeEnvName)
+      .then((result) => setActiveEnvVars(result.map((v: any) => ({ label: v.label as string, value: v.value as string }))))
+      .catch(() => setActiveEnvVars([]))
+      .finally(() => setEnvVarsLoading(false));
+  }, [state.activeEnvName]);
 
   const handleLogin = async () => {
     setLoggingIn(true);
@@ -212,6 +225,45 @@ export function AboutPage() {
                 )}
               </>
             )}
+          </Card>
+
+          <Card title="Active Environment" className="w-[475px]">
+            {(() => {
+              const activeEnv = state.loadedEnvs.find(e => e.name === state.activeEnvName);
+              const envDisplayName = activeEnv?.displayName ?? state.activeEnvName ?? '—';
+              return (
+                <>
+                  <div className="flex items-center gap-[6px] px-[10px] py-[10px] border-b border-[#2c2c2c]">
+                    <div className="size-[8px] rounded-full bg-[#34C759] shrink-0" />
+                    <span className="text-[12px] text-white font-bold font-['JetBrains_Mono',sans-serif]">{envDisplayName}</span>
+                  </div>
+                  {envVarsLoading ? (
+                    <LoadingRow />
+                  ) : activeEnvVars.length === 0 ? (
+                    <div className="px-[10px] py-[8px] text-[11px] text-[rgba(255,255,255,0.3)]">No variables configured</div>
+                  ) : (
+                    activeEnvVars.map((v, i) => (
+                      <CardListItem
+                        key={v.label}
+                        label={v.label}
+                        value={v.value}
+                        noBorder={i === activeEnvVars.length - 1}
+                      />
+                    ))
+                  )}
+                  <div className="p-[10px]">
+                    <Button
+                      variant="secondary"
+                      icon={<Icon icon="solar:server-linear" className="text-base" />}
+                      className="w-full"
+                      onClick={() => navigate('/environments')}
+                    >
+                      Manage Environment Variables
+                    </Button>
+                  </div>
+                </>
+              );
+            })()}
           </Card>
 
           <Card title="Environments" className="w-[475px]">

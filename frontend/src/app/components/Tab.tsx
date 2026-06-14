@@ -18,7 +18,7 @@ export function Tab({ label, icon, active = false, onClick }: TabProps) {
       <div className={`relative shrink-0 flex items-center justify-center ${active ? 'text-[#6f0025]' : 'text-white'}`}>
         {icon}
       </div>
-      <p className={`font-['JetBrains_Mono',sans-serif] leading-[normal] not-italic relative shrink-0 text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${
+      <p className={`font-['JetBrains_Mono',sans-serif] leading-[normal] not-italic relative shrink-0 text-[11px] font-bold uppercase tracking-tight whitespace-nowrap ${
         active ? 'text-[#6f0025]' : 'text-white'
       }`}>
         {label}
