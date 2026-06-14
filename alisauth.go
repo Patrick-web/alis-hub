@@ -61,6 +61,16 @@ func (s *ConsoleTokenSource) Token() (string, error) {
 	return creds.AccessToken, nil
 }
 
+// AccessToken returns the raw OAuth2 access token (not the ID token).
+// Use this for services that validate bearer tokens server-side, such as Forgejo git HTTP auth.
+func (s *ConsoleTokenSource) AccessToken() (string, error) {
+	creds, err := s.freshCreds()
+	if err != nil {
+		return "", err
+	}
+	return creds.AccessToken, nil
+}
+
 // CookieHeader returns the "Cookie: ..." value required by console.alisx.com.
 // The server requires all three alis cookies to be present simultaneously.
 func (s *ConsoleTokenSource) CookieHeader() (string, error) {
