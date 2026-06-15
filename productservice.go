@@ -1261,11 +1261,16 @@ func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error
 
 	// GitHub uses the system credential helper; all other hosts (Forgejo, etc.)
 	// get the alis Bearer token injected as an HTTP header.
+	// The leading empty http.extraHeader= clears any value inherited from an
+	// include.path set by the VS Code extension, preventing duplicate headers.
 	var baseArgs []string
 	if strings.Contains(remoteURL, "github.com") {
 		baseArgs = []string{"-c", "credential.helper=" + systemCredentialHelper()}
 	} else if token != "" {
-		baseArgs = []string{"-c", "http.extraHeader=Authorization: Bearer " + token}
+		baseArgs = []string{
+			"-c", "http.extraHeader=",
+			"-c", "http.extraHeader=Authorization: Bearer " + token,
+		}
 	}
 
 	runGit := func(subcmd ...string) error {

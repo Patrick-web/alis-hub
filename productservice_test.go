@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -1110,6 +1111,93 @@ func TestProbeBFFNeuronVersionLogs(t *testing.T) {
 		} else {
 			t.Logf("  (no content extracted from HTML)")
 		}
+	}
+}
+
+// TestSyncReposLive clones (or fetches) the define and build repos for a real
+// product and verifies that the Forgejo Bearer-token auth works end-to-end.
+// Run with: go test -v -run TestSyncReposLive -timeout 120s .
+func TestSyncReposLive(t *testing.T) {
+	const org, product = "voyage", "vp"
+
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v (run Login() first)", err)
+	}
+	svc.tokens = ts
+
+	// Verify the access token is present before trying git.
+	tok, err := ts.AccessToken()
+	if err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	t.Logf("access token length: %d", len(tok))
+
+	// Resolve the URLs the same way SyncRepos does, so we can log them.
+	overview, err := svc.GetProductOverview(org, product)
+	if err != nil {
+		t.Fatalf("GetProductOverview: %v", err)
+	}
+	orgBaseURL, err := svc.getOrganisationGitRepo(org)
+	if err != nil {
+		t.Fatalf("getOrganisationGitRepo: %v", err)
+	}
+	defineURL := strings.TrimRight(orgBaseURL, "/") + "/proto"
+	buildURL := strings.TrimRight(overview.GitRepo.RemoteURI, "/") + "/" + product
+	t.Logf("define URL: %s", defineURL)
+	t.Logf("build  URL: %s", buildURL)
+
+	// Run the actual sync, routing git output to t.Log.
+	t.Log("syncing repos ...")
+	result, err := svc.SyncRepos(org, product)
+	if err != nil {
+		t.Fatalf("SyncRepos returned error: %v", err)
+	}
+	if result.Error != "" {
+		t.Fatalf("SyncRepos result.Error: %s", result.Error)
+	}
+	t.Logf("define  → %s (%s)", result.DefineDir, result.DefineAction)
+	t.Logf("build   → %s (%s)", result.BuildDir, result.BuildAction)
+}
+
+// TestSyncReposGitDiag runs the git fetch manually so we can see raw git stderr.
+func TestSyncReposGitDiag(t *testing.T) {
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	tok, err := ts.AccessToken()
+	if err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	t.Logf("token length: %d prefix: %.20s", len(tok), tok)
+
+	defineDir := filepath.Join(os.Getenv("HOME"), "alis.build", "voyage", "define")
+	if _, err := os.Stat(defineDir); err != nil {
+		t.Skipf("define repo not cloned yet at %s", defineDir)
+	}
+
+	svc := NewProductService()
+	svc.tokens = ts
+	orgBaseURL, err := svc.getOrganisationGitRepo("voyage")
+	if err != nil {
+		t.Fatalf("getOrganisationGitRepo: %v", err)
+	}
+	defineURL := strings.TrimRight(orgBaseURL, "/") + "/proto"
+	t.Logf("fetch URL: %s", defineURL)
+
+	cmd := exec.Command("git",
+		"-c", "http.extraHeader=",
+		"-c", "http.extraHeader=Authorization: Bearer "+tok,
+		"-C", defineDir,
+		"fetch", defineURL,
+	)
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	out, runErr := cmd.CombinedOutput()
+	t.Logf("exit: %v\noutput:\n%s", runErr, string(out))
+	if runErr != nil {
+		t.Fail()
 	}
 }
 
