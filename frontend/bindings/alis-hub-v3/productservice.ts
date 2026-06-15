@@ -42,12 +42,39 @@ export function DeleteEnvironment(envName: string): $CancellablePromise<void> {
 }
 
 /**
+ * GetCodeblock fetches a single block by its short ID (e.g. "skills").
+ */
+export function GetCodeblock(blockId: string): $CancellablePromise<$models.Codeblock | null> {
+    return $Call.ByID(3775238228, blockId).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * GetCodeblockDoc returns documentation markdown for a specific block version.
+ * audience is "user" or "agent".
+ */
+export function GetCodeblockDoc(versionName: string, audience: string): $CancellablePromise<string> {
+    return $Call.ByID(2050061994, versionName, audience);
+}
+
+/**
+ * GetCodeblockMembers fetches the IAM members for a block and resolves their avatar URLs.
+ * It chains GetIamPolicy → BatchRetrieveMaskedUsers.
+ */
+export function GetCodeblockMembers(blockId: string): $CancellablePromise<$models.CodeblockMember[]> {
+    return $Call.ByID(854804143, blockId).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
  * GetEnvironmentVariables fetches the variables for a single environment.
  * envName is the full resource name, e.g. "organisations/voyage/products/vp/environments/1y2ozw66zv6p3".
  */
 export function GetEnvironmentVariables(envName: string): $CancellablePromise<$models.EnvVariable[]> {
     return $Call.ByID(3106139540, envName).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType9($result);
     });
 }
 
@@ -56,19 +83,19 @@ export function GetEnvironmentVariables(envName: string): $CancellablePromise<$m
  */
 export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
     return $Call.ByID(1082294977, org).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType11($result);
     });
 }
 
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType13($result);
     });
 }
 
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType15($result);
     });
 }
 
@@ -78,7 +105,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType17($result);
     });
 }
 
@@ -88,7 +115,7 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType19($result);
     });
 }
 
@@ -100,35 +127,53 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 }
 
 /**
+ * ListCodeblockInstances lists installed instances for a block.
+ */
+export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
+    return $Call.ByID(2469208404, blockId).then(($result: any) => {
+        return $$createType21($result);
+    });
+}
+
+/**
+ * ListCodeblockVersions lists available versions for a block.
+ */
+export function ListCodeblockVersions(blockId: string): $CancellablePromise<$models.CodeblockVersion[]> {
+    return $Call.ByID(1837251873, blockId).then(($result: any) => {
+        return $$createType23($result);
+    });
+}
+
+/**
  * ListCodeblocks fetches all available codeblocks from alis.bl.blocks.v1.BlocksService.
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType24($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType25($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType27($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType29($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType31($result);
     });
 }
 
@@ -170,7 +215,7 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType33($result);
     });
 }
 
@@ -189,26 +234,33 @@ const $$createType0 = $models.EnvInfo.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.NeuronItem.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.EnvVariable.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.GCPProject.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.ProductOverview.createFrom;
-const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $models.ServicesOverview.createFrom;
+const $$createType4 = $models.Codeblock.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $models.CodeblockMember.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.EnvVariable.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = $models.GCPProject.createFrom;
 const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.ShareData.createFrom;
+const $$createType12 = $models.ProductOverview.createFrom;
 const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $models.UserProfile.createFrom;
+const $$createType14 = $models.ServicesOverview.createFrom;
 const $$createType15 = $Create.Nullable($$createType14);
-const $$createType16 = $models.Codeblock.createFrom;
-const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = $Create.Array($$createType0);
-const $$createType19 = $models.InviteInfo.createFrom;
-const $$createType20 = $Create.Array($$createType19);
-const $$createType21 = $models.LandingZonesData.createFrom;
-const $$createType22 = $Create.Nullable($$createType21);
-const $$createType23 = $models.ProductSummary.createFrom;
-const $$createType24 = $Create.Array($$createType23);
-const $$createType25 = $models.SyncReposResult.createFrom;
-const $$createType26 = $Create.Nullable($$createType25);
+const $$createType16 = $models.ShareData.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = $models.UserProfile.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = $models.CodeblockInstance.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = $models.CodeblockVersion.createFrom;
+const $$createType23 = $Create.Array($$createType22);
+const $$createType24 = $Create.Array($$createType4);
+const $$createType25 = $Create.Array($$createType0);
+const $$createType26 = $models.InviteInfo.createFrom;
+const $$createType27 = $Create.Array($$createType26);
+const $$createType28 = $models.LandingZonesData.createFrom;
+const $$createType29 = $Create.Nullable($$createType28);
+const $$createType30 = $models.ProductSummary.createFrom;
+const $$createType31 = $Create.Array($$createType30);
+const $$createType32 = $models.SyncReposResult.createFrom;
+const $$createType33 = $Create.Nullable($$createType32);
