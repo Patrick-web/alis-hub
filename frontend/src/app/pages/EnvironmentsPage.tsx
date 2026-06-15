@@ -339,6 +339,7 @@ export function EnvironmentsPage() {
         confirmLabel="Delete"
         loading={deleteLoading}
         onConfirm={handleDeleteVar}
+        requireText={deleteVar?.label}
       />
 
       {/* View value modal */}
