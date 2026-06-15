@@ -21,7 +21,7 @@ export function AppInfo(): $CancellablePromise<{ [_ in string]?: string }> {
 
 /**
  * ApplyUpdate swaps the running bundle/binary with the staged one and
- * relaunches. macOS only for now; other platforms return an error.
+ * relaunches. Supported on macOS and Windows; Linux returns an error.
  */
 export function ApplyUpdate(): $CancellablePromise<void> {
     return $Call.ByID(440972242);
@@ -39,11 +39,11 @@ export function CurrentVersion(): $CancellablePromise<string> {
 
 /**
  * DownloadUpdate pulls the appropriate artifact for this platform, extracts
- * it to a temp directory, and stashes the resulting .app path. Progress is
+ * it to a temp directory, and stashes the resulting path. Progress is
  * reported over the "update:progress" event every ~100ms.
  * 
- * Returns the path to the extracted .app (macOS) or the binary (Linux).
- * Windows is not yet supported end-to-end — falls back to the release URL.
+ * Returns the path to the extracted .app (macOS), directory (Linux), or
+ * .exe (Windows).
  */
 export function DownloadUpdate(): $CancellablePromise<string> {
     return $Call.ByID(4121325632);
