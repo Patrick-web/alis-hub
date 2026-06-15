@@ -55,6 +55,23 @@ export function EnvironmentsPage() {
   // Duplicate modal state
   const [duplicateVar, setDuplicateVar] = useState<EnvVar | null>(null);
 
+  // Labels present in each other environment: envName → Set<label>
+  const [otherEnvLabels, setOtherEnvLabels] = useState<Record<string, Set<string>>>({});
+
+  useEffect(() => {
+    const others = state.loadedEnvs.filter(e => e.name !== state.activeEnvName);
+    if (others.length === 0) { setOtherEnvLabels({}); return; }
+    Promise.all(
+      others.map(e =>
+        (ProductService.GetEnvironmentVariables as (n: string) => Promise<any[]>)(e.name)
+          .then(vars => ({ name: e.name, labels: new Set<string>(vars.map((v: any) => v.label as string)) }))
+          .catch(() => ({ name: e.name, labels: new Set<string>() }))
+      )
+    ).then(results => {
+      setOtherEnvLabels(Object.fromEntries(results.map(r => [r.name, r.labels])));
+    });
+  }, [state.activeEnvName, state.loadedEnvs]);
+
   // Load variables whenever selected environment changes
   const loadVariables = useCallback((envName: string) => {
     if (!envName) return;
@@ -193,9 +210,13 @@ export function EnvironmentsPage() {
             setVarSheetMode('edit');
             setVarSheetOpen(true);
           }}>Edit</ActionButton>
-          {state.loadedEnvs.length > 1 && (
-            <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
-          )}
+          {(() => {
+            const others = state.loadedEnvs.filter(e => e.name !== state.activeEnvName);
+            const existsInAll = others.length > 0 && others.every(e => otherEnvLabels[e.name]?.has(item.label));
+            return others.length > 0 && !existsInAll ? (
+              <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
+            ) : null;
+          })()}
           <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
         </div>
       ),
