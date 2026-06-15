@@ -648,7 +648,10 @@ func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error
 	defineDir := filepath.Join(home, "alis.build", org, "define")
 	buildDir := filepath.Join(home, "alis.build", org, "build", product)
 
-	gitToken, _ := s.tokens.Token()
+	gitToken, err := s.tokens.AccessToken()
+	if err != nil {
+		return &SyncReposResult{Error: fmt.Sprintf("get git token: %s", err)}, nil
+	}
 	emit := func(text string) { s.emitSyncLog(text) }
 
 	result := &SyncReposResult{DefineDir: defineDir, BuildDir: buildDir}
@@ -1241,14 +1244,27 @@ func (w *emitWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+func systemCredentialHelper() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return "osxkeychain"
+	case "windows":
+		return "wincred"
+	default:
+		return "cache"
+	}
+}
+
 func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error) {
 	gitEnv := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	ew := &emitWriter{emit: emit}
 
-	// Build the common git flags: inject the token as a Bearer header so it
-	// never gets persisted to .git/config or the credential store.
-	baseArgs := []string{}
-	if token != "" {
+	// GitHub uses the system credential helper; all other hosts (Forgejo, etc.)
+	// get the alis Bearer token injected as an HTTP header.
+	var baseArgs []string
+	if strings.Contains(remoteURL, "github.com") {
+		baseArgs = []string{"-c", "credential.helper=" + systemCredentialHelper()}
+	} else if token != "" {
 		baseArgs = []string{"-c", "http.extraHeader=Authorization: Bearer " + token}
 	}
 
