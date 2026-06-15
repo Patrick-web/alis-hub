@@ -5,6 +5,7 @@ import { SidebarNavItem } from './SidebarNavItem';
 import { Button } from './Button';
 import { EnvFormSheet } from './EnvFormSheet';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MissingVarsModal } from './MissingVarsModal';
 import { useWorkspace, type LoadedEnv } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
@@ -42,6 +43,7 @@ export function Sidebar() {
   const [editTarget, setEditTarget] = useState<LoadedEnv | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LoadedEnv | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [missingVarsOpen, setMissingVarsOpen] = useState(false);
 
   const isEnvironments = location.pathname.includes('/environments');
   const isBuilds = location.pathname.includes('/builds');
@@ -123,6 +125,7 @@ export function Sidebar() {
       name: result?.name ?? '',
       displayName: result?.displayName ?? displayName,
       state: result?.state ?? 0,
+      envType: result?.envType ?? envType,
     };
     const updated = [...state.loadedEnvs, newEnv];
     setLoadedEnvs(updated);
@@ -193,7 +196,17 @@ export function Sidebar() {
           </div>
 
           <div className="relative shrink-0 w-full">
-            <div className="content-stretch flex flex-col items-start p-[10px] relative w-full">
+            <div className="content-stretch flex flex-col items-start p-[10px] gap-[6px] relative w-full">
+              {isEnvironments && (
+                <Button
+                  variant="secondary"
+                  icon={<Icon icon="solar:danger-triangle-linear" className="text-xl" />}
+                  className="w-full h-[34px] text-[10px] font-bold uppercase"
+                  onClick={() => setMissingVarsOpen(true)}
+                >
+                  Check Missing
+                </Button>
+              )}
               <Button
                 variant="primary"
                 icon={bottomButtonIcon}
@@ -230,6 +243,13 @@ export function Sidebar() {
         confirmLabel="Delete"
         loading={deleteLoading}
         onConfirm={handleDeleteEnv}
+      />
+
+      {/* Missing variables modal */}
+      <MissingVarsModal
+        open={missingVarsOpen}
+        onOpenChange={setMissingVarsOpen}
+        loadedEnvs={state.loadedEnvs}
       />
     </>
   );

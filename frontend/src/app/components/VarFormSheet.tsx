@@ -9,6 +9,13 @@ import {
 } from './ui/sheet';
 import { Input } from './Input';
 import { Button } from './Button';
+import type { LoadedEnv } from '../stores/workspace';
+
+export interface PropagationTarget {
+  envName: string;
+  displayName: string;
+  value: string;
+}
 
 interface VarFormSheetProps {
   open: boolean;
@@ -16,7 +23,18 @@ interface VarFormSheetProps {
   mode: 'create' | 'edit';
   initialLabel?: string;
   initialValue?: string;
-  onSubmit: (label: string, value: string) => Promise<void>;
+  onSubmit: (label: string, value: string, propagations?: PropagationTarget[]) => Promise<void>;
+  loadedEnvs?: LoadedEnv[];
+  currentEnvName?: string;
+}
+
+interface PropagationState {
+  envName: string;
+  displayName: string;
+  checked: boolean;
+  useCustom: boolean;
+  customValue: string;
+  envType?: number;
 }
 
 export function VarFormSheet({
@@ -26,11 +44,17 @@ export function VarFormSheet({
   initialLabel = '',
   initialValue = '',
   onSubmit,
+  loadedEnvs,
+  currentEnvName,
 }: VarFormSheetProps) {
   const [label, setLabel] = useState(initialLabel);
   const [value, setValue] = useState(initialValue);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [propagateOpen, setPropagateOpen] = useState(false);
+  const [propagations, setPropagations] = useState<PropagationState[]>([]);
+
+  const otherEnvs = (loadedEnvs ?? []).filter(e => e.name !== currentEnvName);
 
   useEffect(() => {
     if (open) {
@@ -38,15 +62,51 @@ export function VarFormSheet({
       setValue(initialValue);
       setError(null);
       setLoading(false);
+      setPropagateOpen(false);
+      setPropagations(
+        otherEnvs.map(env => ({
+          envName: env.name,
+          displayName: env.displayName,
+          checked: false,
+          useCustom: false,
+          customValue: '',
+          envType: env.envType,
+        }))
+      );
     }
   }, [open, initialLabel, initialValue]);
+
+  const toggleEnv = (envName: string) => {
+    setPropagations(prev => prev.map(p =>
+      p.envName === envName ? { ...p, checked: !p.checked } : p,
+    ));
+  };
+
+  const toggleCustom = (envName: string) => {
+    setPropagations(prev => prev.map(p =>
+      p.envName === envName ? { ...p, useCustom: !p.useCustom } : p,
+    ));
+  };
+
+  const setCustomValue = (envName: string, val: string) => {
+    setPropagations(prev => prev.map(p =>
+      p.envName === envName ? { ...p, customValue: val } : p,
+    ));
+  };
 
   const handleSubmit = async () => {
     if (!label.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      await onSubmit(label.trim(), value);
+      const selectedPropagations: PropagationTarget[] = propagations
+        .filter(p => p.checked)
+        .map(p => ({
+          envName: p.envName,
+          displayName: p.displayName,
+          value: p.useCustom ? p.customValue : value,
+        }));
+      await onSubmit(label.trim(), value, selectedPropagations.length > 0 ? selectedPropagations : undefined);
       onOpenChange(false);
     } catch (err) {
       setError(String(err));
@@ -54,6 +114,8 @@ export function VarFormSheet({
       setLoading(false);
     }
   };
+
+  const checkedCount = propagations.filter(p => p.checked).length;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -70,7 +132,7 @@ export function VarFormSheet({
           </div>
         </SheetHeader>
 
-        <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1">
+        <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1 overflow-y-auto">
           <div className="flex flex-col gap-[6px]">
             <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Label
@@ -97,6 +159,96 @@ export function VarFormSheet({
               className="w-full bg-[#1e1e1e] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-white font-['JetBrains_Mono',sans-serif] text-[12px] resize-none focus:outline-none focus:border-[#F881A9] disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
             />
           </div>
+
+          {mode === 'create' && otherEnvs.length > 0 && (
+            <div className="flex flex-col gap-0 border border-[#464646] rounded-[4px] overflow-hidden">
+              <button
+                onClick={() => setPropagateOpen(v => !v)}
+                disabled={loading}
+                className="flex items-center justify-between px-[12px] py-[10px] hover:bg-[rgba(255,255,255,0.03)] transition-colors"
+              >
+                <div className="flex items-center gap-[8px]">
+                  <Icon icon="solar:copy-linear" className="text-[rgba(255,255,255,0.5)] text-[15px]" />
+                  <span className="font-['JetBrains_Mono',sans-serif] text-[11px] font-bold text-[rgba(255,255,255,0.6)] uppercase">
+                    Propagate to other environments
+                  </span>
+                  {checkedCount > 0 && (
+                    <span className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[#F881A9] border border-[#F881A9] px-[5px] py-[1px] rounded-[3px]">
+                      {checkedCount}
+                    </span>
+                  )}
+                </div>
+                <Icon
+                  icon={propagateOpen ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+                  className="text-[rgba(255,255,255,0.4)] text-[14px]"
+                />
+              </button>
+
+              {propagateOpen && (
+                <div className="border-t border-[#464646] flex flex-col gap-0">
+                  {propagations.map(p => (
+                    <div key={p.envName} className="flex flex-col border-b border-[#464646] last:border-b-0">
+                      <div
+                        className="flex items-center gap-[10px] px-[12px] py-[10px] cursor-pointer hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                        onClick={() => !loading && toggleEnv(p.envName)}
+                      >
+                        <div className={`w-[15px] h-[15px] rounded-[3px] border shrink-0 flex items-center justify-center transition-colors ${
+                          p.checked ? 'border-[#F881A9] bg-[#F881A9]' : 'border-[#464646]'
+                        }`}>
+                          {p.checked && <Icon icon="solar:check-linear" className="text-[#1e1e1e] text-[9px]" />}
+                        </div>
+                        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-white flex-1">
+                          {p.displayName}
+                        </span>
+                        {p.envType === 3 && (
+                          <span className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[#F881A9] border border-[#F881A9] px-[4px] py-[1px] rounded-[3px]">
+                            prod
+                          </span>
+                        )}
+                      </div>
+
+                      {p.checked && (
+                        <div className="px-[12px] pb-[10px] flex flex-col gap-[8px]">
+                          <div className="flex gap-[6px]">
+                            <button
+                              onClick={() => !loading && p.useCustom && toggleCustom(p.envName)}
+                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-['JetBrains_Mono',sans-serif] text-[10px] font-bold uppercase transition-colors ${
+                                !p.useCustom
+                                  ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)] text-[#F881A9]'
+                                  : 'border-[#464646] text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
+                              }`}
+                            >
+                              Same value
+                            </button>
+                            <button
+                              onClick={() => !loading && !p.useCustom && toggleCustom(p.envName)}
+                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-['JetBrains_Mono',sans-serif] text-[10px] font-bold uppercase transition-colors ${
+                                p.useCustom
+                                  ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)] text-[#F881A9]'
+                                  : 'border-[#464646] text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
+                              }`}
+                            >
+                              Custom value
+                            </button>
+                          </div>
+                          {p.useCustom && (
+                            <textarea
+                              placeholder="Custom value for this environment"
+                              value={p.customValue}
+                              onChange={(e) => setCustomValue(p.envName, e.target.value)}
+                              disabled={loading}
+                              rows={3}
+                              className="w-full bg-[#1e1e1e] border border-[#464646] rounded-[4px] px-[10px] py-[6px] text-white font-['JetBrains_Mono',sans-serif] text-[11px] resize-none focus:outline-none focus:border-[#F881A9] disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <p className="text-[11px] text-[#ff5050] font-['JetBrains_Mono',sans-serif] break-all">

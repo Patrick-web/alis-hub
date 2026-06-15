@@ -98,6 +98,7 @@ type EnvInfo struct {
 	Name        string      `json:"name"`
 	DisplayName string      `json:"displayName"`
 	State       int32       `json:"state"`
+	EnvType     int32       `json:"envType"`
 	GCPProject  *GCPProject `json:"gcpProject,omitempty"`
 }
 
@@ -587,7 +588,7 @@ func (s *ProductService) ListEnvironments(org, product string) ([]EnvInfo, error
 		return nil, err
 	}
 	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
-	fields := []string{"name", "display_name", "google_project", "state"}
+	fields := []string{"name", "display_name", "google_project", "state", "type"}
 	protoBytes := marshalListEnvironmentsRequest(parent, fields)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -1773,7 +1774,10 @@ func parseEnvironment(data []byte) (*EnvInfo, error) {
 			if m < 0 {
 				return env, nil
 			}
-			if num == 21 {
+			switch num {
+			case 7:
+				env.EnvType = int32(v)
+			case 21:
 				env.State = int32(v)
 			}
 			data = data[m:]
