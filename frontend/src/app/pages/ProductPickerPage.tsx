@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Events } from '@wailsio/runtime';
+import { useNavigate } from 'react-router';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import type { SyncReposResult } from '../../../bindings/alis-hub-v3/models';
@@ -37,6 +38,7 @@ function StateIndicator({ state }: { state: number }) {
 
 export function ProductPickerPage() {
   const { state, setProduct, setPhase } = useWorkspace();
+  const navigate = useNavigate();
   const org = state.selectedOrg!;
   const orgId = org.name.replace('organisations/', '');
 
@@ -99,6 +101,7 @@ export function ProductPickerPage() {
     }
     setSyncState('done');
     setProduct(orgId, org.displayName, productId, p.displayName);
+    navigate('/about');
   };
 
   const proceedAnyway = () => {
@@ -108,6 +111,7 @@ export function ProductPickerPage() {
     setSyncError(null);
     setShowTerminal(false);
     setProduct(orgId, org.displayName, productId, pendingProduct.displayName);
+    navigate('/about');
   };
 
   return (
