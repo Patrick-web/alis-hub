@@ -710,6 +710,20 @@ func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error
 	return result, nil
 }
 
+// CheckProductCloneStatus returns true if both the define and build repos for
+// the given product are already present on the local filesystem.
+func (s *ProductService) CheckProductCloneStatus(org, product string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	defineDir := filepath.Join(home, "alis.build", org, "define")
+	buildDir := filepath.Join(home, "alis.build", org, "build", product)
+	_, dErr := os.Stat(defineDir)
+	_, bErr := os.Stat(buildDir)
+	return !os.IsNotExist(dErr) && !os.IsNotExist(bErr)
+}
+
 // GetEnvironmentVariables fetches the variables for a single environment.
 // envName is the full resource name, e.g. "organisations/voyage/products/vp/environments/1y2ozw66zv6p3".
 func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable, error) {

@@ -46,10 +46,11 @@ export function ProductPickerPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [cloneStatus, setCloneStatus] = useState<Record<string, boolean>>({});
+  const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [syncState, setSyncState] = useState<'idle' | 'syncing' | 'done' | 'error'>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
   const [pendingProduct, setPendingProduct] = useState<ProductSummary | null>(null);
-  const [showTerminal, setShowTerminal] = useState(false);
 
   const termRef = useRef<BuildTerminalHandle>(null);
 
@@ -74,18 +75,42 @@ export function ProductPickerPage() {
 
   useEffect(load, [orgId]);
 
+  useEffect(() => {
+    if (!products.length) return;
+    setCloneStatus({});
+    products.forEach(p => {
+      const productId = p.name.split('/products/')[1] ?? p.name;
+      (ProductService.CheckProductCloneStatus as (org: string, product: string) => Promise<boolean>)(orgId, productId)
+        .then(ok => setCloneStatus(prev => ({ ...prev, [p.name]: ok })));
+    });
+  }, [products]);
+
   const filtered = products.filter(p => {
     if (!search) return true;
     const q = search.toLowerCase();
     return p.displayName.toLowerCase().includes(q) || p.name.toLowerCase().includes(q);
   });
 
-  const handleSelect = async (p: ProductSummary) => {
+  const handleCardClick = (p: ProductSummary) => {
+    if (syncState === 'syncing') return;
+    if (cloneStatus[p.name]) {
+      const productId = p.name.split('/products/')[1] ?? p.name;
+      setProduct(orgId, org.displayName, productId, p.displayName);
+      navigate('/about');
+      return;
+    }
+    setExpandedProduct(prev => (prev === p.name ? null : p.name));
+    if (expandedProduct !== p.name) {
+      setSyncState('idle');
+      setSyncError(null);
+    }
+  };
+
+  const handleClone = async (p: ProductSummary) => {
     const productId = p.name.split('/products/')[1] ?? p.name;
     setSyncState('syncing');
     setSyncError(null);
     setPendingProduct(p);
-    setShowTerminal(true);
     termRef.current?.clear();
     try {
       const result = await (ProductService.SyncRepos as (org: string, product: string) => Promise<SyncReposResult | null>)(orgId, productId);
@@ -104,188 +129,241 @@ export function ProductPickerPage() {
     navigate('/about');
   };
 
-  const proceedAnyway = () => {
-    if (!pendingProduct) return;
-    const productId = pendingProduct.name.split('/products/')[1] ?? pendingProduct.name;
+  const handleOpenWithoutClone = (p: ProductSummary) => {
+    const productId = p.name.split('/products/')[1] ?? p.name;
+    setExpandedProduct(null);
     setSyncState('idle');
     setSyncError(null);
-    setShowTerminal(false);
-    setProduct(orgId, org.displayName, productId, pendingProduct.displayName);
+    setProduct(orgId, org.displayName, productId, p.displayName);
     navigate('/about');
   };
 
+  const handleCancelExpand = () => {
+    setExpandedProduct(null);
+    setSyncState('idle');
+    setSyncError(null);
+    setPendingProduct(null);
+  };
+
   return (
-    <div className="flex-1 overflow-hidden flex bg-[#1e1e1e]">
-      {/* ── Main column ── */}
-      <div className="flex-1 overflow-hidden flex flex-col min-w-0">
-        {/* Back + header */}
-        <div className="px-[24px] pt-[24px] pb-[16px] shrink-0">
-          <button
-            onClick={() => setPhase('picking-org')}
-            className="flex items-center gap-[6px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] text-[11px]"
-          >
-            <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
-            All landing zones
-          </button>
+    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+      {/* Back + header */}
+      <div className="px-[24px] pt-[24px] pb-[16px] shrink-0">
+        <button
+          onClick={() => setPhase('picking-org')}
+          className="flex items-center gap-[6px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] text-[11px]"
+        >
+          <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
+          All landing zones
+        </button>
 
-          <div className="flex items-center gap-[12px]">
-            {org.logo ? (
-              <img
-                src={org.logo}
-                alt={org.displayName}
-                className="size-[40px] rounded-[10px] object-cover shrink-0 border border-[rgba(255,255,255,0.08)]"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            ) : (
-              <div className="size-[40px] rounded-[10px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
-                <span className="text-[16px] font-bold text-[#F881A9]">
-                  {org.displayName[0]?.toUpperCase() ?? '?'}
-                </span>
-              </div>
-            )}
-            <div>
-              <h1 className="text-[20px] font-bold text-white">{org.displayName}</h1>
-              <p className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)]">{orgId}</p>
+        <div className="flex items-center gap-[12px]">
+          {org.logo ? (
+            <img
+              src={org.logo}
+              alt={org.displayName}
+              className="size-[40px] rounded-[10px] object-cover shrink-0 border border-[rgba(255,255,255,0.08)]"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <div className="size-[40px] rounded-[10px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+              <span className="text-[16px] font-bold text-[#F881A9]">
+                {org.displayName[0]?.toUpperCase() ?? '?'}
+              </span>
             </div>
+          )}
+          <div>
+            <h1 className="text-[20px] font-bold text-white">{org.displayName}</h1>
+            <p className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)]">{orgId}</p>
           </div>
-
-          <p className="text-[12px] text-[rgba(255,255,255,0.4)] mt-[12px]">
-            Select a product to open its workspace
-          </p>
         </div>
 
-        {/* Search */}
-        <div className="px-[24px] pb-[14px] shrink-0 flex items-center gap-[10px]">
-          <div className="flex-1 flex items-center gap-[8px] bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] px-[12px] h-[34px]">
-            <Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search products…"
-              className="flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-[rgba(255,255,255,0.25)]"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="text-[rgba(255,255,255,0.3)] hover:text-white">
-                <Icon icon="solar:close-circle-linear" className="text-sm" />
-              </button>
-            )}
-          </div>
-          {!loading && (
-            <button onClick={load} className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors" title="Refresh">
-              <Icon icon="solar:refresh-linear" className="text-base" />
+        <p className="text-[12px] text-[rgba(255,255,255,0.4)] mt-[12px]">
+          Select a product to open its workspace
+        </p>
+      </div>
+
+      {/* Search */}
+      <div className="px-[24px] pb-[14px] shrink-0 flex items-center gap-[10px]">
+        <div className="flex-1 flex items-center gap-[8px] bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] px-[12px] h-[34px]">
+          <Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search products…"
+            className="flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-[rgba(255,255,255,0.25)]"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-[rgba(255,255,255,0.3)] hover:text-white">
+              <Icon icon="solar:close-circle-linear" className="text-sm" />
             </button>
           )}
         </div>
+        {!loading && (
+          <button onClick={load} className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors" title="Refresh">
+            <Icon icon="solar:refresh-linear" className="text-base" />
+          </button>
+        )}
+      </div>
 
-        {/* Product list */}
-        <div className="flex-1 overflow-auto px-[24px] pb-[24px]">
-          {loading && (
-            <div className="flex items-center justify-center h-full">
-              <Loader />
-            </div>
-          )}
+      {/* Product list */}
+      <div className="flex-1 overflow-auto px-[24px] pb-[24px]">
+        {loading && (
+          <div className="flex items-center justify-center h-full">
+            <Loader />
+          </div>
+        )}
 
-          {error && (
-            <div className="flex items-center justify-center h-full">
-              <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px] max-w-[400px]">
-                <div className="flex items-center gap-[8px] mb-[8px]">
-                  <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
-                  <p className="text-[12px] font-bold text-white">Failed to load</p>
-                </div>
-                <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
-                <button onClick={load} className="mt-[10px] text-[10px] text-[#F881A9] hover:underline">Try again</button>
+        {error && (
+          <div className="flex items-center justify-center h-full">
+            <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px] max-w-[400px]">
+              <div className="flex items-center gap-[8px] mb-[8px]">
+                <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                <p className="text-[12px] font-bold text-white">Failed to load</p>
               </div>
+              <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
+              <button onClick={load} className="mt-[10px] text-[10px] text-[#F881A9] hover:underline">Try again</button>
             </div>
-          )}
+          </div>
+        )}
 
-          {!loading && !error && (
-            <div className="flex flex-col gap-[4px]">
-              {syncState === 'error' && syncError && (
-                <div className="mb-[8px] p-[12px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px]">
-                  <p className="text-[11px] text-[rgba(255,255,255,0.7)] mb-[8px]">Failed to sync repositories: {syncError}</p>
-                  <div className="flex gap-[8px]">
-                    <button onClick={proceedAnyway} className="text-[10px] text-[#F881A9] hover:underline">Proceed anyway</button>
-                    <button onClick={() => { setSyncState('idle'); setSyncError(null); setShowTerminal(false); }} className="text-[10px] text-[rgba(255,255,255,0.4)] hover:underline">Cancel</button>
-                  </div>
-                </div>
-              )}
-              {filtered.map(p => {
-                const productId = p.name.split('/products/')[1] ?? p.name;
-                const isSyncing = syncState === 'syncing' && pendingProduct?.name === p.name;
-                return (
+        {!loading && !error && (
+          <div className="flex flex-col gap-[4px]">
+            {filtered.map(p => {
+              const productId = p.name.split('/products/')[1] ?? p.name;
+              const isCloned = cloneStatus[p.name] === true;
+              const isExpanded = expandedProduct === p.name;
+              const isSyncing = syncState === 'syncing' && pendingProduct?.name === p.name;
+              const isDisabled = syncState === 'syncing' && !isSyncing;
+
+              return (
+                <div
+                  key={p.name}
+                  className={`rounded-[8px] border transition-colors overflow-hidden ${
+                    isExpanded ? 'border-[#F881A9]' : 'border-[#3a3a3a]'
+                  }`}
+                >
+                  {/* Card header row */}
                   <button
-                    key={p.name}
-                    onClick={() => handleSelect(p)}
-                    disabled={syncState === 'syncing'}
-                    className="flex items-center gap-[14px] px-[14px] py-[12px] rounded-[8px] bg-[#2c2c2c] border border-[#3a3a3a] hover:border-[#F881A9] hover:bg-[#333] transition-all text-left group disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:border-[#3a3a3a] disabled:hover:bg-[#2c2c2c]"
+                    onClick={() => handleCardClick(p)}
+                    disabled={isDisabled}
+                    className={`w-full flex items-center gap-[14px] px-[14px] py-[12px] bg-[#2c2c2c] text-left group transition-colors
+                      ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#333]'}
+                    `}
                   >
                     <div className="size-[32px] rounded-[7px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.15)] flex items-center justify-center shrink-0">
                       <Icon icon="solar:box-linear" className="text-[#F881A9] text-base" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-white group-hover:text-[#F881A9] transition-colors truncate">
+                      <p className={`text-[13px] font-semibold transition-colors truncate ${isExpanded ? 'text-[#F881A9]' : 'text-white group-hover:text-[#F881A9]'}`}>
                         {p.displayName}
                       </p>
                       <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] mt-[1px]">
                         {isSyncing ? 'Syncing repositories…' : productId}
                       </p>
                     </div>
-                    <StateIndicator state={p.state} />
-                    {isSyncing
-                      ? <Loader size={16} />
-                      : <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base shrink-0 transition-colors" />
-                    }
+                    <div className="flex items-center gap-[8px] shrink-0">
+                      {isCloned && (
+                        <span className="flex items-center gap-[3px] px-[6px] py-[2px] rounded-[4px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)]">
+                          <Icon icon="solar:check-circle-bold" className="text-[#34C759] text-[9px]" />
+                          <span className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[#34C759] font-medium">Cloned</span>
+                        </span>
+                      )}
+                      <StateIndicator state={p.state} />
+                      {isSyncing
+                        ? <Loader size={16} />
+                        : isCloned
+                          ? <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base transition-colors" />
+                          : <Icon
+                              icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+                              className={`text-base transition-colors ${isExpanded ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9]'}`}
+                            />
+                      }
+                    </div>
                   </button>
-                );
-              })}
 
-              {filtered.length === 0 && !loading && (
-                <div className="flex flex-col items-center justify-center pt-[60px] gap-[8px]">
-                  <Icon icon="solar:box-linear" className="text-[rgba(255,255,255,0.15)] text-4xl" />
-                  <p className="text-[12px] text-[rgba(255,255,255,0.3)]">
-                    {search ? 'No matching products' : 'No products found'}
-                  </p>
+                  {/* Expanded section */}
+                  {isExpanded && (
+                    <div className="border-t border-[#3a3a3a] bg-[#1a1a1a]">
+                      {syncState === 'idle' && (
+                        <div className="px-[16px] py-[14px] flex items-center justify-between gap-[12px]">
+                          <p className="text-[12px] text-[rgba(255,255,255,0.5)]">
+                            Clone repositories to your local machine?
+                          </p>
+                          <div className="flex items-center gap-[8px] shrink-0">
+                            <button
+                              onClick={() => handleOpenWithoutClone(p)}
+                              className="text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                            >
+                              Open without cloning
+                            </button>
+                            <button
+                              onClick={() => handleClone(p)}
+                              className="px-[10px] py-[5px] rounded-[5px] bg-[#F881A9] text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#f96bb0] transition-colors"
+                            >
+                              Clone &amp; open
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {syncState === 'syncing' && isSyncing && (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-[8px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+                            <span className="w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse shrink-0" />
+                            <p className="text-[9px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] tracking-wider">
+                              Syncing repos…
+                            </p>
+                          </div>
+                          <BuildTerminal ref={termRef} className="h-[200px]" />
+                        </div>
+                      )}
+
+                      {syncState === 'error' && pendingProduct?.name === p.name && (
+                        <div className="px-[16px] py-[14px]">
+                          <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[10px]">
+                            Failed to sync: {syncError}
+                          </p>
+                          <div className="flex items-center gap-[10px]">
+                            <button
+                              onClick={() => { setSyncState('idle'); setSyncError(null); }}
+                              className="text-[11px] text-[#F881A9] hover:underline"
+                            >
+                              Try again
+                            </button>
+                            <button
+                              onClick={() => handleOpenWithoutClone(p)}
+                              className="text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                            >
+                              Open without cloning
+                            </button>
+                            <button
+                              onClick={handleCancelExpand}
+                              className="text-[11px] text-[rgba(255,255,255,0.25)] hover:text-white transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+              );
+            })}
 
-      {/* ── Git terminal side panel ── */}
-      {showTerminal && (
-        <div className="w-[420px] border-l border-[#464646] flex flex-col shrink-0 bg-[#141414]">
-          {/* Panel header */}
-          <div className="flex items-center justify-between px-[12px] border-b border-[#464646] shrink-0 h-[34px]">
-            <div className="flex items-center gap-[8px]">
-              {syncState === 'syncing' && (
-                <span className="inline-block w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse shrink-0" />
-              )}
-              {syncState === 'done' && (
-                <Icon icon="solar:check-circle-bold" className="text-[#34C759] text-[11px]" />
-              )}
-              {syncState === 'error' && (
-                <Icon icon="solar:close-circle-bold" className="text-[#FF5C5F] text-[11px]" />
-              )}
-              <p className="text-[9px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] tracking-wider">
-                {syncState === 'syncing' ? 'Syncing repos…' : syncState === 'error' ? 'Sync failed' : 'Git sync'}
-              </p>
-            </div>
-            {syncState !== 'syncing' && (
-              <button
-                onClick={() => setShowTerminal(false)}
-                className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.3)] hover:text-white hover:bg-[#3c3c3c] transition-colors"
-              >
-                <Icon icon="solar:close-linear" className="text-xs" />
-              </button>
+            {filtered.length === 0 && !loading && (
+              <div className="flex flex-col items-center justify-center pt-[60px] gap-[8px]">
+                <Icon icon="solar:box-linear" className="text-[rgba(255,255,255,0.15)] text-4xl" />
+                <p className="text-[12px] text-[rgba(255,255,255,0.3)]">
+                  {search ? 'No matching products' : 'No products found'}
+                </p>
+              </div>
             )}
           </div>
-
-          {/* Terminal */}
-          <BuildTerminal ref={termRef} className="flex-1 min-h-0" />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
