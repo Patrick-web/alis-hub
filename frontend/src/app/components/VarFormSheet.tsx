@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
+
+function parseError(err: unknown): string {
+  const s = String(err);
+  try {
+    const obj = JSON.parse(s);
+    if (obj && typeof obj.message === 'string') return obj.message;
+  } catch { /* not JSON */ }
+  return s;
+}
 import {
   Sheet,
   SheetContent,
@@ -109,7 +118,7 @@ export function VarFormSheet({
       await onSubmit(label.trim(), value, selectedPropagations.length > 0 ? selectedPropagations : undefined);
       onOpenChange(false);
     } catch (err) {
-      setError(String(err));
+      setError(parseError(err));
     } finally {
       setLoading(false);
     }

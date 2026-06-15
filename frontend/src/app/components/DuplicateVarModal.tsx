@@ -1,4 +1,13 @@
 import { useEffect, useState } from 'react';
+
+function parseError(err: unknown): string {
+  const s = String(err);
+  try {
+    const obj = JSON.parse(s);
+    if (obj && typeof obj.message === 'string') return obj.message;
+  } catch { /* not JSON */ }
+  return s;
+}
 import { Icon } from '@iconify/react';
 import {
   Dialog,
@@ -102,14 +111,18 @@ export function DuplicateVarModal({
     for (const target of selectedTargets) {
       try {
         const existing = await (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(target.env.name);
-        const merged = existing.filter((v: any) => v.label !== varLabel);
-        merged.push({ label: varLabel, value: varValue });
+        const merged = [
+          ...existing
+            .filter((v: any) => v.label !== varLabel)
+            .map((v: any) => ({ label: v.label as string, value: v.value as string })),
+          { label: varLabel, value: varValue },
+        ];
         await (ProductService.SetEnvironmentVariables as (envName: string, vars: any[]) => Promise<void>)(
           target.env.name,
           merged,
         );
       } catch (err) {
-        setGlobalError(`Failed for ${target.env.displayName}: ${String(err)}`);
+        setGlobalError(`Failed for ${target.env.displayName}: ${parseError(err)}`);
         setSubmitting(false);
         return;
       }
