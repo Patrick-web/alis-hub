@@ -193,7 +193,9 @@ export function EnvironmentsPage() {
             setVarSheetMode('edit');
             setVarSheetOpen(true);
           }}>Edit</ActionButton>
-          <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
+          {state.loadedEnvs.length > 1 && (
+            <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
+          )}
           <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
         </div>
       ),
