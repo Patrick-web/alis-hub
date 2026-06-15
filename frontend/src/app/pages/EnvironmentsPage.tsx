@@ -22,6 +22,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../components/ui/dialog';
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from '../components/ui/tooltip';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
@@ -203,24 +208,48 @@ export function EnvironmentsPage() {
     },
     {
       header: 'Actions',
-      render: (item: EnvVar) => (
-        <div className="flex gap-[5px]">
-          <ActionButton onClick={() => {
-            setEditVar(item);
-            setVarSheetMode('edit');
-            setVarSheetOpen(true);
-          }}>Edit</ActionButton>
-          {(() => {
-            const others = state.loadedEnvs.filter(e => e.name !== state.activeEnvName);
-            const existsInAll = others.length > 0 && others.every(e => otherEnvLabels[e.name]?.has(item.label));
-            return others.length > 0 && !existsInAll ? (
-              <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
-            ) : null;
-          })()}
-          <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
-        </div>
-      ),
-      className: 'w-[180px]',
+      render: (item: EnvVar) => {
+        const others = state.loadedEnvs.filter(e => e.name !== state.activeEnvName);
+        const missingIn = others.filter(e => !otherEnvLabels[e.name]?.has(item.label));
+        const existsInAll = others.length > 0 && missingIn.length === 0;
+
+        return (
+          <div className="flex gap-[5px] items-center">
+            <ActionButton onClick={() => {
+              setEditVar(item);
+              setVarSheetMode('edit');
+              setVarSheetOpen(true);
+            }}>Edit</ActionButton>
+
+            {others.length > 0 && (existsInAll ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="font-['JetBrains_Mono',sans-serif] text-[9px] font-bold uppercase text-[#4CAF50] border border-[#4CAF50] px-[6px] py-[2px] rounded-[3px] cursor-default select-none opacity-70">
+                    Shared
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-[#2c2c2c] border border-[#464646] text-white font-['JetBrains_Mono',sans-serif] text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                  Shared across all environments
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-[#2c2c2c] border border-[#464646] text-white font-['JetBrains_Mono',sans-serif] text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                  Missing in: {missingIn.map(e => e.displayName).join(', ')}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+
+            <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
+          </div>
+        );
+      },
+      className: 'w-[210px]',
     },
   ];
 
