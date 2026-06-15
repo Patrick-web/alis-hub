@@ -393,6 +393,9 @@ function DocumentationTab({
               [&_h1]:font-['JetBrains_Mono',sans-serif] [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-white [&_h1]:mb-[12px]
               [&_h2]:font-['JetBrains_Mono',sans-serif] [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-white [&_h2]:mb-[8px]
               [&_h3]:font-['JetBrains_Mono',sans-serif] [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-white [&_h3]:mb-[6px]
+              [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-white [&_h4]:mb-[4px]
+              [&_h5]:text-[11px] [&_h5]:font-semibold [&_h5]:text-white/80 [&_h5]:mb-[4px]
+              [&_h6]:text-[11px] [&_h6]:font-medium [&_h6]:text-white/60 [&_h6]:mb-[4px]
               [&_p]:text-[rgba(255,255,255,0.7)] [&_p]:mb-[10px]
               [&_code]:text-[#f881a9] [&_code]:bg-white/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
               [&_pre]:bg-[#2c2c2c] [&_pre]:border [&_pre]:border-[#464646] [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
@@ -401,7 +404,7 @@ function DocumentationTab({
               [&_strong]:text-white
               [&_li]:text-[rgba(255,255,255,0.7)] [&_li]:mb-[4px]
               [&_ul]:mb-[10px] [&_ol]:mb-[10px]
-              [&_hr]:border-[#464646]"
+              [&_hr]:border-[#464646] [&_hr]:my-[20px]"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (

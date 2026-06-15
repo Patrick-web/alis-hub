@@ -14,6 +14,14 @@ import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/
 import * as $models from "./models.js";
 
 /**
+ * CheckProductCloneStatus returns true if both the define and build repos for
+ * the given product are already present on the local filesystem.
+ */
+export function CheckProductCloneStatus(org: string, product: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2135548336, org, product);
+}
+
+/**
  * CreateEnvironment creates a new environment under the given org/product.
  * envType: 1=DEV, 2=STAGING, 3=PROD. region must be a valid GCP region.
  */
