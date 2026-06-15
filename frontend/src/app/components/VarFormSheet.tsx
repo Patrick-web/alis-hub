@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '@iconify/react';
 
+const LABEL_REGEX = /^[a-zA-Z][-_a-zA-Z0-9]{2,100}$/;
+
 function parseError(err: unknown): string {
   const s = String(err);
   try {
@@ -104,7 +106,12 @@ export function VarFormSheet({
   };
 
   const handleSubmit = async () => {
-    if (!label.trim()) return;
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    if (mode === 'create' && !LABEL_REGEX.test(trimmed)) {
+      setError('Label must start with a letter and contain only letters, digits, hyphens, or underscores (3–101 characters).');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -115,7 +122,7 @@ export function VarFormSheet({
           displayName: p.displayName,
           value: p.useCustom ? p.customValue : value,
         }));
-      await onSubmit(label.trim(), value, selectedPropagations.length > 0 ? selectedPropagations : undefined);
+      await onSubmit(trimmed, value, selectedPropagations.length > 0 ? selectedPropagations : undefined);
       onOpenChange(false);
     } catch (err) {
       setError(parseError(err));
@@ -151,8 +158,13 @@ export function VarFormSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               disabled={loading || mode === 'edit'}
-              className="font-['JetBrains_Mono',sans-serif] text-[12px]"
+              className={`font-['JetBrains_Mono',sans-serif] text-[12px] ${mode === 'create' && label && !LABEL_REGEX.test(label.trim()) ? 'border-[#ff5050] focus:border-[#ff5050]' : ''}`}
             />
+            {mode === 'create' && label && !LABEL_REGEX.test(label.trim()) && (
+              <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[#ff5050]">
+                Must start with a letter; letters, digits, <span className="opacity-70">-</span> and <span className="opacity-70">_</span> only; 3–101 chars total.
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-[6px]">
@@ -279,7 +291,7 @@ export function VarFormSheet({
             variant="primary"
             className="flex-1 h-[34px] text-[11px] font-bold uppercase"
             onClick={handleSubmit}
-            disabled={loading || !label.trim()}
+            disabled={loading || !label.trim() || (mode === 'create' && !LABEL_REGEX.test(label.trim()))}
             icon={loading ? <Icon icon="solar:refresh-linear" className="text-xl animate-spin" /> : undefined}
           >
             {mode === 'create' ? 'Create' : 'Save'}
