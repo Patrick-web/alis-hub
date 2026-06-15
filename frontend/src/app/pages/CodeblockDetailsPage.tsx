@@ -340,8 +340,16 @@ function DocumentationTab({
   audience: 'user' | 'agent';
   onAudienceChange: (a: 'user' | 'agent') => void;
 }) {
+  const [copied, setCopied] = useState(false);
   const content = audience === 'agent' ? agentDoc : doc;
   const html = content ? (marked.parse(content) as string) : '';
+
+  function handleCopy() {
+    navigator.clipboard.writeText(content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -359,6 +367,20 @@ function DocumentationTab({
             {audience === a && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />}
           </button>
         ))}
+        <div className="flex-1" />
+        {audience === 'agent' && content && (
+          <button
+            onClick={handleCopy}
+            className="flex items-center gap-[6px] px-[12px] py-[6px] mb-[6px] text-[10px] font-bold uppercase rounded border transition-all"
+            style={copied
+              ? { color: '#4ade80', borderColor: 'rgba(74,222,128,0.3)', background: 'rgba(74,222,128,0.08)' }
+              : { color: 'rgba(255,255,255,0.4)', borderColor: '#464646', background: 'transparent' }
+            }
+          >
+            <Icon icon={copied ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        )}
       </div>
 
       <div className="flex-1 overflow-auto p-[32px]">
