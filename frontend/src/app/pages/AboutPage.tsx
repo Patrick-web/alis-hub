@@ -196,10 +196,10 @@ export function AboutPage() {
           </Card>
 
           <Card title="Quick Actions" className="w-[475px]">
-            <ListItem label="Open DBD Pipeline" icon={<Icon icon="solar:code-2-linear" className="text-[#f881a9] text-xl" />} onClick={() => { window.location.href = '/deployments'; }} />
-            <ListItem label="Manage Services" icon={<Icon icon="solar:layers-linear" className="text-[#f881a9] text-xl" />} onClick={() => { window.location.href = '/develop'; }} />
-            <ListItem label="Browse Codeblocks" icon={<Icon icon="solar:box-linear" className="text-[#f881a9] text-xl" />} onClick={() => { window.location.href = '/codeblocks'; }} />
-            <ListItem label="Agent Launchpad" icon={<Icon icon="solar:users-group-two-rounded-linear" className="text-[#f881a9] text-xl" />} onClick={() => { window.location.href = '/agents'; }} />
+            <ListItem label="Open DBD Pipeline" icon={<Icon icon="solar:code-2-linear" className="text-[#f881a9] text-xl" />} onClick={() => navigate('/deployments')} />
+            <ListItem label="Manage Services" icon={<Icon icon="solar:layers-linear" className="text-[#f881a9] text-xl" />} onClick={() => navigate('/develop')} />
+            <ListItem label="Browse Codeblocks" icon={<Icon icon="solar:box-linear" className="text-[#f881a9] text-xl" />} onClick={() => navigate('/codeblocks')} />
+            <ListItem label="Agent Launchpad" icon={<Icon icon="solar:users-group-two-rounded-linear" className="text-[#f881a9] text-xl" />} onClick={() => navigate('/agents')} />
           </Card>
         </div>
 
