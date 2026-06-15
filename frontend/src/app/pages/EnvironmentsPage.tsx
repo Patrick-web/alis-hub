@@ -1,4 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
+
+function parseError(err: unknown): string {
+  const s = String(err);
+  try {
+    const obj = JSON.parse(s);
+    if (obj && typeof obj.message === 'string') return obj.message;
+  } catch { /* not JSON */ }
+  return s;
+}
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
@@ -60,7 +69,7 @@ export function EnvironmentsPage() {
         }));
         setVars(mapped);
       })
-      .catch((err) => setError(String(err)))
+      .catch((err) => setError(parseError(err)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -97,8 +106,12 @@ export function EnvironmentsPage() {
     if (propagations && propagations.length > 0) {
       for (const target of propagations) {
         const existing = await (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(target.envName);
-        const merged = existing.filter((v: any) => v.label !== label);
-        merged.push({ label, value: target.value });
+        const merged = [
+          ...existing
+            .filter((v: any) => v.label !== label)
+            .map((v: any) => ({ label: v.label as string, value: v.value as string })),
+          { label, value: target.value },
+        ];
         await (ProductService.SetEnvironmentVariables as (envName: string, vars: any[]) => Promise<void>)(
           target.envName,
           merged,
@@ -123,7 +136,7 @@ export function EnvironmentsPage() {
       await persistVars(updated);
       setDeleteVar(null);
     } catch (err) {
-      setError(String(err));
+      setError(parseError(err));
     } finally {
       setDeleteLoading(false);
     }
