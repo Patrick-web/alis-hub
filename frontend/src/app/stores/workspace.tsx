@@ -81,6 +81,16 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         product: action.payload.product,
         productDisplayName: action.payload.productDisplayName,
         phase: 'workspace',
+        environment: initialState.environment,
+        environmentDisplayName: initialState.environmentDisplayName,
+        environmentGoogleProjectId: '',
+        environmentGoogleRegion: '',
+        rootDirectory: '',
+        neurons: [],
+        environments: [],
+        activeNeuronIds: [],
+        loadedEnvs: [],
+        activeEnvName: '',
       };
     case 'SET_NEURONS':
       return { ...state, neurons: action.payload };
