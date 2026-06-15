@@ -31,6 +31,7 @@ export interface LoadedEnv {
   name: string;        // full resource name e.g. organisations/voyage/products/vp/environments/...
   displayName: string; // e.g. "Production"
   state: number;
+  envType?: number;    // 1=DEV, 2=STAGING, 3=PROD
 }
 
 export interface WorkspaceState {

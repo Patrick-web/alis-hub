@@ -594,6 +594,7 @@ export class EnvInfo {
     "name": string;
     "displayName": string;
     "state": number;
+    "envType": number;
     "gcpProject"?: GCPProject | null;
 
     /** Creates a new EnvInfo instance. */
@@ -607,6 +608,9 @@ export class EnvInfo {
         if (!("state" in $$source)) {
             this["state"] = 0;
         }
+        if (!("envType" in $$source)) {
+            this["envType"] = 0;
+        }
 
         Object.assign(this, $$source);
     }
@@ -615,10 +619,10 @@ export class EnvInfo {
      * Creates a new EnvInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvInfo {
-        const $$createField3_0 = $$createType8;
+        const $$createField4_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("gcpProject" in $$parsedSource) {
-            $$parsedSource["gcpProject"] = $$createField3_0($$parsedSource["gcpProject"]);
+            $$parsedSource["gcpProject"] = $$createField4_0($$parsedSource["gcpProject"]);
         }
         return new EnvInfo($$parsedSource as Partial<EnvInfo>);
     }

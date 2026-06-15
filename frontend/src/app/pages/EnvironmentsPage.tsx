@@ -4,8 +4,15 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { ActionButton } from '../components/ActionButton';
 import { Table } from '../components/Table';
-import { VarFormSheet } from '../components/VarFormSheet';
+import { VarFormSheet, type PropagationTarget } from '../components/VarFormSheet';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { DuplicateVarModal } from '../components/DuplicateVarModal';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
@@ -34,6 +41,12 @@ export function EnvironmentsPage() {
   const [deleteVar, setDeleteVar] = useState<EnvVar | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // View value modal state
+  const [viewVar, setViewVar] = useState<EnvVar | null>(null);
+
+  // Duplicate modal state
+  const [duplicateVar, setDuplicateVar] = useState<EnvVar | null>(null);
+
   // Load environment list on mount if not already loaded
   useEffect(() => {
     if (state.loadedEnvs.length > 0 || envsLoading) return;
@@ -49,6 +62,7 @@ export function EnvironmentsPage() {
           name: e.name as string,
           displayName: e.displayName as string,
           state: e.state as number,
+          envType: e.envType as number,
         }));
         setLoadedEnvs(loaded);
         if (!state.activeEnvName && loaded.length > 0) {
@@ -97,7 +111,7 @@ export function EnvironmentsPage() {
     }
   }, [state.activeEnvName]);
 
-  const handleCreateVar = async (label: string, value: string) => {
+  const handleCreateVar = async (label: string, value: string, propagations?: PropagationTarget[]) => {
     if (vars.some((v) => v.label === label)) {
       throw new Error(`Variable "${label}" already exists`);
     }
@@ -105,6 +119,19 @@ export function EnvironmentsPage() {
     const updated = [...vars, { id: newId, label, value }];
     setVars(updated);
     await persistVars(updated);
+
+    // Propagate to other environments
+    if (propagations && propagations.length > 0) {
+      for (const target of propagations) {
+        const existing = await (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(target.envName);
+        const merged = existing.filter((v: any) => v.label !== label);
+        merged.push({ label, value: target.value });
+        await (ProductService.SetEnvironmentVariables as (envName: string, vars: any[]) => Promise<void>)(
+          target.envName,
+          merged,
+        );
+      }
+    }
   };
 
   const handleEditVar = async (_label: string, value: string) => {
@@ -145,9 +172,29 @@ export function EnvironmentsPage() {
     {
       header: 'VALUE',
       render: (item: EnvVar) => (
-        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.6)] break-all">
-          {item.value}
-        </span>
+        <div className="group relative flex items-center gap-[6px] min-w-0">
+          <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.6)] break-all flex-1">
+            {item.value}
+          </span>
+          <div className="hidden group-hover:flex items-center gap-[4px] shrink-0 bg-[#1e1e1e] pl-[4px]">
+            <ActionButton
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewVar(item);
+              }}
+            >
+              View
+            </ActionButton>
+            <ActionButton
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(item.value);
+              }}
+            >
+              Copy
+            </ActionButton>
+          </div>
+        </div>
       ),
       className: 'w-[260px]',
     },
@@ -160,10 +207,11 @@ export function EnvironmentsPage() {
             setVarSheetMode('edit');
             setVarSheetOpen(true);
           }}>Edit</ActionButton>
+          <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
           <ActionButton onClick={() => setDeleteVar(item)}>Delete</ActionButton>
         </div>
       ),
-      className: 'w-[120px]',
+      className: 'w-[180px]',
     },
   ];
 
@@ -235,6 +283,8 @@ export function EnvironmentsPage() {
         initialLabel={varSheetMode === 'edit' ? (editVar?.label ?? '') : ''}
         initialValue={varSheetMode === 'edit' ? (editVar?.value ?? '') : ''}
         onSubmit={varSheetMode === 'create' ? handleCreateVar : handleEditVar}
+        loadedEnvs={varSheetMode === 'create' ? state.loadedEnvs : undefined}
+        currentEnvName={varSheetMode === 'create' ? state.activeEnvName : undefined}
       />
 
       {/* Delete confirmation */}
@@ -251,6 +301,52 @@ export function EnvironmentsPage() {
         confirmLabel="Delete"
         loading={deleteLoading}
         onConfirm={handleDeleteVar}
+      />
+
+      {/* View value modal */}
+      <Dialog open={Boolean(viewVar)} onOpenChange={(o) => { if (!o) setViewVar(null); }}>
+        <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 gap-0 sm:max-w-[560px]">
+          <DialogHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+            <div className="flex items-center gap-[10px]">
+              <Icon icon="solar:eye-linear" className="text-[#F881A9] text-xl" />
+              <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+                {viewVar?.label}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="px-[20px] py-[16px] max-h-[400px] overflow-auto">
+            <pre className="font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] whitespace-pre-wrap break-all">
+              {viewVar?.value}
+            </pre>
+          </div>
+          <div className="px-[20px] py-[14px] border-t border-[#464646] flex justify-end gap-[8px]">
+            <Button
+              variant="secondary"
+              className="h-[34px] px-[16px] text-[11px] font-bold uppercase"
+              icon={<Icon icon="solar:copy-linear" className="text-xl" />}
+              onClick={() => viewVar && navigator.clipboard.writeText(viewVar.value)}
+            >
+              Copy
+            </Button>
+            <Button
+              variant="secondary"
+              className="h-[34px] px-[16px] text-[11px] font-bold uppercase"
+              onClick={() => setViewVar(null)}
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate modal */}
+      <DuplicateVarModal
+        open={Boolean(duplicateVar)}
+        onOpenChange={(o) => { if (!o) setDuplicateVar(null); }}
+        varLabel={duplicateVar?.label ?? ''}
+        varValue={duplicateVar?.value ?? ''}
+        sourceEnvName={state.activeEnvName}
+        loadedEnvs={state.loadedEnvs}
       />
     </div>
   );
