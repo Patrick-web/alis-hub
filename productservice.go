@@ -120,6 +120,44 @@ type Codeblock struct {
 	InstallCount  int32  `json:"installCount"`
 }
 
+type CodeblockVersion struct {
+	Name         string            `json:"name"`
+	VersionTag   string            `json:"versionTag"`
+	ReleaseLevel int32             `json:"releaseLevel"`
+	CreateTime   string            `json:"createTime"`
+	UpdateTime   string            `json:"updateTime"`
+	ReleaseNotes string            `json:"releaseNotes"`
+	Files        []CodeblockFolder `json:"files"`
+}
+
+type CodeblockFolder struct {
+	Name  string              `json:"name"`
+	Files []CodeblockFileItem `json:"files"`
+}
+
+type CodeblockFileItem struct {
+	Name    string `json:"name"`
+	Content string `json:"content"`
+}
+
+type CodeblockInstance struct {
+	Name         string `json:"name"`
+	ShortID      string `json:"shortId"`
+	Package      string `json:"package"`
+	State        int32  `json:"state"`
+	Block        string `json:"block"`
+	BlockVersion string `json:"blockVersion"`
+	CreateTime   string `json:"createTime"`
+	UpdateTime   string `json:"updateTime"`
+	Entitlement  string `json:"entitlement"`
+}
+
+type CodeblockMember struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	PhotoURL    string `json:"photoUrl"`
+}
+
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
@@ -872,6 +910,163 @@ func (s *ProductService) ListCodeblocks() ([]Codeblock, error) {
 		return nil, fmt.Errorf("ListCodeblocks: response too short (%d bytes)", len(body))
 	}
 	return parseCodeblocksResponse(body[5:])
+}
+
+// GetCodeblock fetches a single block by its short ID (e.g. "skills").
+func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	buf := marshalGetProductRequest("blocks/"+blockId,
+		[]string{"name", "display_name", "release_level", "publisher", "releases", "overview_details"})
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetBlock", buf)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("GetCodeblock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("GetCodeblock: response too short (%d bytes)", len(body))
+	}
+	var cb Codeblock
+	parseBlockInto(body[5:], &cb)
+	return &cb, nil
+}
+
+// ListCodeblockVersions lists available versions for a block.
+func (s *ProductService) ListCodeblockVersions(blockId string) ([]CodeblockVersion, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/"+blockId)
+	buf = protowire.AppendTag(buf, 2, protowire.VarintType)
+	buf = protowire.AppendVarint(buf, 100)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/ListBlockVersions", buf)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblockVersions: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListCodeblockVersions: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListCodeblockVersions: response too short (%d bytes)", len(body))
+	}
+	return parseCodeblockVersionsResponse(body[5:]), nil
+}
+
+// GetCodeblockDoc returns documentation markdown for a specific block version.
+// audience is "user" or "agent".
+func (s *ProductService) GetCodeblockDoc(versionName, audience string) (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	fm := marshalFieldMask([]string{"name", "documentation"})
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, versionName)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, fm)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
+	if err != nil {
+		return "", fmt.Errorf("GetCodeblockDoc: %w", err)
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("GetCodeblockDoc: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("GetCodeblockDoc: response too short (%d bytes)", len(body))
+	}
+	userContent, agentContent := parseCodeblockDoc(body[5:])
+	if audience == "agent" {
+		return agentContent, nil
+	}
+	return userContent, nil
+}
+
+// ListCodeblockInstances lists installed instances for a block.
+func (s *ProductService) ListCodeblockInstances(blockId string) ([]CodeblockInstance, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	fm := marshalFieldMask([]string{
+		"name", "package", "state", "block", "block_version",
+		"create_time", "update_time", "entitlement",
+	})
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/"+blockId)
+	buf = protowire.AppendTag(buf, 4, protowire.BytesType) // field 4, not 2
+	buf = protowire.AppendBytes(buf, fm)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/ListInstances", buf)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblockInstances: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("ListCodeblockInstances: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("ListCodeblockInstances: response too short (%d bytes)", len(body))
+	}
+	return parseCodeblockInstancesResponse(body[5:]), nil
+}
+
+// GetCodeblockMembers fetches the IAM members for a block and resolves their avatar URLs.
+// It chains GetIamPolicy → BatchRetrieveMaskedUsers.
+func (s *ProductService) GetCodeblockMembers(blockId string) ([]CodeblockMember, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	// Step 1: GetIamPolicy to collect member IDs.
+	var req1 []byte
+	req1 = protowire.AppendTag(req1, 1, protowire.BytesType)
+	req1 = protowire.AppendString(req1, "blocks/"+blockId)
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel1()
+	body1, status1, msg1, err := s.doConsoleGRPCWeb(ctx1, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", req1)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers/GetIamPolicy: %w", err)
+	}
+	if status1 != 0 {
+		return nil, fmt.Errorf("GetCodeblockMembers/GetIamPolicy: grpc %d: %s", status1, msg1)
+	}
+	if len(body1) < 5 {
+		return nil, nil
+	}
+	members := parseIamPolicyMembers(body1[5:])
+	if len(members) == 0 {
+		return nil, nil
+	}
+
+	// Step 2: BatchRetrieveMaskedUsers for avatar URLs.
+	var req2 []byte
+	for _, m := range members {
+		req2 = protowire.AppendTag(req2, 1, protowire.BytesType)
+		req2 = protowire.AppendString(req2, m)
+	}
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel2()
+	body2, status2, msg2, err := s.doConsoleGRPCWeb(ctx2, "alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", req2)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers/BatchRetrieveMaskedUsers: %w", err)
+	}
+	if status2 != 0 {
+		return nil, fmt.Errorf("GetCodeblockMembers/BatchRetrieveMaskedUsers: grpc %d: %s", status2, msg2)
+	}
+	if len(body2) < 5 {
+		return nil, nil
+	}
+	return parseCodeblockMembers(body2[5:]), nil
 }
 
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
@@ -1906,4 +2101,519 @@ func parseBlockOverviewInto(data []byte, cb *Codeblock) {
 			}
 		}
 	}
+}
+
+// ── Codeblock detail parse helpers ───────────────────────────────────────────
+
+// parseCodeblockVersionsResponse parses a ListBlockVersions response body (after the 5-byte frame).
+// Outer field 1 = repeated BlockVersion.
+func parseCodeblockVersionsResponse(data []byte) []CodeblockVersion {
+	var versions []CodeblockVersion
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 {
+			v := parseCodeblockVersion(b)
+			if v.Name != "" {
+				versions = append(versions, v)
+			}
+		}
+	}
+	return versions
+}
+
+// parseCodeblockVersion parses one BlockVersion message.
+// Field numbers confirmed via live test dumps:
+// f1=name, f2=version_tag, f4=release_notes, f9=release_level(varint), f98=create_time, f99=update_time
+func parseCodeblockVersion(data []byte) CodeblockVersion {
+	var v CodeblockVersion
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			val, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return v
+			}
+			if num == 9 {
+				v.ReleaseLevel = int32(val)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return v
+			}
+			switch num {
+			case 1:
+				v.Name = string(b)
+				if i := strings.LastIndex(v.Name, "/"); i >= 0 {
+					v.VersionTag = v.Name[i+1:]
+				} else {
+					v.VersionTag = v.Name
+				}
+			case 2:
+				if v.VersionTag == "" {
+					v.VersionTag = string(b)
+				}
+			case 4:
+				v.ReleaseNotes = string(b)
+			case 98:
+				v.CreateTime = parseTimestamp(b)
+			case 99:
+				v.UpdateTime = parseTimestamp(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return v
+			}
+			data = data[m:]
+		}
+	}
+	return v
+}
+
+// parseCodeblockVersionFolder parses a file-tree folder sub-message within a BlockVersion.
+// The folder name is inferred from the field number (10=Proto, 11=Infra, 12=Build).
+func parseCodeblockVersionFolder(data []byte, fieldNum protowire.Number) CodeblockFolder {
+	folderNames := map[protowire.Number]string{
+		10: "Proto",
+		11: "Infra",
+		12: "Build",
+	}
+	folder := CodeblockFolder{Name: folderNames[fieldNum]}
+	if folder.Name == "" {
+		folder.Name = fmt.Sprintf("Field%d", fieldNum)
+	}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		// Each file entry: f1=filename, f2=content (or nested file message).
+		entry := parseCodeblockFileEntry(b)
+		if entry.Name != "" {
+			folder.Files = append(folder.Files, entry)
+		}
+	}
+	return folder
+}
+
+// parseCodeblockFileEntry parses one file entry (name + content).
+func parseCodeblockFileEntry(data []byte) CodeblockFileItem {
+	var item CodeblockFileItem
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		switch num {
+		case 1:
+			item.Name = string(b)
+		case 2:
+			item.Content = string(b)
+		}
+	}
+	return item
+}
+
+// parseTimestamp converts a google.protobuf.Timestamp (f1=seconds, f2=nanos) to RFC3339.
+func parseTimestamp(data []byte) string {
+	var sec int64
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.VarintType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		v, m := protowire.ConsumeVarint(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 {
+			sec = int64(v)
+		}
+	}
+	if sec == 0 {
+		return ""
+	}
+	return time.Unix(sec, 0).UTC().Format(time.RFC3339)
+}
+
+// parseCodeblockDoc parses a GetBlockVersion response and returns (userContent, agentContent).
+// The documentation sub-message is at field 8; inside: f1=user_content, f2=agent_content.
+func parseCodeblockDoc(data []byte) (string, string) {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 8 {
+			return parseDocSubMessage(b)
+		}
+	}
+	return "", ""
+}
+
+// parseDocSubMessage parses the Documentation sub-message (field 8 of BlockVersion).
+// Confirmed field layout (from live raw dumps):
+// f10 = user-readable content (Content sub-message: f2=markdown text)
+// f11 = agent-facing content (Content sub-message: f2=markdown text)
+func parseDocSubMessage(data []byte) (string, string) {
+	var user, agent string
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		switch num {
+		case 10:
+			user = extractContentText(b)
+		case 11:
+			agent = extractContentText(b)
+		}
+	}
+	return user, agent
+}
+
+// extractContentText extracts the markdown text (field 2) from a Content sub-message.
+func extractContentText(data []byte) string {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 2 {
+			return string(b)
+		}
+	}
+	return ""
+}
+
+// parseCodeblockInstancesResponse parses a ListInstances response body (after the 5-byte frame).
+// Outer field 1 = repeated Instance.
+func parseCodeblockInstancesResponse(data []byte) []CodeblockInstance {
+	var instances []CodeblockInstance
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 {
+			inst := parseCodeblockInstance(b)
+			if inst.Name != "" || inst.Package != "" {
+				instances = append(instances, inst)
+			}
+		}
+	}
+	return instances
+}
+
+// parseCodeblockInstance parses one Instance message.
+// Field numbers confirmed via live test dumps:
+// f1=name, f2=package, f3=block, f4=block_version, f7=state(varint), f11=entitlement, f98=create_time, f99=update_time
+func parseCodeblockInstance(data []byte) CodeblockInstance {
+	var inst CodeblockInstance
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return inst
+			}
+			if num == 7 {
+				inst.State = int32(v)
+			}
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return inst
+			}
+			switch num {
+			case 1:
+				inst.Name = string(b)
+				if i := strings.LastIndex(inst.Name, "/"); i >= 0 {
+					inst.ShortID = inst.Name[i+1:]
+				}
+			case 2:
+				inst.Package = string(b)
+			case 3:
+				inst.Block = string(b)
+			case 4:
+				inst.BlockVersion = string(b)
+			case 11:
+				inst.Entitlement = string(b)
+			case 98:
+				inst.CreateTime = parseTimestamp(b)
+			case 99:
+				inst.UpdateTime = parseTimestamp(b)
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return inst
+			}
+			data = data[m:]
+		}
+	}
+	return inst
+}
+
+// parseIamPolicyMembers extracts unique user member IDs from a GetIamPolicy response.
+// Returns resource names like "users/12345..." (with "user:" prefix stripped).
+// Uses the same google.iam.v1.Policy structure as parseIamPolicy in sharepage.go:
+// f4=repeated Binding (f1=role, f2=repeated member string).
+func parseIamPolicyMembers(data []byte) []string {
+	seen := map[string]bool{}
+	var result []string
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 4 {
+			continue
+		}
+		// Parse binding sub-message.
+		inner := b
+		for len(inner) > 0 {
+			fn, ft, fn2 := protowire.ConsumeTag(inner)
+			if fn2 < 0 {
+				break
+			}
+			inner = inner[fn2:]
+			if ft != protowire.BytesType {
+				m2 := protowire.ConsumeFieldValue(fn, ft, inner)
+				if m2 < 0 {
+					break
+				}
+				inner = inner[m2:]
+				continue
+			}
+			bv, m2 := protowire.ConsumeBytes(inner)
+			if m2 < 0 {
+				break
+			}
+			inner = inner[m2:]
+			if fn != 2 {
+				continue
+			}
+			member := string(bv)
+			if strings.HasPrefix(member, "user:") {
+				uid := strings.TrimPrefix(member, "user:")
+				userRes := "users/" + uid
+				if !seen[userRes] {
+					seen[userRes] = true
+					result = append(result, userRes)
+				}
+			}
+		}
+	}
+	return result
+}
+
+// parseCodeblockMembers parses a BatchRetrieveMaskedUsers response into CodeblockMember slice.
+// f1=repeated MaskedUser (f1=name, f2=display_name, f3=photo_url).
+func parseCodeblockMembers(data []byte) []CodeblockMember {
+	var members []CodeblockMember
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 1 {
+			continue
+		}
+		member := parseOneCodeblockMember(b)
+		if member.Name != "" || member.DisplayName != "" {
+			members = append(members, member)
+		}
+	}
+	return members
+}
+
+func parseOneCodeblockMember(data []byte) CodeblockMember {
+	var m CodeblockMember
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			mv := protowire.ConsumeFieldValue(num, typ, data)
+			if mv < 0 {
+				break
+			}
+			data = data[mv:]
+			continue
+		}
+		b, mv := protowire.ConsumeBytes(data)
+		if mv < 0 {
+			break
+		}
+		data = data[mv:]
+		// Field numbers match parseMaskedUser in sharepage.go (verified working).
+		switch num {
+		case 1:
+			m.Name = string(b)
+		case 7:
+			m.DisplayName = strings.TrimSpace(string(b) + " " + m.DisplayName)
+		case 8:
+			m.DisplayName = strings.TrimSpace(m.DisplayName + " " + string(b))
+		case 9:
+			m.PhotoURL = string(b)
+		}
+	}
+	return m
 }
