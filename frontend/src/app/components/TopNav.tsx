@@ -48,6 +48,7 @@ const tabs = [
   { id: 'agents', label: 'Agents', icon: <Icon icon="solar:users-group-two-rounded-linear" className="text-lg" /> },
   { id: 'codeblocks', label: 'Codeblocks', icon: <Icon icon="solar:code-linear" className="text-lg" /> },
   { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-launch-linear" className="text-lg" /> },
+  { id: 'learn', label: 'Learn', icon: <Icon icon="solar:diploma-linear" className="text-lg" /> },
 ];
 
 export function TopNav() {

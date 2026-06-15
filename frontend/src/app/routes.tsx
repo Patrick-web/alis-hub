@@ -28,6 +28,7 @@ import { BuildKitPluginsPage } from "./pages/BuildKitPluginsPage";
 import { BuildKitPrivateGitPage } from "./pages/BuildKitPrivateGitPage";
 import { BuildKitMcpServerPage } from "./pages/BuildKitMcpServerPage";
 import { BuildKitGlassModePage } from "./pages/BuildKitGlassModePage";
+import { LearnPage } from "./pages/LearnPage";
 
 export const router = createBrowserRouter([
   {
@@ -47,6 +48,7 @@ export const router = createBrowserRouter([
       { path: "codeblocks", Component: CodeblocksPage },
       { path: "codeblocks/create", Component: CodeblockCreatePage },
       { path: "codeblocks/:id", Component: CodeblockDetailsPage },
+      { path: "codeblocks/:id/:tab", Component: CodeblockDetailsPage },
       { path: "buildkit", Component: BuildKitPage },
       { path: "buildkit/custom-apis", Component: BuildKitCustomApisPage },
       { path: "buildkit/agent", Component: BuildKitAgentPage },
@@ -63,6 +65,7 @@ export const router = createBrowserRouter([
       { path: "buildkit/private-git", Component: BuildKitPrivateGitPage },
       { path: "buildkit/mcp-server", Component: BuildKitMcpServerPage },
       { path: "buildkit/glass-mode", Component: BuildKitGlassModePage },
+      { path: "learn", Component: LearnPage },
     ],
   },
 ]);
