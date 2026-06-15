@@ -225,11 +225,11 @@ export function EnvironmentsPage() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="font-['JetBrains_Mono',sans-serif] text-[9px] font-bold uppercase text-[#4CAF50] border border-[#4CAF50] px-[6px] py-[2px] rounded-[3px] cursor-default select-none opacity-70">
-                    Shared
+                    Present
                   </span>
                 </TooltipTrigger>
                 <TooltipContent className="bg-[#2c2c2c] border border-[#464646] text-white font-['JetBrains_Mono',sans-serif] text-[10px] rounded-[4px] px-[10px] py-[6px]">
-                  Shared across all environments
+                  Present in all environments
                 </TooltipContent>
               </Tooltip>
             ) : (
