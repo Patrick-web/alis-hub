@@ -172,16 +172,12 @@ func pickAsset(assets []githubAsset) (*githubAsset, error) {
 }
 
 // DownloadUpdate pulls the appropriate artifact for this platform, extracts
-// it to a temp directory, and stashes the resulting .app path. Progress is
+// it to a temp directory, and stashes the resulting path. Progress is
 // reported over the "update:progress" event every ~100ms.
 //
-// Returns the path to the extracted .app (macOS) or the binary (Linux).
-// Windows is not yet supported end-to-end — falls back to the release URL.
+// Returns the path to the extracted .app (macOS), directory (Linux), or
+// .exe (Windows).
 func (s *Service) DownloadUpdate() (string, error) {
-	if runtime.GOOS == "windows" {
-		return releaseURL, fmt.Errorf("auto-download not supported on Windows — opening release page")
-	}
-
 	rel, err := fetchLatestRelease()
 	if err != nil {
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
@@ -230,6 +226,18 @@ func (s *Service) DownloadUpdate() (string, error) {
 			return "", fmt.Errorf("untar: %w", err)
 		}
 		newPath = extractDir
+	case "windows":
+		if err := unzip(archivePath, extractDir); err != nil {
+			_ = os.RemoveAll(tmpDir)
+			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+			return "", fmt.Errorf("unzip: %w", err)
+		}
+		newPath, err = findWindowsExe(extractDir)
+		if err != nil {
+			_ = os.RemoveAll(tmpDir)
+			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+			return "", err
+		}
 	}
 
 	s.mu.Lock()
@@ -294,7 +302,7 @@ func (s *Service) downloadFile(url, dst string, expectedSize int64) error {
 }
 
 // ApplyUpdate swaps the running bundle/binary with the staged one and
-// relaunches. macOS only for now; other platforms return an error.
+// relaunches. Supported on macOS and Windows; Linux returns an error.
 func (s *Service) ApplyUpdate() error {
 	s.mu.Lock()
 	staged := s.staged
@@ -306,6 +314,8 @@ func (s *Service) ApplyUpdate() error {
 	switch runtime.GOOS {
 	case "darwin":
 		return s.applyDarwin(staged)
+	case "windows":
+		return s.applyWindows(staged)
 	default:
 		return fmt.Errorf("auto-apply not supported on %s", runtime.GOOS)
 	}
@@ -350,6 +360,60 @@ open "$OLD"
 	}
 
 	cmd := exec.Command("/bin/bash", scriptPath)
+	detachCmd(cmd)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start relauncher: %w", err)
+	}
+
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		s.mu.Lock()
+		app := s.app
+		s.mu.Unlock()
+		if app != nil {
+			app.Quit()
+		} else {
+			os.Exit(0)
+		}
+	}()
+	return nil
+}
+
+func (s *Service) applyWindows(newExePath string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exe, _ = filepath.EvalSymlinks(exe)
+
+	pid := os.Getpid()
+
+	// Escape single quotes so the paths are safe inside PS single-quoted strings.
+	escapedOld := strings.ReplaceAll(exe, "'", "''")
+	escapedNew := strings.ReplaceAll(newExePath, "'", "''")
+
+	scriptPath := filepath.Join(filepath.Dir(newExePath), "alishub-relaunch.ps1")
+	script := fmt.Sprintf(`
+$pidToWait = %d
+$oldExe = '%s'
+$newExe = '%s'
+for ($i = 0; $i -lt 100; $i++) {
+    if (-not (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue)) { break }
+    Start-Sleep -Milliseconds 200
+}
+Start-Sleep -Milliseconds 500
+Remove-Item -Force $oldExe -ErrorAction SilentlyContinue
+Move-Item -Force $newExe $oldExe
+Start-Process $oldExe
+`, pid, escapedOld, escapedNew)
+
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		return fmt.Errorf("write relaunch script: %w", err)
+	}
+
+	cmd := exec.Command("powershell.exe", "-WindowStyle", "Hidden", "-NonInteractive", "-File", scriptPath)
 	detachCmd(cmd)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -454,6 +518,23 @@ func untarGz(archive, dst string) error {
 		return fmt.Errorf("tar: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
+}
+
+func findWindowsExe(dir string) (string, error) {
+	var found string
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || found != "" {
+			return nil
+		}
+		if strings.HasSuffix(strings.ToLower(info.Name()), ".exe") {
+			found = path
+		}
+		return nil
+	})
+	if found == "" {
+		return "", fmt.Errorf("no .exe found in extracted archive")
+	}
+	return found, nil
 }
 
 func findAppBundle(dir string) (string, error) {
