@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
-import { Dropdown } from './Dropdown';
 import { useWorkspace } from '../stores/workspace';
 import { Events, Window } from '@wailsio/runtime';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 import { ProfileModal } from './ProfileModal';
+import { Dialog, DialogContent } from './ui/dialog';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 interface UpdateInfo {
@@ -61,6 +61,7 @@ export function TopNav() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarName, setAvatarName] = useState('');
   const [avatarImgError, setAvatarImgError] = useState(false);
+  const [envModalOpen, setEnvModalOpen] = useState(false);
 
   useEffect(() => {
     const off = Events.On('update:available', (ev) => {
@@ -121,7 +122,6 @@ export function TopNav() {
 
   const getActiveTab = () => {
     const path = location.pathname.split('/')[1] || 'about';
-    if (path === 'services') return 'develop';
     return path;
   };
 
@@ -195,17 +195,25 @@ export function TopNav() {
 
       {/* Right: Environment + Profile + Update badge */}
       <div className="flex items-center h-full px-[10px] gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <Dropdown
-          label={activeEnvDisplay}
-          options={state.loadedEnvs.map(e => e.displayName)}
-          loading={envsLoading}
-          error={state.envsError}
-          onSelect={(displayName) => {
-            const env = state.loadedEnvs.find(e => e.displayName === displayName);
-            if (env) setActiveEnv(env.name);
-          }}
-          onSettingsClick={() => navigate('/environments')}
-        />
+        {/* Environment picker — opens modal */}
+        <div className="content-stretch flex h-full items-center shrink-0">
+          <button
+            onClick={() => setEnvModalOpen(true)}
+            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-[#464646]"
+          >
+            <p className="font-['JetBrains_Mono',sans-serif] leading-normal not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
+              {activeEnvDisplay}
+            </p>
+            <Icon icon="solar:alt-arrow-down-linear" className="text-white text-xs opacity-50" />
+          </button>
+          <button
+            onClick={() => navigate('/environments')}
+            className="h-full border-l border-[#464646] flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+          >
+            <Icon icon="solar:settings-linear" className="text-white text-base opacity-70" />
+          </button>
+        </div>
+
         <div className="h-full w-px bg-[#464646]" />
         {pendingUpdate && (
           <button
@@ -252,6 +260,52 @@ export function TopNav() {
       )}
 
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
+
+      {/* Environment picker modal */}
+      <Dialog open={envModalOpen} onOpenChange={setEnvModalOpen}>
+        <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 max-w-[360px] overflow-hidden">
+          <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-[#464646]">
+            <Icon icon="solar:server-linear" className="text-[#f881a9] text-lg" />
+            <span className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">Environment</span>
+          </div>
+          <div className="py-[6px]">
+            {envsLoading ? (
+              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">Loading…</p>
+            ) : state.envsError ? (
+              <p className="px-[16px] py-[12px] text-[11px] text-[#ff5c5f] font-['JetBrains_Mono',sans-serif]">Session expired — sign in again via your profile.</p>
+            ) : state.loadedEnvs.length === 0 ? (
+              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">No environments</p>
+            ) : (
+              state.loadedEnvs.map((env) => {
+                const isActive = env.name === state.activeEnvName;
+                return (
+                  <button
+                    key={env.name}
+                    onClick={() => { setActiveEnv(env.name); setEnvModalOpen(false); }}
+                    className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
+                      isActive
+                        ? 'bg-[rgba(248,129,169,0.08)] text-[#f881a9]'
+                        : 'text-white hover:bg-[rgba(255,255,255,0.04)]'
+                    }`}
+                  >
+                    <span className="text-[12px] font-['JetBrains_Mono',sans-serif]">{env.displayName}</span>
+                    {isActive && <Icon icon="solar:check-circle-bold" className="text-[#f881a9] text-base shrink-0" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className="border-t border-[#464646] px-[16px] py-[10px]">
+            <button
+              onClick={() => { setEnvModalOpen(false); navigate('/environments'); }}
+              className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif]"
+            >
+              <Icon icon="solar:settings-linear" className="text-sm" />
+              Manage environments
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
