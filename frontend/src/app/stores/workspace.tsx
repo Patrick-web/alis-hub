@@ -51,6 +51,7 @@ export interface WorkspaceState {
   activeNeuronIds: string[];
   loadedEnvs: LoadedEnv[];
   activeEnvName: string;
+  envsError: string | null;
 }
 
 type WorkspaceAction =
@@ -91,6 +92,7 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         activeNeuronIds: [],
         loadedEnvs: [],
         activeEnvName: '',
+        envsError: null,
       };
     case 'SET_NEURONS':
       return { ...state, neurons: action.payload };
@@ -126,6 +128,7 @@ const initialState: WorkspaceState = {
   environments: [],
   loadedEnvs: [],
   activeEnvName: '',
+  envsError: null,
 };
 
 interface WorkspaceContextValue {

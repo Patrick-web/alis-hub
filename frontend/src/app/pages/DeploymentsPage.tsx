@@ -11,7 +11,6 @@ import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerm
 import { useWorkspace } from '../stores/workspace';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 type StageId = 'overview' | 'quickstart' | 'define' | 'build' | 'deploy' | 'playground';
 
@@ -37,8 +36,6 @@ export function DeploymentsPage() {
   const [, setSelectedVersion] = useState('v1');
   const [defineUpdated, setDefineUpdated] = useState(false);
   // Deploy stage state
-  const [environments, setEnvironments] = useState<{ name: string; displayName: string }[]>([]);
-  const [envsLoading, setEnvsLoading] = useState(false);
   const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
   const [deployVersion, setDeployVersion] = useState('');
   const [planOnly, setPlanOnly] = useState(false);
@@ -153,19 +150,6 @@ export function DeploymentsPage() {
     }
   };
 
-  const loadEnvironments = useCallback(async () => {
-    if (environments.length > 0) return;
-    setEnvsLoading(true);
-    try {
-      const envs = await ProductService.ListEnvironments(state.organisation, state.product);
-      setEnvironments(envs.map(e => ({ name: e.name, displayName: e.displayName })));
-    } catch (err) {
-      console.error('Failed to load environments:', err);
-    } finally {
-      setEnvsLoading(false);
-    }
-  }, [state.organisation, state.product, environments.length]);
-
   const handleRunDeploy = async () => {
     if (!selectedNeuron || selectedEnvs.length === 0) return;
     const parsed = parseNeuron(selectedNeuron);
@@ -196,11 +180,6 @@ export function DeploymentsPage() {
     }
   }, [preselectedNeuron, activeStage]);
 
-  useEffect(() => {
-    if (activeStage === 'deploy') {
-      loadEnvironments();
-    }
-  }, [activeStage]);
 
   useEffect(() => {
     if (!deployResult || deployResult.done) return;
@@ -684,22 +663,16 @@ export function DeploymentsPage() {
               )}
 
               <StageCard title="Select Environments" step={1} className="mb-[16px]">
-                {envsLoading ? (
+                {state.loadedEnvs.length === 0 && !state.envsError ? (
                   <div className="flex items-center gap-[8px]">
                     <Loader size={20} />
                     <span className="text-[11px] text-[rgba(255,255,255,0.7)]">Loading environments...</span>
                   </div>
-                ) : environments.length === 0 ? (
-                  <div>
-                    <p className="text-[11px] text-[rgba(255,255,255,0.5)] mb-[8px]">No environments found.</p>
-                    <Button variant="secondary" className="px-[12px]" onClick={loadEnvironments}>
-                      <Icon icon="solar:refresh-linear" className="text-base mr-[4px]" />
-                      Refresh
-                    </Button>
-                  </div>
+                ) : state.envsError ? (
+                  <p className="text-[11px] text-[rgba(255,255,255,0.5)]">{state.envsError}</p>
                 ) : (
                   <div className="flex flex-wrap gap-[8px]">
-                    {environments.map((env) => (
+                    {state.loadedEnvs.map((env) => (
                       <button
                         key={env.name}
                         onClick={() => setSelectedEnvs(prev =>

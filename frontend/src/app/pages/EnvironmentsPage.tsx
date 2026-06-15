@@ -24,11 +24,10 @@ interface EnvVar {
 }
 
 export function EnvironmentsPage() {
-  const { state, setLoadedEnvs, setActiveEnv } = useWorkspace();
+  const { state } = useWorkspace();
   const [filterText, setFilterText] = useState('');
   const [vars, setVars] = useState<EnvVar[]>([]);
   const [loading, setLoading] = useState(false);
-  const [envsLoading, setEnvsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,32 +45,6 @@ export function EnvironmentsPage() {
 
   // Duplicate modal state
   const [duplicateVar, setDuplicateVar] = useState<EnvVar | null>(null);
-
-  // Load environment list on mount if not already loaded
-  useEffect(() => {
-    if (state.loadedEnvs.length > 0 || envsLoading) return;
-    if (!state.organisation || !state.product) return;
-
-    setEnvsLoading(true);
-    (ProductService.ListEnvironments as (org: string, product: string) => Promise<any[]>)(
-      state.organisation,
-      state.product
-    )
-      .then((envs) => {
-        const loaded = envs.map((e: any) => ({
-          name: e.name as string,
-          displayName: e.displayName as string,
-          state: e.state as number,
-          envType: e.envType as number,
-        }));
-        setLoadedEnvs(loaded);
-        if (!state.activeEnvName && loaded.length > 0) {
-          setActiveEnv(loaded[0].name);
-        }
-      })
-      .catch((err) => setError(String(err)))
-      .finally(() => setEnvsLoading(false));
-  }, [state.organisation, state.product]);
 
   // Load variables whenever selected environment changes
   const loadVariables = useCallback((envName: string) => {
@@ -258,13 +231,13 @@ export function EnvironmentsPage() {
 
       {/* Table Content */}
       <div className="flex-1 overflow-hidden">
-        {loading || envsLoading ? (
+        {loading || (state.loadedEnvs.length === 0 && !state.envsError) ? (
           <div className="flex items-center justify-center h-full">
             <Loader />
           </div>
-        ) : error ? (
+        ) : state.envsError || error ? (
           <div className="flex items-center justify-center h-full px-[20px]">
-            <p className="text-[12px] text-[rgba(255,255,255,0.4)] text-center">{error}</p>
+            <p className="text-[12px] text-[rgba(255,255,255,0.4)] text-center">{state.envsError ?? error}</p>
           </div>
         ) : (
           <Table

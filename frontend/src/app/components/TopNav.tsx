@@ -54,7 +54,7 @@ const tabs = [
 export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { state, setPhase, setLoadedEnvs, setActiveEnv } = useWorkspace();
+  const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
   const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -79,14 +79,13 @@ export function TopNav() {
   }, []);
 
   const [envsLoading, setEnvsLoading] = useState(false);
-  const [envsError, setEnvsError] = useState<string | null>(null);
   const envsLoadingRef = useRef(false);
   useEffect(() => {
     if (!state.organisation || !state.product) return;
     if (state.loadedEnvs.length > 0 || envsLoadingRef.current) return;
     envsLoadingRef.current = true;
     setEnvsLoading(true);
-    setEnvsError(null);
+    updateWorkspace({ envsError: null });
     (ProductService.ListEnvironments as (org: string, product: string) => Promise<any[]>)(
       state.organisation,
       state.product,
@@ -95,9 +94,28 @@ export function TopNav() {
       setLoadedEnvs(loaded);
       if (!state.activeEnvName && loaded.length > 0) setActiveEnv(loaded[0].name);
     }).catch((err) => {
-      setEnvsError(String(err));
+      updateWorkspace({ envsError: String(err) });
     }).finally(() => { envsLoadingRef.current = false; setEnvsLoading(false); });
   }, [state.organisation, state.product, state.loadedEnvs.length]);
+
+  const neuronsLoadingRef = useRef(false);
+  useEffect(() => {
+    if (!state.organisation || !state.product) return;
+    if (state.neurons.length > 0 || neuronsLoadingRef.current) return;
+    neuronsLoadingRef.current = true;
+    (ProductService.GetServicesOverview as (org: string, product: string) => Promise<any>)(
+      state.organisation,
+      state.product,
+    ).then((overview) => {
+      if (overview?.neurons?.length) {
+        const loaded = overview.neurons.map((n: any) => ({
+          id: n.id, name: n.id, type: 2, state: n.state, latestBuild: n.version, envs: [],
+        }));
+        setNeurons(loaded);
+      }
+    }).catch(() => {})
+    .finally(() => { neuronsLoadingRef.current = false; });
+  }, [state.organisation, state.product, state.neurons.length]);
 
   const activeEnvDisplay = state.loadedEnvs.find(e => e.name === state.activeEnvName)?.displayName ?? 'Environment';
 
@@ -181,7 +199,7 @@ export function TopNav() {
           label={activeEnvDisplay}
           options={state.loadedEnvs.map(e => e.displayName)}
           loading={envsLoading}
-          error={envsError}
+          error={state.envsError}
           onSelect={(displayName) => {
             const env = state.loadedEnvs.find(e => e.displayName === displayName);
             if (env) setActiveEnv(env.name);
