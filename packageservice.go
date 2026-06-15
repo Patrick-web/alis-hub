@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/creack/pty"
+	"alis-hub-v3/internal/terminal"
 )
 
 // PackageService orchestrates the Manage Packages flow: scan → GeneratePackageScripts → run scripts.
@@ -26,7 +26,7 @@ type packageProcess struct {
 	done   bool
 	errMsg string
 	cancel context.CancelFunc
-	ptmx   *os.File // PTY master — nil once the process has exited
+	ptmx   terminal.PTY // nil once the process has exited
 }
 
 func NewPackageService() *PackageService {
@@ -163,16 +163,11 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 	go func() {
 		defer cancel()
 
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			shell = "/bin/bash"
-		}
-		// Start a persistent interactive login shell. The command is sent as
-		// input after a brief delay (matching VS Code's terminal.sendText).
-		cmd := exec.Command(shell, "-l")
+		shellBin, shellArgs := platformShell()
+		cmd := exec.Command(shellBin, shellArgs...)
 		cmd.Dir = workDir
 
-		ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 220})
+		ptmx, err := terminal.Start(cmd, 24, 220)
 		if err != nil {
 			p.mu.Lock()
 			p.done = true
@@ -269,10 +264,7 @@ func (s *PackageService) ResizePackageTerminal(runID string, cols, rows int) err
 	if ptmx == nil {
 		return nil
 	}
-	return pty.Setsize(ptmx, &pty.Winsize{
-		Rows: uint16(rows),
-		Cols: uint16(cols),
-	})
+	return ptmx.Resize(uint16(rows), uint16(cols))
 }
 
 // PollPackageRun returns new output since offset. Reuses LocalBuildChunk from buildservice.

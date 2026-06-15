@@ -13,11 +13,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/creack/pty"
+	"alis-hub-v3/internal/terminal"
 )
 
 // GCloudService exposes GCP REST API tools to the frontend.
@@ -81,7 +82,7 @@ type setupProcess struct {
 	done   bool
 	errMsg string
 	cancel context.CancelFunc
-	ptmx   *os.File
+	ptmx   terminal.PTY
 }
 
 type SetupChunk struct {
@@ -105,14 +106,11 @@ func (g *GCloudService) StartSetupSession(runID, command string) error {
 	go func() {
 		defer cancel()
 
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			shell = "/bin/bash"
-		}
-		cmd := exec.Command(shell, "-l")
+		shellBin, shellArgs := platformShell()
+		cmd := exec.Command(shellBin, shellArgs...)
 		cmd.Dir = home
 
-		ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 220})
+		ptmx, err := terminal.Start(cmd, 24, 220)
 		if err != nil {
 			p.mu.Lock()
 			p.done = true
@@ -211,10 +209,7 @@ func (g *GCloudService) ResizeSetupTerminal(runID string, cols, rows int) error 
 	if ptmx == nil {
 		return nil
 	}
-	return pty.Setsize(ptmx, &pty.Winsize{
-		Rows: uint16(rows),
-		Cols: uint16(cols),
-	})
+	return ptmx.Resize(uint16(rows), uint16(cols))
 }
 
 // PollSetupOutput returns new terminal output since offset.
@@ -258,23 +253,46 @@ func NewGCloudService() *GCloudService {
 	return &GCloudService{}
 }
 
-// gcloudBin finds the gcloud binary, checking common macOS install locations
-// since desktop apps don't inherit the shell's PATH.
+// gcloudBin finds the gcloud binary. Desktop apps don't inherit the shell's
+// PATH, so we probe common install locations per platform.
 func gcloudBin() (string, error) {
-	// Direct lookup (works if PATH is set correctly)
 	if path, err := exec.LookPath("gcloud"); err == nil {
 		return path, nil
 	}
-	home, _ := os.UserHomeDir()
-	candidates := []string{
-		filepath.Join(home, "google-cloud-sdk", "bin", "gcloud"),
-		filepath.Join(home, "Downloads", "google-cloud-sdk", "bin", "gcloud"),
-		"/usr/local/bin/gcloud",
-		"/opt/homebrew/bin/gcloud",
-		"/opt/homebrew/share/google-cloud-sdk/bin/gcloud",
-		"/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gcloud",
-		"/usr/local/google-cloud-sdk/bin/gcloud",
+	// On Windows gcloud is a .cmd wrapper; LookPath may miss it if PATHEXT
+	// is not set, so try explicitly.
+	if runtime.GOOS == "windows" {
+		if path, err := exec.LookPath("gcloud.cmd"); err == nil {
+			return path, nil
+		}
 	}
+
+	home, _ := os.UserHomeDir()
+	var candidates []string
+
+	if runtime.GOOS == "windows" {
+		localAppData := os.Getenv("LOCALAPPDATA")
+		programFiles := os.Getenv("ProgramFiles")
+		programFilesX86 := os.Getenv("ProgramFiles(x86)")
+		candidates = []string{
+			filepath.Join(localAppData, "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd"),
+			filepath.Join(programFiles, "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd"),
+			filepath.Join(programFilesX86, "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd"),
+			filepath.Join(home, "AppData", "Local", "Google", "Cloud SDK", "google-cloud-sdk", "bin", "gcloud.cmd"),
+			filepath.Join(home, "google-cloud-sdk", "bin", "gcloud.cmd"),
+		}
+	} else {
+		candidates = []string{
+			filepath.Join(home, "google-cloud-sdk", "bin", "gcloud"),
+			filepath.Join(home, "Downloads", "google-cloud-sdk", "bin", "gcloud"),
+			"/usr/local/bin/gcloud",
+			"/opt/homebrew/bin/gcloud",
+			"/opt/homebrew/share/google-cloud-sdk/bin/gcloud",
+			"/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin/gcloud",
+			"/usr/local/google-cloud-sdk/bin/gcloud",
+		}
+	}
+
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
 			return p, nil
