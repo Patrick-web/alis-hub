@@ -1493,3 +1493,15 @@ func tryParseSubMessage(data []byte) string {
 	}
 	return strings.Join(parts, " ")
 }
+
+func TestGetWorkstationURI(t *testing.T) {
+	svc := NewProductService()
+	uri, err := svc.GetWorkstationURI()
+	if err != nil {
+		t.Fatalf("GetWorkstationURI: %v", err)
+	}
+	t.Logf("Workstation URI: %q", uri)
+	if uri == "" {
+		t.Log("(empty — workstation may still be provisioning)")
+	}
+}

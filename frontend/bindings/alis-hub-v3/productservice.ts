@@ -128,6 +128,14 @@ export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null
 }
 
 /**
+ * GetWorkstationURI returns the web IDE URI for the current user's workstation.
+ * Returns "" (no error) if the workstation is still being provisioned or is unavailable.
+ */
+export function GetWorkstationURI(): $CancellablePromise<string> {
+    return $Call.ByID(1516947257);
+}
+
+/**
  * IsLoggedIn returns true when console credentials exist.
  */
 export function IsLoggedIn(): $CancellablePromise<boolean> {
@@ -206,6 +214,15 @@ export function Logout(): $CancellablePromise<void> {
  */
 export function OpenForgejoWindow(repoURL: string): $CancellablePromise<void> {
     return $Call.ByID(3555025818, repoURL);
+}
+
+/**
+ * OpenInIDE opens the product in the specified IDE.
+ * ide must be "web", "vscode", or "cursor".
+ * productName is the full resource name, e.g. "organisations/voyage/products/vp".
+ */
+export function OpenInIDE(productName: string, ide: string): $CancellablePromise<void> {
+    return $Call.ByID(3656788695, productName, ide);
 }
 
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
