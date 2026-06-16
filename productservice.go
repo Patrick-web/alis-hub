@@ -190,6 +190,16 @@ type CodeblockMember struct {
 	PhotoURL    string `json:"photoUrl"`
 }
 
+type ContributeBlockParams struct {
+	BlockID      string              `json:"blockId"`
+	VersionTag   string              `json:"versionTag"`
+	ReleaseNotes string              `json:"releaseNotes"`
+	ReleaseLevel int32               `json:"releaseLevel"` // 3=EXPERIMENTAL,6=ALPHA,9=BETA,12=RC,99=GA
+	ProtoFiles   []CodeblockFileItem `json:"protoFiles"`
+	InfraFiles   []CodeblockFileItem `json:"infraFiles"`
+	BuildFiles   []CodeblockFileItem `json:"buildFiles"`
+}
+
 type CreateCodeblockParams struct {
 	BlockID          string             `json:"blockId"`
 	DisplayName      string             `json:"displayName"`
@@ -1059,6 +1069,31 @@ func (s *ProductService) GetCodeblockDoc(versionName, audience string) (string, 
 	return userContent, nil
 }
 
+// GetCodeblockVersion returns full details for a block version including files.
+// versionName is the resource name, e.g. "blocks/bb6b/versions/1.0.0-experimental1".
+func (s *ProductService) GetCodeblockVersion(versionName string) (*CodeblockVersion, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, versionName)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockVersion: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("GetCodeblockVersion: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("GetCodeblockVersion: response too short (%d bytes)", len(body))
+	}
+	v := parseCodeblockVersion(body[5:])
+	return &v, nil
+}
+
 // ListCodeblockInstances lists installed instances for a block.
 func (s *ProductService) ListCodeblockInstances(blockId string) ([]CodeblockInstance, error) {
 	if err := s.initTokens(); err != nil {
@@ -1258,18 +1293,28 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 		return nil, fmt.Errorf("DoInstallBlock: add block: %w", err)
 	}
 
-	// Step 4: InstallBlock — runs the deployment pipeline (returns an LRO).
+	// Step 4: Resolve block version — BlocksService/InstallBlock requires it.
+	blockVersion := params.BlockVersion
+	if blockVersion == "" {
+		versions, vErr := s.ListCodeblockVersions(params.BlockID)
+		if vErr != nil || len(versions) == 0 {
+			return nil, fmt.Errorf("DoInstallBlock: could not resolve latest block version: %v", vErr)
+		}
+		blockVersion = versions[0].Name
+	}
+
+	// Step 5: InstallBlock — runs the deployment pipeline (returns an LRO).
 	buildFolder := params.BuildFolder
 	if buildFolder == "" {
 		buildFolder = "./"
 	}
-	opName, err := s.installBlockLRO(ctx, instanceName, buildFolder, params.BlockVersion)
+	opName, err := s.installBlockLRO(ctx, params.BlockID, params.Package, instanceName, buildFolder, blockVersion)
 	if err != nil {
 		return nil, fmt.Errorf("DoInstallBlock: install block: %w", err)
 	}
 
 	// Step 5: Poll the install operation until done; capture the final response data.
-	opData, err := s.pollOperation(ctx, opName)
+	opData, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
 	if err != nil {
 		return nil, fmt.Errorf("DoInstallBlock: operation failed: %w", err)
 	}
@@ -1375,26 +1420,25 @@ func (s *ProductService) addBlock(ctx context.Context, blockId, pkg, entitlement
 	return name, nil
 }
 
-func (s *ProductService) installBlockLRO(ctx context.Context, instanceName, buildFolder, blockVersion string) (string, error) {
+func (s *ProductService) installBlockLRO(ctx context.Context, blockId, pkg, instanceName, buildFolder, blockVersion string) (string, error) {
+	// BlocksService/InstallBlock: f1=block, f2=package, f3=build_folder, f4=instance, f5=block_version
 	var buf []byte
 	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
+	buf = protowire.AppendString(buf, "blocks/"+blockId)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendString(buf, pkg)
 	if buildFolder != "" {
-		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
 		buf = protowire.AppendString(buf, buildFolder)
 	}
+	buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+	buf = protowire.AppendString(buf, instanceName)
 	if blockVersion != "" {
-		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
+		buf = protowire.AppendTag(buf, 5, protowire.BytesType)
 		buf = protowire.AppendString(buf, blockVersion)
 	}
-	// field 4 = blockConfig sub-message: field 1 = architecture = 1 (GO_ADK)
-	var cfgBuf []byte
-	cfgBuf = protowire.AppendTag(cfgBuf, 1, protowire.VarintType)
-	cfgBuf = protowire.AppendVarint(cfgBuf, 1)
-	buf = protowire.AppendTag(buf, 4, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, cfgBuf)
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.agents.v1.AgentsService/InstallBlock", buf)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/InstallBlock", buf)
 	if err != nil {
 		return "", err
 	}
@@ -1415,7 +1459,9 @@ func (s *ProductService) installBlockLRO(ctx context.Context, instanceName, buil
 // pollOperation polls until the LRO is done and returns the raw proto bytes of the
 // final Operation (after the 5-byte gRPC frame header). Returns an error if the
 // operation fails or the context times out.
-func (s *ProductService) pollOperation(ctx context.Context, opName string) ([]byte, error) {
+// method is the full gRPC method path for GetOperation on the relevant service,
+// e.g. "alis.bl.blocks.v1.BlocksService/GetOperation" or "google.longrunning.Operations/GetOperation".
+func (s *ProductService) pollOperation(ctx context.Context, method string, opName string) ([]byte, error) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -1424,7 +1470,7 @@ func (s *ProductService) pollOperation(ctx context.Context, opName string) ([]by
 		}
 
 		body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
-			"google.longrunning.Operations/GetOperation", marshalGetOperationRequest(opName))
+			method, marshalGetOperationRequest(opName))
 		if err != nil {
 			return nil, fmt.Errorf("GetOperation: %w", err)
 		}
@@ -1469,7 +1515,7 @@ func (s *ProductService) mergeBlockBranch(ctx context.Context, instanceName stri
 	if opName == "" {
 		return fmt.Errorf("empty operation name in MergeBlockBranch response")
 	}
-	_, err = s.pollOperation(ctx, opName)
+	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
 	return err
 }
 
@@ -1684,6 +1730,8 @@ func parseInstallNeuronsResponse(data []byte) []InstallNeuron {
 }
 
 func parseInstallNeuron(data []byte) InstallNeuron {
+	// Neuron proto fields: f1=name, f2=version, f3=build_commit, f4=package,
+	// f5=latest_version_state(enum), f6=last_version_logs_uri. No display_name field.
 	var n InstallNeuron
 	for len(data) > 0 {
 		num, typ, nn := protowire.ConsumeTag(data)
@@ -1707,17 +1755,18 @@ func parseInstallNeuron(data []byte) InstallNeuron {
 		switch num {
 		case 1:
 			n.Name = string(b)
-		case 2:
-			n.DisplayName = string(b)
+		case 4:
+			n.Package = string(b)
 		}
 	}
 	if n.Name != "" {
-		n.Package = neuronNameToPackage(n.Name)
-		if n.DisplayName == "" {
-			// Fall back to the neuron ID from the resource name.
-			if i := strings.LastIndex(n.Name, "/"); i >= 0 {
-				n.DisplayName = n.Name[i+1:]
-			}
+		// Derive package from name if the server didn't include it.
+		if n.Package == "" {
+			n.Package = neuronNameToPackage(n.Name)
+		}
+		// Display name = neuron ID segment (no display_name in the Neuron proto).
+		if i := strings.LastIndex(n.Name, "/"); i >= 0 {
+			n.DisplayName = n.Name[i+1:]
 		}
 	}
 	return n
@@ -3179,6 +3228,22 @@ func parseCodeblockVersion(data []byte) CodeblockVersion {
 				}
 			case 4:
 				v.ReleaseNotes = string(b)
+			case 3, 7:
+				// Both fields carry identical data (sub-field 1=Build, 2=Infra, 3=Proto).
+				// Process only the first one encountered; skip the duplicate.
+				if len(v.Files) > 0 {
+					break
+				}
+				build, infra, proto := parseVersionAllFolders(b)
+				if len(proto.Files) > 0 {
+					v.Files = append(v.Files, proto)
+				}
+				if len(infra.Files) > 0 {
+					v.Files = append(v.Files, infra)
+				}
+				if len(build.Files) > 0 {
+					v.Files = append(v.Files, build)
+				}
 			case 98:
 				v.CreateTime = parseTimestamp(b)
 			case 99:
@@ -3194,6 +3259,49 @@ func parseCodeblockVersion(data []byte) CodeblockVersion {
 		}
 	}
 	return v
+}
+
+// parseVersionAllFolders extracts the three folder types from a block version container field.
+// Sub-field 1 = Build files, sub-field 2 = Infra files, sub-field 3 = Proto files.
+// The same container appears at both field 3 and field 7 of BlockVersion; callers should
+// process only one of them.
+func parseVersionAllFolders(data []byte) (build, infra, proto CodeblockFolder) {
+	build.Name = "Build"
+	infra.Name = "Infra"
+	proto.Name = "Proto"
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		entry := parseCodeblockFileEntry(b)
+		if entry.Name == "" {
+			continue
+		}
+		switch num {
+		case 1:
+			build.Files = append(build.Files, entry)
+		case 2:
+			infra.Files = append(infra.Files, entry)
+		case 3:
+			proto.Files = append(proto.Files, entry)
+		}
+	}
+	return build, infra, proto
 }
 
 // parseCodeblockVersionFolder parses a file-tree folder sub-message within a BlockVersion.
