@@ -110,15 +110,19 @@ type EnvVariable struct {
 // ── Codeblocks ────────────────────────────────────────────────────────────────
 
 type Codeblock struct {
-	Name          string `json:"name"`
-	DisplayName   string `json:"displayName"`
-	ReleaseLevel  int32  `json:"releaseLevel"`
-	Publisher     string `json:"publisher"`
-	LatestVersion string `json:"latestVersion"`
-	Headline      string `json:"headline"`
-	Description   string `json:"description"`
-	BannerURL     string `json:"bannerUrl"`
-	InstallCount  int32  `json:"installCount"`
+	Name             string             `json:"name"`
+	DisplayName      string             `json:"displayName"`
+	ReleaseLevel     int32              `json:"releaseLevel"`
+	Publisher        string             `json:"publisher"`
+	LatestVersion    string             `json:"latestVersion"`
+	Tagline          string             `json:"tagline"`
+	Headline         string             `json:"headline"`
+	Description      string             `json:"description"`
+	BannerURL        string             `json:"bannerUrl"`
+	InstallCount     int32              `json:"installCount"`
+	Highlights       []string           `json:"highlights"`
+	KeyFeatures      []CodeblockFeature `json:"keyFeatures"`
+	CodeArchitecture []CodeblockLayer   `json:"codeArchitecture"`
 }
 
 type CodeblockVersion struct {
@@ -954,7 +958,7 @@ func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
 		return nil, err
 	}
 	buf := marshalGetProductRequest("blocks/"+blockId,
-		[]string{"name", "display_name", "release_level", "publisher", "releases", "overview_details"})
+		[]string{"name", "display_name", "release_level", "publisher", "releases", "tagline", "overview_details"})
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetBlock", buf)
@@ -1231,6 +1235,92 @@ func marshalCreateBlockRequest(p CreateCodeblockParams, accountName string) []by
 }
 
 // parseCreateBlockName extracts the resource name (field 1) from the returned Block.
+// UpdateCodeblock calls BlocksService/UpdateBlock with the given params.
+func (s *ProductService) UpdateCodeblock(params CreateCodeblockParams) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+	blockName := "blocks/" + params.BlockID
+	buf := marshalUpdateBlockRequest(blockName, params)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UpdateBlock", buf)
+	if err != nil {
+		return err
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("update block: gRPC status %d: %s", grpcStatus, grpcMsg)
+	}
+	return nil
+}
+
+func marshalUpdateBlockRequest(blockName string, p CreateCodeblockParams) []byte {
+	// overview_details sub-message (same layout as create)
+	var overview []byte
+	if p.HeroStatement != "" {
+		overview = protowire.AppendTag(overview, 2, protowire.BytesType)
+		overview = protowire.AppendString(overview, p.HeroStatement)
+	}
+	if p.Description != "" {
+		overview = protowire.AppendTag(overview, 3, protowire.BytesType)
+		overview = protowire.AppendString(overview, p.Description)
+	}
+	for _, h := range p.Highlights {
+		overview = protowire.AppendTag(overview, 6, protowire.BytesType)
+		overview = protowire.AppendString(overview, h)
+	}
+	for _, kf := range p.KeyFeatures {
+		var feat []byte
+		feat = protowire.AppendTag(feat, 1, protowire.BytesType)
+		feat = protowire.AppendString(feat, kf.Title)
+		feat = protowire.AppendTag(feat, 2, protowire.BytesType)
+		feat = protowire.AppendString(feat, kf.Description)
+		overview = protowire.AppendTag(overview, 7, protowire.BytesType)
+		overview = protowire.AppendBytes(overview, feat)
+	}
+	for _, al := range p.CodeArchitecture {
+		var layer []byte
+		layer = protowire.AppendTag(layer, 1, protowire.BytesType)
+		layer = protowire.AppendString(layer, al.Title)
+		layer = protowire.AppendTag(layer, 2, protowire.BytesType)
+		layer = protowire.AppendString(layer, al.Description)
+		overview = protowire.AppendTag(overview, 8, protowire.BytesType)
+		overview = protowire.AppendBytes(overview, layer)
+	}
+
+	// Block message: f1=name, f2=display_name, f13=tagline, f31=overview_details
+	var block []byte
+	block = protowire.AppendTag(block, 1, protowire.BytesType)
+	block = protowire.AppendString(block, blockName)
+	if p.DisplayName != "" {
+		block = protowire.AppendTag(block, 2, protowire.BytesType)
+		block = protowire.AppendString(block, p.DisplayName)
+	}
+	if p.Tagline != "" {
+		block = protowire.AppendTag(block, 13, protowire.BytesType)
+		block = protowire.AppendString(block, p.Tagline)
+	}
+	if len(overview) > 0 {
+		block = protowire.AppendTag(block, 31, protowire.BytesType)
+		block = protowire.AppendBytes(block, overview)
+	}
+
+	// update_mask (FieldMask): f1=paths repeated
+	var mask []byte
+	for _, path := range []string{"display_name", "tagline", "overview_details"} {
+		mask = protowire.AppendTag(mask, 1, protowire.BytesType)
+		mask = protowire.AppendString(mask, path)
+	}
+
+	// UpdateBlockRequest: f1=block, f2=update_mask
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendBytes(req, block)
+	req = protowire.AppendTag(req, 2, protowire.BytesType)
+	req = protowire.AppendBytes(req, mask)
+	return req
+}
+
 func parseCreateBlockName(data []byte) string {
 	for len(data) > 0 {
 		num, typ, n := protowire.ConsumeTag(data)
@@ -2177,6 +2267,8 @@ func parseBlockInto(data []byte, cb *Codeblock) {
 				cb.DisplayName = string(b)
 			case 4:
 				cb.LatestVersion = parseBlockLatestVersion(b)
+			case 13:
+				cb.Tagline = string(b)
 			case 30:
 				cb.Publisher = parseBlockPublisherAccount(b)
 			case 31:
@@ -2257,8 +2349,8 @@ func parseBlockPublisherAccount(data []byte) string {
 	return ""
 }
 
-// parseBlockOverviewInto fills BannerURL, Headline, Description from overview_details (f31).
-// f1=banner_url, f2=headline, f3=description, f10=short_title.
+// parseBlockOverviewInto fills overview fields from overview_details (f31).
+// f1=banner_url, f2=hero_statement(headline), f3=description, f6=highlights, f7=key_features, f8=arch_layers, f10=short_title.
 func parseBlockOverviewInto(data []byte, cb *Codeblock) {
 	for len(data) > 0 {
 		num, typ, n := protowire.ConsumeTag(data)
@@ -2288,12 +2380,50 @@ func parseBlockOverviewInto(data []byte, cb *Codeblock) {
 			if cb.Description == "" {
 				cb.Description = string(b)
 			}
+		case 6:
+			cb.Highlights = append(cb.Highlights, string(b))
+		case 7:
+			cb.KeyFeatures = append(cb.KeyFeatures, parseTitleDescBytes(b))
+		case 8:
+			cb.CodeArchitecture = append(cb.CodeArchitecture, CodeblockLayer(parseTitleDescBytes(b)))
 		case 10:
 			if cb.Headline == "" {
 				cb.Headline = string(b)
 			}
 		}
 	}
+}
+
+// parseTitleDescBytes parses a proto message with f1=title, f2=description.
+func parseTitleDescBytes(data []byte) CodeblockFeature {
+	var f CodeblockFeature
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		switch num {
+		case 1:
+			f.Title = string(b)
+		case 2:
+			f.Description = string(b)
+		}
+	}
+	return f
 }
 
 // ── Codeblock detail parse helpers ───────────────────────────────────────────

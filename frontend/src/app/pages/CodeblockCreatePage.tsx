@@ -61,12 +61,20 @@ export function CodeblockCreatePage() {
   useEffect(() => {
     if (!isEditing || !editId) return;
     setInitLoading(true);
-    (ProductService.GetCodeblock as (id: string) => Promise<{ name: string; displayName: string; headline: string; description: string }>)(editId)
+    (ProductService.GetCodeblock as (id: string) => Promise<any>)(editId)
       .then(b => {
         setBlockId(editId);
         setDisplayName(b.displayName ?? '');
-        setTagline(b.headline ?? '');
+        setTagline(b.tagline ?? '');
+        setHeroStatement(b.headline ?? '');
         setDescription(b.description ?? '');
+        setHighlights(b.highlights ?? []);
+        if (b.keyFeatures?.length) {
+          setKeyFeatures(b.keyFeatures.map((f: any) => ({ title: f.title ?? '', description: f.description ?? '' })));
+        }
+        if (b.codeArchitecture?.length) {
+          setCodeArchitecture(b.codeArchitecture.map((l: any) => ({ title: l.title ?? '', description: l.description ?? '' })));
+        }
       })
       .catch(console.error)
       .finally(() => setInitLoading(false));
@@ -92,11 +100,7 @@ export function CodeblockCreatePage() {
     setError(null);
     setLoading(true);
     try {
-      if (isEditing) {
-        setError('Block editing is not yet implemented.');
-        return;
-      }
-      const params = models.CreateCodeblockParams.createFrom({
+        const params = models.CreateCodeblockParams.createFrom({
         blockId,
         displayName,
         tagline,
@@ -110,9 +114,14 @@ export function CodeblockCreatePage() {
           models.CodeblockLayer.createFrom({ title: l.title, description: l.description })
         ),
       });
-      const name = await (ProductService.CreateCodeblock as (p: typeof params) => Promise<string>)(params);
-      const id = name.replace('blocks/', '');
-      navigate(id ? `/codeblocks/${id}` : '/codeblocks');
+      if (isEditing) {
+        await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
+        navigate(`/codeblocks/${editId}`);
+      } else {
+        const name = await (ProductService.CreateCodeblock as (p: typeof params) => Promise<string>)(params);
+        const id = name.replace('blocks/', '');
+        navigate(id ? `/codeblocks/${id}` : '/codeblocks');
+      }
     } catch (e) {
       setError(String(e));
     } finally {
