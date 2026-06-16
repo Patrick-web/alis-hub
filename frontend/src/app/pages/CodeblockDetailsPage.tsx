@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { codeToHtml } from 'shiki';
 import { useParams, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { marked } from 'marked';
+import { Events } from '@wailsio/runtime';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
 import { Loader } from '../components/Loader';
 import { Button } from '../components/Button';
 import { FilterSelect } from '../components/FilterSelect';
+import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
 
 const LEVEL_LABEL: Record<number, string> = {
   1: 'Experimental',
@@ -444,6 +446,7 @@ function InstallBlockWizard({
   const [hunkResolutions, setHunkResolutions] = useState<Record<string, (string[] | null)[]>>({});
   const [resolvedFiles, setResolvedFiles] = useState<Set<string>>(new Set());
   const [mergeError, setMergeError] = useState('');
+  const mergeTermRef = useRef<BuildTerminalHandle>(null);
 
   // Load orgs on mount
   useEffect(() => {
@@ -535,14 +538,15 @@ function InstallBlockWizard({
   function startMerge() {
     setMergePhase('merging');
     setMergeError('');
+    mergeTermRef.current?.clear();
+    const off = Events.On('git:log', (ev: any) => mergeTermRef.current?.write(typeof ev === 'string' ? ev : ev?.data ?? String(ev)));
     (GitService.StartLocalMerge as (rp: string, bn: string) => Promise<{ hasConflicts: boolean; conflictFiles: string[]; errorMessage: string }>)(repoPath, branchName)
       .then(r => {
+        off();
         if (r.errorMessage) { setMergeError(r.errorMessage); setMergePhase('ready'); return; }
         if (r.hasConflicts && r.conflictFiles?.length > 0) {
           const files = r.conflictFiles;
           setConflictFiles(files);
-          // Initialise resolution state: null = unresolved for each hunk.
-          // We'll populate hunk counts after loading each file's content.
           setHunkResolutions({});
           setResolvedFiles(new Set());
           setSelectedConflictFile(files[0]);
@@ -552,7 +556,7 @@ function InstallBlockWizard({
           setMergePhase('done');
         }
       })
-      .catch(e => { setMergeError(String(e)); setMergePhase('ready'); });
+      .catch(e => { off(); setMergeError(String(e)); setMergePhase('ready'); });
   }
 
   function loadConflictFile(filePath: string) {
@@ -793,6 +797,7 @@ function InstallBlockWizard({
             hunkResolutions={hunkResolutions}
             resolvedFiles={resolvedFiles}
             mergeError={mergeError}
+            termRef={mergeTermRef}
             onLoadFile={loadConflictFile}
             onResolveHunk={resolveHunk}
             onAcceptAllCurrent={acceptAllCurrent}
@@ -889,6 +894,7 @@ function MergeStepContent({
   hunkResolutions,
   resolvedFiles,
   mergeError,
+  termRef,
   onLoadFile,
   onResolveHunk,
   onAcceptAllCurrent,
@@ -904,6 +910,7 @@ function MergeStepContent({
   hunkResolutions: Record<string, (string[] | null)[]>;
   resolvedFiles: Set<string>;
   mergeError: string;
+  termRef: React.RefObject<BuildTerminalHandle>;
   onLoadFile: (fp: string) => void;
   onResolveHunk: (fp: string, idx: number, lines: string[] | null) => void;
   onAcceptAllCurrent: () => void;
@@ -940,10 +947,14 @@ function MergeStepContent({
 
   if (mergePhase === 'merging') {
     return (
-      <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
-        <Loader />
-        <p className="text-[13px] text-white/60">Fetching and merging…</p>
-        <p className="text-[11px] text-white/30">Running git operations in your local build repo.</p>
+      <div className="flex flex-col gap-[10px] h-full">
+        <div className="flex items-center gap-[8px]">
+          <span className="inline-block w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse" />
+          <p className="text-[11px] text-white/50">Running git operations…</p>
+        </div>
+        <div className="flex-1 rounded-[4px] overflow-hidden" style={{ minHeight: 240 }}>
+          <BuildTerminal ref={termRef} className="h-full" />
+        </div>
       </div>
     );
   }

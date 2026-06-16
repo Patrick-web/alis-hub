@@ -3,17 +3,39 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // GitService provides local git operations for the block merge flow.
-type GitService struct{}
+type GitService struct {
+	mu  sync.Mutex
+	app *application.App
+}
 
 func NewGitService() *GitService { return &GitService{} }
+
+func (g *GitService) SetApp(app *application.App) {
+	g.mu.Lock()
+	g.app = app
+	g.mu.Unlock()
+}
+
+func (g *GitService) emitLog(line string) {
+	g.mu.Lock()
+	app := g.app
+	g.mu.Unlock()
+	if app != nil {
+		app.Event.Emit("git:log", line)
+	}
+}
 
 type LocalMergeResult struct {
 	RepoPath      string   `json:"repoPath"`
@@ -38,6 +60,7 @@ type ConflictFileContent struct {
 
 // StartLocalMerge runs: git fetch, checkout master, pull, then merge origin/{branchName}.
 // Returns conflict file list if exit code 1 (conflicts detected).
+// Git command output is streamed via "git:log" Wails events.
 func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeResult, error) {
 	result := &LocalMergeResult{RepoPath: repoPath, BranchName: branchName}
 
@@ -47,14 +70,18 @@ func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeRe
 		{"git", "pull", "--no-ff", "origin", "master"},
 	}
 	for _, args := range cmds {
-		if out, err := gitCmd(repoPath, args...); err != nil {
+		g.emitLog("$ " + strings.Join(args, " ") + "\r\n")
+		out, err := g.gitCmdStream(repoPath, args...)
+		if err != nil {
 			result.ErrorMessage = fmt.Sprintf("%s: %s", strings.Join(args, " "), strings.TrimSpace(out))
 			return result, nil
 		}
 	}
 
 	// Merge the block branch — exit code 1 means conflicts, not a hard error.
-	out, err := gitCmd(repoPath, "git", "merge", "origin/"+branchName)
+	mergeArgs := []string{"git", "merge", "--no-ff", "origin/" + branchName}
+	g.emitLog("$ " + strings.Join(mergeArgs, " ") + "\r\n")
+	out, err := g.gitCmdStream(repoPath, mergeArgs...)
 	if err != nil {
 		// Check if it's a conflict (exit 1) vs a real error.
 		conflicts, listErr := g.GetConflictFiles(repoPath)
@@ -68,6 +95,36 @@ func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeRe
 	}
 
 	return result, nil
+}
+
+// gitCmdStream runs a git command, streams combined output via emitLog, and returns combined output on error.
+func (g *GitService) gitCmdStream(dir string, args ...string) (string, error) {
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = dir
+
+	stdout, _ := cmd.StdoutPipe()
+	stderr, _ := cmd.StderrPipe()
+	if err := cmd.Start(); err != nil {
+		return "", err
+	}
+
+	var combined strings.Builder
+	forward := func(r io.Reader) {
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			line := scanner.Text() + "\r\n"
+			combined.WriteString(line)
+			g.emitLog(line)
+		}
+	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); forward(stdout) }()
+	go func() { defer wg.Done(); forward(stderr) }()
+	wg.Wait()
+
+	err := cmd.Wait()
+	return combined.String(), err
 }
 
 // GetConflictFiles returns the list of files with unmerged conflicts.
@@ -237,13 +294,23 @@ func (g *GitService) SaveConflictResolution(repoPath, filePath string, resolutio
 
 // CompleteMerge finalises the merge with a commit (non-interactive).
 func (g *GitService) CompleteMerge(repoPath string) error {
-	_, err := gitCmdEnv(repoPath, []string{"GIT_EDITOR=true"}, "git", "-c", "core.editor=true", "merge", "--continue")
+	g.emitLog("$ git merge --continue\r\n")
+	cmd := exec.Command("git", "-c", "core.editor=true", "merge", "--continue")
+	cmd.Dir = repoPath
+	cmd.Env = append(os.Environ(), "GIT_EDITOR=true")
+	out, err := cmd.CombinedOutput()
+	for _, line := range strings.Split(string(out), "\n") {
+		if line != "" {
+			g.emitLog(line + "\r\n")
+		}
+	}
 	return err
 }
 
 // AbortMerge aborts an in-progress merge.
 func (g *GitService) AbortMerge(repoPath string) error {
-	_, err := gitCmd(repoPath, "git", "merge", "--abort")
+	g.emitLog("$ git merge --abort\r\n")
+	_, err := g.gitCmdStream(repoPath, "git", "merge", "--abort")
 	return err
 }
 

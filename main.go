@@ -18,6 +18,7 @@ var assets embed.FS
 func main() {
 	updaterSvc := updater.NewService(version)
 	productSvc := NewProductService()
+	gitSvc := NewGitService()
 
 	app := application.New(application.Options{
 		Name:        "Alis Hub",
@@ -33,7 +34,7 @@ func main() {
 			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
 			application.NewService(NewGCloudService()),
-			application.NewService(NewGitService()),
+			application.NewService(gitSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -104,6 +105,7 @@ func main() {
 
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
+	gitSvc.SetApp(app)
 	updater.BackgroundCheck(app, version, 30*time.Second)
 
 	err := app.Run()
