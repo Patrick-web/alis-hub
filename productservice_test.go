@@ -807,6 +807,47 @@ func TestProbeGetBlock(t *testing.T) {
 
 // ── Codeblock detail live tests ──────────────────────────────────────────────
 
+func TestListMyCodeblocksLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	// First dump my account IDs to confirm JWT parsing
+	myIDs := svc.myAccountIDs()
+	t.Logf("my account IDs from JWT: %v", myIDs)
+
+	// Fetch all blocks and log their publisher fields to see what values we get
+	all, err := svc.ListCodeblocks()
+	if err != nil {
+		t.Fatalf("ListCodeblocks: %v", err)
+	}
+	t.Logf("total blocks in marketplace: %d", len(all))
+	for _, b := range all {
+		t.Logf("  name=%-35s publisher=%q", b.Name, b.Publisher)
+	}
+
+	blocks, err := svc.ListMyCodeblocks()
+	if err != nil {
+		t.Fatalf("ListMyCodeblocks: %v", err)
+	}
+	t.Logf("found %d block(s) owned by my account:", len(blocks))
+
+	var found bool
+	for _, b := range blocks {
+		t.Logf("  name=%-35s displayName=%q publisher=%s", b.Name, b.DisplayName, b.Publisher)
+		if b.Name == "blocks/testclaudeblock" {
+			found = true
+			t.Logf("✓ testclaudeblock present: displayName=%q releaseLevel=%d", b.DisplayName, b.ReleaseLevel)
+		}
+	}
+	if !found {
+		t.Error("blocks/testclaudeblock not found — ListMyCodeblocks filter may be broken")
+	}
+}
+
 func TestGetCodeblockLive(t *testing.T) {
 	svc := NewProductService()
 	ts, err := NewConsoleTokenSource()

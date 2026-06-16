@@ -275,6 +275,31 @@ export class Codeblock {
     }
 }
 
+export class CodeblockFeature {
+    "title": string;
+    "description": string;
+
+    /** Creates a new CodeblockFeature instance. */
+    constructor($$source: Partial<CodeblockFeature> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodeblockFeature instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodeblockFeature {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CodeblockFeature($$parsedSource as Partial<CodeblockFeature>);
+    }
+}
+
 export class CodeblockFileItem {
     "name": string;
     "content": string;
@@ -382,6 +407,31 @@ export class CodeblockInstance {
     }
 }
 
+export class CodeblockLayer {
+    "title": string;
+    "description": string;
+
+    /** Creates a new CodeblockLayer instance. */
+    constructor($$source: Partial<CodeblockLayer> = {}) {
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CodeblockLayer instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CodeblockLayer {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CodeblockLayer($$parsedSource as Partial<CodeblockLayer>);
+    }
+}
+
 export class CodeblockMember {
     "name": string;
     "displayName": string;
@@ -457,6 +507,67 @@ export class CodeblockVersion {
             $$parsedSource["files"] = $$createField6_0($$parsedSource["files"]);
         }
         return new CodeblockVersion($$parsedSource as Partial<CodeblockVersion>);
+    }
+}
+
+export class CreateCodeblockParams {
+    "blockId": string;
+    "displayName": string;
+    "tagline": string;
+    "heroStatement": string;
+    "description": string;
+    "highlights": string[];
+    "keyFeatures": CodeblockFeature[];
+    "codeArchitecture": CodeblockLayer[];
+
+    /** Creates a new CreateCodeblockParams instance. */
+    constructor($$source: Partial<CreateCodeblockParams> = {}) {
+        if (!("blockId" in $$source)) {
+            this["blockId"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("tagline" in $$source)) {
+            this["tagline"] = "";
+        }
+        if (!("heroStatement" in $$source)) {
+            this["heroStatement"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("highlights" in $$source)) {
+            this["highlights"] = [];
+        }
+        if (!("keyFeatures" in $$source)) {
+            this["keyFeatures"] = [];
+        }
+        if (!("codeArchitecture" in $$source)) {
+            this["codeArchitecture"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CreateCodeblockParams instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CreateCodeblockParams {
+        const $$createField5_0 = $$createType0;
+        const $$createField6_0 = $$createType6;
+        const $$createField7_0 = $$createType8;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("highlights" in $$parsedSource) {
+            $$parsedSource["highlights"] = $$createField5_0($$parsedSource["highlights"]);
+        }
+        if ("keyFeatures" in $$parsedSource) {
+            $$parsedSource["keyFeatures"] = $$createField6_0($$parsedSource["keyFeatures"]);
+        }
+        if ("codeArchitecture" in $$parsedSource) {
+            $$parsedSource["codeArchitecture"] = $$createField7_0($$parsedSource["codeArchitecture"]);
+        }
+        return new CreateCodeblockParams($$parsedSource as Partial<CreateCodeblockParams>);
     }
 }
 
@@ -581,7 +692,7 @@ export class EnvDeployments {
      * Creates a new EnvDeployments instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvDeployments {
-        const $$createField2_0 = $$createType6;
+        const $$createField2_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("deployments" in $$parsedSource) {
             $$parsedSource["deployments"] = $$createField2_0($$parsedSource["deployments"]);
@@ -619,7 +730,7 @@ export class EnvInfo {
      * Creates a new EnvInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvInfo {
-        const $$createField4_0 = $$createType8;
+        const $$createField4_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("gcpProject" in $$parsedSource) {
             $$parsedSource["gcpProject"] = $$createField4_0($$parsedSource["gcpProject"]);
@@ -789,7 +900,7 @@ export class GCSObjectList {
      */
     static createFrom($$source: any = {}): GCSObjectList {
         const $$createField0_0 = $$createType0;
-        const $$createField1_0 = $$createType10;
+        const $$createField1_0 = $$createType14;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("prefixes" in $$parsedSource) {
             $$parsedSource["prefixes"] = $$createField0_0($$parsedSource["prefixes"]);
@@ -1033,8 +1144,8 @@ export class GlassResult {
      * Creates a new GlassResult instance from a string or object.
      */
     static createFrom($$source: any = {}): GlassResult {
-        const $$createField2_0 = $$createType11;
-        const $$createField3_0 = $$createType13;
+        const $$createField2_0 = $$createType15;
+        const $$createField3_0 = $$createType17;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("definition" in $$parsedSource) {
             $$parsedSource["definition"] = $$createField2_0($$parsedSource["definition"]);
@@ -1087,7 +1198,7 @@ export class InviteInfo {
      */
     static createFrom($$source: any = {}): InviteInfo {
         const $$createField4_0 = $$createType0;
-        const $$createField5_0 = $$createType15;
+        const $$createField5_0 = $$createType19;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("domains" in $$parsedSource) {
             $$parsedSource["domains"] = $$createField4_0($$parsedSource["domains"]);
@@ -1164,8 +1275,8 @@ export class LandingZonesData {
      * Creates a new LandingZonesData instance from a string or object.
      */
     static createFrom($$source: any = {}): LandingZonesData {
-        const $$createField0_0 = $$createType17;
-        const $$createField1_0 = $$createType17;
+        const $$createField0_0 = $$createType21;
+        const $$createField1_0 = $$createType21;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("own" in $$parsedSource) {
             $$parsedSource["own"] = $$createField0_0($$parsedSource["own"]);
@@ -1266,9 +1377,9 @@ export class LogEntry {
      * Creates a new LogEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): LogEntry {
-        const $$createField5_0 = $$createType19;
-        const $$createField6_0 = $$createType20;
-        const $$createField7_0 = $$createType21;
+        const $$createField5_0 = $$createType23;
+        const $$createField6_0 = $$createType24;
+        const $$createField7_0 = $$createType25;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("resource" in $$parsedSource) {
             $$parsedSource["resource"] = $$createField5_0($$parsedSource["resource"]);
@@ -1303,7 +1414,7 @@ export class LogPage {
      * Creates a new LogPage instance from a string or object.
      */
     static createFrom($$source: any = {}): LogPage {
-        const $$createField0_0 = $$createType23;
+        const $$createField0_0 = $$createType27;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("entries" in $$parsedSource) {
             $$parsedSource["entries"] = $$createField0_0($$parsedSource["entries"]);
@@ -1332,7 +1443,7 @@ export class LogResource {
      * Creates a new LogResource instance from a string or object.
      */
     static createFrom($$source: any = {}): LogResource {
-        const $$createField1_0 = $$createType20;
+        const $$createField1_0 = $$createType24;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("labels" in $$parsedSource) {
             $$parsedSource["labels"] = $$createField1_0($$parsedSource["labels"]);
@@ -1443,7 +1554,7 @@ export class Organisation {
      * Creates a new Organisation instance from a string or object.
      */
     static createFrom($$source: any = {}): Organisation {
-        const $$createField5_0 = $$createType8;
+        const $$createField5_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField5_0($$parsedSource["googleProject"]);
@@ -1596,9 +1707,9 @@ export class ProductOverview {
      * Creates a new ProductOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ProductOverview {
-        const $$createField3_0 = $$createType8;
-        const $$createField4_0 = $$createType25;
-        const $$createField5_0 = $$createType27;
+        const $$createField3_0 = $$createType12;
+        const $$createField4_0 = $$createType29;
+        const $$createField5_0 = $$createType31;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -1772,7 +1883,7 @@ export class RunDeployResult {
      * Creates a new RunDeployResult instance from a string or object.
      */
     static createFrom($$source: any = {}): RunDeployResult {
-        const $$createField2_0 = $$createType30;
+        const $$createField2_0 = $$createType34;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("deployments" in $$parsedSource) {
             $$parsedSource["deployments"] = $$createField2_0($$parsedSource["deployments"]);
@@ -1805,7 +1916,7 @@ export class SMSecret {
      * Creates a new SMSecret instance from a string or object.
      */
     static createFrom($$source: any = {}): SMSecret {
-        const $$createField2_0 = $$createType20;
+        const $$createField2_0 = $$createType24;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("labels" in $$parsedSource) {
             $$parsedSource["labels"] = $$createField2_0($$parsedSource["labels"]);
@@ -1901,8 +2012,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType32;
-        const $$createField1_0 = $$createType34;
+        const $$createField0_0 = $$createType36;
+        const $$createField1_0 = $$createType38;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -1997,9 +2108,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType36;
-        const $$createField1_0 = $$createType38;
-        const $$createField2_0 = $$createType38;
+        const $$createField0_0 = $$createType40;
+        const $$createField1_0 = $$createType42;
+        const $$createField2_0 = $$createType42;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -2174,7 +2285,7 @@ export class SpannerQueryResult {
      */
     static createFrom($$source: any = {}): SpannerQueryResult {
         const $$createField0_0 = $$createType0;
-        const $$createField1_0 = $$createType39;
+        const $$createField1_0 = $$createType43;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -2329,38 +2440,42 @@ const $$createType1 = CodeblockFileItem.createFrom;
 const $$createType2 = $Create.Array($$createType1);
 const $$createType3 = CodeblockFolder.createFrom;
 const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = DeploymentItem.createFrom;
+const $$createType5 = CodeblockFeature.createFrom;
 const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = GCPProject.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
-const $$createType9 = GCSObject.createFrom;
+const $$createType7 = CodeblockLayer.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = DeploymentItem.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = GlassDefinition.createFrom;
-const $$createType12 = GlassArtifact.createFrom;
-const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = InviteUserInfo.createFrom;
-const $$createType15 = $Create.Array($$createType14);
-const $$createType16 = Organisation.createFrom;
+const $$createType11 = GCPProject.createFrom;
+const $$createType12 = $Create.Nullable($$createType11);
+const $$createType13 = GCSObject.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = GlassDefinition.createFrom;
+const $$createType16 = GlassArtifact.createFrom;
 const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = LogResource.createFrom;
-const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $Create.Map($Create.Any, $Create.Any);
-const $$createType21 = $Create.Map($Create.Any, $Create.Any);
-const $$createType22 = LogEntry.createFrom;
-const $$createType23 = $Create.Array($$createType22);
-const $$createType24 = GitRepoInfo.createFrom;
-const $$createType25 = $Create.Nullable($$createType24);
-const $$createType26 = PkgRegistries.createFrom;
-const $$createType27 = $Create.Nullable($$createType26);
-const $$createType28 = DeployItem.createFrom;
+const $$createType18 = InviteUserInfo.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = Organisation.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = LogResource.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $Create.Map($Create.Any, $Create.Any);
+const $$createType25 = $Create.Map($Create.Any, $Create.Any);
+const $$createType26 = LogEntry.createFrom;
+const $$createType27 = $Create.Array($$createType26);
+const $$createType28 = GitRepoInfo.createFrom;
 const $$createType29 = $Create.Nullable($$createType28);
-const $$createType30 = $Create.Array($$createType29);
-const $$createType31 = NeuronItem.createFrom;
-const $$createType32 = $Create.Array($$createType31);
-const $$createType33 = EnvDeployments.createFrom;
+const $$createType30 = PkgRegistries.createFrom;
+const $$createType31 = $Create.Nullable($$createType30);
+const $$createType32 = DeployItem.createFrom;
+const $$createType33 = $Create.Nullable($$createType32);
 const $$createType34 = $Create.Array($$createType33);
-const $$createType35 = SharePerson.createFrom;
+const $$createType35 = NeuronItem.createFrom;
 const $$createType36 = $Create.Array($$createType35);
-const $$createType37 = ShareAccount.createFrom;
+const $$createType37 = EnvDeployments.createFrom;
 const $$createType38 = $Create.Array($$createType37);
-const $$createType39 = $Create.Array($$createType0);
+const $$createType39 = SharePerson.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = ShareAccount.createFrom;
+const $$createType42 = $Create.Array($$createType41);
+const $$createType43 = $Create.Array($$createType0);

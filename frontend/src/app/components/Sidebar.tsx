@@ -9,13 +9,7 @@ import { MissingVarsModal } from './MissingVarsModal';
 import { useWorkspace, type LoadedEnv } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
-const developNavItems = [
-  { id: 'about', label: 'Overview', route: '/about', icon: <Icon icon="solar:chart-square-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'services', label: 'Services', route: '/services', icon: <Icon icon="solar:layers-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'routes', label: 'Routes', route: null, icon: <Icon icon="solar:map-point-linear" className="text-white text-xl" /> },
-  { id: 'sharing', label: 'Sharing', route: '/share', icon: <Icon icon="solar:share-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'product-access', label: 'Product access', route: null, icon: <Icon icon="solar:shield-keyhole-linear" className="text-white text-xl" /> },
-];
+const developNavItems: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = [];
 
 const envNavItems = [
   { id: 'production', label: 'Production', icon: <Icon icon="solar:earth-linear" className="text-[#F881A9] text-xl" /> },
@@ -25,9 +19,9 @@ const envNavItems = [
 
 
 const codeblockNavItems = [
-  { id: 'all', label: 'All Codeblocks', icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'mine', label: 'My Codeblocks', icon: <Icon icon="solar:user-linear" className="text-white text-xl" /> },
-  { id: 'starred', label: 'Starred', icon: <Icon icon="solar:star-linear" className="text-white text-xl" /> },
+  { id: 'all', label: 'All Codeblocks', route: '/codeblocks', icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" /> },
+  { id: 'mine', label: 'My Codeblocks', route: '/codeblocks/mine', icon: <Icon icon="solar:user-linear" className="text-white text-xl" /> },
+  { id: 'starred', label: 'Starred', route: null, icon: <Icon icon="solar:star-linear" className="text-white text-xl" /> },
 ];
 
 export function Sidebar() {
@@ -35,7 +29,6 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } = useWorkspace();
   const [activeBuildItem] = useState('');
-  const [activeCodeblockItem, setActiveCodeblockItem] = useState('');
 
   // Env CRUD state
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -60,7 +53,7 @@ export function Sidebar() {
 
   let items: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = developNavItems;
   let header = 'DEVELOP';
-  let bottomButtonLabel = 'Open in IDE';
+  let bottomButtonLabel = '';
   let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
   let onBottomButtonClick: (() => void) | undefined;
 
@@ -86,8 +79,9 @@ export function Sidebar() {
   } else if (isCodeblocks) {
     items = codeblockNavItems;
     header = 'CODEBLOCKS';
-    bottomButtonLabel = 'Install Block';
-    bottomButtonIcon = <Icon icon="solar:download-linear" className="text-xl" />;
+    bottomButtonLabel = 'Create Block';
+    bottomButtonIcon = <Icon icon="solar:add-square-linear" className="text-xl" />;
+    onBottomButtonClick = () => navigate('/codeblocks/create');
   }
 
   const getActiveItem = () => {
@@ -96,7 +90,7 @@ export function Sidebar() {
       return envNavItems[0]?.id;
     }
     if (isBuilds) return state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem;
-    if (isCodeblocks) return activeCodeblockItem || codeblockNavItems[0]?.id;
+    if (isCodeblocks) return codeblockNavItems.find(i => i.route && currentPath === i.route)?.id ?? codeblockNavItems[0]?.id;
     return activeDevelopId;
   };
 
@@ -105,8 +99,6 @@ export function Sidebar() {
       setActiveEnv(item.id);
     } else if (isBuilds) {
       setActiveNeurons([item.id]);
-    } else if (isCodeblocks) {
-      setActiveCodeblockItem(item.id);
     }
     if ('route' in item && item.route) {
       navigate(item.route);
@@ -207,14 +199,16 @@ export function Sidebar() {
                   Check Missing
                 </Button>
               )}
-              <Button
-                variant="primary"
-                icon={bottomButtonIcon}
-                className="w-full flex-col h-[60px]"
-                onClick={onBottomButtonClick}
-              >
-                {bottomButtonLabel}
-              </Button>
+              {bottomButtonLabel && (
+                <Button
+                  variant="primary"
+                  icon={bottomButtonIcon}
+                  className="w-full flex-col h-[60px]"
+                  onClick={onBottomButtonClick}
+                >
+                  {bottomButtonLabel}
+                </Button>
+              )}
             </div>
           </div>
         </div>
