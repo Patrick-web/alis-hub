@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { codeToHtml } from 'shiki';
 import { useParams, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { marked } from 'marked';
@@ -1258,6 +1259,14 @@ function DocumentationTab({
 
 // ── Versions Tab ──────────────────────────────────────────────────────────────
 
+const VERSION_FILTERS = [
+  { label: 'Stable', level: 5 },
+  { label: 'RC', level: 4 },
+  { label: 'Beta', level: 3 },
+  { label: 'Alpha', level: 2 },
+  { label: 'Experimental', level: 1 },
+] as const;
+
 function VersionsTab({
   versions,
   loading,
@@ -1269,9 +1278,39 @@ function VersionsTab({
   selected: CodeblockVersion | null;
   onSelect: (v: CodeblockVersion) => void;
 }) {
+  const [filter, setFilter] = useState<number | null>(null);
+  const [detail, setDetail] = useState<CodeblockVersion | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [openFile, setOpenFile] = useState<{ name: string; content: string } | null>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    setDetail(null);
+    setExpandedFolders(new Set());
+    setDetailLoading(true);
+    (ProductService.GetCodeblockVersion as (name: string) => Promise<CodeblockVersion>)(selected.name)
+      .then(full => {
+        setDetail(full);
+        setExpandedFolders(new Set(full.files?.map(f => f.name) ?? []));
+      })
+      .catch(() => setDetail(selected))
+      .finally(() => setDetailLoading(false));
+  }, [selected?.name]);
+
+  function toggleFolder(name: string) {
+    setExpandedFolders(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><Loader /></div>;
   }
+
   if (versions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-[12px]">
@@ -1281,86 +1320,241 @@ function VersionsTab({
     );
   }
 
+  const filtered = filter === null ? versions : versions.filter(v => v.releaseLevel === filter);
+  const displayDetail = detail ?? (detailLoading ? null : selected);
+
   return (
-    <div className="h-full flex overflow-hidden">
-      {/* Version list */}
-      <div className="w-[260px] shrink-0 border-r border-[#464646] overflow-auto">
-        {versions.map(v => (
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Filter bar */}
+      <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-[#464646] shrink-0 flex-wrap">
+        <span className="text-[11px] text-white/40 mr-[4px]">Filters:</span>
+        {VERSION_FILTERS.map(f => (
           <button
-            key={v.name}
-            onClick={() => onSelect(v)}
-            className={`w-full text-left px-[16px] py-[14px] border-b border-[#464646] transition-colors ${
-              selected?.name === v.name ? 'bg-white/5' : 'hover:bg-white/3'
+            key={f.level}
+            onClick={() => setFilter(filter === f.level ? null : f.level)}
+            className={`text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] transition-colors ${
+              filter === f.level
+                ? LEVEL_COLOR[f.level]
+                : 'text-white/40 border-white/20 hover:border-white/40'
             }`}
           >
-            <div className="flex items-center justify-between mb-[4px]">
-              <span className="font-['JetBrains_Mono',sans-serif] text-[12px] text-white font-bold">
-                {v.versionTag}
-              </span>
-              {v.releaseLevel > 0 && (
-                <span className={`text-[8px] font-bold uppercase border rounded px-[5px] py-[1px] ${LEVEL_COLOR[v.releaseLevel] ?? 'text-white/50 border-white/10 bg-white/5'}`}>
-                  {LEVEL_LABEL[v.releaseLevel] ?? ''}
-                </span>
-              )}
-            </div>
-            {v.createTime && (
-              <p className="text-[10px] text-white/40">{formatDate(v.createTime)}</p>
-            )}
+            {f.label}
           </button>
         ))}
+        {filter !== null && (
+          <button
+            onClick={() => setFilter(null)}
+            className="text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] text-white/60 border-white/30 hover:border-white/50 ml-[4px]"
+          >
+            Show all
+          </button>
+        )}
       </div>
 
-      {/* Version detail */}
-      {selected && (
-        <div className="flex-1 overflow-auto p-[24px]">
-          <div className="max-w-[700px] flex flex-col gap-[20px]">
-            <div>
-              <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-white uppercase mb-[4px]">
-                {selected.versionTag}
-              </h2>
-              <div className="flex items-center gap-[12px] text-[11px] text-white/40">
-                {selected.createTime && <span>Published {formatDate(selected.createTime)}</span>}
-                {selected.releaseLevel > 0 && (
-                  <span className={`text-[9px] font-bold uppercase border rounded px-[5px] py-[1px] ${LEVEL_COLOR[selected.releaseLevel] ?? ''}`}>
-                    {LEVEL_LABEL[selected.releaseLevel]}
-                  </span>
-                )}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Version list */}
+        <div className="w-[260px] shrink-0 border-r border-[#464646] overflow-auto">
+          {filtered.length === 0 && (
+            <p className="text-[12px] text-white/30 p-[16px]">No versions match this filter</p>
+          )}
+          {filtered.map(v => (
+            <button
+              key={v.name}
+              onClick={() => onSelect(v)}
+              className={`w-full text-left px-[16px] py-[14px] border-b border-[#464646] transition-colors ${
+                selected?.name === v.name ? 'bg-white/5' : 'hover:bg-white/3'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-[4px]">
+                <span className="font-['JetBrains_Mono',sans-serif] text-[12px] text-white font-bold">
+                  {v.versionTag}
+                </span>
+                <span className={`text-[8px] font-bold uppercase border rounded px-[5px] py-[1px] ${
+                  v.releaseLevel > 0
+                    ? (LEVEL_COLOR[v.releaseLevel] ?? 'text-white/50 border-white/10 bg-white/5')
+                    : 'text-white/30 border-white/10 bg-white/5'
+                }`}>
+                  {v.releaseLevel > 0 ? (LEVEL_LABEL[v.releaseLevel] ?? '') : 'Not Specified'}
+                </span>
               </div>
-            </div>
+              {v.createTime && (
+                <p className="text-[10px] text-white/40">{formatDate(v.createTime)}</p>
+              )}
+            </button>
+          ))}
+        </div>
 
-            {selected.releaseNotes && (
-              <div>
-                <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">Release Notes</p>
-                <div className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]">
-                  <p className="text-[13px] text-white/80 leading-[1.6]">{selected.releaseNotes}</p>
+        {/* Version detail */}
+        {selected && (
+          <div className="flex-1 overflow-auto p-[24px]">
+            {detailLoading ? (
+              <div className="flex items-center justify-center h-[120px]"><Loader /></div>
+            ) : displayDetail && (
+              <div className="max-w-[700px] flex flex-col gap-[20px]">
+                <div>
+                  <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-white uppercase mb-[4px]">
+                    {displayDetail.versionTag}
+                  </h2>
+                  <div className="flex items-center gap-[12px] text-[11px] text-white/40">
+                    {displayDetail.createTime && <span>Published {formatDate(displayDetail.createTime)}</span>}
+                    <span className={`text-[9px] font-bold uppercase border rounded px-[5px] py-[1px] ${
+                      displayDetail.releaseLevel > 0
+                        ? (LEVEL_COLOR[displayDetail.releaseLevel] ?? 'text-white/50 border-white/10 bg-white/5')
+                        : 'text-white/30 border-white/10 bg-white/5'
+                    }`}>
+                      {displayDetail.releaseLevel > 0 ? LEVEL_LABEL[displayDetail.releaseLevel] : 'Not Specified'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            {selected.files && selected.files.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">Files</p>
-                <div className="flex flex-col gap-[4px]">
-                  {selected.files.map(folder => (
-                    <div key={folder.name} className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] overflow-hidden">
-                      <div className="flex items-center gap-[8px] px-[12px] py-[10px] border-b border-[#464646]">
-                        <Icon icon="solar:folder-linear" className="text-white/50 text-sm" />
-                        <span className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">{folder.name}</span>
-                      </div>
-                      {folder.files?.map(f => (
-                        <div key={f.name} className="flex items-center gap-[8px] px-[12px] py-[8px] pl-[32px] border-b border-[#464646] last:border-0">
-                          <Icon icon="solar:file-linear" className="text-white/30 text-xs" />
-                          <span className="text-[11px] text-white/70 font-['JetBrains_Mono',sans-serif]">{f.name}</span>
-                        </div>
-                      ))}
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">Release Notes</p>
+                  <div className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]">
+                    {displayDetail.releaseNotes ? (
+                      <p className="text-[13px] text-white/80 leading-[1.6]">{displayDetail.releaseNotes}</p>
+                    ) : (
+                      <p className="text-[13px] text-white/30 italic">No release notes written.</p>
+                    )}
+                  </div>
+                </div>
+
+                {displayDetail.files && displayDetail.files.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">Files</p>
+                    <div className="flex flex-col gap-[4px]">
+                      {displayDetail.files.map(folder => {
+                        const isExpanded = expandedFolders.has(folder.name);
+                        return (
+                          <div key={folder.name} className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] overflow-hidden">
+                            <button
+                              onClick={() => toggleFolder(folder.name)}
+                              className="w-full flex items-center gap-[8px] px-[12px] py-[10px] border-b border-[#464646] hover:bg-white/3 transition-colors text-left"
+                            >
+                              <Icon
+                                icon={isExpanded ? 'solar:alt-arrow-down-linear' : 'solar:alt-arrow-right-linear'}
+                                className="text-white/40 text-xs shrink-0"
+                              />
+                              <Icon icon="solar:folder-linear" className="text-white/50 text-sm shrink-0" />
+                              <span className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">{folder.name}</span>
+                            </button>
+                            {isExpanded && folder.files?.map(f => (
+                              <button
+                                key={f.name}
+                                onClick={() => setOpenFile({ name: f.name, content: f.content ?? '' })}
+                                className="w-full flex items-center gap-[8px] px-[12px] py-[8px] pl-[36px] border-b border-[#464646] last:border-0 hover:bg-white/5 transition-colors text-left group"
+                              >
+                                <Icon icon="solar:file-linear" className="text-white/30 text-xs shrink-0 group-hover:text-white/50" />
+                                <span className="text-[11px] text-white/70 font-['JetBrains_Mono',sans-serif] group-hover:text-white/90">{f.name}</span>
+                                <Icon icon="solar:alt-arrow-right-linear" className="text-white/20 text-xs ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        </div>
+        )}
+      </div>
+
+      {openFile && (
+        <FileViewerModal file={openFile} onClose={() => setOpenFile(null)} />
       )}
+    </div>
+  );
+}
+
+// ── File Viewer Modal ─────────────────────────────────────────────────────────
+
+function extToLang(filename: string): string {
+  const name = filename.split('/').pop() ?? filename;
+  const ext = name.includes('.') ? name.split('.').pop()!.toLowerCase() : '';
+  if (name === 'Dockerfile' || name.startsWith('Dockerfile.')) return 'dockerfile';
+  if (name === 'Makefile' || name === 'makefile') return 'makefile';
+  if (name === 'go.mod' || name === 'go.sum') return 'go';
+  const map: Record<string, string> = {
+    go: 'go', proto: 'protobuf', tf: 'hcl', hcl: 'hcl',
+    ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
+    json: 'json', yaml: 'yaml', yml: 'yaml', sh: 'bash',
+    md: 'markdown', py: 'python', rs: 'rust', sql: 'sql',
+    toml: 'toml', xml: 'xml', html: 'html', css: 'css',
+  };
+  return map[ext] ?? 'text';
+}
+
+function FileViewerModal({ file, onClose }: { file: { name: string; content: string }; onClose: () => void }) {
+  const [html, setHtml] = useState<string>('');
+  const [hlLoading, setHlLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const lang = extToLang(file.name);
+    codeToHtml(file.content || ' ', { lang, theme: 'github-dark' })
+      .then(result => { if (!cancelled) { setHtml(result); setHlLoading(false); } })
+      .catch(() => {
+        if (!cancelled) {
+          codeToHtml(file.content || ' ', { lang: 'text', theme: 'github-dark' })
+            .then(r => { if (!cancelled) { setHtml(r); setHlLoading(false); } })
+            .catch(() => { if (!cancelled) setHlLoading(false); });
+        }
+      });
+    return () => { cancelled = true; };
+  }, [file.name, file.content]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const shortName = file.name.split('/').pop() ?? file.name;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-[#1a1a1a]/95 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-[20px] py-[12px] border-b border-[#464646] shrink-0">
+        <div className="flex items-center gap-[10px]">
+          <Icon icon="solar:file-code-linear" className="text-white/50 text-base" />
+          <span className="font-['JetBrains_Mono',sans-serif] text-[13px] text-white">{shortName}</span>
+          {shortName !== file.name && (
+            <span className="text-[11px] text-white/30 font-['JetBrains_Mono',sans-serif]">{file.name}</span>
+          )}
+          <span className="text-[10px] font-bold uppercase text-white/30 border border-white/15 rounded px-[6px] py-[1px]">
+            {extToLang(file.name)}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="flex items-center gap-[6px] text-[11px] text-white/50 hover:text-white/80 transition-colors border border-white/15 hover:border-white/30 rounded px-[10px] py-[4px]"
+        >
+          <Icon icon="solar:close-linear" className="text-xs" />
+          Close
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto">
+        {hlLoading ? (
+          <div className="flex items-center justify-center h-full"><Loader /></div>
+        ) : html ? (
+          <div
+            className="shiki-container p-[24px] text-[12px] leading-[1.6] font-['JetBrains_Mono',sans-serif] min-h-full"
+            dangerouslySetInnerHTML={{ __html: html }}
+            style={{ '--shiki-dark-bg': '#1a1a1a' } as React.CSSProperties}
+          />
+        ) : (
+          <pre className="p-[24px] text-[12px] text-white/70 font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap leading-[1.6]">
+            {file.content}
+          </pre>
+        )}
+      </div>
     </div>
   );
 }

@@ -94,12 +94,22 @@ export function GetCodeblockMembers(blockId: string): $CancellablePromise<$model
 }
 
 /**
+ * GetCodeblockVersion returns full details for a block version including files.
+ * versionName is the resource name, e.g. "blocks/bb6b/versions/1.0.0-experimental1".
+ */
+export function GetCodeblockVersion(versionName: string): $CancellablePromise<$models.CodeblockVersion | null> {
+    return $Call.ByID(2809120232, versionName).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
  * GetEnvironmentVariables fetches the variables for a single environment.
  * envName is the full resource name, e.g. "organisations/voyage/products/vp/environments/1y2ozw66zv6p3".
  */
 export function GetEnvironmentVariables(envName: string): $CancellablePromise<$models.EnvVariable[]> {
     return $Call.ByID(3106139540, envName).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
@@ -115,19 +125,19 @@ export function GetMyPrimaryAccountID(): $CancellablePromise<string> {
  */
 export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
     return $Call.ByID(1082294977, org).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType15($result);
     });
 }
 
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType17($result);
     });
 }
 
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -137,7 +147,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -147,7 +157,7 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType23($result);
     });
 }
 
@@ -171,7 +181,7 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
  */
 export function ListBlockPlans(blockId: string): $CancellablePromise<$models.BlockPlan[]> {
     return $Call.ByID(2087595101, blockId).then(($result: any) => {
-        return $$createType23($result);
+        return $$createType25($result);
     });
 }
 
@@ -180,7 +190,7 @@ export function ListBlockPlans(blockId: string): $CancellablePromise<$models.Blo
  */
 export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
     return $Call.ByID(2469208404, blockId).then(($result: any) => {
-        return $$createType25($result);
+        return $$createType27($result);
     });
 }
 
@@ -189,7 +199,7 @@ export function ListCodeblockInstances(blockId: string): $CancellablePromise<$mo
  */
 export function ListCodeblockVersions(blockId: string): $CancellablePromise<$models.CodeblockVersion[]> {
     return $Call.ByID(1837251873, blockId).then(($result: any) => {
-        return $$createType27($result);
+        return $$createType28($result);
     });
 }
 
@@ -198,13 +208,13 @@ export function ListCodeblockVersions(blockId: string): $CancellablePromise<$mod
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType29($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType29($result);
+        return $$createType30($result);
     });
 }
 
@@ -213,7 +223,7 @@ export function ListEnvironments(org: string, product: string): $CancellableProm
  */
 export function ListInstallNeurons(org: string, product: string): $CancellablePromise<$models.InstallNeuron[]> {
     return $Call.ByID(426248599, org, product).then(($result: any) => {
-        return $$createType31($result);
+        return $$createType32($result);
     });
 }
 
@@ -222,19 +232,19 @@ export function ListInstallNeurons(org: string, product: string): $CancellablePr
  */
 export function ListInstallOrgs(): $CancellablePromise<$models.Organisation[]> {
     return $Call.ByID(3252611686).then(($result: any) => {
-        return $$createType33($result);
+        return $$createType34($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType35($result);
+        return $$createType36($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType37($result);
+        return $$createType38($result);
     });
 }
 
@@ -243,13 +253,13 @@ export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData
  */
 export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(657485483).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType29($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType39($result);
+        return $$createType40($result);
     });
 }
 
@@ -300,7 +310,7 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType41($result);
+        return $$createType42($result);
     });
 }
 
@@ -333,35 +343,36 @@ const $$createType6 = $models.Codeblock.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
 const $$createType8 = $models.CodeblockMember.createFrom;
 const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $models.EnvVariable.createFrom;
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = $models.GCPProject.createFrom;
-const $$createType13 = $Create.Nullable($$createType12);
-const $$createType14 = $models.ProductOverview.createFrom;
+const $$createType10 = $models.CodeblockVersion.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $models.EnvVariable.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = $models.GCPProject.createFrom;
 const $$createType15 = $Create.Nullable($$createType14);
-const $$createType16 = $models.ServicesOverview.createFrom;
+const $$createType16 = $models.ProductOverview.createFrom;
 const $$createType17 = $Create.Nullable($$createType16);
-const $$createType18 = $models.ShareData.createFrom;
+const $$createType18 = $models.ServicesOverview.createFrom;
 const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $models.UserProfile.createFrom;
+const $$createType20 = $models.ShareData.createFrom;
 const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $models.BlockPlan.createFrom;
-const $$createType23 = $Create.Array($$createType22);
-const $$createType24 = $models.CodeblockInstance.createFrom;
+const $$createType22 = $models.UserProfile.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $models.BlockPlan.createFrom;
 const $$createType25 = $Create.Array($$createType24);
-const $$createType26 = $models.CodeblockVersion.createFrom;
+const $$createType26 = $models.CodeblockInstance.createFrom;
 const $$createType27 = $Create.Array($$createType26);
-const $$createType28 = $Create.Array($$createType6);
-const $$createType29 = $Create.Array($$createType0);
-const $$createType30 = $models.InstallNeuron.createFrom;
-const $$createType31 = $Create.Array($$createType30);
-const $$createType32 = $models.Organisation.createFrom;
-const $$createType33 = $Create.Array($$createType32);
-const $$createType34 = $models.InviteInfo.createFrom;
-const $$createType35 = $Create.Array($$createType34);
-const $$createType36 = $models.LandingZonesData.createFrom;
-const $$createType37 = $Create.Nullable($$createType36);
-const $$createType38 = $models.ProductSummary.createFrom;
-const $$createType39 = $Create.Array($$createType38);
-const $$createType40 = $models.SyncReposResult.createFrom;
-const $$createType41 = $Create.Nullable($$createType40);
+const $$createType28 = $Create.Array($$createType10);
+const $$createType29 = $Create.Array($$createType6);
+const $$createType30 = $Create.Array($$createType0);
+const $$createType31 = $models.InstallNeuron.createFrom;
+const $$createType32 = $Create.Array($$createType31);
+const $$createType33 = $models.Organisation.createFrom;
+const $$createType34 = $Create.Array($$createType33);
+const $$createType35 = $models.InviteInfo.createFrom;
+const $$createType36 = $Create.Array($$createType35);
+const $$createType37 = $models.LandingZonesData.createFrom;
+const $$createType38 = $Create.Nullable($$createType37);
+const $$createType39 = $models.ProductSummary.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = $models.SyncReposResult.createFrom;
+const $$createType42 = $Create.Nullable($$createType41);
