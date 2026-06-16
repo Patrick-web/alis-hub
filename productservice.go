@@ -159,6 +159,27 @@ type CodeblockMember struct {
 	PhotoURL    string `json:"photoUrl"`
 }
 
+type CreateCodeblockParams struct {
+	BlockID          string             `json:"blockId"`
+	DisplayName      string             `json:"displayName"`
+	Tagline          string             `json:"tagline"`
+	HeroStatement    string             `json:"heroStatement"`
+	Description      string             `json:"description"`
+	Highlights       []string           `json:"highlights"`
+	KeyFeatures      []CodeblockFeature `json:"keyFeatures"`
+	CodeArchitecture []CodeblockLayer   `json:"codeArchitecture"`
+}
+
+type CodeblockFeature struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+type CodeblockLayer struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
@@ -1084,6 +1105,151 @@ func (s *ProductService) GetCodeblockMembers(blockId string) ([]CodeblockMember,
 	return parseCodeblockMembers(body2[5:]), nil
 }
 
+// ListMyCodeblocks returns only the blocks published by the current user's account.
+func (s *ProductService) ListMyCodeblocks() ([]Codeblock, error) {
+	all, err := s.ListCodeblocks()
+	if err != nil {
+		return nil, err
+	}
+	myIDs := s.myAccountIDs()
+	var mine []Codeblock
+	for _, cb := range all {
+		if myIDs[cb.Publisher] {
+			mine = append(mine, cb)
+		}
+	}
+	return mine, nil
+}
+
+// CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
+func (s *ProductService) CreateCodeblock(params CreateCodeblockParams) (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	accountName := s.myPrimaryAccountID()
+	protoBytes := marshalCreateBlockRequest(params, accountName)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/CreateBlock", protoBytes)
+	if err != nil {
+		return "", fmt.Errorf("CreateBlock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("CreateBlock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("CreateBlock: response too short (%d bytes)", len(body))
+	}
+	return parseCreateBlockName(body[5:]), nil
+}
+
+// myPrimaryAccountID returns the first "accounts/<id>" from the JWT access token.
+func (s *ProductService) myPrimaryAccountID() string {
+	for id := range s.myAccountIDs() {
+		return id
+	}
+	return ""
+}
+
+func marshalCreateBlockRequest(p CreateCodeblockParams, accountName string) []byte {
+	// overview_details (field 31 of Block)
+	var overview []byte
+	if p.HeroStatement != "" {
+		overview = protowire.AppendTag(overview, 2, protowire.BytesType)
+		overview = protowire.AppendString(overview, p.HeroStatement)
+	}
+	if p.Description != "" {
+		overview = protowire.AppendTag(overview, 3, protowire.BytesType)
+		overview = protowire.AppendString(overview, p.Description)
+	}
+	for _, h := range p.Highlights {
+		if h != "" {
+			overview = protowire.AppendTag(overview, 6, protowire.BytesType)
+			overview = protowire.AppendString(overview, h)
+		}
+	}
+	for _, kf := range p.KeyFeatures {
+		var feat []byte
+		feat = protowire.AppendTag(feat, 1, protowire.BytesType)
+		feat = protowire.AppendString(feat, kf.Title)
+		feat = protowire.AppendTag(feat, 2, protowire.BytesType)
+		feat = protowire.AppendString(feat, kf.Description)
+		overview = protowire.AppendTag(overview, 7, protowire.BytesType)
+		overview = protowire.AppendBytes(overview, feat)
+	}
+	for _, al := range p.CodeArchitecture {
+		var layer []byte
+		layer = protowire.AppendTag(layer, 1, protowire.BytesType)
+		layer = protowire.AppendString(layer, al.Title)
+		layer = protowire.AppendTag(layer, 2, protowire.BytesType)
+		layer = protowire.AppendString(layer, al.Description)
+		overview = protowire.AppendTag(overview, 8, protowire.BytesType)
+		overview = protowire.AppendBytes(overview, layer)
+	}
+
+	// publisher (field 30 of Block)
+	var publisher []byte
+	if accountName != "" {
+		publisher = protowire.AppendTag(publisher, 1, protowire.BytesType)
+		publisher = protowire.AppendString(publisher, accountName)
+	}
+
+	// Block message (field 2 of CreateBlockRequest)
+	var block []byte
+	if p.DisplayName != "" {
+		block = protowire.AppendTag(block, 2, protowire.BytesType)
+		block = protowire.AppendString(block, p.DisplayName)
+	}
+	if p.Tagline != "" {
+		block = protowire.AppendTag(block, 13, protowire.BytesType)
+		block = protowire.AppendString(block, p.Tagline)
+	}
+	if len(publisher) > 0 {
+		block = protowire.AppendTag(block, 30, protowire.BytesType)
+		block = protowire.AppendBytes(block, publisher)
+	}
+	if len(overview) > 0 {
+		block = protowire.AppendTag(block, 31, protowire.BytesType)
+		block = protowire.AppendBytes(block, overview)
+	}
+
+	// CreateBlockRequest: f2=block, f3=block_id
+	var req []byte
+	req = protowire.AppendTag(req, 2, protowire.BytesType)
+	req = protowire.AppendBytes(req, block)
+	req = protowire.AppendTag(req, 3, protowire.BytesType)
+	req = protowire.AppendString(req, p.BlockID)
+	return req
+}
+
+// parseCreateBlockName extracts the resource name (field 1) from the returned Block.
+func parseCreateBlockName(data []byte) string {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ == protowire.BytesType {
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				break
+			}
+			if num == 1 {
+				return string(b)
+			}
+			data = data[m:]
+		} else {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+		}
+	}
+	return ""
+}
+
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
 // Authentication uses all three alis cookies — the server requires all of them.
 func (s *ProductService) doConsoleGRPCWeb(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
@@ -1899,7 +2065,9 @@ func parseEnvInfoFromEnvironment(data []byte) (*EnvInfo, error) {
 
 // ── Codeblock parse helpers ───────────────────────────────────────────────────
 
-// parseCodeblocksResponse parses the outer repeated BlockDetails (field 1) from RetrieveBlockDetails.
+// parseCodeblocksResponse parses BlockDetails entries from RetrieveBlockDetails.
+// The server uses field 1 for marketplace blocks and field 2 for the caller's own blocks,
+// so we attempt to parse every bytes-type field as a BlockDetails message.
 func parseCodeblocksResponse(data []byte) ([]Codeblock, error) {
 	var blocks []Codeblock
 	for len(data) > 0 {
@@ -1921,11 +2089,10 @@ func parseCodeblocksResponse(data []byte) ([]Codeblock, error) {
 			break
 		}
 		data = data[m:]
-		if num == 1 { // BlockDetails message
-			cb := parseBlockDetails(b)
-			if cb.Name != "" {
-				blocks = append(blocks, cb)
-			}
+		_ = num
+		cb := parseBlockDetails(b)
+		if cb.Name != "" {
+			blocks = append(blocks, cb)
 		}
 	}
 	return blocks, nil

@@ -7,19 +7,19 @@ import { Loader } from '../components/Loader';
 import { Button } from '../components/Button';
 
 const LEVEL_LABEL: Record<number, string> = {
-  1: 'Stable',
-  2: 'Release Candidate',
+  1: 'Experimental',
+  2: 'Alpha',
   3: 'Beta',
-  4: 'Alpha',
-  5: 'Experimental',
+  4: 'Release Candidate',
+  5: 'Stable',
 };
 
 const LEVEL_COLOR: Record<number, string> = {
-  1: 'text-green-400 border-green-400/30 bg-green-400/10',
-  2: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+  1: 'text-red-400 border-red-400/30 bg-red-400/10',
+  2: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
   3: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10',
-  4: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
-  5: 'text-red-400 border-red-400/30 bg-red-400/10',
+  4: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+  5: 'text-green-400 border-green-400/30 bg-green-400/10',
 };
 
 const STATE_LABEL: Record<number, string> = { 1: 'Pending', 2: 'Deploying', 3: 'Active', 4: 'Error' };

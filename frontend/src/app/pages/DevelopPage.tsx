@@ -637,9 +637,6 @@ export function DevelopPage() {
   };
 
 
-  const activeNeuronName = state.activeNeuronIds[0] || null;
-  const activeNeuronData = state.neurons.find(n => n.name === activeNeuronName || n.id === activeNeuronName);
-
   const formatTimestamp = (ts: number) => {
     const d = new Date(ts * 1000);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -658,63 +655,93 @@ export function DevelopPage() {
       <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
         <ResizablePanel defaultSize={packageSessions.length > 0 ? 65 : 100} minSize={25}>
           <div className="flex h-full overflow-hidden">
-            {/* Service detail — left side */}
+            {/* Services table — left side */}
             <div className="flex-1 overflow-y-auto">
-              {activeNeuronName ? (
-                <div className="p-[24px] flex flex-col gap-[24px]">
-                  {/* Neuron header */}
-                  <div className="flex items-center gap-[12px]">
-                    <div className={`size-[10px] rounded-full shrink-0 ${activeNeuronData?.state === 1 ? 'bg-[#34C759]' : activeNeuronData?.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
-                    <h1 className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-white">{activeNeuronName}</h1>
-                    {activeNeuronData?.latestBuild && (
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.4)] bg-[#2c2c2c] border border-[#464646] px-[8px] py-[3px] rounded-[4px]">
-                        {activeNeuronData.latestBuild}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex flex-wrap gap-[8px]">
-                    <Button
-                      variant="secondary"
-                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
-                      icon={<Icon icon="solar:document-text-linear" className="text-base" />}
-                      onClick={() => openDefinePane(activeNeuronName)}
-                    >
-                      DEFINE
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
-                      icon={<Icon icon="solar:code-linear" className="text-base" />}
-                      onClick={() => openBuildPane(activeNeuronName)}
-                    >
-                      BUILD
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
-                      icon={<Icon icon="solar:cloud-upload-linear" className="text-base" />}
-                      onClick={() => openDeployPane(activeNeuronName)}
-                    >
-                      DEPLOY
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="px-[14px] py-[8px] h-[36px] uppercase text-[10px] font-bold"
-                      icon={<Icon icon="solar:box-linear" className="text-base" />}
-                      onClick={() => openPackagesPane([activeNeuronName])}
-                    >
-                      PACKAGES
-                    </Button>
-                  </div>
-                </div>
-              ) : (
+              {state.neurons.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-[12px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
-                    Select a service from the sidebar
+                    No services found
                   </p>
                 </div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 z-10 bg-[#1e1e1e]">
+                    <tr className="border-b border-[#464646]">
+                      <th className="text-left px-[20px] py-[8px]">
+                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Service</span>
+                      </th>
+                      <th className="text-left px-[16px] py-[8px] w-[100px]">
+                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Version</span>
+                      </th>
+                      <th className="text-left px-[16px] py-[8px] w-[260px]">
+                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Actions</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {state.neurons.map(neuron => {
+                      const name = neuron.name || neuron.id;
+                      return (
+                        <tr
+                          key={name}
+                          className="border-b border-[#2e2e2e] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                        >
+                          <td className="px-[20px] py-[10px]">
+                            <div className="flex items-center gap-[8px]">
+                              <div className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? 'bg-[#34C759]' : neuron.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
+                              <span className="text-[12px] font-bold font-['JetBrains_Mono',sans-serif] text-white">{name}</span>
+                            </div>
+                          </td>
+                          <td className="px-[16px] py-[10px]">
+                            {neuron.latestBuild ? (
+                              <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] bg-[#2c2c2c] border border-[#464646] px-[6px] py-[2px]">
+                                {neuron.latestBuild}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-[rgba(255,255,255,0.2)]">—</span>
+                            )}
+                          </td>
+                          <td className="px-[16px] py-[10px]">
+                            <div className="flex items-center gap-[6px]">
+                              <Button
+                                variant="secondary"
+                                className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
+                                icon={<Icon icon="solar:document-text-linear" className="text-sm" />}
+                                onClick={() => openDefinePane(name)}
+                              >
+                                Define
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
+                                icon={<Icon icon="solar:code-linear" className="text-sm" />}
+                                onClick={() => openBuildPane(name)}
+                              >
+                                Build
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
+                                icon={<Icon icon="solar:cloud-upload-linear" className="text-sm" />}
+                                onClick={() => openDeployPane(name)}
+                              >
+                                Deploy
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
+                                icon={<Icon icon="solar:box-linear" className="text-sm" />}
+                                onClick={() => openPackagesPane([name])}
+                              >
+                                Packages
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
         </div>
 

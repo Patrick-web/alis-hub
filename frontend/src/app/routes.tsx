@@ -5,7 +5,6 @@ import { DevelopPage } from "./pages/DevelopPage";
 import { EnvironmentsPage } from "./pages/EnvironmentsPage";
 import { BuildsPage } from "./pages/BuildsPage";
 import { DeploymentsPage } from "./pages/DeploymentsPage";
-import { ServicesPage } from "./pages/ServicesPage";
 import { CodeblocksPage } from "./pages/CodeblocksPage";
 import { CodeblockCreatePage } from "./pages/CodeblockCreatePage";
 import { CodeblockDetailsPage } from "./pages/CodeblockDetailsPage";
@@ -38,7 +37,6 @@ export const router = createBrowserRouter([
       { index: true, Component: AboutPage },
       { path: "about", Component: AboutPage },
       { path: "develop", Component: DevelopPage },
-      { path: "services", Component: ServicesPage },
       { path: "builds", Component: BuildsPage },
       { path: "deployments", Component: DeploymentsPage },
       { path: "environments", Component: EnvironmentsPage },
@@ -46,6 +44,7 @@ export const router = createBrowserRouter([
       { path: "agents", Component: AgentsPage },
       { path: "share", Component: SharePage },
       { path: "codeblocks", Component: CodeblocksPage },
+      { path: "codeblocks/mine", element: <CodeblocksPage view="mine" /> },
       { path: "codeblocks/create", Component: CodeblockCreatePage },
       { path: "codeblocks/:id", Component: CodeblockDetailsPage },
       { path: "codeblocks/:id/:tab", Component: CodeblockDetailsPage },

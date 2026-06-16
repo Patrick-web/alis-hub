@@ -22,6 +22,13 @@ export function CheckProductCloneStatus(org: string, product: string): $Cancella
 }
 
 /**
+ * CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
+ */
+export function CreateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<string> {
+    return $Call.ByID(3659538524, params);
+}
+
+/**
  * CreateEnvironment creates a new environment under the given org/product.
  * envType: 1=DEV, 2=STAGING, 3=PROD. region must be a valid GCP region.
  */
@@ -184,6 +191,15 @@ export function ListInvites(org: string, product: string): $CancellablePromise<$
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
         return $$createType29($result);
+    });
+}
+
+/**
+ * ListMyCodeblocks returns only the blocks published by the current user's account.
+ */
+export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
+    return $Call.ByID(657485483).then(($result: any) => {
+        return $$createType24($result);
     });
 }
 

@@ -9,19 +9,19 @@ const RELEASE_LEVELS = ['All', 'Stable', 'Release Candidate', 'Beta', 'Alpha', '
 type ReleaseFilter = typeof RELEASE_LEVELS[number];
 
 const LEVEL_LABEL: Record<number, string> = {
-  1: 'Stable',
-  2: 'Release Candidate',
+  1: 'Experimental',
+  2: 'Alpha',
   3: 'Beta',
-  4: 'Alpha',
-  5: 'Experimental',
+  4: 'Release Candidate',
+  5: 'Stable',
 };
 
 const LEVEL_COLOR: Record<number, string> = {
-  1: 'text-green-400 border-green-400/30 bg-green-400/10',
-  2: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+  1: 'text-red-400 border-red-400/30 bg-red-400/10',
+  2: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
   3: 'text-yellow-400 border-yellow-400/30 bg-yellow-400/10',
-  4: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
-  5: 'text-red-400 border-red-400/30 bg-red-400/10',
+  4: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+  5: 'text-green-400 border-green-400/30 bg-green-400/10',
 };
 
 const DEFAULT_BANNER = 'https://static.vecteezy.com/system/resources/previews/020/398/136/non_2x/abstract-background-banner-with-dark-red-and-black-gradations-vector.jpg';
@@ -42,7 +42,7 @@ function blockId(name: string): string {
   return name.replace('blocks/', '');
 }
 
-export function CodeblocksPage() {
+export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
   const navigate = useNavigate();
   const [blocks, setBlocks] = useState<Codeblock[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,11 +50,14 @@ export function CodeblocksPage() {
   const [activeFilter, setActiveFilter] = useState<ReleaseFilter>('All');
 
   useEffect(() => {
-    (ProductService.ListCodeblocks as () => Promise<Codeblock[]>)()
+    const fetch = view === 'mine'
+      ? (ProductService.ListMyCodeblocks as () => Promise<Codeblock[]>)()
+      : (ProductService.ListCodeblocks as () => Promise<Codeblock[]>)();
+    fetch
       .then(data => setBlocks(data ?? []))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [view]);
 
   const filtered = blocks.filter(cb => {
     if (activeFilter !== 'All') {
