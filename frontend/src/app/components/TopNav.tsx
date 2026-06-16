@@ -46,9 +46,6 @@ const tabs = [
   { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
   { id: 'agents', label: 'Agents', icon: <Icon icon="solar:users-group-two-rounded-linear" className="text-lg" /> },
-  { id: 'codeblocks', label: 'Codeblocks', icon: <Icon icon="solar:code-linear" className="text-lg" /> },
-  { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-launch-linear" className="text-lg" /> },
-  { id: 'learn', label: 'Learn', icon: <Icon icon="solar:diploma-linear" className="text-lg" /> },
 ];
 
 export function TopNav() {
@@ -129,7 +126,7 @@ export function TopNav() {
 
   const handleTabClick = (tabId: string) => navigate(`/${tabId}`);
 
-  const handleHomeClick = () => setPhase('picking-org');
+  const handleHomeClick = () => setPhase('hub');
   const handleOrgClick = () => setPhase('picking-product');
 
   const openProfile = () => setProfileOpen(true);

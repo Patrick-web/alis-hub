@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { TopNav } from './components/TopNav';
+import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
+import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { useWorkspace, type AppPhase } from './stores/workspace';
@@ -19,7 +21,7 @@ export function RootLayout() {
     const devPhase = new URLSearchParams(window.location.search).get('phase') as AppPhase | null;
     if (devPhase) { setPhase(devPhase); return; }
     (ProductService.IsLoggedIn as () => Promise<boolean>)()
-      .then(loggedIn => setPhase(loggedIn ? 'picking-org' : 'login'))
+      .then(loggedIn => setPhase(loggedIn ? 'hub' : 'login'))
       .catch(() => setPhase('login'));
   }, []);
 
@@ -40,6 +42,10 @@ export function RootLayout() {
     );
   }
 
+  if (state.phase === 'hub') {
+    return <HubPage />;
+  }
+
   if (state.phase === 'picking-org') {
     return (
       <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
@@ -56,19 +62,34 @@ export function RootLayout() {
     );
   }
 
-  // Workspace phase — full nav chrome + sidebar + tab content
   const path = location.pathname;
   const codeblockListPaths = new Set(['/codeblocks', '/codeblocks/mine', '/codeblocks/starred']);
-  const showSidebar =
+  const showSidebar = codeblockListPaths.has(path);
+
+  // Standalone phase — slim 4-shortcut nav, no product required
+  if (state.phase === 'standalone') {
+    return (
+      <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
+        <StandaloneTopNav />
+        <div className="flex flex-1 overflow-hidden">
+          {showSidebar && <Sidebar />}
+          <Outlet />
+        </div>
+      </div>
+    );
+  }
+
+  // Workspace phase — full nav chrome + sidebar + tab content
+  const workspaceSidebar =
     path === '/environments' ||
     path === '/builds' ||
-    codeblockListPaths.has(path);
+    showSidebar;
 
   return (
     <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
       <TopNav />
       <div className="flex flex-1 overflow-hidden">
-        {showSidebar && <Sidebar />}
+        {workspaceSidebar && <Sidebar />}
         <Outlet key={`${state.organisation}/${state.product}`} />
       </div>
     </div>
