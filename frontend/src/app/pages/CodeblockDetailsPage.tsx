@@ -3,6 +3,9 @@ import { codeToHtml } from 'shiki';
 import { useParams, useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { marked } from 'marked';
+import mermaid from 'mermaid';
+
+mermaid.initialize({ startOnLoad: false, theme: 'dark', securityLevel: 'loose' });
 import { Events } from '@wailsio/runtime';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
@@ -1206,8 +1209,33 @@ function DocumentationTab({
   onAudienceChange: (a: 'user' | 'agent') => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const proseRef = useRef<HTMLDivElement>(null);
   const content = audience === 'agent' ? agentDoc : doc;
   const html = content ? (marked.parse(content) as string) : '';
+
+  useEffect(() => {
+    if (!proseRef.current || !html) return;
+    const nodes = proseRef.current.querySelectorAll<HTMLElement>('pre code.language-mermaid');
+    if (nodes.length === 0) return;
+    nodes.forEach((codeEl, i) => {
+      const pre = codeEl.parentElement;
+      if (!pre) return;
+      const code = codeEl.textContent ?? '';
+      const id = `mermaid-${Date.now()}-${i}`;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'mermaid-diagram';
+      wrapper.style.cssText = 'margin: 16px 0; display: flex; justify-content: center;';
+      pre.replaceWith(wrapper);
+      mermaid.parse(code)
+        .then(() => mermaid.render(id, code))
+        .then(({ svg }) => { wrapper.innerHTML = svg; })
+        .catch(() => {
+          document.getElementById(`d${id}`)?.remove();
+          document.getElementById(id)?.remove();
+          wrapper.replaceWith(pre);
+        });
+    });
+  }, [html]);
 
   function handleCopy() {
     navigator.clipboard.writeText(content).then(() => {
@@ -1253,6 +1281,7 @@ function DocumentationTab({
           <div className="flex items-center justify-center py-[60px]"><Loader /></div>
         ) : html ? (
           <div
+            ref={proseRef}
             className="prose prose-invert prose-sm max-w-none break-words
               text-[13px] leading-[1.7] text-[rgba(255,255,255,0.75)]
               [&_h1]:font-['JetBrains_Mono',sans-serif] [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-white [&_h1]:mb-[12px]
