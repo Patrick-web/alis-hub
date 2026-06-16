@@ -33,6 +33,7 @@ func main() {
 			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
 			application.NewService(NewGCloudService()),
+			application.NewService(NewGitService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
