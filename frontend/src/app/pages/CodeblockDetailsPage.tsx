@@ -290,14 +290,24 @@ export function CodeblockDetailsPage() {
         {/* CTA */}
         <div className="p-[10px] border-t border-[#464646] flex flex-col gap-[8px]">
           {isOwner ? (
-            <Button
-              variant="secondary"
-              className="w-full"
-              icon={<Icon icon="solar:pen-linear" />}
-              onClick={() => navigate(`/codeblocks/${blockId}/edit`)}
-            >
-              Edit Block
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                className="w-full"
+                icon={<Icon icon="solar:pen-linear" />}
+                onClick={() => navigate(`/codeblocks/${blockId}/edit`)}
+              >
+                Edit Block
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                icon={<Icon icon="solar:upload-linear" />}
+                onClick={() => navigate(`/codeblocks/${blockId}/contribute`)}
+              >
+                Contribute Version
+              </Button>
+            </>
           ) : (
             <Button
               variant="secondary"
@@ -368,7 +378,12 @@ export function CodeblockDetailsPage() {
             />
           )}
           {activeTab === 'instances' && (
-            <InstancesTab instances={instances} loading={instancesLoading} />
+            <InstancesTab
+              instances={instances}
+              loading={instancesLoading}
+              blockId={blockId}
+              onRefresh={() => setInstances([])}
+            />
           )}
           {activeTab === 'help' && <HelpTab blockId={blockId} />}
         </div>
@@ -1561,7 +1576,20 @@ function FileViewerModal({ file, onClose }: { file: { name: string; content: str
 
 // ── Instances Tab ─────────────────────────────────────────────────────────────
 
-function InstancesTab({ instances, loading }: { instances: CodeblockInstance[]; loading: boolean }) {
+function InstancesTab({
+  instances,
+  loading,
+  blockId,
+  onRefresh,
+}: {
+  instances: CodeblockInstance[];
+  loading: boolean;
+  blockId: string;
+  onRefresh: () => void;
+}) {
+  const [uninstallTarget, setUninstallTarget] = useState<CodeblockInstance | null>(null);
+  const [configureTarget, setConfigureTarget] = useState<CodeblockInstance | null>(null);
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><Loader /></div>;
   }
@@ -1576,56 +1604,269 @@ function InstancesTab({ instances, loading }: { instances: CodeblockInstance[]; 
   }
 
   return (
-    <div className="h-full overflow-auto p-[20px]">
-      <div className="flex flex-col gap-[12px] max-w-[900px]">
-        {instances.map(inst => (
-          <div key={inst.name} className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]">
-            <div className="flex items-start justify-between mb-[12px]">
-              <div>
-                <div className="flex items-center gap-[10px] mb-[4px]">
-                  <span className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white">
-                    {inst.shortId}
-                  </span>
-                  {inst.state > 0 && (
-                    <span className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? 'text-white/50 bg-white/5'}`}>
-                      {STATE_LABEL[inst.state] ?? 'Unknown'}
+    <>
+      <div className="h-full overflow-auto p-[20px]">
+        <div className="flex flex-col gap-[12px] max-w-[900px]">
+          {instances.map(inst => (
+            <div key={inst.name} className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]">
+              <div className="flex items-start justify-between mb-[12px]">
+                <div>
+                  <div className="flex items-center gap-[10px] mb-[4px]">
+                    <span className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white">
+                      {inst.shortId}
                     </span>
-                  )}
+                    {inst.state > 0 && (
+                      <span className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? 'text-white/50 bg-white/5'}`}>
+                        {STATE_LABEL[inst.state] ?? 'Unknown'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-white/50 font-['JetBrains_Mono',sans-serif]">{inst.package}</p>
                 </div>
-                <p className="text-[11px] text-white/50 font-['JetBrains_Mono',sans-serif]">{inst.package}</p>
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    onClick={() => setConfigureTarget(inst)}
+                    className="text-[10px] text-white/40 hover:text-white/70 border border-[#464646] rounded px-[10px] py-[4px] transition-colors"
+                  >
+                    Configure
+                  </button>
+                  <button
+                    onClick={() => setUninstallTarget(inst)}
+                    className="text-[10px] text-red-400/70 hover:text-red-400 border border-red-400/20 rounded px-[10px] py-[4px] transition-colors"
+                  >
+                    Uninstall
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-[8px]">
-                <button className="text-[10px] text-white/40 hover:text-white/70 border border-[#464646] rounded px-[10px] py-[4px] transition-colors">
-                  Configure
-                </button>
-                <button className="text-[10px] text-red-400/70 hover:text-red-400 border border-red-400/20 rounded px-[10px] py-[4px] transition-colors">
-                  Uninstall
-                </button>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-[12px] text-[11px]">
-              {inst.blockVersion && (
-                <div>
-                  <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Version</p>
-                  <p className="text-white/70 font-['JetBrains_Mono',sans-serif]">{shortBlockId(inst.blockVersion)}</p>
-                </div>
-              )}
-              {inst.createTime && (
-                <div>
-                  <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Installed</p>
-                  <p className="text-white/70">{formatDate(inst.createTime)}</p>
-                </div>
-              )}
-              {inst.entitlement && (
-                <div className="col-span-2">
-                  <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Entitlement</p>
-                  <p className="text-white/50 font-['JetBrains_Mono',sans-serif] text-[10px] truncate">{inst.entitlement}</p>
-                </div>
-              )}
+              <div className="grid grid-cols-2 gap-[12px] text-[11px]">
+                {inst.blockVersion && (
+                  <div>
+                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Version</p>
+                    <p className="text-white/70 font-['JetBrains_Mono',sans-serif]">{shortBlockId(inst.blockVersion)}</p>
+                  </div>
+                )}
+                {inst.createTime && (
+                  <div>
+                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Installed</p>
+                    <p className="text-white/70">{formatDate(inst.createTime)}</p>
+                  </div>
+                )}
+                {inst.entitlement && (
+                  <div className="col-span-2">
+                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">Entitlement</p>
+                    <p className="text-white/50 font-['JetBrains_Mono',sans-serif] text-[10px] truncate">{inst.entitlement}</p>
+                  </div>
+                )}
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+
+      {uninstallTarget && (
+        <UninstallModal
+          instance={uninstallTarget}
+          onClose={() => setUninstallTarget(null)}
+          onDone={() => { setUninstallTarget(null); onRefresh(); }}
+        />
+      )}
+
+      {configureTarget && (
+        <ConfigureModal
+          instance={configureTarget}
+          blockId={blockId}
+          onClose={() => setConfigureTarget(null)}
+          onDone={() => { setConfigureTarget(null); onRefresh(); }}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Uninstall Modal ───────────────────────────────────────────────────────────
+
+function UninstallModal({
+  instance: inst,
+  onClose,
+  onDone,
+}: {
+  instance: CodeblockInstance;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  function doUninstall() {
+    setLoading(true);
+    setError('');
+    (ProductService.UninstallCodeblockInstance as (name: string) => Promise<void>)(inst.name)
+      .then(onDone)
+      .catch(e => { setError(String(e)); setLoading(false); });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-[#464646]">
+          <Icon icon="solar:trash-bin-minimalistic-linear" className="text-red-400 text-lg" />
+          <div>
+            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+              Uninstall Instance
+            </h2>
+            <p className="text-[11px] text-white/40 mt-[2px]">
+              Configuration is preserved for potential reinstallation.
+            </p>
           </div>
-        ))}
+        </div>
+
+        <div className="p-[24px] flex flex-col gap-[16px]">
+          {error && (
+            <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[12px] text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-white/3 border border-[#464646] rounded-[4px] text-[11px] overflow-hidden">
+            {[
+              { label: 'Instance', value: inst.name },
+              { label: 'State', value: STATE_LABEL[inst.state] ?? 'Unknown', color: STATE_COLOR[inst.state] },
+              { label: 'Package', value: inst.package },
+              { label: 'Block Version', value: inst.blockVersion },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="flex gap-[12px] px-[12px] py-[8px] border-b border-[#464646] last:border-0">
+                <span className="text-white/30 w-[90px] shrink-0">{label}</span>
+                {color ? (
+                  <span className={`text-[9px] font-bold uppercase rounded px-[6px] py-[1px] self-center ${color}`}>{value}</span>
+                ) : (
+                  <span className="text-white/70 font-['JetBrains_Mono',sans-serif] break-all">{value}</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+              Type <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">{inst.shortId}</span> to confirm
+            </label>
+            <input
+              type="text"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder={inst.shortId}
+              disabled={loading}
+              className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-['JetBrains_Mono',sans-serif] focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={doUninstall}
+            disabled={confirm !== inst.shortId || loading}
+            className="bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-500/60"
+          >
+            {loading ? <><Loader size={14} /><span className="ml-2">Uninstalling…</span></> : 'Uninstall'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Configure (Upgrade) Modal ─────────────────────────────────────────────────
+
+function ConfigureModal({
+  instance: inst,
+  blockId,
+  onClose,
+  onDone,
+}: {
+  instance: CodeblockInstance;
+  blockId: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [versions, setVersions] = useState<CodeblockVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+  const [selectedVersion, setSelectedVersion] = useState(inst.blockVersion ?? '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
+      .then(list => {
+        const l = list ?? [];
+        setVersions(l);
+        if (!selectedVersion && l.length > 0) setSelectedVersion(l[0].name);
+      })
+      .catch(e => setError(String(e)))
+      .finally(() => setVersionsLoading(false));
+  }, [blockId]);
+
+  function doUpgrade() {
+    if (!selectedVersion) return;
+    setLoading(true);
+    setError('');
+    (ProductService.UpgradeCodeblockInstance as (name: string, version: string) => Promise<void>)(inst.name, selectedVersion)
+      .then(onDone)
+      .catch(e => { setError(String(e)); setLoading(false); });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#464646]">
+          <div>
+            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+              Configure Installation
+            </h2>
+            <p className="text-[11px] text-white/40 mt-[2px] font-['JetBrains_Mono',sans-serif]">{inst.name}</p>
+          </div>
+          {!loading && (
+            <button onClick={onClose} className="text-white/40 hover:text-white/80 transition-colors p-[4px]">
+              <Icon icon="solar:close-circle-linear" className="text-lg" />
+            </button>
+          )}
+        </div>
+
+        <div className="p-[24px] flex flex-col gap-[16px]">
+          {error && (
+            <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[12px] text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">Block Version</label>
+            <FilterSelect
+              size="lg"
+              value={selectedVersion}
+              onChange={setSelectedVersion}
+              loading={versionsLoading}
+              placeholder="Select version…"
+              options={versions.map(v => ({ value: v.name, label: v.versionTag }))}
+            />
+            {selectedVersion && selectedVersion === inst.blockVersion && (
+              <p className="mt-[6px] text-[10px] text-white/30">This is the currently installed version.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={doUpgrade}
+            disabled={!selectedVersion || versionsLoading || loading}
+          >
+            {loading ? <><Loader size={14} /><span className="ml-2">Upgrading…</span></> : 'Upgrade'}
+          </Button>
+        </div>
       </div>
     </div>
   );

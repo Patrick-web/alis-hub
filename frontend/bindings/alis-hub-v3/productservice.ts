@@ -22,6 +22,14 @@ export function CheckProductCloneStatus(org: string, product: string): $Cancella
 }
 
 /**
+ * ContributeBlock publishes a new block version with code files via BlockVersionsService/CreateBlockVersion (LRO).
+ * Returns the created version resource name, e.g. "blocks/myblock/versions/v1.0.0-experimental1".
+ */
+export function ContributeBlock(params: $models.ContributeBlockParams): $CancellablePromise<string> {
+    return $Call.ByID(2599750638, params);
+}
+
+/**
  * CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
  */
 export function CreateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<string> {
@@ -315,6 +323,15 @@ export function SyncRepos(org: string, product: string): $CancellablePromise<$mo
 }
 
 /**
+ * UninstallCodeblockInstance uninstalls an instance by resource name (e.g. "blocks/bb6b/instances/631").
+ * The configuration is preserved on the server for potential reinstallation.
+ * Returns after the resulting LRO completes (up to 5 minutes).
+ */
+export function UninstallCodeblockInstance(instanceName: string): $CancellablePromise<void> {
+    return $Call.ByID(598414329, instanceName);
+}
+
+/**
  * parseCreateBlockName extracts the resource name (field 1) from the returned Block.
  * UpdateCodeblock calls BlocksService/UpdateBlock with the given params.
  */
@@ -330,6 +347,16 @@ export function UpdateEnvironment(envName: string, displayName: string): $Cancel
     return $Call.ByID(828266076, envName, displayName).then(($result: any) => {
         return $$createType1($result);
     });
+}
+
+/**
+ * UpgradeCodeblockInstance upgrades an instance to a different block version.
+ * instanceName is the full resource name (e.g. "blocks/bb6b/instances/631").
+ * blockVersionName is the full version resource name (e.g. "blocks/bb6b/versions/1.0.0-experimental1").
+ * Returns after the resulting LRO completes (up to 5 minutes).
+ */
+export function UpgradeCodeblockInstance(instanceName: string, blockVersionName: string): $CancellablePromise<void> {
+    return $Call.ByID(1284035243, instanceName, blockVersionName);
 }
 
 // Private type creation functions
