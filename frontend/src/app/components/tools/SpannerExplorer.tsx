@@ -88,10 +88,29 @@ export function SpannerExplorer({ projectID }: Props) {
   }
 
   // ── Tab system ─────────────────────────────────────────────────────────────
+  type ContextItem = { label: string; onClick: () => void; destructive?: boolean } | 'divider';
+  interface TabContextMenuState { x: number; y: number; items: ContextItem[] }
+
   const [tabs, setTabs] = useState<string[]>([QUERY_TAB]);
   const [activeTab, setActiveTab] = useState<string>(QUERY_TAB);
   const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set([QUERY_TAB]));
   const [tableTabs, setTableTabs] = useState<Record<string, TableTabInfo>>({});
+  const [tabContextMenu, setTabContextMenu] = useState<TabContextMenuState | null>(null);
+  const tabContextMenuRef = useRef<HTMLDivElement>(null);
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!tabContextMenu) return;
+    function onDown(e: MouseEvent) {
+      if (tabContextMenuRef.current && !tabContextMenuRef.current.contains(e.target as Node))
+        setTabContextMenu(null);
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setTabContextMenu(null); }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [tabContextMenu]);
 
   function activateTab(tabId: string) {
     setActiveTab(tabId);
@@ -107,19 +126,57 @@ export function SpannerExplorer({ projectID }: Props) {
     activateTab(id);
   }
 
-  function closeTab(tabId: string, e: React.MouseEvent) {
-    e.stopPropagation();
+  function removeTab(tabId: string) {
     setTabs((prev) => {
       const next = prev.filter((t) => t !== tabId);
       if (activeTab === tabId) {
         const idx = prev.indexOf(tabId);
-        const fallback = next[Math.max(0, idx - 1)] ?? QUERY_TAB;
-        setActiveTab(fallback);
+        setActiveTab(next[Math.max(0, idx - 1)] ?? QUERY_TAB);
       }
       return next;
     });
     setMountedTabs((prev) => { const s = new Set(prev); s.delete(tabId); return s; });
     setTableTabs((prev) => { const n = { ...prev }; delete n[tabId]; return n; });
+  }
+
+  function closeTab(tabId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    removeTab(tabId);
+  }
+
+  function closeOtherTabs(keepTabId: string) {
+    const toRemove = tabs.filter((t) => t !== QUERY_TAB && t !== keepTabId);
+    setTabs((prev) => prev.filter((t) => t === QUERY_TAB || t === keepTabId));
+    setMountedTabs((prev) => { const s = new Set(prev); toRemove.forEach((t) => s.delete(t)); return s; });
+    setTableTabs((prev) => { const n = { ...prev }; toRemove.forEach((t) => delete n[t]); return n; });
+    if (activeTab !== keepTabId && activeTab !== QUERY_TAB) setActiveTab(keepTabId);
+  }
+
+  function closeAllTabs() {
+    setTabs([QUERY_TAB]);
+    setMountedTabs(new Set([QUERY_TAB]));
+    setTableTabs({});
+    setActiveTab(QUERY_TAB);
+  }
+
+  function openTabContextMenu(e: React.MouseEvent, tabId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const x = Math.min(e.clientX, window.innerWidth - 180);
+    const y = Math.min(e.clientY, window.innerHeight - 120);
+    const tableTabCount = tabs.filter((t) => t !== QUERY_TAB).length;
+    const items: ContextItem[] = [];
+    if (tabId === QUERY_TAB) {
+      if (tableTabCount > 0)
+        items.push({ label: 'Close All Tabs', onClick: () => { setTabContextMenu(null); closeAllTabs(); } });
+    } else {
+      items.push({ label: 'Close', onClick: () => { setTabContextMenu(null); removeTab(tabId); } });
+      if (tableTabCount > 1)
+        items.push({ label: 'Close Others', onClick: () => { setTabContextMenu(null); closeOtherTabs(tabId); } });
+      items.push({ label: 'Close All', onClick: () => { setTabContextMenu(null); closeAllTabs(); } });
+    }
+    if (items.length === 0) return;
+    setTabContextMenu({ x, y, items });
   }
 
   // ── Query panel state ──────────────────────────────────────────────────────
@@ -326,6 +383,7 @@ export function SpannerExplorer({ projectID }: Props) {
         <div className="flex items-stretch border-b border-[#464646] shrink-0 overflow-x-auto bg-[#1a1a1a]">
           <div
             onClick={() => activateTab(QUERY_TAB)}
+            onContextMenu={(e) => openTabContextMenu(e, QUERY_TAB)}
             className={`flex items-center gap-[6px] px-[12px] py-0 text-[10px] font-['JetBrains_Mono',sans-serif] shrink-0 border-r border-[#2a2a2a] cursor-pointer transition-colors select-none ${
               activeTab === QUERY_TAB
                 ? 'text-white bg-[#1e1e1e] shadow-[inset_0_-2px_0_#f881a9]'
@@ -341,15 +399,37 @@ export function SpannerExplorer({ projectID }: Props) {
             const info = tableTabs[tabId];
             if (!info) return null;
             const isActive = activeTab === tabId;
+            const isDragging = draggedTabId === tabId;
+            const isDragOver = dragOverTabId === tabId && draggedTabId !== tabId;
             return (
               <div
                 key={tabId}
                 onClick={() => activateTab(tabId)}
+                onContextMenu={(e) => openTabContextMenu(e, tabId)}
+                draggable={true}
+                onDragStart={() => setDraggedTabId(tabId)}
+                onDragEnd={() => { setDraggedTabId(null); setDragOverTabId(null); }}
+                onDragOver={(e) => { e.preventDefault(); setDragOverTabId(tabId); }}
+                onDragLeave={() => setDragOverTabId(null)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (!draggedTabId || draggedTabId === tabId) { setDraggedTabId(null); setDragOverTabId(null); return; }
+                  setTabs((prev) => {
+                    const without = prev.filter((t) => t !== draggedTabId);
+                    const at = without.indexOf(tabId);
+                    if (at === -1) return prev;
+                    const result = [...without];
+                    result.splice(at, 0, draggedTabId);
+                    return result;
+                  });
+                  setDraggedTabId(null);
+                  setDragOverTabId(null);
+                }}
                 className={`flex items-center gap-[6px] pl-[10px] pr-[4px] text-[10px] font-['JetBrains_Mono',sans-serif] shrink-0 border-r border-[#2a2a2a] cursor-pointer transition-colors select-none group ${
                   isActive
                     ? 'text-white bg-[#1e1e1e] shadow-[inset_0_-2px_0_#f881a9]'
                     : 'text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.03)]'
-                }`}
+                } ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'border-l-2 border-l-[#f881a9]' : ''}`}
                 style={{ minHeight: 36 }}
               >
                 <Icon icon="hugeicons:table" className={`text-xs shrink-0 ${isActive ? 'text-[#f881a9]' : ''}`} />
@@ -357,7 +437,7 @@ export function SpannerExplorer({ projectID }: Props) {
                 <span
                   onClick={(e) => closeTab(tabId, e)}
                   role="button"
-                  className="ml-[2px] p-[3px] rounded text-[rgba(255,255,255,0.15)] hover:text-[#f881a9] hover:bg-[rgba(248,129,169,0.1)] transition-colors shrink-0"
+                  className="ml-[2px] p-[3px] rounded opacity-0 group-hover:opacity-100 text-[rgba(255,255,255,0.4)] hover:text-[#f881a9] hover:bg-[rgba(248,129,169,0.1)] transition-all shrink-0"
                 >
                   <Icon icon="solar:close-linear" className="text-[9px]" />
                 </span>
@@ -505,6 +585,29 @@ export function SpannerExplorer({ projectID }: Props) {
           })}
         </div>
       </div>
+
+      {/* Tab context menu */}
+      {tabContextMenu && (
+        <div
+          ref={tabContextMenuRef}
+          style={{ position: 'fixed', top: tabContextMenu.y, left: tabContextMenu.x, zIndex: 9999 }}
+          className="bg-[#1e1e1e] border border-[#464646] rounded-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.65)] min-w-[160px] py-[4px]"
+        >
+          {tabContextMenu.items.map((item, i) =>
+            item === 'divider' ? (
+              <div key={i} className="my-[2px] border-t border-[#363636]" />
+            ) : (
+              <button
+                key={i}
+                onClick={item.onClick}
+                className="w-full text-left px-[12px] py-[6px] text-[9px] font-['JetBrains_Mono',sans-serif] uppercase transition-colors text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.06)] hover:text-white"
+              >
+                {item.label}
+              </button>
+            )
+          )}
+        </div>
+      )}
 
       {/* Destructive query confirmation */}
       <AlertDialog open={destructiveQueryPending} onOpenChange={(open) => { if (!open) setDestructiveQueryPending(false); }}>
