@@ -14,7 +14,7 @@ export function LoginPage() {
     setError(null);
     try {
       await (ProductService.Login as () => Promise<void>)();
-      setPhase('picking-org');
+      setPhase('hub');
     } catch (e) {
       setError(String(e));
     } finally {

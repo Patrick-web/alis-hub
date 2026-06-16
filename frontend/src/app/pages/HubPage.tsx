@@ -128,9 +128,14 @@ export function HubPage() {
       <div className="flex-1 overflow-auto flex flex-col items-center justify-center px-[32px] py-[40px]">
         <div className="w-full max-w-[640px] flex flex-col gap-[32px]">
           {/* Header */}
-          <div>
-            <h1 className="text-[22px] font-bold text-white">Alis Hub</h1>
-            <p className="text-[12px] text-[rgba(255,255,255,0.4)] mt-[4px]">Select a destination to get started</p>
+          <div className="flex flex-col items-center text-center gap-[14px]">
+            <img src="/appicon.png" alt="Alis" className="size-[64px] rounded-[16px]" />
+            <div>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">Alis Hub</h1>
+              <p className="text-[13px] text-[rgba(255,255,255,0.45)] mt-[5px] italic tracking-wide">
+                From Idea to Impact, Faster
+              </p>
+            </div>
           </div>
 
           {/* Recent landing zone */}
