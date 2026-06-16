@@ -92,6 +92,13 @@ export function LandingZonesPage() {
     <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
       {/* Page header */}
       <div className="px-[24px] pt-[28px] pb-[20px] shrink-0">
+        <button
+          onClick={() => setPhase('hub')}
+          className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] font-['JetBrains_Mono',sans-serif]"
+        >
+          <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
+          Back
+        </button>
         <h1 className="text-[20px] font-bold text-white">Landing Zones</h1>
         <p className="text-[12px] text-[rgba(255,255,255,0.4)] mt-[4px]">
           Select a landing zone to browse its products

@@ -1,6 +1,13 @@
 import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
 
-export type AppPhase = 'init' | 'login' | 'picking-org' | 'picking-product' | 'workspace';
+export type AppPhase = 'init' | 'login' | 'hub' | 'picking-org' | 'picking-product' | 'workspace' | 'standalone';
+
+export interface RecentLandingZone {
+  org: string;
+  orgDisplayName: string;
+  product: string;
+  productDisplayName: string;
+}
 
 export interface Organisation {
   name: string;
@@ -36,6 +43,7 @@ export interface LoadedEnv {
 
 export interface WorkspaceState {
   phase: AppPhase;
+  recentLandingZone: RecentLandingZone | null;
   organisation: string;
   organisationDisplayName: string;
   selectedOrg: Organisation | null;
@@ -74,7 +82,14 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, ...action.payload };
     case 'SET_ORG':
       return { ...state, selectedOrg: action.payload, phase: 'picking-product' };
-    case 'SET_PRODUCT':
+    case 'SET_PRODUCT': {
+      const recent: RecentLandingZone = {
+        org: action.payload.org,
+        orgDisplayName: action.payload.orgDisplayName,
+        product: action.payload.product,
+        productDisplayName: action.payload.productDisplayName,
+      };
+      try { localStorage.setItem('alis:recentLandingZone', JSON.stringify(recent)); } catch {}
       return {
         ...state,
         organisation: action.payload.org,
@@ -82,6 +97,7 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         product: action.payload.product,
         productDisplayName: action.payload.productDisplayName,
         phase: 'workspace',
+        recentLandingZone: recent,
         environment: initialState.environment,
         environmentDisplayName: initialState.environmentDisplayName,
         environmentGoogleProjectId: '',
@@ -94,6 +110,7 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         activeEnvName: '',
         envsError: null,
       };
+    }
     case 'SET_NEURONS':
       return { ...state, neurons: action.payload };
     case 'SET_ENVIRONMENTS':
@@ -111,8 +128,16 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
   }
 }
 
+const savedRecentLandingZone = (() => {
+  try {
+    const raw = localStorage.getItem('alis:recentLandingZone');
+    return raw ? (JSON.parse(raw) as RecentLandingZone) : null;
+  } catch { return null; }
+})();
+
 const initialState: WorkspaceState = {
   phase: 'init',
+  recentLandingZone: savedRecentLandingZone,
   organisation: '',
   organisationDisplayName: '',
   selectedOrg: null,
