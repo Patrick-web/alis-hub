@@ -1319,8 +1319,11 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 		return nil, fmt.Errorf("DoInstallBlock: operation failed: %w", err)
 	}
 
-	// Extract the branch name from the InstallBlock LRO response.
-	branchName := parseInstallBlockBranch(opData)
+	// Suppress unused variable — opData is kept for future use but branch is fetched via GetInstance.
+	_ = opData
+
+	// Step 6: Fetch the instance to get git_branch (field 6 of Instance).
+	branchName, _ := s.getInstanceGitBranch(ctx, instanceName)
 
 	// Derive local repo path from the package: packages/{org}.{product}.{...} → ~/alis.build/{org}/build/{product}
 	repoPath := packageToRepoPath(params.Package)
@@ -1330,6 +1333,29 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 		BranchName:   branchName,
 		RepoPath:     repoPath,
 	}, nil
+}
+
+// getInstanceGitBranch calls InstancesService/GetInstance and returns the git_branch field.
+func (s *ProductService) getInstanceGitBranch(ctx context.Context, instanceName string) (string, error) {
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, instanceName)
+	fm := marshalFieldMask([]string{"git_branch"})
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, fm)
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/GetInstance", buf)
+	if err != nil {
+		return "", err
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("response too short")
+	}
+	// Instance.git_branch is field 6.
+	return parseStringFieldN(body[5:], 6), nil
 }
 
 // packageToRepoPath converts a package resource name to the local alis build repo path.
