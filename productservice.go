@@ -1143,6 +1143,14 @@ func (s *ProductService) CreateCodeblock(params CreateCodeblockParams) (string, 
 	return parseCreateBlockName(body[5:]), nil
 }
 
+// GetMyPrimaryAccountID returns the caller's primary account resource name (e.g. "accounts/8na6ap").
+func (s *ProductService) GetMyPrimaryAccountID() (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	return s.myPrimaryAccountID(), nil
+}
+
 // myPrimaryAccountID returns the first "accounts/<id>" from the JWT access token.
 func (s *ProductService) myPrimaryAccountID() string {
 	for id := range s.myAccountIDs() {
