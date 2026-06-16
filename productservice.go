@@ -1852,6 +1852,73 @@ func parseBlockPlan(data []byte) BlockPlan {
 	return p
 }
 
+// UninstallCodeblockInstance uninstalls an instance by resource name (e.g. "blocks/bb6b/instances/631").
+// The configuration is preserved on the server for potential reinstallation.
+// Returns after the resulting LRO completes (up to 5 minutes).
+func (s *ProductService) UninstallCodeblockInstance(instanceName string) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, instanceName)
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UninstallBlock", buf)
+	if err != nil {
+		return fmt.Errorf("UninstallBlock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("UninstallBlock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return fmt.Errorf("UninstallBlock: response too short (%d bytes)", len(body))
+	}
+	opName := parseStringField1(body[5:])
+	if opName == "" {
+		return fmt.Errorf("UninstallBlock: empty operation name in response")
+	}
+	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	return err
+}
+
+// UpgradeCodeblockInstance upgrades an instance to a different block version.
+// instanceName is the full resource name (e.g. "blocks/bb6b/instances/631").
+// blockVersionName is the full version resource name (e.g. "blocks/bb6b/versions/1.0.0-experimental1").
+// Returns after the resulting LRO completes (up to 5 minutes).
+func (s *ProductService) UpgradeCodeblockInstance(instanceName, blockVersionName string) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, instanceName)
+	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
+	buf = protowire.AppendString(buf, blockVersionName)
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UpgradeBlock", buf)
+	if err != nil {
+		return fmt.Errorf("UpgradeBlock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("UpgradeBlock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return fmt.Errorf("UpgradeBlock: response too short (%d bytes)", len(body))
+	}
+	opName := parseStringField1(body[5:])
+	if opName == "" {
+		return fmt.Errorf("UpgradeBlock: empty operation name in response")
+	}
+	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	return err
+}
+
 // CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
 func (s *ProductService) CreateCodeblock(params CreateCodeblockParams) (string, error) {
 	if err := s.initTokens(); err != nil {
@@ -2045,6 +2112,90 @@ func marshalUpdateBlockRequest(blockName string, p CreateCodeblockParams) []byte
 	req = protowire.AppendBytes(req, block)
 	req = protowire.AppendTag(req, 2, protowire.BytesType)
 	req = protowire.AppendBytes(req, mask)
+	return req
+}
+
+// ContributeBlock publishes a new block version with code files via BlockVersionsService/CreateBlockVersion (LRO).
+// Returns the created version resource name, e.g. "blocks/myblock/versions/v1.0.0-experimental1".
+func (s *ProductService) ContributeBlock(params ContributeBlockParams) (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	buf := marshalCreateBlockVersionRequest(params)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/CreateBlockVersion", buf)
+	if err != nil {
+		return "", fmt.Errorf("ContributeBlock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("ContributeBlock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("ContributeBlock: response too short (%d bytes)", len(body))
+	}
+	opName := parseStringField1(body[5:])
+	if opName == "" {
+		return "", fmt.Errorf("ContributeBlock: empty operation name in response")
+	}
+	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName); err != nil {
+		return "", fmt.Errorf("ContributeBlock: operation failed: %w", err)
+	}
+	return "blocks/" + params.BlockID + "/versions/" + params.VersionTag, nil
+}
+
+func marshalCreateBlockVersionRequest(p ContributeBlockParams) []byte {
+	// File sub-message: f1=filename, f2=content (bytes)
+	marshalFile := func(f CodeblockFileItem) []byte {
+		var b []byte
+		b = protowire.AppendTag(b, 1, protowire.BytesType)
+		b = protowire.AppendString(b, f.Name)
+		b = protowire.AppendTag(b, 2, protowire.BytesType)
+		b = protowire.AppendBytes(b, []byte(f.Content))
+		return b
+	}
+
+	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
+	var content []byte
+	for _, f := range p.BuildFiles {
+		content = protowire.AppendTag(content, 1, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
+	}
+	for _, f := range p.InfraFiles {
+		content = protowire.AppendTag(content, 2, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
+	}
+	for _, f := range p.ProtoFiles {
+		content = protowire.AppendTag(content, 3, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
+	}
+
+	// BlockVersion: f3=contributed_content, f4=release_notes, f9=release_level
+	// Note: version (f2) must be empty — the ID is sent as block_version_id on the request.
+	var bv []byte
+	if len(content) > 0 {
+		bv = protowire.AppendTag(bv, 3, protowire.BytesType)
+		bv = protowire.AppendBytes(bv, content)
+	}
+	if p.ReleaseNotes != "" {
+		bv = protowire.AppendTag(bv, 4, protowire.BytesType)
+		bv = protowire.AppendString(bv, p.ReleaseNotes)
+	}
+	if p.ReleaseLevel != 0 {
+		bv = protowire.AppendTag(bv, 9, protowire.VarintType)
+		bv = protowire.AppendVarint(bv, uint64(p.ReleaseLevel))
+	}
+
+	// CreateBlockVersionRequest: f1=parent, f2=block_version, f3=block_version_id
+	var req []byte
+	req = protowire.AppendTag(req, 1, protowire.BytesType)
+	req = protowire.AppendString(req, "blocks/"+p.BlockID)
+	req = protowire.AppendTag(req, 2, protowire.BytesType)
+	req = protowire.AppendBytes(req, bv)
+	if p.VersionTag != "" {
+		req = protowire.AppendTag(req, 3, protowire.BytesType)
+		req = protowire.AppendString(req, p.VersionTag)
+	}
 	return req
 }
 

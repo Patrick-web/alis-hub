@@ -1009,6 +1009,97 @@ func TestGetCodeblockMembersLive(t *testing.T) {
 	}
 }
 
+func TestProbeGetBlockVersion(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/bb6b/versions/1.0.0-experimental1")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
+	if reqErr != nil {
+		t.Fatalf("request error: %v", reqErr)
+	}
+	if grpcStatus != 0 {
+		t.Fatalf("grpc error %d: %s", grpcStatus, grpcMsg)
+	}
+	t.Logf("response body %d bytes", len(body))
+
+	// Test the parsed result via GetCodeblockVersion
+	v, verr := svc.GetCodeblockVersion("blocks/bb6b/versions/1.0.0-experimental1")
+	if verr != nil {
+		t.Fatalf("GetCodeblockVersion: %v", verr)
+	}
+	t.Logf("parsed: name=%q tag=%q level=%d files=%d", v.Name, v.VersionTag, v.ReleaseLevel, len(v.Files))
+	for _, f := range v.Files {
+		t.Logf("  folder=%q files=%d", f.Name, len(f.Files))
+		for _, fi := range f.Files {
+			t.Logf("    file=%q content_len=%d", fi.Name, len(fi.Content))
+		}
+	}
+
+	t.Log("--- sub-field number summary for fields 3 and 7 ---")
+	data := body[5:]
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 3 && num != 7 {
+			continue
+		}
+		// Count files per sub-field number
+		counts := map[protowire.Number][]string{}
+		inner := b
+		for len(inner) > 0 {
+			fn, ft, fn2 := protowire.ConsumeTag(inner)
+			if fn2 < 0 {
+				break
+			}
+			inner = inner[fn2:]
+			if ft != protowire.BytesType {
+				mv := protowire.ConsumeFieldValue(fn, ft, inner)
+				if mv < 0 {
+					break
+				}
+				inner = inner[mv:]
+				continue
+			}
+			fb, fm := protowire.ConsumeBytes(inner)
+			if fm < 0 {
+				break
+			}
+			inner = inner[fm:]
+			entry := parseCodeblockFileEntry(fb)
+			counts[fn] = append(counts[fn], entry.Name)
+		}
+		t.Logf("field %d (%d bytes): sub-field distribution:", num, len(b))
+		for sfn, names := range counts {
+			t.Logf("  sub-field %d: %d files → %v", sfn, len(names), names)
+		}
+	}
+}
+
 // dumpProtoFields recursively logs all field numbers and their types from a proto byte slice.
 func dumpProtoFields(t *testing.T, data []byte, depth int) {
 	t.Helper()
@@ -1546,3 +1637,30 @@ func TestGetWorkstationURI(t *testing.T) {
 		t.Log("(empty — workstation may still be provisioning)")
 	}
 }
+
+func TestContributeBlock(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	result, err := svc.ContributeBlock(ContributeBlockParams{
+		BlockID:      "testclaudeblock",
+		VersionTag:   "v1.0.0-experimental5",
+		ReleaseNotes: "Test version from Go test",
+		ReleaseLevel: 3, // EXPERIMENTAL
+		ProtoFiles: []CodeblockFileItem{
+			{Name: "hello.proto", Content: "syntax = \"proto3\";\npackage hello.v1;"},
+		},
+		BuildFiles: []CodeblockFileItem{
+			{Name: "cloudbuild.yaml", Content: "steps:\n  - name: 'hello'"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ContributeBlock: %v", err)
+	}
+	t.Logf("created version: %s", result)
+}
+

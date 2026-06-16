@@ -42,6 +42,7 @@ export {
     CodeblockVersion,
     ConflictFileContent,
     ConflictHunk,
+    ContributeBlockParams,
     CreateCodeblockParams,
     DefineCommit,
     DeployItem,

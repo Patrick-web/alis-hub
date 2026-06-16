@@ -645,6 +645,67 @@ export class ConflictHunk {
     }
 }
 
+export class ContributeBlockParams {
+    "blockId": string;
+    "versionTag": string;
+    "releaseNotes": string;
+
+    /**
+     * 3=EXPERIMENTAL,6=ALPHA,9=BETA,12=RC,99=GA
+     */
+    "releaseLevel": number;
+    "protoFiles": CodeblockFileItem[];
+    "infraFiles": CodeblockFileItem[];
+    "buildFiles": CodeblockFileItem[];
+
+    /** Creates a new ContributeBlockParams instance. */
+    constructor($$source: Partial<ContributeBlockParams> = {}) {
+        if (!("blockId" in $$source)) {
+            this["blockId"] = "";
+        }
+        if (!("versionTag" in $$source)) {
+            this["versionTag"] = "";
+        }
+        if (!("releaseNotes" in $$source)) {
+            this["releaseNotes"] = "";
+        }
+        if (!("releaseLevel" in $$source)) {
+            this["releaseLevel"] = 0;
+        }
+        if (!("protoFiles" in $$source)) {
+            this["protoFiles"] = [];
+        }
+        if (!("infraFiles" in $$source)) {
+            this["infraFiles"] = [];
+        }
+        if (!("buildFiles" in $$source)) {
+            this["buildFiles"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ContributeBlockParams instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ContributeBlockParams {
+        const $$createField4_0 = $$createType6;
+        const $$createField5_0 = $$createType6;
+        const $$createField6_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("protoFiles" in $$parsedSource) {
+            $$parsedSource["protoFiles"] = $$createField4_0($$parsedSource["protoFiles"]);
+        }
+        if ("infraFiles" in $$parsedSource) {
+            $$parsedSource["infraFiles"] = $$createField5_0($$parsedSource["infraFiles"]);
+        }
+        if ("buildFiles" in $$parsedSource) {
+            $$parsedSource["buildFiles"] = $$createField6_0($$parsedSource["buildFiles"]);
+        }
+        return new ContributeBlockParams($$parsedSource as Partial<ContributeBlockParams>);
+    }
+}
+
 export class CreateCodeblockParams {
     "blockId": string;
     "displayName": string;
