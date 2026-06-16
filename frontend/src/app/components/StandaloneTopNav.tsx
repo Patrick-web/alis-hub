@@ -30,7 +30,7 @@ function WindowControls() {
 }
 
 const standaloneTabs = [
-  { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-launch-linear" className="text-lg" />, route: '/buildkit' },
+  { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-2-linear" className="text-lg" />, route: '/buildkit' },
   { id: 'learn', label: 'Learn', icon: <Icon icon="solar:diploma-linear" className="text-lg" />, route: '/learn' },
   { id: 'codeblocks', label: 'Codeblocks', icon: <Icon icon="solar:code-linear" className="text-lg" />, route: '/codeblocks' },
 ];

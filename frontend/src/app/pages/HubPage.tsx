@@ -62,7 +62,7 @@ export function HubPage() {
       id: 'buildkit',
       label: 'Build Kit',
       description: 'Configure APIs, agents, and integrations',
-      icon: 'solar:rocket-launch-linear',
+      icon: 'solar:rocket-2-linear',
       action: () => goStandalone('/buildkit'),
     },
     {
@@ -89,12 +89,12 @@ export function HubPage() {
   ];
 
   return (
-    <div
-      className="flex flex-col h-screen w-full bg-[#1e1e1e] overflow-hidden"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-    >
-      {/* Title bar */}
-      <div className="h-[40px] flex items-center justify-between px-[10px] shrink-0 border-b border-[#2c2c2c]">
+    <div className="flex flex-col h-screen w-full bg-[#1e1e1e] overflow-hidden">
+      {/* Title bar — only this strip is draggable */}
+      <div
+        className="h-[40px] flex items-center justify-between px-[10px] shrink-0 border-b border-[#2c2c2c]"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      >
         <div className="flex items-center gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <WindowControls />
         </div>
