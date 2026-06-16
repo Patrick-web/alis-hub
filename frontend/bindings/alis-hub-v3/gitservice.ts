@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -55,9 +59,14 @@ export function SaveConflictResolution(repoPath: string, filePath: string, resol
     return $Call.ByID(1423658464, repoPath, filePath, resolutions);
 }
 
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(1890383270, app);
+}
+
 /**
  * StartLocalMerge runs: git fetch, checkout master, pull, then merge origin/{branchName}.
  * Returns conflict file list if exit code 1 (conflicts detected).
+ * Git command output is streamed via "git:log" Wails events.
  */
 export function StartLocalMerge(repoPath: string, branchName: string): $CancellablePromise<$models.LocalMergeResult | null> {
     return $Call.ByID(2277677406, repoPath, branchName).then(($result: any) => {
