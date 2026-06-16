@@ -101,6 +101,7 @@ export function CodeblockDetailsPage() {
   const [block, setBlock] = useState<Codeblock | null>(null);
   const [members, setMembers] = useState<CodeblockMember[]>([]);
   const [blockLoading, setBlockLoading] = useState(true);
+  const [myAccountID, setMyAccountID] = useState('');
 
   const [versions, setVersions] = useState<CodeblockVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -118,16 +119,18 @@ export function CodeblockDetailsPage() {
 
   const go = useCallback((t: Tab) => navigate(`/codeblocks/${blockId}/${t}`), [blockId, navigate]);
 
-  // Load block metadata + members on mount
+  // Load block metadata + members + caller account on mount
   useEffect(() => {
     if (!blockId) return;
     setBlockLoading(true);
     Promise.all([
       (ProductService.GetCodeblock as (id: string) => Promise<Codeblock>)(blockId),
       (ProductService.GetCodeblockMembers as (id: string) => Promise<CodeblockMember[]>)(blockId).catch(() => [] as CodeblockMember[]),
-    ]).then(([b, m]) => {
+      (ProductService.GetMyPrimaryAccountID as () => Promise<string>)().catch(() => ''),
+    ]).then(([b, m, accountID]) => {
       setBlock(b);
       setMembers(m ?? []);
+      setMyAccountID(accountID ?? '');
     }).catch(console.error).finally(() => setBlockLoading(false));
   }, [blockId]);
 
@@ -181,6 +184,8 @@ export function CodeblockDetailsPage() {
   const publisherLabel = block?.publisher
     ? block.publisher.replace('accounts/', '')
     : 'Alis Exchange';
+
+  const isOwner = Boolean(myAccountID && block?.publisher === myAccountID);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
@@ -258,14 +263,25 @@ export function CodeblockDetailsPage() {
 
         {/* CTA */}
         <div className="p-[10px] border-t border-[#464646] flex flex-col gap-[8px]">
-          <Button
-            variant="secondary"
-            className="w-full"
-            icon={<Icon icon="solar:box-linear" />}
-            onClick={() => go('instances')}
-          >
-            Instances
-          </Button>
+          {isOwner ? (
+            <Button
+              variant="secondary"
+              className="w-full"
+              icon={<Icon icon="solar:pen-linear" />}
+              onClick={() => navigate(`/codeblocks/${blockId}/edit`)}
+            >
+              Edit Block
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              className="w-full"
+              icon={<Icon icon="solar:box-linear" />}
+              onClick={() => go('instances')}
+            >
+              Instances
+            </Button>
+          )}
           <Button
             variant="primary"
             className="w-full"

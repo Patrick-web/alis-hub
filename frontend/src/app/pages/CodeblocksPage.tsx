@@ -50,6 +50,8 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
   const [activeFilter, setActiveFilter] = useState<ReleaseFilter>('All');
 
   useEffect(() => {
+    setBlocks([]);
+    setLoading(true);
     const fetch = view === 'mine'
       ? (ProductService.ListMyCodeblocks as () => Promise<Codeblock[]>)()
       : (ProductService.ListCodeblocks as () => Promise<Codeblock[]>)();

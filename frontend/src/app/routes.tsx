@@ -47,6 +47,7 @@ export const router = createBrowserRouter([
       { path: "codeblocks/mine", element: <CodeblocksPage view="mine" /> },
       { path: "codeblocks/create", Component: CodeblockCreatePage },
       { path: "codeblocks/:id", Component: CodeblockDetailsPage },
+      { path: "codeblocks/:id/edit", Component: CodeblockCreatePage },
       { path: "codeblocks/:id/:tab", Component: CodeblockDetailsPage },
       { path: "buildkit", Component: BuildKitPage },
       { path: "buildkit/custom-apis", Component: BuildKitCustomApisPage },

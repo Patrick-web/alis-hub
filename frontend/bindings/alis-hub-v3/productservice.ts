@@ -94,6 +94,13 @@ export function GetEnvironmentVariables(envName: string): $CancellablePromise<$m
 }
 
 /**
+ * GetMyPrimaryAccountID returns the caller's primary account resource name (e.g. "accounts/8na6ap").
+ */
+export function GetMyPrimaryAccountID(): $CancellablePromise<string> {
+    return $Call.ByID(1119095964);
+}
+
+/**
  * GetOrganisationProject returns the GCP project associated with an organisation.
  */
 export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
