@@ -8,6 +8,7 @@ import { EnvFormSheet } from "./EnvFormSheet";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { MissingVarsModal } from "./MissingVarsModal";
 import { useWorkspace, type LoadedEnv } from "../stores/workspace";
+import { Call } from "@wailsio/runtime";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
 const developNavItems: {
@@ -169,6 +170,13 @@ export function Sidebar() {
   const handleItemClick = (item: (typeof items)[0]) => {
     if (isEnvironments && dynamicEnvItems.length > 0) {
       setActiveEnv(item.id);
+      const env = state.loadedEnvs.find(e => e.name === item.id);
+      if (env) {
+        Call.ByName('main.ProductService.SwitchEnvironment',
+          state.organisation, state.product, env.name,
+          env.gcpProjectId ?? '', env.gcpProjectNumber ?? '', env.gcpRegion ?? ''
+        ).catch(console.error);
+      }
     } else if (isBuilds) {
       setActiveNeurons([item.id]);
     }

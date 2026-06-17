@@ -316,6 +316,18 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
     return $Call.ByID(1096665320, envName, vars);
 }
 
+/**
+ * SwitchEnvironment updates the local .alis/.env file to reflect the newly
+ * selected environment. It rewrites the env-specific system variables
+ * (ALIS_OS_PROJECT, ALIS_PROJECT_NR, ALIS_REGION, ALIS_MANAGED_SPANNER_DB,
+ * ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX) and regenerates the Builder Managed
+ * section with the environment's variables from the API.
+ * If no local .env file exists the call is a no-op.
+ */
+export function SwitchEnvironment(org: string, product: string, envName: string, projectID: string, projectNumber: string, region: string): $CancellablePromise<void> {
+    return $Call.ByID(3506000719, org, product, envName, projectID, projectNumber, region);
+}
+
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
         return $$createType42($result);
