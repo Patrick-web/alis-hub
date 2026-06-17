@@ -1,12 +1,12 @@
 # Alis Hub
 
-A native desktop client for [alis.build](https://alis.build) developers — bringing the define → build → deploy pipeline off the browser and onto your machine.
+A native desktop client for [alis.build](https://alis.build) developers - bringing the define → build → deploy pipeline off the browser and onto your machine.
 
 [![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-informational)](#building--distribution)
 [![License](https://img.shields.io/badge/license-MIT-green)](/LICENSE)
 [![Latest release](https://img.shields.io/github/v/release/Patrick-web/alis-hub)](https://github.com/Patrick-web/alis-hub/releases/latest)
 
-> Community project — not affiliated with or endorsed by Alis.
+> Community project - not affiliated with or endorsed by Alis.
 
 ---
 
@@ -17,9 +17,9 @@ A native desktop client for [alis.build](https://alis.build) developers — brin
 
 ## What is Alis Hub?
 
-Alis Hub is a desktop app for developers working on the alis.build platform. It exposes the full development workflow — define proto schemas, build Docker images, deploy to environments, manage packages, and browse codeblocks — in a single native window, without switching between the web console, a terminal, and VS Code.
+Alis Hub is a desktop app for developers working on the alis.build platform. It exposes the full development workflow - define proto schemas, build Docker images, deploy to environments, manage packages, and browse codeblocks - in a single native window, without switching between the web console, a terminal, and VS Code.
 
-It was built by reverse-engineering the web console (`console.alisx.com`) and the published VS Code extension (`alis-build`) to map the gRPC-web API surface. All communication uses the same endpoints the browser console uses — no official SDK or published proto definitions were available. Field numbers, message shapes, and auth flows were extracted by inspecting live network traffic and the compiled extension JS.
+It was built by reverse-engineering the web console (`console.alisx.com`) and the published VS Code extension (`alis-build`) to map the gRPC-web API surface. All communication uses the same endpoints the browser console uses - no official SDK or published proto definitions were available. Field numbers, message shapes, and auth flows were extracted by inspecting live network traffic and the compiled extension JS.
 
 This is a demonstration of what a native alis.build client experience could look like. It is an independent project and carries no guarantee of continued API compatibility.
 
@@ -29,15 +29,15 @@ This is a demonstration of what a native alis.build client experience could look
 
 ### Define → Build → Deploy pipeline
 
-- **Define** — pick a neuron, select commits, run proto compilation, and read a Glass AI explanation of what changed and why it matters
-- **Build** — trigger local Docker builds or cloud builds, stream logs in real time, tag versions
-- **Deploy** — select environments, preview a Terraform plan, apply to one or more environments, follow live deploy logs
-- **Packages** — scan Go, Node, Python, and Dart projects in your build repo; generate and run install/upgrade scripts in an embedded terminal
+- **Define** - pick a neuron, select commits, run proto compilation, and read a Glass AI explanation of what changed and why it matters
+- **Build** - trigger local Docker builds or cloud builds, stream logs in real time, tag versions
+- **Deploy** - select environments, preview a Terraform plan, apply to one or more environments, follow live deploy logs
+- **Packages** - scan Go, Node, Python, and Dart projects in your build repo; generate and run install/upgrade scripts in an embedded terminal
 
 ### Product & environment management
 
 - Browse organisations and products across your landing zones (own and shared)
-- Switch active environment — rewrites the local `.alis/.env` file automatically
+- Switch active environment - rewrites the local `.alis/.env` file automatically
 - Create, edit, and delete environments and their variables
 - View product overview: GCP project details, Git repository, package registries, environment status
 
@@ -58,11 +58,11 @@ This is a demonstration of what a native alis.build client experience could look
 
 No more switching to the browser for routine cloud operations:
 
-- **Spanner explorer** — browse instances, databases, and tables
-- **Cloud Logging** — tail and filter log entries
-- **Artifact Registry** — browse images and packages
-- **Cloud Storage** — explore buckets and objects
-- **Secret Manager** — list secrets and versions
+- **Spanner explorer** - browse instances, databases, and tables
+- **Cloud Logging** - tail and filter log entries
+- **Artifact Registry** - browse images and packages
+- **Cloud Storage** - explore buckets and objects
+- **Secret Manager** - list secrets and versions
 
 ---
 
@@ -75,7 +75,7 @@ No more switching to the browser for routine cloud operations:
 | Frontend | React 18 + TypeScript + Tailwind CSS |
 | API transport | gRPC-Web (manual proto wire encoding via `google.golang.org/protobuf/encoding/protowire`) |
 | Git operations | go-git v5 |
-| Distribution | GitHub Releases — macOS `.dmg`, Linux `.tar.gz`, Windows `.zip` |
+| Distribution | GitHub Releases - macOS `.dmg`, Linux `.tar.gz`, Windows `.zip` |
 
 ---
 
@@ -101,10 +101,10 @@ The app opens in dev mode with hot-reload on both Go and frontend changes. You'l
 ## Building & distribution
 
 ```bash
-# macOS — signed and notarized (requires cert setup, see docs/SIGNING.md)
+# macOS - signed and notarized (requires cert setup, see docs/SIGNING.md)
 wails3 task darwin:sign:notarize
 
-# Release all platforms via CI — push a semver tag:
+# Release all platforms via CI - push a semver tag:
 git tag v0.x.y && git push origin v0.x.y
 ```
 
@@ -119,7 +119,7 @@ Pre-built binaries are available on the [releases page](https://github.com/Patri
 ```
 alis-hub/
 ├── *service.go          # Go backend services (Define, Build, Deploy, Product, Package, BuildKit, GCloud, Git)
-├── alisclient.go        # gRPC-web client — manual proto frame encoding/decoding
+├── alisclient.go        # gRPC-web client - manual proto frame encoding/decoding
 ├── alisauth.go          # OAuth2 PKCE login flow, token storage
 ├── alistoken.go         # Token refresh and identity token management
 ├── frontend/
@@ -136,7 +136,7 @@ alis-hub/
 
 ## Disclaimer
 
-> Alis Hub is an independent, community-built project. It is not affiliated with, endorsed by, or supported by Alis. The gRPC-web API surface was discovered by inspecting live network traffic from the web console and studying the published VS Code extension — no proprietary source code was accessed or redistributed. Use at your own discretion.
+> Alis Hub is an independent, community-built project. It is not affiliated with, endorsed by, or supported by Alis. The gRPC-web API surface was discovered by inspecting live network traffic from the web console and studying the published VS Code extension - no proprietary source code was accessed or redistributed. Use at your own discretion.
 
 ---
 
