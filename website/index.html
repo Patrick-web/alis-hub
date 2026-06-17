@@ -215,26 +215,22 @@
     const btn = document.getElementById('download-btn');
     const tag = document.getElementById('version-tag');
     const ua = navigator.userAgent.toLowerCase();
-    let os = 'macOS', ext = '.dmg';
-    if (ua.includes('win')) { os = 'Windows'; ext = '.zip'; }
-    else if (ua.includes('linux')) { os = 'Linux'; ext = '.tar.gz'; }
+    let platform = 'macos', label = 'macOS';
+    if (ua.includes('win')) { platform = 'windows'; label = 'Windows'; }
+    else if (ua.includes('linux')) { platform = 'linux'; label = 'Linux'; }
 
-    btn.textContent = `download for ${os}_`;
+    btn.textContent = `download for ${label}_`;
 
     try {
-      const res = await fetch('https://api.github.com/repos/Patrick-web/alis-hub/releases/latest');
+      const res = await fetch('/api/release');
       if (!res.ok) return;
-      const release = await res.json();
-      if (release.tag_name) {
-        tag.innerHTML = `latest <span>${release.tag_name}</span>`;
+      const data = await res.json();
+      if (data.version) {
+        tag.innerHTML = `latest <span>${data.version}</span>`;
       }
-      const asset = release.assets?.find(a => {
-        const n = a.name.toLowerCase();
-        if (os === 'macOS') return n.includes('macos') && n.endsWith('.dmg');
-        if (os === 'Windows') return n.includes('windows') && n.endsWith('.zip');
-        if (os === 'Linux') return n.includes('linux') && n.endsWith('.tar.gz');
-      });
-      if (asset) btn.href = asset.browser_download_url;
+      if (data.platforms?.[platform]) {
+        btn.href = data.platforms[platform];
+      }
     } catch {}
   })();
 </script>
