@@ -1,4 +1,5 @@
 import { Loader } from '../components/Loader';
+import { EmptyState } from '../components/EmptyState';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
@@ -563,11 +564,11 @@ export function BuildsPage() {
               <p className="text-[11px] text-[rgba(255,255,255,0.3)]">Select a neuron to view its build history.</p>
             </div>
           ) : filteredVersions.length === 0 && !versionsLoading ? (
-            <div className="px-[20px] py-[20px]">
-              <p className="text-[11px] text-[rgba(255,255,255,0.3)]">
-                {filterText ? 'No versions match the filter.' : 'No built versions found. Click BUILD to create the first one.'}
-              </p>
-            </div>
+            <EmptyState
+              icon="solar:box-minimalistic-linear"
+              title={filterText ? 'No versions match the filter' : 'No built versions found'}
+              description={filterText ? undefined : 'Click BUILD to create the first one'}
+            />
           ) : (
             <Table
               columns={columns}

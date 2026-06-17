@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
 import { useWorkspace, type Organisation } from '../stores/workspace';
+import { EmptyState } from '../components/EmptyState';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
 
@@ -194,12 +195,11 @@ export function LandingZonesPage() {
             )}
 
             {filteredOwn.length === 0 && filteredShared.length === 0 && (
-              <div className="flex flex-col items-center justify-center pt-[80px] gap-[8px]">
-                <Icon icon="solar:cloud-linear" className="text-[rgba(255,255,255,0.15)] text-5xl" />
-                <p className="text-[13px] text-[rgba(255,255,255,0.3)]">
-                  {search ? 'No matching landing zones' : 'No landing zones found'}
-                </p>
-              </div>
+              <EmptyState
+                icon="solar:cloud-linear"
+                title={search ? 'No matching landing zones' : 'No landing zones found'}
+                className="pt-[80px] pb-0"
+              />
             )}
           </div>
         )}

@@ -1,4 +1,5 @@
 import { Loader } from '../components/Loader';
+import { EmptyState } from '../components/EmptyState';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
@@ -659,9 +660,7 @@ export function DevelopPage() {
             <div className="flex-1 overflow-y-auto">
               {state.neurons.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
-                  <p className="text-[12px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
-                    No services found
-                  </p>
+                  <EmptyState icon="solar:server-minimalistic-linear" title="No services found" />
                 </div>
               ) : (
                 <table className="w-full border-collapse">
