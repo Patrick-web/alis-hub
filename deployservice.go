@@ -49,12 +49,14 @@ type DeployItem struct {
 	LogsURL string `json:"logsUrl"`
 }
 
-// NeuronVersionSummary is a built/retagged neuron version returned to the frontend.
+// NeuronVersionSummary is a neuron version returned to the frontend.
+// State: 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED.
 type NeuronVersionSummary struct {
 	Version     string `json:"version"`
 	CreateTime  int64  `json:"createTime"` // unix seconds
 	BuildCommit string `json:"buildCommit"`
 	LogsURL     string `json:"logsUrl"`
+	State       int32  `json:"state"`
 }
 
 // ListNeuronVersions returns built/retagged versions for a neuron, newest first.
@@ -74,18 +76,16 @@ func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSumma
 
 	var out []*NeuronVersionSummary
 	for _, item := range items {
-		// state: BUILT=1, RETAGGED=2
-		if item.State == 1 || item.State == 2 {
-			out = append(out, &NeuronVersionSummary{
-				Version:     item.Version,
-				CreateTime:  item.CreateTime,
-				BuildCommit: item.BuildCommit,
-				LogsURL:     item.LogsURL,
-			})
-		}
+		out = append(out, &NeuronVersionSummary{
+			Version:     item.Version,
+			CreateTime:  item.CreateTime,
+			BuildCommit: item.BuildCommit,
+			LogsURL:     item.LogsURL,
+			State:       item.State,
+		})
 	}
 	// Already ordered newest-first by the server, but reverse if needed.
-	log.Printf("[deploy] ListNeuronVersions: %d built/retagged versions for %s", len(out), neuron)
+	log.Printf("[deploy] ListNeuronVersions: %d versions for %s", len(out), neuron)
 	return out, nil
 }
 
