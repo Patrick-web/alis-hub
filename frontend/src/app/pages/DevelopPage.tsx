@@ -119,6 +119,7 @@ export function DevelopPage() {
   const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
   const [localBuildId, setLocalBuildId] = useState<string | null>(null);
   const [neuronFilter, setNeuronFilter] = useState('');
+  const [selectedNeurons, setSelectedNeurons] = useState<Set<string>>(new Set());
 
   // Deploy pane state
   const [deployNeuron, setDeployNeuron] = useState<string | null>(null);
@@ -650,6 +651,34 @@ export function DevelopPage() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const visibleNeurons = state.neurons.filter(n =>
+    !neuronFilter || (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase())
+  );
+  const allVisibleSelected = visibleNeurons.length > 0 && visibleNeurons.every(n => selectedNeurons.has(n.name || n.id));
+  const someVisibleSelected = visibleNeurons.some(n => selectedNeurons.has(n.name || n.id));
+
+  const toggleNeuron = (name: string) => setSelectedNeurons(prev => {
+    const next = new Set(prev);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+
+  const toggleAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedNeurons(prev => {
+        const next = new Set(prev);
+        visibleNeurons.forEach(n => next.delete(n.name || n.id));
+        return next;
+      });
+    } else {
+      setSelectedNeurons(prev => {
+        const next = new Set(prev);
+        visibleNeurons.forEach(n => next.add(n.name || n.id));
+        return next;
+      });
+    }
+  };
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
       {/* Page header */}
@@ -673,6 +702,17 @@ export function DevelopPage() {
             containerClassName="h-full"
           />
         </div>
+        <div className="ml-auto">
+          {selectedNeurons.size > 0 && (
+            <button
+              onClick={() => { openPackagesPane(Array.from(selectedNeurons)); setSelectedNeurons(new Set()); }}
+              className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-[#F881A9] hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-['JetBrains_Mono',sans-serif] uppercase"
+            >
+              <Icon icon="solar:box-linear" className="text-base" />
+              Packages · {selectedNeurons.size}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main content: detail + optional right pane + optional terminal bottom pane */}
@@ -689,6 +729,21 @@ export function DevelopPage() {
                 <table className="w-full border-collapse">
                   <thead className="sticky top-0 z-10 bg-[#1e1e1e]">
                     <tr className="border-b border-[#464646]">
+                      <th className="px-[16px] py-[8px] w-[40px]">
+                        <button
+                          onClick={toggleAllVisible}
+                          className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
+                            allVisibleSelected
+                              ? 'bg-[#f881a9] border-[#f881a9]'
+                              : someVisibleSelected
+                                ? 'border-[#f881a9] bg-[rgba(248,129,169,0.15)]'
+                                : 'border-[#464646] hover:border-[rgba(248,129,169,0.5)]'
+                          }`}
+                        >
+                          {allVisibleSelected && <Icon icon="solar:check-linear" className="text-black text-[8px]" />}
+                          {someVisibleSelected && !allVisibleSelected && <span className="block w-[6px] h-[2px] bg-[#f881a9] rounded-full" />}
+                        </button>
+                      </th>
                       <th className="text-left px-[20px] py-[8px]">
                         <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Service</span>
                       </th>
@@ -701,13 +756,26 @@ export function DevelopPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {state.neurons.filter(n => !neuronFilter || (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase())).map(neuron => {
+                    {visibleNeurons.map(neuron => {
                       const name = neuron.name || neuron.id;
+                      const isSelected = selectedNeurons.has(name);
                       return (
                         <tr
                           key={name}
-                          className="border-b border-[#2e2e2e] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                          className={`border-b border-[#2e2e2e] transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
                         >
+                          <td className="px-[16px] py-[10px]">
+                            <button
+                              onClick={() => toggleNeuron(name)}
+                              className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
+                                isSelected
+                                  ? 'bg-[#f881a9] border-[#f881a9]'
+                                  : 'border-[#464646] hover:border-[rgba(248,129,169,0.5)]'
+                              }`}
+                            >
+                              {isSelected && <Icon icon="solar:check-linear" className="text-black text-[8px]" />}
+                            </button>
+                          </td>
                           <td className="px-[20px] py-[10px]">
                             <div className="flex items-center gap-[8px]">
                               <div className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? 'bg-[#34C759]' : neuron.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
@@ -1466,7 +1534,7 @@ export function DevelopPage() {
 
         {/* Packages pane */}
         {packagesNeuron && (
-          <RightPane label="Packages" title={packagesNeuron} onClose={() => setPackagesNeuron(null)}>
+          <RightPane label="Packages" title={packagesNeuron} onClose={() => { setPackagesNeuron(null); setSelectedNeurons(new Set()); }}>
             {/* Step: scan */}
             {packagesStep === 'scan' && (
               <div className="flex-1 flex items-center justify-center">
