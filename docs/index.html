@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Alis Hub — alis.build desktop workspace</title>
+<meta name="description" content="A native desktop app for managing your alis.build workspace. Products, environments, builds, deployments — all in one place.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --bg: #08090a;
+    --fg: #eef0f2;
+    --accent: #4ade80;
+    --dim: #52575e;
+    --border: 1px solid #1c1f23;
+    --font: 'IBM Plex Mono', monospace;
+  }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  ::selection { background: var(--accent); color: var(--bg); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* full-viewport layout */
+  .page {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 52px 1fr auto;
+    border-left: var(--border);
+    border-right: var(--border);
+    max-width: 860px;
+    margin: 0 auto;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    border-bottom: var(--border);
+  }
+  .logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+  .nav-gh {
+    margin-left: auto;
+    background: var(--fg);
+    color: var(--bg);
+    padding: 6px 16px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 0;
+    display: inline-block;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+  .nav-gh:hover { background: var(--accent); text-decoration: none; }
+
+  /* HERO */
+  .hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 32px;
+    border-bottom: var(--border);
+  }
+  .hero-pre {
+    font-size: 12px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: clamp(36px, 6vw, 60px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+  }
+  h1 .accent { color: var(--accent); }
+  h1 .dim { color: var(--dim); }
+  .hero-desc {
+    font-size: 15px;
+    color: var(--dim);
+    max-width: 520px;
+    margin-bottom: 40px;
+    line-height: 1.75;
+  }
+  .cta-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-block;
+    padding: 14px 28px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.1s, box-shadow 0.1s;
+    border: var(--border);
+  }
+  .btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 #1c1f23; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn-primary:hover { box-shadow: 3px 3px 0 rgba(74,222,128,0.25); }
+  .btn-ghost { background: transparent; color: var(--fg); }
+  .version-tag {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 1px;
+  }
+  .version-tag span { color: var(--accent); }
+
+  /* PILLS */
+  .pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 48px;
+  }
+  .pill {
+    font-size: 11px;
+    padding: 4px 12px;
+    border: var(--border);
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--dim);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer a { color: var(--dim); }
+  footer a:hover { color: var(--fg); }
+
+  @media (max-width: 600px) {
+    .page { border: 0; }
+    nav { padding: 0 20px; }
+    .hero { padding: 0 20px; }
+    footer { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <nav>
+    <div class="logo">alis<span>hub</span></div>
+    <a href="https://github.com/Patrick-web/alis-hub" class="nav-gh">github →</a>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-pre">// alis.build desktop client</div>
+    <h1>
+      Your workspace,<br>
+      <span class="accent">one window_</span><br>
+      <span class="dim">always at hand</span>
+    </h1>
+    <p class="hero-desc">
+      A native desktop app for alis.build. Browse products, switch environments, monitor builds, and manage deployments — without leaving your machine.
+    </p>
+    <div class="cta-row">
+      <a id="download-btn" href="https://github.com/Patrick-web/alis-hub/releases/latest" class="btn btn-primary">download_</a>
+      <a href="https://github.com/Patrick-web/alis-hub/releases" class="btn btn-ghost">all releases_</a>
+      <span class="version-tag" id="version-tag"></span>
+    </div>
+    <div class="pills">
+      <div class="pill">macOS</div>
+      <div class="pill">Linux</div>
+      <div class="pill">Windows</div>
+      <div class="pill">Wails v3</div>
+      <div class="pill">Go + React</div>
+      <div class="pill">Free &amp; open source</div>
+    </div>
+  </div>
+
+  <footer>
+    <span>MIT License · Built by <a href="https://github.com/Patrick-web">Patrick-web</a></span>
+    <a href="https://github.com/Patrick-web/alis-hub/releases/latest">latest release →</a>
+  </footer>
+
+</div>
+
+<script>
+  (async function() {
+    const btn = document.getElementById('download-btn');
+    const tag = document.getElementById('version-tag');
+    const ua = navigator.userAgent.toLowerCase();
+    let os = 'macOS', ext = '.dmg';
+    if (ua.includes('win')) { os = 'Windows'; ext = '.zip'; }
+    else if (ua.includes('linux')) { os = 'Linux'; ext = '.tar.gz'; }
+
+    btn.textContent = `download for ${os}_`;
+
+    try {
+      const res = await fetch('https://api.github.com/repos/Patrick-web/alis-hub/releases/latest');
+      if (!res.ok) return;
+      const release = await res.json();
+      if (release.tag_name) {
+        tag.innerHTML = `latest <span>${release.tag_name}</span>`;
+      }
+      const asset = release.assets?.find(a => {
+        const n = a.name.toLowerCase();
+        if (os === 'macOS') return n.includes('macos') && n.endsWith('.dmg');
+        if (os === 'Windows') return n.includes('windows') && n.endsWith('.zip');
+        if (os === 'Linux') return n.includes('linux') && n.endsWith('.tar.gz');
+      });
+      if (asset) btn.href = asset.browser_download_url;
+    } catch {}
+  })();
+</script>
+
+</body>
+</html>
