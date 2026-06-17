@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
-import { Events, Window } from '@wailsio/runtime';
+import { Call, Events, Window } from '@wailsio/runtime';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
@@ -88,7 +88,14 @@ export function TopNav() {
       state.organisation,
       state.product,
     ).then((envs) => {
-      const loaded = envs.map((e: any) => ({ name: e.name as string, displayName: e.displayName as string, state: e.state as number }));
+      const loaded = envs.map((e: any) => ({
+        name: e.name as string,
+        displayName: e.displayName as string,
+        state: e.state as number,
+        gcpProjectId: e.gcpProject?.id ?? '',
+        gcpProjectNumber: e.gcpProject?.number ?? '',
+        gcpRegion: e.gcpProject?.region ?? '',
+      }));
       setLoadedEnvs(loaded);
       if (!state.activeEnvName && loaded.length > 0) setActiveEnv(loaded[0].name);
     }).catch((err) => {
@@ -278,7 +285,14 @@ export function TopNav() {
                 return (
                   <button
                     key={env.name}
-                    onClick={() => { setActiveEnv(env.name); setEnvModalOpen(false); }}
+                    onClick={() => {
+                      setActiveEnv(env.name);
+                      setEnvModalOpen(false);
+                      Call.ByName('main.ProductService.SwitchEnvironment',
+                        state.organisation, state.product, env.name,
+                        env.gcpProjectId ?? '', env.gcpProjectNumber ?? '', env.gcpRegion ?? ''
+                      ).catch(console.error);
+                    }}
                     className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
                       isActive
                         ? 'bg-[rgba(248,129,169,0.08)] text-[#f881a9]'

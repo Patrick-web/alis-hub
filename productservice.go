@@ -4073,3 +4073,85 @@ func parseWorkstationAny(anyBytes []byte) string {
 	}
 	return ""
 }
+
+// SwitchEnvironment updates the local .alis/.env file to reflect the newly
+// selected environment. It rewrites the env-specific system variables
+// (ALIS_OS_PROJECT, ALIS_PROJECT_NR, ALIS_REGION, ALIS_MANAGED_SPANNER_DB,
+// ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX) and regenerates the Builder Managed
+// section with the environment's variables from the API.
+// If no local .env file exists the call is a no-op.
+func (s *ProductService) SwitchEnvironment(org, product, envName, projectID, projectNumber, region string) error {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("home dir: %w", err)
+	}
+	envFilePath := filepath.Join(home, "alis.build", org, "build", product, ".alis", ".env")
+
+	content, err := os.ReadFile(envFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read env file: %w", err)
+	}
+
+	vars, err := s.GetEnvironmentVariables(envName)
+	if err != nil {
+		return fmt.Errorf("get environment variables: %w", err)
+	}
+
+	envParts := strings.Split(envName, "/")
+	envID := envParts[len(envParts)-1]
+
+	lines := strings.Split(string(content), "\n")
+
+	builderIdx := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, "# Builder Managed via") {
+			builderIdx = i
+			break
+		}
+	}
+
+	end := len(lines)
+	if builderIdx >= 0 {
+		end = builderIdx
+	}
+
+	for i := 0; i < end; i++ {
+		line := lines[i]
+		switch {
+		case projectID != "" && strings.HasPrefix(line, "ALIS_OS_PROJECT="):
+			lines[i] = `ALIS_OS_PROJECT="` + projectID + `"`
+		case projectID != "" && strings.HasPrefix(line, "ALIS_MANAGED_SPANNER_DB="):
+			lines[i] = `ALIS_MANAGED_SPANNER_DB="` + projectID + `"`
+		case projectNumber != "" && strings.HasPrefix(line, "ALIS_PROJECT_NR="):
+			lines[i] = `ALIS_PROJECT_NR="` + projectNumber + `"`
+		case region != "" && strings.HasPrefix(line, "ALIS_REGION="):
+			lines[i] = `ALIS_REGION="` + region + `"`
+		case envID != "" && strings.HasPrefix(line, "ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX="):
+			prefix := fmt.Sprintf("organisations/%s/products/%s/deployments/%s/neurons/", org, product, envID)
+			lines[i] = `ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX="` + prefix + `"`
+		}
+	}
+
+	var sb strings.Builder
+	for i := 0; i < end; i++ {
+		sb.WriteString(lines[i])
+		sb.WriteByte('\n')
+	}
+
+	builderURL := fmt.Sprintf("https://console.alisx.com/build/landing-zone/%s/%s/environments/%s/variables", org, product, envID)
+	sb.WriteString("# Builder Managed via the Alis Build Console at ")
+	sb.WriteString(builderURL)
+	sb.WriteByte('\n')
+	for _, v := range vars {
+		sb.WriteString(v.Label)
+		sb.WriteString(`="`)
+		sb.WriteString(v.Value)
+		sb.WriteString(`"`)
+		sb.WriteByte('\n')
+	}
+
+	return os.WriteFile(envFilePath, []byte(sb.String()), 0644)
+}

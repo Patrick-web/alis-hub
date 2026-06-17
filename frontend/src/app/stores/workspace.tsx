@@ -39,6 +39,9 @@ export interface LoadedEnv {
   displayName: string; // e.g. "Production"
   state: number;
   envType?: number;    // 1=DEV, 2=STAGING, 3=PROD
+  gcpProjectId?: string;
+  gcpProjectNumber?: string;
+  gcpRegion?: string;
 }
 
 export interface WorkspaceState {
@@ -90,6 +93,7 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         productDisplayName: action.payload.productDisplayName,
       };
       try { localStorage.setItem('alis:recentLandingZone', JSON.stringify(recent)); } catch {}
+      try { localStorage.removeItem('alis:activeEnvName'); } catch {}
       return {
         ...state,
         organisation: action.payload.org,
@@ -122,6 +126,7 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
     case 'SET_LOADED_ENVS':
       return { ...state, loadedEnvs: action.payload };
     case 'SET_ACTIVE_ENV':
+      try { localStorage.setItem('alis:activeEnvName', action.payload); } catch {}
       return { ...state, activeEnvName: action.payload };
     default:
       return state;
@@ -133,6 +138,10 @@ const savedRecentLandingZone = (() => {
     const raw = localStorage.getItem('alis:recentLandingZone');
     return raw ? (JSON.parse(raw) as RecentLandingZone) : null;
   } catch { return null; }
+})();
+
+const savedActiveEnvName = (() => {
+  try { return localStorage.getItem('alis:activeEnvName') ?? ''; } catch { return ''; }
 })();
 
 const initialState: WorkspaceState = {
@@ -152,7 +161,7 @@ const initialState: WorkspaceState = {
   activeNeuronIds: [],
   environments: [],
   loadedEnvs: [],
-  activeEnvName: '',
+  activeEnvName: savedActiveEnvName,
   envsError: null,
 };
 
