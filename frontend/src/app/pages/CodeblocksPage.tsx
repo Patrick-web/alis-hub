@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
+import { EmptyState } from '../components/EmptyState';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
 
@@ -116,9 +117,11 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
             <Loader />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex items-center justify-center h-[200px]">
-            <p className="text-[13px] text-white opacity-30">No blocks found</p>
-          </div>
+          <EmptyState
+            icon="solar:code-square-linear"
+            title={filterText || activeFilter !== 'All' ? 'No blocks match your filters' : 'No blocks found'}
+            className="h-[200px] py-0"
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[20px] max-w-[1400px]">
             {filtered.map(cb => (

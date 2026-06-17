@@ -10,6 +10,7 @@ import { Events } from '@wailsio/runtime';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
 import { Loader } from '../components/Loader';
+import { EmptyState } from '../components/EmptyState';
 import { Button } from '../components/Button';
 import { FilterSelect } from '../components/FilterSelect';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
@@ -1302,10 +1303,7 @@ function DocumentationTab({
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (
-          <div className="flex flex-col items-center justify-center py-[60px] gap-[12px]">
-            <Icon icon="solar:document-text-linear" className="text-4xl text-white/20" />
-            <p className="text-[13px] text-white/30">No documentation available</p>
-          </div>
+          <EmptyState icon="solar:document-text-linear" title="No documentation available" />
         )}
       </div>
     </div>
@@ -1368,9 +1366,8 @@ function VersionsTab({
 
   if (versions.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-[12px]">
-        <Icon icon="solar:box-linear" className="text-4xl text-white/20" />
-        <p className="text-[13px] text-white/30">No versions published yet</p>
+      <div className="flex items-center justify-center h-full">
+        <EmptyState icon="solar:box-minimalistic-linear" title="No versions published yet" />
       </div>
     );
   }
@@ -1635,10 +1632,12 @@ function InstancesTab({
   }
   if (instances.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-[12px]">
-        <Icon icon="solar:box-linear" className="text-4xl text-white/20" />
-        <p className="text-[13px] text-white/30">No instances found</p>
-        <p className="text-[11px] text-white/20">Install this block to create an instance</p>
+      <div className="flex items-center justify-center h-full">
+        <EmptyState
+          icon="solar:layers-minimalistic-linear"
+          title="No instances found"
+          description="Install this block to create an instance"
+        />
       </div>
     );
   }

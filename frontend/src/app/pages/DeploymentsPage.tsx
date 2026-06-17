@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
+import { EmptyState } from '../components/EmptyState';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
@@ -260,13 +261,12 @@ export function DeploymentsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={2 + (overview.environments.length || 0)}
-                    className="px-[20px] py-[32px] text-center"
-                  >
-                    <span className="text-[12px] text-[rgba(255,255,255,0.3)]">
-                      {filter ? `No services match "${filter}"` : 'No services found'}
-                    </span>
+                  <td colSpan={2 + (overview.environments.length || 0)}>
+                    <EmptyState
+                      icon="solar:server-minimalistic-linear"
+                      title={filter ? `No services match "${filter}"` : 'No services found'}
+                      className="py-[32px]"
+                    />
                   </td>
                 </tr>
               )}

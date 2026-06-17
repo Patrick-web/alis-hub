@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import { PageLayout } from '../components/PageLayout';
+import { EmptyState } from '../components/EmptyState';
 import { Loader } from '../components/Loader';
 import { useWorkspace } from '../stores/workspace';
 import { BucketsExplorer } from '../components/tools/BucketsExplorer';
@@ -209,9 +210,11 @@ export function ToolsPage() {
             </div>
           ) : !projectID ? (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
-                No GCP project linked to this product
-              </p>
+              <EmptyState
+                icon="solar:cloud-cross-linear"
+                title="No GCP project linked to this product"
+                description="Link a GCP project in the product settings to use cloud tools"
+              />
             </div>
           ) : (
             <>
