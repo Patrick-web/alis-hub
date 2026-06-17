@@ -31,7 +31,7 @@ export default {
           const asset = release.assets?.find((a) => match(a.name));
           if (asset) platforms[key] = `/download/${key}`;
         }
-        return Response.json({ version: release.tag_name, platforms });
+        return Response.json({ version: release.tag_name, url: release.html_url, notes: release.body ?? "", platforms });
       } catch (e) {
         return Response.json({ error: e.message }, { status: 502 });
       }

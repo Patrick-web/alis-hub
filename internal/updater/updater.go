@@ -20,9 +20,8 @@ import (
 )
 
 const (
-	repo       = "Patrick-web/alis-hub"
-	apiLatest  = "https://api.github.com/repos/" + repo + "/releases/latest"
-	releaseURL = "https://github.com/" + repo + "/releases/latest"
+	workerBase = "https://alishub.justpatrick.workers.dev"
+	releaseURL = "https://github.com/Patrick-web/alis-hub/releases/latest"
 )
 
 type UpdateInfo struct {
@@ -76,41 +75,30 @@ func (s *Service) emit(event string, data any) {
 
 func (s *Service) CurrentVersion() string { return s.version }
 
-// githubRelease matches the subset of GitHub's releases-API JSON we consume.
-type githubRelease struct {
-	TagName    string        `json:"tag_name"`
-	HTMLURL    string        `json:"html_url"`
-	Body       string        `json:"body"`
-	Draft      bool          `json:"draft"`
-	Prerelease bool          `json:"prerelease"`
-	Assets     []githubAsset `json:"assets"`
+// workerRelease is the response shape from the Cloudflare Worker /api/release endpoint.
+type workerRelease struct {
+	Version   string            `json:"version"`
+	URL       string            `json:"url"`
+	Notes     string            `json:"notes"`
+	Platforms map[string]string `json:"platforms"` // "macos" | "linux" | "windows" → "/download/<platform>"
 }
 
-type githubAsset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-	Size               int64  `json:"size"`
-}
-
-func fetchLatestRelease() (*githubRelease, error) {
-	req, err := http.NewRequest("GET", apiLatest, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "AlisHub-updater")
+func fetchWorkerRelease() (*workerRelease, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := client.Get(workerBase + "/api/release")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("github: %s", resp.Status)
+		return nil, fmt.Errorf("worker: %s", resp.Status)
 	}
-	var rel githubRelease
+	var rel workerRelease
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
 		return nil, err
+	}
+	if rel.Version == "" {
+		return nil, fmt.Errorf("worker returned empty version")
 	}
 	return &rel, nil
 }
@@ -118,84 +106,82 @@ func fetchLatestRelease() (*githubRelease, error) {
 func (s *Service) CheckForUpdate() (UpdateInfo, error) {
 	info := UpdateInfo{CurrentVersion: s.version}
 
-	rel, err := fetchLatestRelease()
+	rel, err := fetchWorkerRelease()
 	if err != nil {
 		return info, fmt.Errorf("update check failed: %w", err)
 	}
-	if rel.Draft || rel.Prerelease {
-		return info, nil
-	}
 
-	latest, err := semver.Parse(trimV(rel.TagName))
+	latest, err := semver.Parse(trimV(rel.Version))
 	if err != nil {
-		return info, fmt.Errorf("parse latest tag %q: %w", rel.TagName, err)
+		return info, fmt.Errorf("parse latest version %q: %w", rel.Version, err)
 	}
 	current, err := semver.Parse(trimV(s.version))
 	if err != nil {
 		info.Available = true
 		info.LatestVersion = latest.String()
-		info.ReleaseURL = rel.HTMLURL
-		info.ReleaseNotes = rel.Body
+		info.ReleaseURL = rel.URL
+		info.ReleaseNotes = rel.Notes
 		return info, nil
 	}
 
 	info.LatestVersion = latest.String()
 	if latest.GT(current) {
 		info.Available = true
-		info.ReleaseURL = rel.HTMLURL
-		info.ReleaseNotes = rel.Body
+		info.ReleaseURL = rel.URL
+		info.ReleaseNotes = rel.Notes
 	}
 	return info, nil
 }
 
-// pickAsset returns the release asset that matches the current platform.
-// macOS: prefer the .zip (contains Alis Hub.app), not the .dmg.
-func pickAsset(assets []githubAsset) (*githubAsset, error) {
-	var wantOS, wantExt string
+// platformKey maps runtime.GOOS to the key used in the Worker's platforms map.
+func platformKey() (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		wantOS, wantExt = "macos", ".zip"
+		return "macos", nil
 	case "linux":
-		wantOS, wantExt = "linux", ".tar.gz"
+		return "linux", nil
 	case "windows":
-		wantOS, wantExt = "windows", ".zip"
+		return "windows", nil
 	default:
-		return nil, fmt.Errorf("no update asset for %s", runtime.GOOS)
+		return "", fmt.Errorf("no update asset for %s", runtime.GOOS)
 	}
-	for i := range assets {
-		name := strings.ToLower(assets[i].Name)
-		if strings.Contains(name, wantOS) && strings.HasSuffix(name, wantExt) {
-			return &assets[i], nil
-		}
-	}
-	return nil, fmt.Errorf("no asset matching %s%s in release", wantOS, wantExt)
 }
 
-// DownloadUpdate pulls the appropriate artifact for this platform, extracts
-// it to a temp directory, and stashes the resulting path. Progress is
-// reported over the "update:progress" event every ~100ms.
+// DownloadUpdate pulls the appropriate artifact for this platform via the
+// Cloudflare Worker proxy, extracts it to a temp directory, and stashes
+// the resulting path. Progress is reported over the "update:progress" event
+// every ~100ms.
 //
 // Returns the path to the extracted .app (macOS), directory (Linux), or
 // .exe (Windows).
 func (s *Service) DownloadUpdate() (string, error) {
-	rel, err := fetchLatestRelease()
+	rel, err := fetchWorkerRelease()
 	if err != nil {
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
 	}
-	asset, err := pickAsset(rel.Assets)
+
+	key, err := platformKey()
 	if err != nil {
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
 	}
+	path, ok := rel.Platforms[key]
+	if !ok {
+		err := fmt.Errorf("no download available for %s", runtime.GOOS)
+		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+		return "", err
+	}
+	downloadURL := workerBase + path
 
 	tmpDir, err := os.MkdirTemp("", "alishub-update-*")
 	if err != nil {
 		return "", fmt.Errorf("mkdir temp: %w", err)
 	}
 
-	archivePath := filepath.Join(tmpDir, asset.Name)
-	if err := s.downloadFile(asset.BrowserDownloadURL, archivePath, asset.Size); err != nil {
+	archiveName := key + "-" + trimV(rel.Version) + map[string]string{"macos": ".zip", "linux": ".tar.gz", "windows": ".zip"}[key]
+	archivePath := filepath.Join(tmpDir, archiveName)
+	if err := s.downloadFile(downloadURL, archivePath, 0); err != nil {
 		_ = os.RemoveAll(tmpDir)
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
@@ -244,7 +230,7 @@ func (s *Service) DownloadUpdate() (string, error) {
 	s.staged = newPath
 	s.mu.Unlock()
 
-	s.emit("update:progress", DownloadProgress{Downloaded: asset.Size, Total: asset.Size, Done: true, Path: newPath})
+	s.emit("update:progress", DownloadProgress{Done: true, Path: newPath})
 	return newPath, nil
 }
 
