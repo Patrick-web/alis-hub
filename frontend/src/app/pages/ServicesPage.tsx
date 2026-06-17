@@ -224,13 +224,16 @@ export function ServicesPage() {
                     Latest
                   </span>
                 </th>
-                {overview.environments.map(env => (
-                  <th key={env.name} className="text-left px-[16px] py-[8px] min-w-[180px]">
-                    <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">
-                      {env.displayName}
-                    </span>
-                  </th>
-                ))}
+                {overview.environments.map(env => {
+                  const isActive = env.name === state.activeEnvName;
+                  return (
+                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-[#F881A9]' : ''}`}>
+                      <span className={`text-[10px] font-bold font-['JetBrains_Mono',sans-serif] uppercase ${isActive ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.4)]'}`}>
+                        {env.displayName}
+                      </span>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -251,8 +254,9 @@ export function ServicesPage() {
                   </td>
                   {overview.environments.map(env => {
                     const dep = env.deployments.find(d => d.neuronId === neuron.id);
+                    const isActive = env.name === state.activeEnvName;
                     return (
-                      <td key={env.name} className="px-[16px] py-[12px]">
+                      <td key={env.name} className={`px-[16px] py-[12px] ${isActive ? 'bg-[rgba(248,129,169,0.03)]' : ''}`}>
                         <EnvCell neuronVersion={neuron.version} dep={dep} />
                       </td>
                     );

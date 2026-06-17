@@ -94,6 +94,13 @@ export function ToolsPage() {
     loadContexts();
   }, [loadContexts]);
 
+  // Auto-select the active environment's GCP project when env picker changes
+  useEffect(() => {
+    if (!state.activeEnvName || contexts.length === 0) return;
+    const match = contexts.find(c => c.id === state.activeEnvName);
+    if (match) setSelectedCtx(match);
+  }, [state.activeEnvName, contexts]);
+
   const projectID = selectedCtx?.projectID ?? '';
   const region = selectedCtx?.region ?? '';
 

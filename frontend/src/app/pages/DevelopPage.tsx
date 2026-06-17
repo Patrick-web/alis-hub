@@ -327,12 +327,17 @@ export function DevelopPage() {
         return { name: env.name, displayName: env.displayName, currentVersion: dep?.version ?? '' };
       });
       setDeployEnvs(envs);
+      // Pre-select the active environment
+      if (state.activeEnvName) {
+        const active = envs.find(e => e.name === state.activeEnvName);
+        if (active) setSelectedDeployEnvs([active.name]);
+      }
     } catch {
       setDeployEnvs([]);
     } finally {
       setDeployStep('confirm');
     }
-  }, [state.organisation, state.product]);
+  }, [state.organisation, state.product, state.activeEnvName]);
 
   const handleRunDeploy = async () => {
     if (!deployNeuron || selectedDeployEnvs.length === 0 || !deployVersion) return;
