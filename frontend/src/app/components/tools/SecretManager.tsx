@@ -125,7 +125,7 @@ export function SecretManager({ projectID }: Props) {
                     <div className="flex gap-[4px] flex-wrap shrink-0 max-w-[120px]">
                       {Object.entries(secret.labels).slice(0, 2).map(([k, v]) => (
                         <span key={k} className="text-[8px] px-[4px] py-[1px] bg-[rgba(255,255,255,0.05)] rounded-[2px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
-                          {k}={v}
+                          {k}={v as string}
                         </span>
                       ))}
                     </div>
