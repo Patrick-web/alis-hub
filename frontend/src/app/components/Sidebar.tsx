@@ -1,120 +1,198 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
-import { Icon } from '@iconify/react';
-import { SidebarNavItem } from './SidebarNavItem';
-import { Button } from './Button';
-import { EnvFormSheet } from './EnvFormSheet';
-import { ConfirmDialog } from './ConfirmDialog';
-import { MissingVarsModal } from './MissingVarsModal';
-import { useWorkspace, type LoadedEnv } from '../stores/workspace';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { Icon } from "@iconify/react";
+import { SidebarNavItem } from "./SidebarNavItem";
+import { Button } from "./Button";
+import { Input } from "./Input";
+import { EnvFormSheet } from "./EnvFormSheet";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { MissingVarsModal } from "./MissingVarsModal";
+import { useWorkspace, type LoadedEnv } from "../stores/workspace";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
-const developNavItems: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = [];
+const developNavItems: {
+  id: string;
+  label: string;
+  route?: string | null;
+  icon: JSX.Element;
+}[] = [];
 
 const envNavItems = [
-  { id: 'production', label: 'Production', icon: <Icon icon="solar:earth-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'staging', label: 'Staging', icon: <Icon icon="solar:cloud-linear" className="text-white text-xl" /> },
-  { id: 'development', label: 'Development', icon: <Icon icon="solar:code-linear" className="text-white text-xl" /> },
+  {
+    id: "production",
+    label: "Production",
+    icon: <Icon icon="solar:earth-linear" className="text-[#F881A9] text-xl" />,
+  },
+  {
+    id: "staging",
+    label: "Staging",
+    icon: <Icon icon="solar:cloud-linear" className="text-white text-xl" />,
+  },
+  {
+    id: "development",
+    label: "Development",
+    icon: <Icon icon="solar:code-linear" className="text-white text-xl" />,
+  },
 ];
 
-
 const codeblockNavItems = [
-  { id: 'all', label: 'All Codeblocks', route: '/codeblocks', icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" /> },
-  { id: 'mine', label: 'My Codeblocks', route: '/codeblocks/mine', icon: <Icon icon="solar:user-linear" className="text-white text-xl" /> },
-  { id: 'starred', label: 'Starred', route: null, icon: <Icon icon="solar:star-linear" className="text-white text-xl" /> },
+  {
+    id: "all",
+    label: "All Codeblocks",
+    route: "/codeblocks",
+    icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" />,
+  },
+  {
+    id: "mine",
+    label: "My Codeblocks",
+    route: "/codeblocks/mine",
+    icon: <Icon icon="solar:user-linear" className="text-white text-xl" />,
+  },
+  {
+    id: "starred",
+    label: "Starred",
+    route: null,
+    icon: <Icon icon="solar:star-linear" className="text-white text-xl" />,
+  },
 ];
 
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } = useWorkspace();
-  const [activeBuildItem] = useState('');
+  const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } =
+    useWorkspace();
+  const [activeBuildItem] = useState("");
+  const [neuronFilter, setNeuronFilter] = useState("");
 
   // Env CRUD state
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetMode, setSheetMode] = useState<'create' | 'edit'>('create');
+  const [sheetMode, setSheetMode] = useState<"create" | "edit">("create");
   const [editTarget, setEditTarget] = useState<LoadedEnv | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LoadedEnv | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [missingVarsOpen, setMissingVarsOpen] = useState(false);
 
-  const isEnvironments = location.pathname.includes('/environments');
-  const isBuilds = location.pathname.includes('/builds');
-  const isCodeblocks = location.pathname.includes('/codeblocks');
+  const isEnvironments = location.pathname.includes("/environments");
+  const isBuilds = location.pathname.includes("/builds");
+  const isCodeblocks = location.pathname.includes("/codeblocks");
 
   const currentPath = location.pathname;
-  const activeDevelopId = developNavItems.find(i => i.route === currentPath)?.id ?? 'about';
+  const activeDevelopId =
+    developNavItems.find((i) => i.route === currentPath)?.id ?? "about";
 
-  const dynamicEnvItems = state.loadedEnvs.map(env => ({
+  const dynamicEnvItems = state.loadedEnvs.map((env) => ({
     id: env.name,
     label: env.displayName,
-    icon: <Icon icon="solar:server-square-cloud-linear" className="text-[#F881A9] text-xl" />,
+    icon: (
+      <Icon
+        icon="solar:server-square-cloud-linear"
+        className="text-[#F881A9] text-xl"
+      />
+    ),
   }));
 
-  let items: { id: string; label: string; route?: string | null; icon: JSX.Element }[] = developNavItems;
-  let header = 'DEVELOP';
-  let bottomButtonLabel = '';
-  let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
+  let items: {
+    id: string;
+    label: string;
+    route?: string | null;
+    icon: JSX.Element;
+  }[] = developNavItems;
+  let header = "DEVELOP";
+  let bottomButtonLabel = "";
+  let bottomButtonIcon = (
+    <Icon icon="solar:keyboard-linear" className="text-xl" />
+  );
   let onBottomButtonClick: (() => void) | undefined;
 
   if (isEnvironments) {
     items = dynamicEnvItems.length > 0 ? dynamicEnvItems : envNavItems;
-    header = 'ENVIRONMENTS';
-    bottomButtonLabel = 'New Environment';
-    bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
+    header = "ENVIRONMENTS";
+    bottomButtonLabel = "New Environment";
+    bottomButtonIcon = (
+      <Icon icon="solar:add-circle-linear" className="text-xl" />
+    );
     onBottomButtonClick = () => {
-      setSheetMode('create');
+      setSheetMode("create");
       setEditTarget(null);
       setSheetOpen(true);
     };
   } else if (isBuilds) {
-    items = state.neurons.map(n => ({
+    const q = neuronFilter.toLowerCase();
+    items = state.neurons
+      .filter((n) => !q || n.name.toLowerCase().includes(q))
+      .map((n) => ({
       id: n.name,
       label: n.name,
-      icon: <Icon icon="solar:delta-linear" className="text-xl" style={{ color: state.activeNeuronIds[0] === n.name ? '#F881A9' : 'white' }} />,
+      icon: (
+        <Icon
+          icon="solar:sledgehammer-line-duotone"
+          className="text-xl"
+          style={{
+            color: state.activeNeuronIds[0] === n.name ? "#F881A9" : "white",
+          }}
+        />
+      ),
     }));
-    header = 'BUILDS';
-    bottomButtonLabel = 'New Service';
-    bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
+    header = "BUILDS";
+    bottomButtonLabel = "New Service";
+    bottomButtonIcon = (
+      <Icon icon="solar:add-circle-linear" className="text-xl" />
+    );
   } else if (isCodeblocks) {
     items = codeblockNavItems;
-    header = 'CODEBLOCKS';
-    bottomButtonLabel = 'Create Block';
-    bottomButtonIcon = <Icon icon="solar:add-square-linear" className="text-xl" />;
-    onBottomButtonClick = () => navigate('/codeblocks/create');
+    header = "CODEBLOCKS";
+    bottomButtonLabel = "Create Block";
+    bottomButtonIcon = (
+      <Icon icon="solar:add-square-linear" className="text-xl" />
+    );
+    onBottomButtonClick = () => navigate("/codeblocks/create");
   }
 
   const getActiveItem = () => {
     if (isEnvironments) {
-      if (dynamicEnvItems.length > 0) return state.activeEnvName || dynamicEnvItems[0]?.id;
+      if (dynamicEnvItems.length > 0)
+        return state.activeEnvName || dynamicEnvItems[0]?.id;
       return envNavItems[0]?.id;
     }
-    if (isBuilds) return state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem;
-    if (isCodeblocks) return codeblockNavItems.find(i => i.route && currentPath === i.route)?.id ?? codeblockNavItems[0]?.id;
+    if (isBuilds)
+      return (
+        state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem
+      );
+    if (isCodeblocks)
+      return (
+        codeblockNavItems.find((i) => i.route && currentPath === i.route)?.id ??
+        codeblockNavItems[0]?.id
+      );
     return activeDevelopId;
   };
 
-  const handleItemClick = (item: typeof items[0]) => {
+  const handleItemClick = (item: (typeof items)[0]) => {
     if (isEnvironments && dynamicEnvItems.length > 0) {
       setActiveEnv(item.id);
     } else if (isBuilds) {
       setActiveNeurons([item.id]);
     }
-    if ('route' in item && item.route) {
+    if ("route" in item && item.route) {
       navigate(item.route);
     }
   };
 
-  const handleCreateEnv = async (displayName: string, envType: number, region: string) => {
-    const result = await (ProductService.CreateEnvironment as (org: string, product: string, displayName: string, region: string, envType: number) => Promise<any>)(
-      state.organisation,
-      state.product,
-      displayName,
-      region,
-      envType,
-    );
+  const handleCreateEnv = async (
+    displayName: string,
+    envType: number,
+    region: string,
+  ) => {
+    const result = await (
+      ProductService.CreateEnvironment as (
+        org: string,
+        product: string,
+        displayName: string,
+        region: string,
+        envType: number,
+      ) => Promise<any>
+    )(state.organisation, state.product, displayName, region, envType);
     const newEnv: LoadedEnv = {
-      name: result?.name ?? '',
+      name: result?.name ?? "",
       displayName: result?.displayName ?? displayName,
       state: result?.state ?? 0,
       envType: result?.envType ?? envType,
@@ -126,11 +204,13 @@ export function Sidebar() {
 
   const handleEditEnv = async (displayName: string) => {
     if (!editTarget) return;
-    const result = await (ProductService.UpdateEnvironment as (envName: string, displayName: string) => Promise<any>)(
-      editTarget.name,
-      displayName,
-    );
-    const updated = state.loadedEnvs.map(e =>
+    const result = await (
+      ProductService.UpdateEnvironment as (
+        envName: string,
+        displayName: string,
+      ) => Promise<any>
+    )(editTarget.name, displayName);
+    const updated = state.loadedEnvs.map((e) =>
       e.name === editTarget.name
         ? { ...e, displayName: result?.displayName ?? displayName }
         : e,
@@ -142,11 +222,15 @@ export function Sidebar() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await (ProductService.DeleteEnvironment as (envName: string) => Promise<void>)(deleteTarget.name);
-      const updated = state.loadedEnvs.filter(e => e.name !== deleteTarget.name);
+      await (
+        ProductService.DeleteEnvironment as (envName: string) => Promise<void>
+      )(deleteTarget.name);
+      const updated = state.loadedEnvs.filter(
+        (e) => e.name !== deleteTarget.name,
+      );
       setLoadedEnvs(updated);
       if (state.activeEnvName === deleteTarget.name) {
-        setActiveEnv(updated[0]?.name ?? '');
+        setActiveEnv(updated[0]?.name ?? "");
       }
     } finally {
       setDeleteLoading(false);
@@ -164,6 +248,17 @@ export function Sidebar() {
                 {header}
               </p>
             </div>
+            {isBuilds && (
+              <div className="px-[10px] py-[8px] border-b border-[#464646] w-full">
+                <Input
+                  placeholder="Filter services..."
+                  value={neuronFilter}
+                  onChange={(e) => setNeuronFilter(e.target.value)}
+                  icon={<Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm" />}
+                  className="w-full"
+                />
+              </div>
+            )}
             {items.map((item) => (
               <SidebarNavItem
                 key={item.id}
@@ -171,18 +266,30 @@ export function Sidebar() {
                 icon={item.icon}
                 active={getActiveItem() === item.id}
                 onClick={() => handleItemClick(item)}
-                onEdit={isEnvironments && dynamicEnvItems.length > 0 ? () => {
-                  const env = state.loadedEnvs.find(e => e.name === item.id);
-                  if (env) {
-                    setEditTarget(env);
-                    setSheetMode('edit');
-                    setSheetOpen(true);
-                  }
-                } : undefined}
-                onDelete={isEnvironments && dynamicEnvItems.length > 0 ? () => {
-                  const env = state.loadedEnvs.find(e => e.name === item.id);
-                  if (env) setDeleteTarget(env);
-                } : undefined}
+                onEdit={
+                  isEnvironments && dynamicEnvItems.length > 0
+                    ? () => {
+                        const env = state.loadedEnvs.find(
+                          (e) => e.name === item.id,
+                        );
+                        if (env) {
+                          setEditTarget(env);
+                          setSheetMode("edit");
+                          setSheetOpen(true);
+                        }
+                      }
+                    : undefined
+                }
+                onDelete={
+                  isEnvironments && dynamicEnvItems.length > 0
+                    ? () => {
+                        const env = state.loadedEnvs.find(
+                          (e) => e.name === item.id,
+                        );
+                        if (env) setDeleteTarget(env);
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -192,7 +299,12 @@ export function Sidebar() {
               {isEnvironments && (
                 <Button
                   variant="secondary"
-                  icon={<Icon icon="solar:danger-triangle-linear" className="text-xl" />}
+                  icon={
+                    <Icon
+                      icon="solar:danger-triangle-linear"
+                      className="text-xl"
+                    />
+                  }
                   className="w-full h-[34px] text-[10px] font-bold uppercase"
                   onClick={() => setMissingVarsOpen(true)}
                 >
@@ -212,7 +324,10 @@ export function Sidebar() {
             </div>
           </div>
         </div>
-        <div aria-hidden="true" className="absolute border-[#626262] border-r border-solid inset-0 pointer-events-none" />
+        <div
+          aria-hidden="true"
+          className="absolute border-[#626262] border-r border-solid inset-0 pointer-events-none"
+        />
       </div>
 
       {/* Create / Edit sheet */}
@@ -220,18 +335,28 @@ export function Sidebar() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         mode={sheetMode}
-        initialDisplayName={sheetMode === 'edit' ? (editTarget?.displayName ?? '') : ''}
-        onSubmit={sheetMode === 'create' ? handleCreateEnv : (displayName, _envType, _region) => handleEditEnv(displayName)}
+        initialDisplayName={
+          sheetMode === "edit" ? (editTarget?.displayName ?? "") : ""
+        }
+        onSubmit={
+          sheetMode === "create"
+            ? handleCreateEnv
+            : (displayName, _envType, _region) => handleEditEnv(displayName)
+        }
       />
 
       {/* Delete confirmation */}
       <ConfirmDialog
         open={Boolean(deleteTarget)}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="Delete Environment"
         description={
           <>
-            Delete <span className="text-white">{deleteTarget?.displayName}</span>? This cannot be undone.
+            Delete{" "}
+            <span className="text-white">{deleteTarget?.displayName}</span>?
+            This cannot be undone.
           </>
         }
         confirmLabel="Delete"
