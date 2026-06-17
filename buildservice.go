@@ -468,6 +468,10 @@ type LocalBuildChunk struct {
 // a build ID that can be passed to PollLocalBuild to stream output.
 // neuron is the full resource name e.g. "organisations/voyage/products/vp/neurons/hubspot-v1".
 func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult, error) {
+	if err := s.initClient(); err != nil {
+		return nil, fmt.Errorf("connecting to Alis backend: %w", err)
+	}
+
 	parts := strings.Split(neuron, "/")
 	if len(parts) < 6 {
 		return nil, fmt.Errorf("invalid neuron resource: %s", neuron)
@@ -516,6 +520,14 @@ func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult
 			st.buf.WriteString("\n\nBuild complete: " + tag + "\n")
 		}
 		st.mu.Unlock()
+
+		go func(tag string, failed bool) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := s.alisClient.FinishLocalBuild(ctx, tag, failed); err != nil {
+				log.Printf("[build] FinishLocalBuild: %v", err)
+			}
+		}(tag, runErr != nil)
 	}()
 
 	log.Printf("[build] StartLocalBuild: buildID=%s tag=%s dir=%s", buildID, tag, neuronDir)

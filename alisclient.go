@@ -249,7 +249,7 @@ func parseGRPCWebTrailer(data []byte) (int, string) {
 }
 
 // marshalRunDefineRequest builds protobuf bytes for alis.os.dbd.v1.RunDefineRequest.
-func marshalRunDefineRequest(neuron, commit string, releaseType int32) []byte {
+func marshalRunDefineRequest(neuron, commit string) []byte {
 	var buf []byte
 	if neuron != "" {
 		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
@@ -258,10 +258,6 @@ func marshalRunDefineRequest(neuron, commit string, releaseType int32) []byte {
 	if commit != "" {
 		buf = protowire.AppendTag(buf, 2, protowire.BytesType)
 		buf = protowire.AppendString(buf, commit)
-	}
-	if releaseType != 0 {
-		buf = protowire.AppendTag(buf, 3, protowire.VarintType)
-		buf = protowire.AppendVarint(buf, uint64(releaseType))
 	}
 	return buf
 }
@@ -275,22 +271,10 @@ func marshalGetOperationRequest(name string) []byte {
 	return buf
 }
 
-func enumValue(s string) int32 {
-	switch s {
-	case "GA":
-		return 1
-	case "BETA":
-		return 2
-	case "ALPHA":
-		return 3
-	}
-	return 0
-}
-
 // RunDefine starts a Define operation.
 func (c *AlisClient) RunDefine(ctx context.Context, req *dbdv1.RunDefineRequest) (*dbdv1.Operation, error) {
 	method := "alis.os.dbd.v1.DbdService/RunDefine"
-	protoBytes := marshalRunDefineRequest(req.Neuron, req.Commit, enumValue(req.ReleaseType))
+	protoBytes := marshalRunDefineRequest(req.Neuron, req.Commit)
 
 	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
 	if err != nil {
@@ -953,6 +937,38 @@ func unpackDeployMetadata(op *dbdv1.Operation) *RunDeployMetadata {
 		}
 	}
 	return meta
+}
+
+// marshalFinishLocalBuildRequest builds protobuf bytes for
+// alis.os.resources.products.v1.FinishLocalBuildRequest.
+// field 1: neuronVersion (string) — Docker image tag e.g. "hubspot-v1:12345678"
+// field 2: failed (bool)
+func marshalFinishLocalBuildRequest(neuronVersion string, failed bool) []byte {
+	var buf []byte
+	if neuronVersion != "" {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, neuronVersion)
+	}
+	if failed {
+		buf = protowire.AppendTag(buf, 2, protowire.VarintType)
+		buf = protowire.AppendVarint(buf, 1)
+	}
+	return buf
+}
+
+// FinishLocalBuild notifies the backend that a local Docker build completed.
+// neuronVersion is the Docker image tag (e.g. "hubspot-v1:12345678").
+// failed is true when docker build exited non-zero.
+func (c *AlisClient) FinishLocalBuild(ctx context.Context, neuronVersion string, failed bool) error {
+	protoBytes := marshalFinishLocalBuildRequest(neuronVersion, failed)
+	_, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.resources.products.v1.Service/FinishLocalBuild", protoBytes)
+	if err != nil {
+		return fmt.Errorf("FinishLocalBuild: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("FinishLocalBuild: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	return nil
 }
 
 // parseDeployInfo parses RunDeployMetadata.Deployment:
