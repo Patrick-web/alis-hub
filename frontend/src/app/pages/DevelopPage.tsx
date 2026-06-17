@@ -3,6 +3,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
+import { Input } from '../components/Input';
 import { RightPane } from '../components/RightPane';
 import { PackageTerminalPane, type TerminalSession, type PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable';
@@ -117,6 +118,7 @@ export function DevelopPage() {
   const [buildBranches, setBuildBranches] = useState<string[]>(['master']);
   const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
   const [localBuildId, setLocalBuildId] = useState<string | null>(null);
+  const [neuronFilter, setNeuronFilter] = useState('');
 
   // Deploy pane state
   const [deployNeuron, setDeployNeuron] = useState<string | null>(null);
@@ -646,10 +648,26 @@ export function DevelopPage() {
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
       {/* Page header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646]">
+      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between">
         <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           SERVICES
         </p>
+      </div>
+
+      {/* Filter toolbar */}
+      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
+        <div className="flex items-center h-[34px]">
+          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+            <p className="text-[12px] text-white">/</p>
+          </div>
+          <Input
+            placeholder="Filter services..."
+            value={neuronFilter}
+            onChange={(e) => setNeuronFilter(e.target.value)}
+            className="w-[260px] border-l-0 rounded-l-none h-full"
+            containerClassName="h-full"
+          />
+        </div>
       </div>
 
       {/* Main content: detail + optional right pane + optional terminal bottom pane */}
@@ -678,7 +696,7 @@ export function DevelopPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {state.neurons.map(neuron => {
+                    {state.neurons.filter(n => !neuronFilter || (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase())).map(neuron => {
                       const name = neuron.name || neuron.id;
                       return (
                         <tr
