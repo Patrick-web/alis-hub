@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Alis Hub — alis.build desktop workspace</title>
-<meta name="description" content="A native desktop app for managing your alis.build workspace. Products, environments, builds, deployments — all in one place.">
+<title>Alis Hub - alis.build desktop workspace</title>
+<meta name="description" content="A native desktop app for managing your alis.build workspace. Products, environments, builds, deployments - all in one place.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='6' fill='%230f0f0f'/%3E%3Ccircle cx='29' cy='7' r='5' fill='%23e8192c'/%3E%3Ccircle cx='41' cy='7' r='5' fill='%23e8192c'/%3E%3Ccircle cx='29' cy='19' r='5' fill='%23e8192c'/%3E%3Ccircle cx='41' cy='19' r='5' fill='%23e8192c'/%3E%3Ccircle cx='7' cy='27' r='5' fill='%23e8192c'/%3E%3Ccircle cx='19' cy='27' r='5' fill='%23e8192c'/%3E%3Ccircle cx='29' cy='27' r='5' fill='%23e8192c'/%3E%3Ccircle cx='7' cy='37' r='5' fill='%23e8192c'/%3E%3Ccircle cx='19' cy='37' r='5' fill='%23e8192c'/%3E%3Ccircle cx='7' cy='47' r='5' fill='%23e8192c'/%3E%3Ccircle cx='19' cy='47' r='5' fill='%23e8192c'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -12,7 +13,8 @@
   :root {
     --bg: #08090a;
     --fg: #eef0f2;
-    --accent: #4ade80;
+    --accent: #e8192c;
+    --accent-dim: rgba(232,25,44,0.15);
     --dim: #52575e;
     --border: 1px solid #1c1f23;
     --font: 'IBM Plex Mono', monospace;
@@ -25,7 +27,7 @@
     font-size: 15px;
     line-height: 1.6;
   }
-  ::selection { background: var(--accent); color: var(--bg); }
+  ::selection { background: var(--accent); color: var(--fg); }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; text-underline-offset: 3px; }
 
@@ -48,9 +50,18 @@
     border-bottom: var(--border);
   }
   .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.5px;
+  }
+  .logo-mark {
+    display: block;
+    width: 14px;
+    height: 22px;
+    flex-shrink: 0;
   }
   .logo span { color: var(--accent); }
   .nav-gh {
@@ -68,7 +79,7 @@
     text-decoration: none;
     transition: background 0.15s;
   }
-  .nav-gh:hover { background: var(--accent); text-decoration: none; }
+  .nav-gh:hover { background: var(--accent); color: var(--fg); text-decoration: none; }
 
   /* HERO */
   .hero {
@@ -121,8 +132,8 @@
     border: var(--border);
   }
   .btn:hover { transform: translate(-2px, -2px); box-shadow: 3px 3px 0 #1c1f23; text-decoration: none; }
-  .btn-primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-  .btn-primary:hover { box-shadow: 3px 3px 0 rgba(74,222,128,0.25); }
+  .btn-primary { background: var(--accent); color: var(--fg); border-color: var(--accent); }
+  .btn-primary:hover { box-shadow: 3px 3px 0 var(--accent-dim); }
   .btn-ghost { background: transparent; color: var(--fg); }
   .version-tag {
     font-size: 11px;
@@ -174,7 +185,22 @@
 <div class="page">
 
   <nav>
-    <div class="logo">alis<span>hub</span></div>
+    <div class="logo">
+      <svg class="logo-mark" viewBox="0 0 14 22" fill="#e8192c" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="8"  cy="1.5" r="1.5"/>
+        <circle cx="12.5" cy="1.5" r="1.5"/>
+        <circle cx="8"  cy="6"   r="1.5"/>
+        <circle cx="12.5" cy="6"   r="1.5"/>
+        <circle cx="1.5" cy="10"  r="1.5"/>
+        <circle cx="6"  cy="10"  r="1.5"/>
+        <circle cx="10.5" cy="10"  r="1.5"/>
+        <circle cx="1.5" cy="14.5" r="1.5"/>
+        <circle cx="6"  cy="14.5" r="1.5"/>
+        <circle cx="1.5" cy="19"  r="1.5"/>
+        <circle cx="6"  cy="19"  r="1.5"/>
+      </svg>
+      alis<span>hub</span>
+    </div>
     <a href="https://github.com/Patrick-web/alis-hub" class="nav-gh">github →</a>
   </nav>
 
@@ -186,7 +212,7 @@
       <span class="dim">always at hand</span>
     </h1>
     <p class="hero-desc">
-      A native desktop app for alis.build. Browse products, switch environments, monitor builds, and manage deployments — without leaving your machine.
+      A native desktop app for alis.build. Browse products, switch environments, monitor builds, and manage deployments - without leaving your machine.
     </p>
     <div class="cta-row">
       <a id="download-btn" href="https://github.com/Patrick-web/alis-hub/releases/latest" class="btn btn-primary">download_</a>
