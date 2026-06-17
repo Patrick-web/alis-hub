@@ -1814,7 +1814,8 @@ export class NeuronItem {
 }
 
 /**
- * NeuronVersionSummary is a built/retagged neuron version returned to the frontend.
+ * NeuronVersionSummary is a neuron version returned to the frontend.
+ * State: 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED.
  */
 export class NeuronVersionSummary {
     "version": string;
@@ -1825,6 +1826,7 @@ export class NeuronVersionSummary {
     "createTime": number;
     "buildCommit": string;
     "logsUrl": string;
+    "state": number;
 
     /** Creates a new NeuronVersionSummary instance. */
     constructor($$source: Partial<NeuronVersionSummary> = {}) {
@@ -1839,6 +1841,9 @@ export class NeuronVersionSummary {
         }
         if (!("logsUrl" in $$source)) {
             this["logsUrl"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = 0;
         }
 
         Object.assign(this, $$source);

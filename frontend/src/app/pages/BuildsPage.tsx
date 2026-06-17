@@ -39,6 +39,7 @@ interface VersionEntry {
   createTime: number;
   buildCommit: string;
   logsUrl: string;
+  state: number; // 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED
 }
 
 interface DeployResultState {
@@ -196,7 +197,7 @@ export function BuildsPage() {
       .then((res) => {
         const vs = (res ?? [])
           .filter(v => v !== null)
-          .map(v => ({ version: v!.version, createTime: v!.createTime, buildCommit: v!.buildCommit, logsUrl: v!.logsUrl }));
+          .map(v => ({ version: v!.version, createTime: v!.createTime, buildCommit: v!.buildCommit, logsUrl: v!.logsUrl, state: v!.state ?? 0 }));
         setVersions(vs);
       })
       .catch(() => setVersions([]))
@@ -343,7 +344,7 @@ export function BuildsPage() {
           // Refresh versions after build completes
           DeployService.ListNeuronVersions(neuronResource)
             .then(res => {
-              const vs = (res ?? []).filter(v => v !== null).map(v => ({ version: v!.version, createTime: v!.createTime, buildCommit: v!.buildCommit, logsUrl: v!.logsUrl }));
+              const vs = (res ?? []).filter(v => v !== null).map(v => ({ version: v!.version, createTime: v!.createTime, buildCommit: v!.buildCommit, logsUrl: v!.logsUrl, state: v!.state ?? 0 }));
               setVersions(vs);
             })
             .catch(() => {});
@@ -451,15 +452,25 @@ export function BuildsPage() {
   const deployedEnvsForVersion = (version: string): string[] =>
     deployedEnvsMap.get(`${activeNeuron}::${version}`) ?? [];
 
+  function versionStateBadge(state: number) {
+    if (state === 2) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(56,189,248,0.1)] border border-[rgba(56,189,248,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#38bdf8] uppercase">RETAGGED</span>;
+    if (state === 3) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(251,191,36,0.1)] border border-[rgba(251,191,36,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#fbbf24] uppercase">BUILDING</span>;
+    if (state === 4) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#ef4444] uppercase">FAILED</span>;
+    return null;
+  }
+
   const columns = [
     {
       header: 'VERSION',
       render: (item: VersionEntry) => (
-        <span className={`font-['JetBrains_Mono',sans-serif] font-bold text-[12px] ${activeVersionId === item.version ? 'text-[#F881A9]' : 'text-white'}`}>
-          {item.version}
+        <span className="flex items-center">
+          <span className={`font-['JetBrains_Mono',sans-serif] font-bold text-[12px] ${activeVersionId === item.version ? 'text-[#F881A9]' : 'text-white'}`}>
+            {item.version}
+          </span>
+          {versionStateBadge(item.state)}
         </span>
       ),
-      className: 'w-[120px]',
+      className: 'w-[160px]',
     },
     {
       header: 'COMMIT',
@@ -509,7 +520,7 @@ export function BuildsPage() {
     ? versions.find(v => v.version === activeVersionId)
     : null;
 
-  const canDeploy = Boolean(activeVersionId);
+  const canDeploy = Boolean(activeVersionId) && (selectedVersion?.state === 1 || selectedVersion?.state === 2);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
@@ -566,7 +577,7 @@ export function BuildsPage() {
           ) : filteredVersions.length === 0 && !versionsLoading ? (
             <EmptyState
               icon="solar:box-minimalistic-linear"
-              title={filterText ? 'No versions match the filter' : 'No built versions found'}
+              title={filterText ? 'No versions match the filter' : 'No versions found'}
               description={filterText ? undefined : 'Click BUILD to create the first one'}
             />
           ) : (
