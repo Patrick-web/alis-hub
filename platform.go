@@ -25,3 +25,12 @@ func platformShell() (bin string, args []string) {
 	}
 	return shell, []string{"-l"}
 }
+
+// platformShellExitSuffix returns a shell fragment to append to a one-shot
+// command so the shell exits with the command's exit code once it finishes.
+func platformShellExitSuffix() string {
+	if runtime.GOOS == "windows" {
+		return "; exit $LASTEXITCODE"
+	}
+	return "; exit $?"
+}
