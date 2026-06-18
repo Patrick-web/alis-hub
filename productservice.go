@@ -129,9 +129,10 @@ type InstallBlockParams struct {
 }
 
 type InstallBlockResult struct {
-	InstanceName string `json:"instanceName"`
-	BranchName   string `json:"branchName"`
-	RepoPath     string `json:"repoPath"`
+	InstanceName   string `json:"instanceName"`
+	BranchName     string `json:"branchName"`
+	RepoPath       string `json:"repoPath"`
+	DefineRepoPath string `json:"defineRepoPath"`
 }
 
 // ── Codeblocks ────────────────────────────────────────────────────────────────
@@ -1329,9 +1330,10 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 	repoPath := packageToRepoPath(params.Package)
 
 	return &InstallBlockResult{
-		InstanceName: instanceName,
-		BranchName:   branchName,
-		RepoPath:     repoPath,
+		InstanceName:   instanceName,
+		BranchName:     branchName,
+		RepoPath:       repoPath,
+		DefineRepoPath: packageToDefineRepoPath(params.Package),
 	}, nil
 }
 
@@ -1371,6 +1373,21 @@ func packageToRepoPath(pkg string) string {
 		return ""
 	}
 	return filepath.Join(home, "alis.build", parts[0], "build", parts[1])
+}
+
+// packageToDefineRepoPath converts a package resource name to the local alis define repo path.
+// "packages/voyage.vp.bff.v1" → "~/alis.build/voyage/define"
+func packageToDefineRepoPath(pkg string) string {
+	pkg = strings.TrimPrefix(pkg, "packages/")
+	parts := strings.SplitN(pkg, ".", 2)
+	if len(parts) < 1 || parts[0] == "" {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, "alis.build", parts[0], "define")
 }
 
 func (s *ProductService) findExistingEntitlement(ctx context.Context, blockId, accountID string) (string, error) {

@@ -1394,6 +1394,7 @@ export class InstallBlockResult {
     "instanceName": string;
     "branchName": string;
     "repoPath": string;
+    "defineRepoPath": string;
 
     /** Creates a new InstallBlockResult instance. */
     constructor($$source: Partial<InstallBlockResult> = {}) {
@@ -1405,6 +1406,9 @@ export class InstallBlockResult {
         }
         if (!("repoPath" in $$source)) {
             this["repoPath"] = "";
+        }
+        if (!("defineRepoPath" in $$source)) {
+            this["defineRepoPath"] = "";
         }
 
         Object.assign(this, $$source);
