@@ -29,6 +29,7 @@ import { BuildKitPrivateGitPage } from "./pages/BuildKitPrivateGitPage";
 import { BuildKitMcpServerPage } from "./pages/BuildKitMcpServerPage";
 import { BuildKitGlassModePage } from "./pages/BuildKitGlassModePage";
 import { LearnPage } from "./pages/LearnPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 import { NotificationsDebugPage } from "./pages/NotificationsDebugPage";
 
 export const router = createBrowserRouter([
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
       { path: "buildkit/mcp-server", Component: BuildKitMcpServerPage },
       { path: "buildkit/glass-mode", Component: BuildKitGlassModePage },
       { path: "learn", Component: LearnPage },
+      { path: "notifications", Component: NotificationsPage },
       { path: "debug/notifications", Component: NotificationsDebugPage },
     ],
   },

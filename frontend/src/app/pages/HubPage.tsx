@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Window } from '@wailsio/runtime';
 import { useWorkspace } from '../stores/workspace';
+import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
@@ -98,7 +99,8 @@ export function HubPage() {
         <div className="flex items-center gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <WindowControls />
         </div>
-        <div style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="flex items-center gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <NotificationCenter />
           <button
             onClick={() => setProfileOpen(true)}
             className="opacity-70 hover:opacity-100 transition-opacity"
