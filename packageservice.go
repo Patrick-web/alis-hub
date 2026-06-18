@@ -117,11 +117,27 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 		"pubspec.yaml":     vscodeLanguageDART,
 	}
 
+	skipDirs := map[string]bool{
+		"node_modules":     true,
+		".dart_tool":       true,
+		".symlinks":        true,
+		".plugin_symlinks": true,
+		".venv":            true,
+		"venv":             true,
+		"__pypackages__":   true,
+	}
+
 	seen := map[string]bool{}
 	var locations []PackageScriptLocation
 	names := map[string]string{}
 	err := filepath.WalkDir(buildDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if skipDirs[d.Name()] {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		langEnum, ok := manifests[d.Name()]
