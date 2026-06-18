@@ -59,10 +59,13 @@ export function NotificationItem({ notification, onMarkRead, onDismiss }: Notifi
     <div
       className={`relative flex gap-[10px] py-[10px] pr-[12px] border-b border-[#3a3a3a] cursor-pointer transition-colors ${
         notification.read
-          ? 'opacity-60 hover:opacity-80'
-          : 'bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(255,255,255,0.05)]'
+          ? 'opacity-50 hover:opacity-70'
+          : 'hover:bg-[rgba(255,255,255,0.03)]'
       }`}
-      style={{ paddingLeft: '12px', borderLeft: `3px solid ${color}` }}
+      style={{
+        paddingLeft: '12px',
+        borderLeft: `3px solid ${notification.read ? 'transparent' : color}`,
+      }}
       onClick={handleClick}
     >
       {/* Unread dot */}
