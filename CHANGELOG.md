@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.2.4] - 2026-06-18
+
+### What's New
+- Notifications now appear on the main page for better visibility, with an error boundary to prevent crashes if something goes wrong
+
 ## [v0.2.3] - 2026-06-18
 
 ### What's New
