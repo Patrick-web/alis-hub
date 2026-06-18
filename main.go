@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"alis-hub-v3/internal/notifications"
 	"alis-hub-v3/internal/updater"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -17,6 +18,7 @@ var assets embed.FS
 
 func main() {
 	updaterSvc := updater.NewService(version)
+	notifSvc := notifications.NewService()
 	productSvc := NewProductService()
 	gitSvc := NewGitService()
 	changelogSvc := NewChangelogService(version)
@@ -34,6 +36,7 @@ func main() {
 			application.NewService(NewPackageService()),
 			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
+			application.NewService(notifSvc),
 			application.NewService(NewGCloudService()),
 			application.NewService(gitSvc),
 			application.NewService(changelogSvc),
@@ -106,6 +109,7 @@ func main() {
 	tray.SetMenu(trayMenu)
 
 	updaterSvc.SetApp(app)
+	notifSvc.SetApp(app)
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
 	updater.BackgroundCheck(app, version, 30*time.Second)

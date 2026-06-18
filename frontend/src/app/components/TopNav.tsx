@@ -3,18 +3,11 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
-import { Call, Events, Window } from '@wailsio/runtime';
-import { ReleaseNotesModal } from './ReleaseNotesModal';
+import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
+import { NotificationCenter } from './NotificationCenter';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
-
-interface UpdateInfo {
-  currentVersion: string;
-  latestVersion: string;
-  releaseNotes: string;
-  releaseUrl: string;
-}
 
 function WindowControls() {
   return (
@@ -52,20 +45,11 @@ export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
-  const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
-  const [notesOpen, setNotesOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarName, setAvatarName] = useState('');
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);
-
-  useEffect(() => {
-    const off = Events.On('update:available', (ev) => {
-      setPendingUpdate(ev.data as UpdateInfo);
-    });
-    return () => { off(); };
-  }, []);
 
   useEffect(() => {
     ProductService.GetUserProfile().then((p: any) => {
@@ -218,16 +202,7 @@ export function TopNav() {
           </button>
         </div>
 
-        <div className="h-full w-px bg-[#464646]" />
-        {pendingUpdate && (
-          <button
-            onClick={() => setNotesOpen(true)}
-            className="text-[10px] font-['JetBrains_Mono',sans-serif] font-bold bg-[#34C759] text-black px-[6px] py-[2px] rounded-full uppercase tracking-wide hover:bg-[#2eaf4f] transition-colors"
-            title={`Update available: v${pendingUpdate.latestVersion}`}
-          >
-            Update
-          </button>
-        )}
+        <NotificationCenter />
         <button
           onClick={openProfile}
           className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
@@ -251,17 +226,6 @@ export function TopNav() {
           )}
         </button>
       </div>
-
-      {pendingUpdate && (
-        <ReleaseNotesModal
-          open={notesOpen}
-          onOpenChange={setNotesOpen}
-          currentVersion={pendingUpdate.currentVersion}
-          latestVersion={pendingUpdate.latestVersion}
-          releaseNotes={pendingUpdate.releaseNotes}
-          releaseUrl={pendingUpdate.releaseUrl}
-        />
-      )}
 
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
 

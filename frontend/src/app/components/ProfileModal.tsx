@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
 import { Browser, Events } from '@wailsio/runtime';
+import { isSystemNotificationsEnabled, setSystemNotificationsEnabled } from '../lib/systemNotify';
 import {
   Dialog,
   DialogContent,
@@ -108,6 +109,13 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [notesOpen, setNotesOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [changelogHtml, setChangelogHtml] = useState('');
+  const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
+
+  function handleSysNotifToggle() {
+    const next = !sysNotifications;
+    setSysNotifications(next);
+    setSystemNotificationsEnabled(next);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -263,6 +271,19 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   <div className="bg-[#1e1e1e] rounded-[8px] border border-[#3a3a3a] overflow-hidden">
                     <SettingRow label="Name" value={profile?.name || '—'} />
                     <SettingRow label="Email" value={profile?.email || '—'} />
+                  </div>
+
+                  {/* Preferences */}
+                  <div className="bg-[#1e1e1e] rounded-[8px] border border-[#3a3a3a] overflow-hidden">
+                    <SettingRow label="System notifications">
+                      <button
+                        onClick={handleSysNotifToggle}
+                        className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? 'bg-[#34C759]' : 'bg-[#3a3a3a]'}`}
+                        title={sysNotifications ? 'Disable system notifications' : 'Enable system notifications'}
+                      >
+                        <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysNotifications ? 'left-[16px]' : 'left-[2px]'}`} />
+                      </button>
+                    </SettingRow>
                   </div>
 
                   {/* Edit profile link */}

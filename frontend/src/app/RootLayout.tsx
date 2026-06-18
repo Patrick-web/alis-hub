@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
@@ -13,7 +13,19 @@ import { Loader } from './components/Loader';
 
 export function RootLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { state, setPhase } = useWorkspace();
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyN') {
+        e.preventDefault();
+        navigate('/debug/notifications');
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [navigate]);
 
   // On mount: check login status, then route to appropriate phase.
   // DEV: ?phase=picking-org overrides for browser testing without Wails bridge.
