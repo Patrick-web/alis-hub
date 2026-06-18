@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
 import { Browser, Events } from '@wailsio/runtime';
-import { isSystemNotificationsEnabled, setSystemNotificationsEnabled } from '../lib/systemNotify';
+import { isSystemNotificationsEnabled, setSystemNotificationsEnabled, requestNotificationAuthorization } from '../lib/systemNotify';
 import {
   Dialog,
   DialogContent,
@@ -111,10 +111,17 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [changelogHtml, setChangelogHtml] = useState('');
   const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
 
-  function handleSysNotifToggle() {
-    const next = !sysNotifications;
-    setSysNotifications(next);
-    setSystemNotificationsEnabled(next);
+  async function handleSysNotifToggle() {
+    if (!sysNotifications) {
+      const granted = await requestNotificationAuthorization();
+      if (granted) {
+        setSysNotifications(true);
+        setSystemNotificationsEnabled(true);
+      }
+    } else {
+      setSysNotifications(false);
+      setSystemNotificationsEnabled(false);
+    }
   }
 
   useEffect(() => {

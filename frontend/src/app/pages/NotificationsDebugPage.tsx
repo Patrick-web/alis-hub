@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { notify } from '../lib/notify';
-import { systemNotify, isSystemNotificationsEnabled, setSystemNotificationsEnabled } from '../lib/systemNotify';
+import { systemNotify, isSystemNotificationsEnabled, setSystemNotificationsEnabled, requestNotificationAuthorization } from '../lib/systemNotify';
 import { useNotifications } from '../stores/notifications';
 import type { NotificationSeverity, NotificationSource } from '../stores/notifications';
 
@@ -88,10 +88,17 @@ export function NotificationsDebugPage() {
 
   const [sysEnabled, setSysEnabled] = useState(() => isSystemNotificationsEnabled());
 
-  function toggleSysNotif() {
-    const next = !sysEnabled;
-    setSysEnabled(next);
-    setSystemNotificationsEnabled(next);
+  async function toggleSysNotif() {
+    if (!sysEnabled) {
+      const granted = await requestNotificationAuthorization();
+      if (granted) {
+        setSysEnabled(true);
+        setSystemNotificationsEnabled(true);
+      }
+    } else {
+      setSysEnabled(false);
+      setSystemNotificationsEnabled(false);
+    }
   }
 
   // ── toast demos ────────────────────────────────────────────────────────
@@ -317,7 +324,7 @@ export function NotificationsDebugPage() {
             <div>
               <p className="text-[11px] text-white font-['JetBrains_Mono',sans-serif]">macOS notification center</p>
               <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] mt-[2px]">
-                Fires a native notification via osascript. Also togglable in Profile → System notifications.
+                Fires a native notification via UserNotifications. Also togglable in Profile → System notifications.
               </p>
             </div>
             <button

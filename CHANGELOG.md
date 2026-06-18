@@ -1,5 +1,15 @@
 # Changelog
 
+## [v0.2.3] - 2026-06-18
+
+### What's New
+- Added an in-app notification center — build, deploy, update, and system alerts now appear in a bell icon in the top nav with unread counts and a persistent history panel
+- Added toast notifications for real-time feedback on actions
+- Native macOS notifications now use the UserNotifications framework for reliable delivery (requires allowing notifications in System Settings when first enabled)
+
+### Bug Fixes
+- Package scripts now correctly mark as complete when the command finishes, rather than when the terminal shell exits
+
 ## [v0.2.2] - 2026-06-18
 
 ### What's New

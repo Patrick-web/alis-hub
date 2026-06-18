@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Events, Browser } from '@wailsio/runtime';
 import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
 import { notify } from '../lib/notify';
+import { systemNotify, isSystemNotificationsEnabled, requestNotificationAuthorization, setSystemNotificationsEnabled } from '../lib/systemNotify';
 import { useNotifications } from '../stores/notifications';
 import type { WailsNotificationPayload } from '../stores/notifications';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
@@ -34,6 +35,14 @@ export function WailsNotificationBridge() {
   setNotesOpenRef.current = setNotesOpen;
 
   useEffect(() => {
+    // If the user previously enabled system notifications, re-validate authorization
+    // on startup. If macOS hasn't granted permission yet, request it now.
+    if (isSystemNotificationsEnabled()) {
+      requestNotificationAuthorization().then(granted => {
+        if (!granted) setSystemNotificationsEnabled(false);
+      });
+    }
+
     const offPush = Events.On('notification:push', (ev) => {
       const payload = ev.data as WailsNotificationPayload;
       addRef.current({
@@ -51,6 +60,7 @@ export function WailsNotificationBridge() {
         })),
       });
       notify[payload.severity](payload.title, { description: payload.body });
+      systemNotify(payload.title, payload.body ?? '');
     });
 
     const offAvailable = Events.On('update:available', (ev) => {
