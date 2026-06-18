@@ -192,7 +192,7 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 		// Send the command to the shell once it has had time to initialize.
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			ptmx.Write([]byte(command + "\n"))
+			ptmx.Write([]byte(command + platformShellExitSuffix() + "\n"))
 		}()
 
 		exitErrCh := make(chan error, 1)

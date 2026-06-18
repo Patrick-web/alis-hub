@@ -73,8 +73,8 @@ export function UpdateToast() {
 
     try {
       await UpdaterService.DownloadUpdate();
-    } catch (err) {
-      toast.error(`Download failed: ${String(err)}`, { id: toastId });
+    } catch {
+      // error already surfaced via update:progress event
     }
   }
 
