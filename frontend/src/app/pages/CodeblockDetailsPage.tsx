@@ -443,6 +443,7 @@ function InstallBlockWizard({
   const [mergePhase, setMergePhase] = useState<MergePhase>('ready');
   const [branchName, setBranchName] = useState('');
   const [repoPath, setRepoPath] = useState('');
+  const [defineRepoPath, setDefineRepoPath] = useState('');
   const [conflictFiles, setConflictFiles] = useState<string[]>([]);
   const [selectedConflictFile, setSelectedConflictFile] = useState('');
   const [conflictContent, setConflictContent] = useState<ConflictFileContent | null>(null);
@@ -529,22 +530,24 @@ function InstallBlockWizard({
       buildFolder: buildFolder || './',
       blockVersion: selectedVersion,
     };
-    (ProductService.DoInstallBlock as (p: typeof params) => Promise<{ instanceName: string; branchName: string; repoPath: string }>)(params)
+    (ProductService.DoInstallBlock as (p: typeof params) => Promise<{ instanceName: string; branchName: string; repoPath: string; defineRepoPath: string }>)(params)
       .then(r => {
         setBranchName(r?.branchName ?? '');
         setRepoPath(r?.repoPath ?? '');
+        setDefineRepoPath(r?.defineRepoPath ?? '');
         setMergePhase('ready');
         setStep('merge');
       })
       .catch(e => { setError(String(e)); setStep('configure'); });
   }
 
-  function startMerge() {
-    setMergePhase('merging');
-    setMergeError('');
+  // runMerge performs a local git merge on `path`. If `isLast` is false, a successful
+  // merge automatically continues into the define repo. Pass `path` explicitly so that
+  // closures inside async .then() callbacks use the correct repo, not stale state.
+  function runMerge(path: string, isLast: boolean) {
     mergeTermRef.current?.clear();
     const off = Events.On('git:log', (ev: any) => mergeTermRef.current?.write(typeof ev === 'string' ? ev : ev?.data ?? String(ev)));
-    (GitService.StartLocalMerge as (rp: string, bn: string) => Promise<{ hasConflicts: boolean; conflictFiles: string[]; errorMessage: string }>)(repoPath, branchName)
+    (GitService.StartLocalMerge as (rp: string, bn: string) => Promise<{ hasConflicts: boolean; conflictFiles: string[]; errorMessage: string }>)(path, branchName)
       .then(r => {
         off();
         if (r.errorMessage) { setMergeError(r.errorMessage); setMergePhase('ready'); return; }
@@ -555,7 +558,11 @@ function InstallBlockWizard({
           setResolvedFiles(new Set());
           setSelectedConflictFile(files[0]);
           setMergePhase('conflicts');
-          loadConflictFile(files[0]);
+          loadConflictFile(files[0], path);
+        } else if (!isLast) {
+          // Build repo merged; continue to define repo.
+          setRepoPath(defineRepoPath);
+          runMerge(defineRepoPath, true);
         } else {
           setMergePhase('done');
         }
@@ -563,10 +570,21 @@ function InstallBlockWizard({
       .catch(e => { off(); setMergeError(String(e)); setMergePhase('ready'); });
   }
 
-  function loadConflictFile(filePath: string) {
+  function startMerge() {
+    setMergePhase('merging');
+    setMergeError('');
+    // isLast = true when there is no define repo, or when repoPath is already the define repo.
+    const isLast = !defineRepoPath || repoPath === defineRepoPath;
+    runMerge(repoPath, isLast);
+  }
+
+  // loadConflictFile accepts an optional explicit repo path to avoid stale closure captures
+  // when called from inside async runMerge callbacks.
+  function loadConflictFile(filePath: string, rp?: string) {
+    const effectivePath = rp ?? repoPath;
     setSelectedConflictFile(filePath);
     setConflictContent(null);
-    (GitService.GetConflictContent as (rp: string, fp: string) => Promise<ConflictFileContent>)(repoPath, filePath)
+    (GitService.GetConflictContent as (rp: string, fp: string) => Promise<ConflictFileContent>)(effectivePath, filePath)
       .then(content => {
         setConflictContent(content);
         // Init hunk resolutions for this file if not already set.
@@ -609,7 +627,19 @@ function InstallBlockWizard({
 
   function completeMerge() {
     (GitService.CompleteMerge as (rp: string) => Promise<void>)(repoPath)
-      .then(() => setMergePhase('done'))
+      .then(() => {
+        // If we just completed the build repo and the define repo still needs merging, continue.
+        if (defineRepoPath && repoPath !== defineRepoPath) {
+          setRepoPath(defineRepoPath);
+          setConflictFiles([]);
+          setHunkResolutions({});
+          setResolvedFiles(new Set());
+          setMergePhase('merging');
+          runMerge(defineRepoPath, true);
+        } else {
+          setMergePhase('done');
+        }
+      })
       .catch(e => setMergeError(String(e)));
   }
 
