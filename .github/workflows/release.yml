@@ -201,11 +201,18 @@ jobs:
     needs: [build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
           merge-multiple: true
-      - name: List artifacts
-        run: ls -la
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -213,6 +220,6 @@ jobs:
             AlisHub-macOS-*.dmg
             AlisHub-linux-*.tar.gz
             AlisHub-windows-*.zip
-          generate_release_notes: true
+          body: ${{ steps.changelog.outputs.notes }}
           draft: false
           prerelease: false

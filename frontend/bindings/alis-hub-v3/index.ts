@@ -3,6 +3,7 @@
 
 import * as BuildKitService from "./buildkitservice.js";
 import * as BuildService from "./buildservice.js";
+import * as ChangelogService from "./changelogservice.js";
 import * as DefineService from "./defineservice.js";
 import * as DeployService from "./deployservice.js";
 import * as GCloudService from "./gcloudservice.js";
@@ -14,6 +15,7 @@ import * as ServiceManager from "./servicemanager.js";
 export {
     BuildKitService,
     BuildService,
+    ChangelogService,
     DefineService,
     DeployService,
     GCloudService,

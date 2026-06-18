@@ -38,9 +38,10 @@ export function CurrentVersion(): $CancellablePromise<string> {
 }
 
 /**
- * DownloadUpdate pulls the appropriate artifact for this platform, extracts
- * it to a temp directory, and stashes the resulting path. Progress is
- * reported over the "update:progress" event every ~100ms.
+ * DownloadUpdate pulls the appropriate artifact for this platform via the
+ * Cloudflare Worker proxy, extracts it to a temp directory, and stashes
+ * the resulting path. Progress is reported over the "update:progress" event
+ * every ~100ms.
  * 
  * Returns the path to the extracted .app (macOS), directory (Linux), or
  * .exe (Windows).
