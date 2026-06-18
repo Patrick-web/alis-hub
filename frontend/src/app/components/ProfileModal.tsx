@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
 import { Browser, Events } from '@wailsio/runtime';
@@ -8,6 +9,7 @@ import {
 } from './ui/dialog';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
+import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
 import { useWorkspace } from '../stores/workspace';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
@@ -16,7 +18,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'profile' | 'updates' | 'about';
+type Tab = 'profile' | 'updates' | 'about' | 'changelog';
 
 interface UserProfile {
   email: string;
@@ -105,6 +107,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [downloadPct, setDownloadPct] = useState(0);
   const [notesOpen, setNotesOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [changelogHtml, setChangelogHtml] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -118,6 +121,11 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
     UpdaterService.CurrentVersion().then((v: string) => {
       setUpdateInfo(prev => prev ? { ...prev, currentVersion: v } : { available: false, currentVersion: v, latestVersion: '', releaseUrl: '', releaseNotes: '' });
+    }).catch(() => {});
+
+    ChangelogService.GetReleaseNotes().then(async (notes: string) => {
+      const html = await marked.parse(notes || '');
+      setChangelogHtml(html);
     }).catch(() => {});
   }, [open]);
 
@@ -188,6 +196,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     { id: 'profile', label: 'Profile', icon: 'solar:user-circle-linear' },
     { id: 'updates', label: 'Updates', icon: 'solar:refresh-circle-linear' },
     { id: 'about', label: 'About', icon: 'solar:info-circle-linear' },
+    { id: 'changelog', label: 'Changelog', icon: 'solar:history-linear' },
   ];
 
   return (
@@ -342,6 +351,22 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     )}
                     {checkingUpdate ? 'Checking…' : 'Check for updates'}
                   </button>
+                </div>
+              )}
+
+              {activeTab === 'changelog' && (
+                <div className="p-[16px] flex flex-col gap-[14px]">
+                  <p className="text-[10px] font-bold text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-wide">
+                    v{appInfo?.version || updateInfo?.currentVersion || '—'}
+                  </p>
+                  {changelogHtml ? (
+                    <div
+                      className="prose prose-invert prose-sm max-w-none font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-[rgba(255,255,255,0.4)] [&_h3]:mt-[12px] [&_h3]:mb-[4px] [&_ul]:pl-4 [&_li]:my-[2px] [&_p]:text-[rgba(255,255,255,0.6)]"
+                      dangerouslySetInnerHTML={{ __html: changelogHtml }}
+                    />
+                  ) : (
+                    <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">No release notes for this version.</p>
+                  )}
                 </div>
               )}
 
