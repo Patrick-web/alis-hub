@@ -22,8 +22,8 @@ func main() {
 	changelogSvc := NewChangelogService(version)
 
 	app := application.New(application.Options{
-		Name:        "Alis Hub",
-		Description: "Alis Hub Desktop Application",
+		Name:        "AlisHub",
+		Description: "AlisHub Desktop Application",
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
@@ -48,7 +48,7 @@ func main() {
 
 	// Create a new window
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:  "Alis Hub",
+		Title:  "AlisHub",
 		Width:  1024,
 		Height: 768,
 		Mac: application.MacWindow{

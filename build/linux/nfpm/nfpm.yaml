@@ -10,7 +10,7 @@ version: "0.0.1"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "Alis Hub Desktop Application"
+description: "AlisHub Desktop Application"
 vendor: "Patrick-web"
 homepage: "https://wails.io"
 license: "MIT"
