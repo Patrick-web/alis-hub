@@ -6,11 +6,11 @@ version: '3'
 # This information is used to generate the build assets.
 info:
   companyName: "Patrick-web" # The name of the company
-  productName: "Alis Hub" # The name of the application
+  productName: "AlisHub" # The name of the application
   productIdentifier: "com.patrickweb.alishub" # The unique product identifier
-  description: "Alis Hub Desktop Application" # The application description
+  description: "AlisHub Desktop Application" # The application description
   copyright: "(c) 2026, Patrick-web" # Copyright text
-  comments: "Alis Hub desktop app" # Comments
+  comments: "AlisHub desktop app" # Comments
   version: "0.0.1" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension

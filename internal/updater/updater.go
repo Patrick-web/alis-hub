@@ -312,8 +312,8 @@ func (s *Service) applyDarwin(newAppPath string) error {
 	if err != nil {
 		return err
 	}
-	// exe is like /Applications/Alis Hub.app/Contents/MacOS/alis-hub-v3
-	// oldApp  = /Applications/Alis Hub.app
+	// exe is like /Applications/AlisHub.app/Contents/MacOS/alis-hub-v3
+	// oldApp  = /Applications/AlisHub.app
 	oldApp := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
 	if !strings.HasSuffix(oldApp, ".app") {
 		return fmt.Errorf("not running from an .app bundle (%s)", exe)
@@ -323,7 +323,7 @@ func (s *Service) applyDarwin(newAppPath string) error {
 	scriptPath := filepath.Join(filepath.Dir(newAppPath), "alishub-relaunch.sh")
 
 	script := fmt.Sprintf(`#!/bin/bash
-# Wait for the running Alis Hub to exit.
+# Wait for the running AlisHub to exit.
 PID=%d
 OLD=%q
 NEW=%q

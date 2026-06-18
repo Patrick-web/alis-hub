@@ -29,7 +29,7 @@ export function LoginPage() {
         <div className="size-[56px] rounded-[14px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)] flex items-center justify-center">
           <Icon icon="solar:cloud-bold" className="text-[#F881A9] text-[28px]" />
         </div>
-        <p className="text-[22px] font-bold text-white tracking-tight">Alis Hub</p>
+        <p className="text-[22px] font-bold text-white tracking-tight">AlisHub</p>
         <p className="text-[13px] text-[rgba(255,255,255,0.4)]">Sign in to access your landing zones</p>
       </div>
 

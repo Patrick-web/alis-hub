@@ -131,7 +131,7 @@ export function HubPage() {
           <div className="flex flex-col items-center text-center gap-[14px]">
             <img src="/appicon.png" alt="Alis" className="size-[64px] rounded-[16px]" />
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">Alis Hub</h1>
+              <h1 className="text-[24px] font-bold text-white tracking-tight">AlisHub</h1>
               <p className="text-[13px] text-[rgba(255,255,255,0.45)] mt-[5px] italic tracking-wide">
                 From Idea to Impact, Faster
               </p>

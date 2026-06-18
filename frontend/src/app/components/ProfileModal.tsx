@@ -377,7 +377,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                       <Icon icon="solar:cloud-bold" className="text-[#F881A9] text-xl" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-bold text-white">Alis Hub</p>
+                      <p className="text-[13px] font-bold text-white">AlisHub</p>
                       <p className="text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] mt-[2px]">
                         v{appInfo?.version || updateInfo?.currentVersion || '—'}
                       </p>

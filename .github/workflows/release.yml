@@ -56,7 +56,7 @@ jobs:
         run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
       - name: Create .app bundle and sign
         run: |
-          APP="Alis Hub.app"
+          APP="AlisHub.app"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
           cp alis-hub-v3 "$APP/Contents/MacOS/"
@@ -87,7 +87,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          APP="Alis Hub.app"
+          APP="AlisHub.app"
           if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
             echo "::warning::Notarization secrets missing; skipping notarization. Downloaded app will be blocked by Gatekeeper."
             exit 0
@@ -116,11 +116,11 @@ jobs:
           rm /tmp/AlisHub-notarize.zip
       - name: Create zip + DMG with Applications shortcut
         run: |
-          APP="Alis Hub.app"
+          APP="AlisHub.app"
           VERSION=${{ github.ref_name }}
           ditto -c -k --sequesterRsrc --keepParent "$APP" "AlisHub-macOS-${VERSION}.zip"
 
-          hdiutil create -size 200m -volname "Alis Hub" -fs HFS+ -ov /tmp/alishub-rw.dmg
+          hdiutil create -size 200m -volname "AlisHub" -fs HFS+ -ov /tmp/alishub-rw.dmg
           hdiutil attach /tmp/alishub-rw.dmg -mountpoint /tmp/alishub-mount
           cp -R "$APP" /tmp/alishub-mount/
           ln -s /Applications /tmp/alishub-mount/Applications
