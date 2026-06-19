@@ -373,6 +373,7 @@ export function CodeblockDetailsPage() {
               loading={docLoading}
               audience={docAudience}
               onAudienceChange={setDocAudience}
+              versionCreateTime={selectedVersion?.createTime}
             />
           )}
           {activeTab === 'versions' && (
@@ -1232,12 +1233,14 @@ function DocumentationTab({
   loading,
   audience,
   onAudienceChange,
+  versionCreateTime,
 }: {
   doc: string;
   agentDoc: string;
   loading: boolean;
   audience: 'user' | 'agent';
   onAudienceChange: (a: 'user' | 'agent') => void;
+  versionCreateTime?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const proseRef = useRef<HTMLDivElement>(null);
@@ -1332,6 +1335,16 @@ function DocumentationTab({
               [&_hr]:border-[#464646] [&_hr]:my-[20px]"
             dangerouslySetInnerHTML={{ __html: html }}
           />
+        ) : versionCreateTime && Date.now() - new Date(versionCreateTime).getTime() < 15 * 60 * 1000 ? (
+          <div className="flex flex-col items-center justify-center py-[60px] gap-[16px]">
+            <div className="w-[48px] h-[48px] rounded-full bg-white/5 flex items-center justify-center">
+              <Icon icon="solar:document-add-linear" className="text-[24px] text-white/30" />
+            </div>
+            <div className="text-center">
+              <p className="text-white/60 text-[13px] font-medium">Generating documentation</p>
+              <p className="text-white/30 text-[11px] mt-[4px]">This may take a few minutes after publishing</p>
+            </div>
+          </div>
         ) : (
           <EmptyState icon="solar:document-text-linear" title="No documentation available" />
         )}
