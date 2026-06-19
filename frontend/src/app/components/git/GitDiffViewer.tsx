@@ -1,4 +1,5 @@
-import { DiffModeEnum, DiffView } from '@git-diff-view/react';
+import { useMemo } from 'react';
+import { DiffFile, DiffModeEnum, DiffView } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view-pure.css';
 import { GitFileDiff } from './types';
 
@@ -10,7 +11,19 @@ interface Props {
 }
 
 export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
-  if (!diff || !filePath) {
+  const diffFile = useMemo(() => {
+    if (!diff || !filePath) return null;
+    const file = DiffFile.createInstance({
+      oldFile: { fileName: filePath, fileLang: diff.language, content: diff.oldContent },
+      newFile: { fileName: filePath, fileLang: diff.language, content: diff.newContent },
+      hunks: diff.hunks,
+    });
+    file.init();
+    file.buildUnifiedDiffLines();
+    return file;
+  }, [diff, filePath]);
+
+  if (!diffFile || !filePath) {
     return (
       <div className="flex items-center justify-center h-full text-white/20 text-sm select-none">
         Select a file to view changes
@@ -18,8 +31,8 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
     );
   }
 
-  const addCount = diff.hunks.filter(l => l.startsWith('+')).length;
-  const delCount = diff.hunks.filter(l => l.startsWith('-')).length;
+  const addCount = diff!.hunks.filter(l => l.startsWith('+')).length;
+  const delCount = diff!.hunks.filter(l => l.startsWith('-')).length;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -28,7 +41,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
         <span className="shrink-0 text-white/30">
           {commitHash ? `@${commitHash.slice(0, 7)}` : staged ? '(staged)' : '(unstaged)'}
         </span>
-        {diff.hunks.length > 0 && (
+        {diff!.hunks.length > 0 && (
           <span className="shrink-0 text-white/30 ml-auto">
             +{addCount} -{delCount}
           </span>
@@ -37,11 +50,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
 
       <div className="flex-1 overflow-auto" style={{ '--diff-plain-content--': '#1e1e1e', '--diff-plain-lineNumber--': '#1e1e1e' } as React.CSSProperties}>
         <DiffView
-          data={{
-            oldFile: { fileName: filePath, fileLang: diff.language, content: diff.oldContent },
-            newFile: { fileName: filePath, fileLang: diff.language, content: diff.newContent },
-            hunks: diff.hunks,
-          }}
+          diffFile={diffFile}
           diffViewTheme="dark"
           diffViewMode={DiffModeEnum.Unified}
           diffViewHighlight
