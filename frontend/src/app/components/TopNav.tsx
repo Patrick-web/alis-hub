@@ -39,6 +39,7 @@ const tabs = [
   { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
   { id: 'agents', label: 'Agents', icon: <Icon icon="solar:users-group-two-rounded-linear" className="text-lg" /> },
+  { id: 'git', label: 'Source Control', icon: <Icon icon="solar:code-scan-linear" className="text-lg" /> },
 ];
 
 export function TopNav() {

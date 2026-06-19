@@ -31,8 +31,9 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
     );
   }
 
-  const addCount = diff!.hunks.filter(l => l.startsWith('+')).length;
-  const delCount = diff!.hunks.filter(l => l.startsWith('-')).length;
+  const allLines = diff!.hunks.flatMap(h => h.split('\n'));
+  const addCount = allLines.filter(l => l.startsWith('+') && !l.startsWith('+++')).length;
+  const delCount = allLines.filter(l => l.startsWith('-') && !l.startsWith('---')).length;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">

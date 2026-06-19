@@ -28,6 +28,7 @@ import { BuildKitPluginsPage } from "./pages/BuildKitPluginsPage";
 import { BuildKitPrivateGitPage } from "./pages/BuildKitPrivateGitPage";
 import { BuildKitMcpServerPage } from "./pages/BuildKitMcpServerPage";
 import { BuildKitGlassModePage } from "./pages/BuildKitGlassModePage";
+import { GitPage } from "./pages/GitPage";
 import { LearnPage } from "./pages/LearnPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
 import { NotificationsDebugPage } from "./pages/NotificationsDebugPage";
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
       { path: "buildkit/private-git", Component: BuildKitPrivateGitPage },
       { path: "buildkit/mcp-server", Component: BuildKitMcpServerPage },
       { path: "buildkit/glass-mode", Component: BuildKitGlassModePage },
+      { path: "git", Component: GitPage },
       { path: "learn", Component: LearnPage },
       { path: "notifications", Component: NotificationsPage },
       { path: "debug/notifications", Component: NotificationsDebugPage },

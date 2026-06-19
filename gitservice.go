@@ -523,19 +523,15 @@ func (g *GitService) GetFileDiff(repoPath, filePath string, staged bool) (*GitFi
 	return diff, nil
 }
 
-// gitParseHunks extracts hunk lines (from @@ onwards) out of raw git diff output.
+// gitParseHunks returns the raw diff as a single-element slice.
+// @git-diff-view/core's parseInstance.parse() expects a full diff string
+// (including the --- / +++ header) per element, not individual hunk lines.
 func gitParseHunks(raw string) []string {
-	var hunks []string
-	inHunk := false
-	for _, line := range strings.Split(raw, "\n") {
-		if strings.HasPrefix(line, "@@") {
-			inHunk = true
-		}
-		if inHunk && line != "" {
-			hunks = append(hunks, line)
-		}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
 	}
-	return hunks
+	return []string{raw}
 }
 
 // StageFile stages a single file.
