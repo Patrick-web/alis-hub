@@ -4,6 +4,7 @@ import { Icon } from '@iconify/react';
 import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Loader } from '../components/Loader';
+import { FilterSelect } from '../components/FilterSelect';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as models from '../../../bindings/alis-hub-v3/models';
 
@@ -17,13 +18,21 @@ interface ArchLayer {
   description: string;
 }
 
-type Tab = 'overview' | 'features' | 'architecture';
-const TABS: Tab[] = ['overview', 'features', 'architecture'];
+interface InstallOrg { name: string; displayName: string; }
+interface InstallProduct { name: string; displayName: string; }
+interface InstallNeuron { name: string; displayName: string; package: string; }
+
+type SourceMode = 'scratch' | 'from-neuron';
+type Tab = 'overview' | 'features' | 'architecture' | 'files';
+
 const TAB_LABEL: Record<Tab, string> = {
   overview: 'Overview',
   features: 'Features',
   architecture: 'Architecture',
+  files: 'Files',
 };
+
+const CATEGORY_LABEL: Record<string, string> = { build: 'Build', infra: 'Infra', proto: 'Proto' };
 
 const labelClass = 'text-[10px] font-bold uppercase text-white/40 mb-[2px]';
 const textareaClass = 'bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[10px] text-white text-[12px] font-[\'JetBrains_Mono\',sans-serif] outline-none focus:border-[#f881a9] resize-none w-full transition-colors';
@@ -53,9 +62,33 @@ export function CodeblockCreatePage() {
   // Architecture tab
   const [codeArchitecture, setCodeArchitecture] = useState<ArchLayer[]>([{ title: '', description: '' }]);
 
+  // Source mode (create only)
+  const [sourceMode, setSourceMode] = useState<SourceMode>('scratch');
+
+  // Cascade picker state (from-neuron)
+  const [orgs, setOrgs] = useState<InstallOrg[]>([]);
+  const [orgsLoading, setOrgsLoading] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState('');
+  const [products, setProducts] = useState<InstallProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState('');
+  const [neurons, setNeurons] = useState<InstallNeuron[]>([]);
+  const [neuronsLoading, setNeuronsLoading] = useState(false);
+  const [selectedNeuron, setSelectedNeuron] = useState<InstallNeuron | null>(null);
+
+  // Scanned files state
+  const [scannedFiles, setScannedFiles] = useState<models.ScannedNeuronFile[]>([]);
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const highlightInputRef = useRef<HTMLInputElement>(null);
+
+  // Computed tabs list
+  const tabs: Tab[] = (sourceMode === 'from-neuron' && !isEditing)
+    ? ['overview', 'features', 'architecture', 'files']
+    : ['overview', 'features', 'architecture'];
 
   // Pre-fill in edit mode
   useEffect(() => {
@@ -80,6 +113,89 @@ export function CodeblockCreatePage() {
       .finally(() => setInitLoading(false));
   }, [editId, isEditing]);
 
+  // Load orgs when From Neuron mode is selected
+  useEffect(() => {
+    if (sourceMode !== 'from-neuron' || orgs.length > 0) return;
+    setOrgsLoading(true);
+    (ProductService.ListInstallOrgs as () => Promise<InstallOrg[]>)()
+      .then(list => setOrgs(list ?? []))
+      .catch(e => setError(String(e)))
+      .finally(() => setOrgsLoading(false));
+  }, [sourceMode]);
+
+  // Load products when org selected
+  useEffect(() => {
+    if (!selectedOrg) return;
+    setSelectedProduct('');
+    setSelectedNeuron(null);
+    setNeurons([]);
+    setScannedFiles([]);
+    setScanError(null);
+    setActiveTab('overview');
+    setProductsLoading(true);
+    const orgId = selectedOrg.replace('organisations/', '');
+    (ProductService.ListProducts as (org: string) => Promise<InstallProduct[]>)(orgId)
+      .then(list => setProducts(list ?? []))
+      .catch(e => setError(String(e)))
+      .finally(() => setProductsLoading(false));
+  }, [selectedOrg]);
+
+  // Load neurons when product selected
+  useEffect(() => {
+    if (!selectedOrg || !selectedProduct) return;
+    setSelectedNeuron(null);
+    setScannedFiles([]);
+    setScanError(null);
+    setActiveTab('overview');
+    setNeuronsLoading(true);
+    const orgId = selectedOrg.replace('organisations/', '');
+    const productId = selectedProduct.replace(/.*\/products\//, '');
+    (ProductService.ListInstallNeurons as (org: string, product: string) => Promise<InstallNeuron[]>)(orgId, productId)
+      .then(list => setNeurons(list ?? []))
+      .catch(e => setError(String(e)))
+      .finally(() => setNeuronsLoading(false));
+  }, [selectedOrg, selectedProduct]);
+
+  // Scan files when neuron selected
+  useEffect(() => {
+    if (!selectedNeuron) return;
+    setScanLoading(true);
+    setScanError(null);
+    setScannedFiles([]);
+    (ProductService.ScanNeuronFiles as (pkg: string) => Promise<models.NeuronScanResult | null>)(selectedNeuron.package)
+      .then(result => {
+        if (!result) return;
+        if (result.error) {
+          setScanError(result.error);
+        } else {
+          setScannedFiles(result.files ?? []);
+          setActiveTab('files');
+        }
+      })
+      .catch(e => setScanError(String(e)))
+      .finally(() => setScanLoading(false));
+  }, [selectedNeuron]);
+
+  function switchSourceMode(mode: SourceMode) {
+    setSourceMode(mode);
+    if (mode === 'scratch') {
+      setSelectedOrg('');
+      setSelectedProduct('');
+      setSelectedNeuron(null);
+      setScannedFiles([]);
+      setScanError(null);
+      setActiveTab('overview');
+    }
+  }
+
+  function toggleFile(idx: number) {
+    setScannedFiles(prev => prev.map((f, i) => i === idx ? { ...f, selected: !f.selected } : f));
+  }
+
+  function selectAllFiles(selected: boolean) {
+    setScannedFiles(prev => prev.map(f => ({ ...f, selected })));
+  }
+
   function addHighlight(value: string) {
     const trimmed = value.trim();
     if (trimmed && !highlights.includes(trimmed)) {
@@ -96,28 +212,44 @@ export function CodeblockCreatePage() {
     setCodeArchitecture(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
   }
 
+  function buildCodeblockParams() {
+    return models.CreateCodeblockParams.createFrom({
+      blockId,
+      displayName,
+      tagline,
+      heroStatement,
+      description,
+      highlights,
+      keyFeatures: keyFeatures.filter(f => f.title || f.description).map(f =>
+        models.CodeblockFeature.createFrom({ title: f.title, description: f.description })
+      ),
+      codeArchitecture: codeArchitecture.filter(l => l.title || l.description).map(l =>
+        models.CodeblockLayer.createFrom({ title: l.title, description: l.description })
+      ),
+    });
+  }
+
   async function handleSubmit() {
     setError(null);
     setLoading(true);
     try {
-        const params = models.CreateCodeblockParams.createFrom({
-        blockId,
-        displayName,
-        tagline,
-        heroStatement,
-        description,
-        highlights,
-        keyFeatures: keyFeatures.filter(f => f.title || f.description).map(f =>
-          models.CodeblockFeature.createFrom({ title: f.title, description: f.description })
-        ),
-        codeArchitecture: codeArchitecture.filter(l => l.title || l.description).map(l =>
-          models.CodeblockLayer.createFrom({ title: l.title, description: l.description })
-        ),
-      });
       if (isEditing) {
+        const params = buildCodeblockParams();
         await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
         navigate(`/codeblocks/${editId}`);
+      } else if (sourceMode === 'from-neuron') {
+        const bParams = models.BootstrapBlockParams.createFrom({
+          blockId,
+          displayName,
+          tagline,
+          package: selectedNeuron!.package,
+          files: scannedFiles,
+        });
+        const name = await (ProductService.BootstrapBlock as (p: typeof bParams) => Promise<string>)(bParams);
+        const id = name.replace('blocks/', '');
+        navigate(id ? `/codeblocks/${id}` : '/codeblocks');
       } else {
+        const params = buildCodeblockParams();
         const name = await (ProductService.CreateCodeblock as (p: typeof params) => Promise<string>)(params);
         const id = name.replace('blocks/', '');
         navigate(id ? `/codeblocks/${id}` : '/codeblocks');
@@ -136,6 +268,21 @@ export function CodeblockCreatePage() {
       navigate('/codeblocks');
     }
   }
+
+  const selectedFileCount = scannedFiles.filter(f => f.selected).length;
+  const fromNeuronSubmitDisabled = sourceMode === 'from-neuron' && (
+    !selectedNeuron || scanLoading || selectedFileCount === 0
+  );
+
+  const submitLabel = loading
+    ? (isEditing ? 'Saving...' : sourceMode === 'from-neuron' ? 'Bootstrapping...' : 'Creating...')
+    : (isEditing ? 'Save Changes' : sourceMode === 'from-neuron' ? 'Bootstrap Block' : 'Create Block');
+
+  const submitIcon = loading
+    ? 'solar:spinner-linear'
+    : isEditing ? 'solar:pen-linear'
+    : sourceMode === 'from-neuron' ? 'solar:upload-square-linear'
+    : 'solar:add-square-linear';
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
@@ -156,6 +303,84 @@ export function CodeblockCreatePage() {
             <div className="flex items-center justify-center py-[40px]"><Loader /></div>
           ) : (
             <>
+              {/* Source toggle — create mode only */}
+              {!isEditing && (
+                <div>
+                  <p className={labelClass}>Source</p>
+                  <div className="flex gap-[4px] bg-[#2c2c2c] rounded-[6px] p-[3px]">
+                    {(['scratch', 'from-neuron'] as SourceMode[]).map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => switchSourceMode(mode)}
+                        className={`flex-1 py-[5px] rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                          sourceMode === mode
+                            ? 'bg-[#f881a9] text-[#1e1e1e]'
+                            : 'text-white/50 hover:text-white/80'
+                        }`}
+                      >
+                        {mode === 'scratch' ? 'Scratch' : 'From Neuron'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Neuron cascade picker — from-neuron mode only */}
+              {!isEditing && sourceMode === 'from-neuron' && (
+                <div className="flex flex-col gap-[12px]">
+                  <div>
+                    <p className={labelClass}>Organisation</p>
+                    <FilterSelect
+                      size="sm"
+                      value={selectedOrg}
+                      onChange={setSelectedOrg}
+                      loading={orgsLoading}
+                      placeholder="Select org…"
+                      emptyLabel="No organisations"
+                      options={orgs.map(o => ({ value: o.name, label: o.displayName || o.name.replace('organisations/', '') }))}
+                    />
+                  </div>
+                  <div>
+                    <p className={labelClass}>Product</p>
+                    <FilterSelect
+                      size="sm"
+                      value={selectedProduct}
+                      onChange={setSelectedProduct}
+                      loading={productsLoading}
+                      disabled={!selectedOrg}
+                      placeholder="Select product…"
+                      emptyLabel="No products"
+                      options={products.map(p => ({ value: p.name, label: p.displayName || p.name }))}
+                    />
+                  </div>
+                  <div>
+                    <p className={labelClass}>Neuron</p>
+                    <FilterSelect
+                      size="sm"
+                      value={selectedNeuron?.name ?? ''}
+                      onChange={v => setSelectedNeuron(neurons.find(n => n.name === v) ?? null)}
+                      loading={neuronsLoading}
+                      disabled={!selectedProduct}
+                      placeholder="Select neuron…"
+                      emptyLabel="No neurons"
+                      options={neurons.map(n => ({ value: n.name, label: n.displayName }))}
+                    />
+                    {selectedNeuron && !scanLoading && !scanError && (
+                      <p className="mt-[6px] text-[10px] font-['JetBrains_Mono',sans-serif] text-white/30">{selectedNeuron.package}</p>
+                    )}
+                    {scanLoading && (
+                      <div className="flex items-center gap-[6px] mt-[6px]">
+                        <Icon icon="solar:spinner-linear" className="text-[10px] text-white/40 animate-spin" />
+                        <span className="text-[10px] text-white/40">Scanning files…</span>
+                      </div>
+                    )}
+                    {scanError && (
+                      <p className="mt-[6px] text-[10px] text-[#ff6b6b]">{scanError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <p className={labelClass}>Block ID</p>
                 <Input
@@ -207,11 +432,11 @@ export function CodeblockCreatePage() {
           <Button
             variant="primary"
             className="w-full"
-            icon={<Icon icon={loading ? 'solar:spinner-linear' : isEditing ? 'solar:pen-linear' : 'solar:add-square-linear'} className={loading ? 'animate-spin' : ''} />}
+            icon={<Icon icon={submitIcon} className={loading ? 'animate-spin' : ''} />}
             onClick={handleSubmit}
-            disabled={loading || initLoading}
+            disabled={loading || initLoading || fromNeuronSubmitDisabled}
           >
-            {loading ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Block')}
+            {submitLabel}
           </Button>
         </div>
       </div>
@@ -220,7 +445,7 @@ export function CodeblockCreatePage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Tab bar */}
         <div className="flex items-center border-b border-[#464646] shrink-0">
-          {TABS.map(t => (
+          {tabs.map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
@@ -229,6 +454,11 @@ export function CodeblockCreatePage() {
               }`}
             >
               {TAB_LABEL[t]}
+              {t === 'files' && selectedFileCount > 0 && (
+                <span className="ml-[6px] text-[9px] bg-[#f881a9]/20 text-[#f881a9] rounded-full px-[5px] py-[1px]">
+                  {selectedFileCount}
+                </span>
+              )}
               {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />}
             </button>
           ))}
@@ -368,6 +598,85 @@ export function CodeblockCreatePage() {
                   Add Architecture Layer
                 </Button>
               </>
+            )}
+
+            {activeTab === 'files' && (
+              <div className="flex flex-col gap-[16px]">
+                {!selectedNeuron ? (
+                  <p className="text-[12px] text-white/40">Select a neuron in the sidebar to scan its local files.</p>
+                ) : scanLoading ? (
+                  <div className="flex items-center gap-[10px] py-[20px]">
+                    <Loader />
+                    <span className="text-[12px] text-white/40">Scanning neuron files…</span>
+                  </div>
+                ) : scanError ? (
+                  <div className="text-[12px] text-[#ff6b6b] bg-[rgba(255,107,107,0.06)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[12px]">
+                    {scanError}
+                  </div>
+                ) : scannedFiles.length === 0 ? (
+                  <p className="text-[12px] text-white/40">No files found in this neuron.</p>
+                ) : (
+                  <>
+                    {/* Select all controls */}
+                    <div className="flex items-center gap-[12px]">
+                      <button
+                        onClick={() => selectAllFiles(true)}
+                        className="text-[10px] font-bold uppercase text-white/50 hover:text-white/80 tracking-wider transition-colors"
+                      >
+                        Select All
+                      </button>
+                      <span className="text-white/20">·</span>
+                      <button
+                        onClick={() => selectAllFiles(false)}
+                        className="text-[10px] font-bold uppercase text-white/50 hover:text-white/80 tracking-wider transition-colors"
+                      >
+                        Deselect All
+                      </button>
+                      <span className="ml-auto text-[10px] text-white/30">
+                        {selectedFileCount} / {scannedFiles.length} selected
+                      </span>
+                    </div>
+
+                    {/* Files grouped by category */}
+                    {(Object.keys(CATEGORY_LABEL) as Array<keyof typeof CATEGORY_LABEL>).map(cat => {
+                      const catFiles = scannedFiles
+                        .map((f, idx) => ({ ...f, idx }))
+                        .filter(f => f.category === cat);
+                      if (catFiles.length === 0) return null;
+                      return (
+                        <div key={cat}>
+                          <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px] tracking-wider">
+                            {CATEGORY_LABEL[cat]}
+                          </p>
+                          <div className="border border-[#464646] rounded-[4px] overflow-hidden">
+                            {catFiles.map((file, i) => (
+                              <label
+                                key={file.idx}
+                                className={`flex items-center gap-[10px] px-[12px] py-[8px] cursor-pointer hover:bg-white/[0.03] transition-colors ${
+                                  i > 0 ? 'border-t border-[#464646]' : ''
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={file.selected}
+                                  onChange={() => toggleFile(file.idx)}
+                                  className="accent-[#f881a9] shrink-0"
+                                />
+                                <Icon icon="solar:file-code-linear" className="text-white/30 shrink-0 text-sm" />
+                                <span className={`text-[11px] font-['JetBrains_Mono',sans-serif] truncate ${
+                                  file.selected ? 'text-white/80' : 'text-white/30'
+                                }`}>
+                                  {file.path}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
             )}
 
           </div>

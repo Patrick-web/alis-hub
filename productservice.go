@@ -222,6 +222,26 @@ type CodeblockLayer struct {
 	Description string `json:"description"`
 }
 
+type ScannedNeuronFile struct {
+	Path     string `json:"path"`     // relative path within its category folder
+	Category string `json:"category"` // "build" or "infra"
+	Selected bool   `json:"selected"`
+}
+
+type NeuronScanResult struct {
+	Files   []ScannedNeuronFile `json:"files"`
+	Package string              `json:"package"`
+	Error   string              `json:"error,omitempty"` // soft error — caller checks, not throws
+}
+
+type BootstrapBlockParams struct {
+	BlockID     string              `json:"blockId"`
+	DisplayName string              `json:"displayName"`
+	Tagline     string              `json:"tagline"`
+	Package     string              `json:"package"` // e.g. "packages/myorg.myproduct.my-service.v1"
+	Files       []ScannedNeuronFile `json:"files"`
+}
+
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex
@@ -2267,6 +2287,191 @@ func parseCreateBlockName(data []byte) string {
 		}
 	}
 	return ""
+}
+
+// neuronVersionRoot derives ~/alis.build/{org}/build/{product}/{neuron}/{version} from a package string.
+func neuronVersionRoot(pkg string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	p := strings.TrimPrefix(pkg, "packages/")
+	parts := strings.SplitN(p, ".", 4)
+	if len(parts) < 4 {
+		return "", fmt.Errorf("invalid package: %s", pkg)
+	}
+	org, product, neuron, version := parts[0], parts[1], parts[2], parts[3]
+	return filepath.Join(home, "alis.build", org, "build", product, neuron, version), nil
+}
+
+// ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
+// Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
+func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResult, error) {
+	versionRoot, err := neuronVersionRoot(neuronPackage)
+	if err != nil {
+		return &NeuronScanResult{Error: err.Error()}, nil
+	}
+	infraDir := filepath.Join(versionRoot, "infra")
+
+	if _, err := os.Stat(versionRoot); os.IsNotExist(err) {
+		return &NeuronScanResult{
+			Package: neuronPackage,
+			Error:   fmt.Sprintf("neuron not checked out locally — expected at %s", versionRoot),
+		}, nil
+	}
+
+	skipDirs := map[string]bool{
+		"node_modules": true, ".git": true, ".dart_tool": true,
+		".symlinks": true, ".plugin_symlinks": true,
+		".venv": true, "venv": true, "__pypackages__": true, "__pycache__": true,
+	}
+
+	var files []ScannedNeuronFile
+	err = filepath.WalkDir(versionRoot, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			if path == versionRoot {
+				return err // propagate root errors (e.g. EACCES); skip per-entry errors
+			}
+			return nil
+		}
+		if d.IsDir() {
+			if skipDirs[d.Name()] {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, _ := filepath.Rel(versionRoot, path)
+		if strings.HasPrefix(rel, "infra"+string(filepath.Separator)) {
+			infraRel, _ := filepath.Rel(infraDir, path)
+			files = append(files, ScannedNeuronFile{Path: infraRel, Category: "infra", Selected: true})
+		} else {
+			files = append(files, ScannedNeuronFile{Path: rel, Category: "build", Selected: true})
+		}
+		return nil
+	})
+	if err != nil {
+		return &NeuronScanResult{Package: neuronPackage, Error: fmt.Sprintf("cannot scan neuron directory: %v", err)}, nil
+	}
+	return &NeuronScanResult{Package: neuronPackage, Files: files}, nil
+}
+
+func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([]byte, error) {
+	versionRoot, err := neuronVersionRoot(p.Package)
+	if err != nil {
+		return nil, err
+	}
+	infraDir := filepath.Join(versionRoot, "infra")
+	// rootPrefix used for path-containment check against frontend-supplied file.Path values.
+	rootPrefix := filepath.Clean(versionRoot) + string(filepath.Separator)
+
+	marshalFile := func(relPath string, content []byte) []byte {
+		var f []byte
+		f = protowire.AppendTag(f, 1, protowire.BytesType)
+		f = protowire.AppendString(f, relPath)
+		f = protowire.AppendTag(f, 2, protowire.BytesType)
+		f = protowire.AppendBytes(f, content)
+		return f
+	}
+
+	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
+	var content []byte
+	for _, file := range p.Files {
+		if !file.Selected {
+			continue
+		}
+		var absPath string
+		if file.Category == "infra" {
+			absPath = filepath.Join(infraDir, file.Path)
+		} else {
+			absPath = filepath.Join(versionRoot, file.Path)
+		}
+		if !strings.HasPrefix(filepath.Clean(absPath)+string(filepath.Separator), rootPrefix) {
+			continue // skip paths that escaped versionRoot
+		}
+		data, err := os.ReadFile(absPath)
+		if err != nil {
+			return nil, fmt.Errorf("read %s: %w", file.Path, err)
+		}
+		fileBytes := marshalFile(file.Path, data)
+		var fieldNum protowire.Number
+		switch file.Category {
+		case "build":
+			fieldNum = 1
+		case "infra":
+			fieldNum = 2
+		case "proto":
+			fieldNum = 3
+		default:
+			continue
+		}
+		content = protowire.AppendTag(content, fieldNum, protowire.BytesType)
+		content = protowire.AppendBytes(content, fileBytes)
+	}
+
+	// Publisher sub-message: f1=account
+	var publisher []byte
+	if accountName != "" {
+		publisher = protowire.AppendTag(publisher, 1, protowire.BytesType)
+		publisher = protowire.AppendString(publisher, accountName)
+	}
+
+	// Block sub-message: f2=display_name, f13=tagline, f30=publisher
+	var block []byte
+	if p.DisplayName != "" {
+		block = protowire.AppendTag(block, 2, protowire.BytesType)
+		block = protowire.AppendString(block, p.DisplayName)
+	}
+	if p.Tagline != "" {
+		block = protowire.AppendTag(block, 13, protowire.BytesType)
+		block = protowire.AppendString(block, p.Tagline)
+	}
+	if len(publisher) > 0 {
+		block = protowire.AppendTag(block, 30, protowire.BytesType)
+		block = protowire.AppendBytes(block, publisher)
+	}
+
+	// BootstrapBlockRequest: f2=block, f3=block_id, f4=package, f5=contributed_content
+	var req []byte
+	req = protowire.AppendTag(req, 2, protowire.BytesType)
+	req = protowire.AppendBytes(req, block)
+	req = protowire.AppendTag(req, 3, protowire.BytesType)
+	req = protowire.AppendString(req, p.BlockID)
+	req = protowire.AppendTag(req, 4, protowire.BytesType)
+	req = protowire.AppendString(req, p.Package)
+	if len(content) > 0 {
+		req = protowire.AppendTag(req, 5, protowire.BytesType)
+		req = protowire.AppendBytes(req, content)
+	}
+	return req, nil
+}
+
+func (s *ProductService) BootstrapBlock(params BootstrapBlockParams) (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	accountName := s.myPrimaryAccountID()
+	protoBytes, err := marshalBootstrapBlockRequest(params, accountName)
+	if err != nil {
+		return "", err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/BootstrapBlock", protoBytes)
+	if err != nil {
+		return "", fmt.Errorf("BootstrapBlock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return "", fmt.Errorf("BootstrapBlock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", fmt.Errorf("BootstrapBlock: response too short (%d bytes)", len(body))
+	}
+	// Response: BootstrapBlockResponse { f1: Block { f1: name (string) } }
+	blockName := parseStringField1([]byte(parseStringFieldN(body[5:], 1)))
+	if blockName == "" {
+		return "", fmt.Errorf("BootstrapBlock: response contained no block name")
+	}
+	return blockName, nil
 }
 
 // doConsoleGRPCWeb sends a grpc-web-text request to console.alisx.com.
