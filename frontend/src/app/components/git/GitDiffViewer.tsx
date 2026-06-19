@@ -1,6 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { DiffFile, DiffModeEnum, DiffView } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view-pure.css';
+import { Columns2, AlignJustify } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { GitFileDiff } from './types';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
 }
 
 export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
+  const [splitMode, setSplitMode] = useState(false);
+
   const diffFile = useMemo(() => {
     if (!diff || !filePath) return null;
     const file = DiffFile.createInstance({
@@ -20,6 +24,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
     });
     file.init();
     file.buildUnifiedDiffLines();
+    file.buildSplitDiffLines();
     return file;
   }, [diff, filePath]);
 
@@ -43,17 +48,41 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
           {commitHash ? `@${commitHash.slice(0, 7)}` : staged ? '(staged)' : '(unstaged)'}
         </span>
         {diff!.hunks.length > 0 && (
-          <span className="shrink-0 text-white/30 ml-auto">
+          <span className="shrink-0 text-white/30">
             +{addCount} -{delCount}
           </span>
         )}
+        <div className="ml-auto flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setSplitMode(false)}
+                className={`p-1 rounded transition-colors ${!splitMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+              >
+                <AlignJustify size={13} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Unified</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setSplitMode(true)}
+                className={`p-1 rounded transition-colors ${splitMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+              >
+                <Columns2 size={13} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Split</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       <div className="flex-1 overflow-auto" style={{ '--diff-plain-content--': '#1e1e1e', '--diff-plain-lineNumber--': '#1e1e1e' } as React.CSSProperties}>
         <DiffView
           diffFile={diffFile}
           diffViewTheme="dark"
-          diffViewMode={DiffModeEnum.Unified}
+          diffViewMode={splitMode ? DiffModeEnum.Split : DiffModeEnum.Unified}
           diffViewHighlight
           diffViewFontSize={11}
         />
