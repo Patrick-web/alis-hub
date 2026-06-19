@@ -1,6 +1,7 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { ChevronDown, ChevronRight, Minus, Plus, RotateCcw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { GitFileStatus, GitStatus } from './types';
 
 interface Props {
@@ -18,6 +19,30 @@ interface Props {
   onCommitMessageChange: (msg: string) => void;
 }
 
+interface TreeNode {
+  name: string;
+  key: string;
+  children: Map<string, TreeNode>;
+  items: Array<GitFileStatus | string>;
+}
+
+function buildTree(files: Array<GitFileStatus | string>): TreeNode {
+  const root: TreeNode = { name: '', key: 'root', children: new Map(), items: [] };
+  for (const file of files) {
+    const path = typeof file === 'string' ? file : file.path;
+    const parts = path.split('/');
+    let node = root;
+    for (let i = 0; i < parts.length - 1; i++) {
+      const seg = parts[i];
+      if (!node.children.has(seg)) {
+        node.children.set(seg, { name: seg, key: `${node.key}/${seg}`, children: new Map(), items: [] });
+      }
+      node = node.children.get(seg)!;
+    }
+    node.items.push(file);
+  }
+  return root;
+}
 
 function statusIcon(code: string) {
   switch (code) {
@@ -28,12 +53,13 @@ function statusIcon(code: string) {
   }
 }
 
-function fileName(path: string) {
+function filePart(path: string) {
   return path.split('/').pop() ?? path;
 }
 
 function FileRow({
-  file, staged, selected, onSelect, onAction1, onAction2, action1Icon, action2Icon, action1Title, action2Title,
+  file, staged, selected, onSelect, onAction1, onAction2,
+  action1Icon, action2Icon, action1Title, action2Title, indent,
 }: {
   file: GitFileStatus | string;
   staged: boolean;
@@ -45,6 +71,7 @@ function FileRow({
   action2Icon?: React.ReactNode;
   action1Title?: string;
   action2Title?: string;
+  indent?: number;
 }) {
   const [hover, setHover] = useState(false);
   const path = typeof file === 'string' ? file : file.path;
@@ -52,39 +79,116 @@ function FileRow({
 
   return (
     <div
-      className={`group flex items-center gap-1.5 px-3 py-[3px] cursor-pointer text-xs transition-colors ${
+      className={`group flex items-center gap-1.5 py-[3px] pr-3 cursor-pointer text-xs transition-colors ${
         selected ? 'bg-pink-500/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white/80'
       }`}
+      style={{ paddingLeft: `${indent ?? 12}px` }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={onSelect}
       title={path}
     >
       {statusIcon(code)}
-      <span className="flex-1 truncate">{fileName(path)}</span>
+      <span className="flex-1 truncate">{filePart(path)}</span>
       {hover && (
         <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
           {onAction1 && (
-            <button
-              title={action1Title}
-              onClick={onAction1}
-              className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90"
-            >
+            <button title={action1Title} onClick={onAction1} className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90">
               {action1Icon}
             </button>
           )}
           {onAction2 && (
-            <button
-              title={action2Title}
-              onClick={onAction2}
-              className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90"
-            >
+            <button title={action2Title} onClick={onAction2} className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90">
               {action2Icon}
             </button>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function TreeDir({
+  node, depth, staged, selectedFile, selectedStaged,
+  onSelectFile, onAction1, onAction2, action1Icon, action2Icon, action1Title, action2Title,
+}: {
+  node: TreeNode;
+  depth: number;
+  staged: boolean;
+  selectedFile: string | null;
+  selectedStaged: boolean;
+  onSelectFile: (path: string, staged: boolean) => void;
+  onAction1?: (path: string) => void;
+  onAction2?: (path: string) => void;
+  action1Icon?: React.ReactNode;
+  action2Icon?: React.ReactNode;
+  action1Title?: string;
+  action2Title?: string;
+}) {
+  const [open, setOpen] = useState(true);
+  const dirs = [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const pl = depth * 12;
+
+  return (
+    <>
+      {node.name && (
+        <div
+          className="flex items-center gap-1 py-[3px] pr-3 cursor-pointer text-xs text-white/40 hover:text-white/60 hover:bg-white/5 select-none"
+          style={{ paddingLeft: `${pl}px` }}
+          onClick={() => setOpen(o => !o)}
+        >
+          {open
+            ? <ChevronDown size={10} className="shrink-0" />
+            : <ChevronRight size={10} className="shrink-0" />
+          }
+          {open
+            ? <FolderOpen size={11} className="shrink-0 text-white/30" />
+            : <Folder size={11} className="shrink-0 text-white/30" />
+          }
+          <span className="truncate">{node.name}</span>
+        </div>
+      )}
+      {open && (
+        <>
+          {dirs.map(child => (
+            <TreeDir
+              key={child.key}
+              node={child}
+              depth={depth + 1}
+              staged={staged}
+              selectedFile={selectedFile}
+              selectedStaged={selectedStaged}
+              onSelectFile={onSelectFile}
+              onAction1={onAction1}
+              onAction2={onAction2}
+              action1Icon={action1Icon}
+              action2Icon={action2Icon}
+              action1Title={action1Title}
+              action2Title={action2Title}
+            />
+          ))}
+          {node.items.map(file => {
+            const path = typeof file === 'string' ? file : file.path;
+            return (
+              <FileRow
+                key={path}
+                file={file}
+                staged={staged}
+                selected={selectedFile === path && staged === selectedStaged}
+                onSelect={() => onSelectFile(path, staged)}
+                onAction1={onAction1 ? () => onAction1(path) : undefined}
+                onAction2={onAction2 ? () => onAction2(path) : undefined}
+                action1Icon={action1Icon}
+                action2Icon={action2Icon}
+                action1Title={action1Title}
+                action2Title={action2Title}
+                indent={pl + 12}
+              />
+            );
+          })}
+        </>
+      )}
+    </>
   );
 }
 
@@ -117,10 +221,41 @@ export function GitFileList({
   status, selectedFile, selectedStaged, commitMessage, committing,
   onSelectFile, onStage, onUnstage, onDiscard, onStageAll, onCommit, onCommitMessageChange,
 }: Props) {
+  const [treeMode, setTreeMode] = useState(false);
   const canCommit = status.staged.length > 0 && commitMessage.trim().length > 0 && !committing;
+
+  const stagedTree = buildTree(status.staged);
+  const unstagedTree = buildTree(status.unstaged);
+  const untrackedTree = buildTree(status.untracked);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* View toggle */}
+      <div className="shrink-0 flex items-center justify-end gap-1 px-2 py-1 border-b border-white/10">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setTreeMode(false)}
+              className={`p-1 rounded transition-colors ${!treeMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+            >
+              <List size={12} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">List view</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setTreeMode(true)}
+              className={`p-1 rounded transition-colors ${treeMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+            >
+              <FolderTree size={12} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Tree view</TooltipContent>
+        </Tooltip>
+      </div>
+
       <div className="flex-1 overflow-y-auto min-h-0">
         {/* Staged */}
         <Section
@@ -138,18 +273,32 @@ export function GitFileList({
             ) : undefined
           }
         >
-          {status.staged.map(f => (
-            <FileRow
-              key={f.path}
-              file={f}
+          {treeMode ? (
+            <TreeDir
+              node={stagedTree}
+              depth={1}
               staged
-              selected={selectedFile === f.path && selectedStaged}
-              onSelect={() => onSelectFile(f.path, true)}
-              onAction1={() => onUnstage(f.path)}
+              selectedFile={selectedFile}
+              selectedStaged={selectedStaged}
+              onSelectFile={onSelectFile}
+              onAction1={onUnstage}
               action1Icon={<Minus size={11} />}
               action1Title="Unstage"
             />
-          ))}
+          ) : (
+            status.staged.map(f => (
+              <FileRow
+                key={f.path}
+                file={f}
+                staged
+                selected={selectedFile === f.path && selectedStaged}
+                onSelect={() => onSelectFile(f.path, true)}
+                onAction1={() => onUnstage(f.path)}
+                action1Icon={<Minus size={11} />}
+                action1Title="Unstage"
+              />
+            ))
+          )}
           {status.staged.length === 0 && (
             <div className="px-3 py-1 text-[11px] text-white/20 italic">No staged changes</div>
           )}
@@ -171,21 +320,38 @@ export function GitFileList({
             ) : undefined
           }
         >
-          {status.unstaged.map(f => (
-            <FileRow
-              key={f.path}
-              file={f}
+          {treeMode ? (
+            <TreeDir
+              node={unstagedTree}
+              depth={1}
               staged={false}
-              selected={selectedFile === f.path && !selectedStaged}
-              onSelect={() => onSelectFile(f.path, false)}
-              onAction1={() => onStage(f.path)}
-              onAction2={() => onDiscard(f.path)}
+              selectedFile={selectedFile}
+              selectedStaged={selectedStaged}
+              onSelectFile={onSelectFile}
+              onAction1={onStage}
+              onAction2={onDiscard}
               action1Icon={<Plus size={11} />}
               action2Icon={<RotateCcw size={11} />}
               action1Title="Stage"
               action2Title="Discard changes"
             />
-          ))}
+          ) : (
+            status.unstaged.map(f => (
+              <FileRow
+                key={f.path}
+                file={f}
+                staged={false}
+                selected={selectedFile === f.path && !selectedStaged}
+                onSelect={() => onSelectFile(f.path, false)}
+                onAction1={() => onStage(f.path)}
+                onAction2={() => onDiscard(f.path)}
+                action1Icon={<Plus size={11} />}
+                action2Icon={<RotateCcw size={11} />}
+                action1Title="Stage"
+                action2Title="Discard changes"
+              />
+            ))
+          )}
           {status.unstaged.length === 0 && (
             <div className="px-3 py-1 text-[11px] text-white/20 italic">No changes</div>
           )}
@@ -194,18 +360,32 @@ export function GitFileList({
         {/* Untracked */}
         {status.untracked.length > 0 && (
           <Section title="Untracked" count={status.untracked.length} defaultOpen={false}>
-            {status.untracked.map(p => (
-              <FileRow
-                key={p}
-                file={{ path: p, statusCode: '?', oldPath: '' }}
+            {treeMode ? (
+              <TreeDir
+                node={untrackedTree}
+                depth={1}
                 staged={false}
-                selected={false}
-                onSelect={() => onSelectFile(p, false)}
-                onAction1={() => onStage(p)}
+                selectedFile={selectedFile}
+                selectedStaged={selectedStaged}
+                onSelectFile={onSelectFile}
+                onAction1={onStage}
                 action1Icon={<Plus size={11} />}
                 action1Title="Stage file"
               />
-            ))}
+            ) : (
+              status.untracked.map(p => (
+                <FileRow
+                  key={p}
+                  file={{ path: p, statusCode: '?', oldPath: '' }}
+                  staged={false}
+                  selected={false}
+                  onSelect={() => onSelectFile(p, false)}
+                  onAction1={() => onStage(p)}
+                  action1Icon={<Plus size={11} />}
+                  action1Title="Stage file"
+                />
+              ))
+            )}
           </Section>
         )}
       </div>
