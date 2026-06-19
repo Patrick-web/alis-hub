@@ -13,6 +13,10 @@ import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+export function BootstrapBlock(params: $models.BootstrapBlockParams): $CancellablePromise<string> {
+    return $Call.ByID(3259830753, params);
+}
+
 /**
  * CheckProductCloneStatus returns true if both the define and build repos for
  * the given product are already present on the local filesystem.
@@ -303,6 +307,16 @@ export function OpenInIDE(productName: string, ide: string): $CancellablePromise
     return $Call.ByID(3656788695, productName, ide);
 }
 
+/**
+ * ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
+ * Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
+ */
+export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
+    return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
+        return $$createType42($result);
+    });
+}
+
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(1786829241, app);
 }
@@ -330,7 +344,7 @@ export function SwitchEnvironment(org: string, product: string, envName: string,
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType42($result);
+        return $$createType44($result);
     });
 }
 
@@ -413,5 +427,7 @@ const $$createType37 = $models.LandingZonesData.createFrom;
 const $$createType38 = $Create.Nullable($$createType37);
 const $$createType39 = $models.ProductSummary.createFrom;
 const $$createType40 = $Create.Array($$createType39);
-const $$createType41 = $models.SyncReposResult.createFrom;
+const $$createType41 = $models.NeuronScanResult.createFrom;
 const $$createType42 = $Create.Nullable($$createType41);
+const $$createType43 = $models.SyncReposResult.createFrom;
+const $$createType44 = $Create.Nullable($$createType43);
