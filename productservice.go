@@ -1034,6 +1034,27 @@ func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
 	return &cb, nil
 }
 
+// DeleteCodeblock permanently deletes a block by its ID.
+func (s *ProductService) DeleteCodeblock(blockId string) error {
+	if err := s.initTokens(); err != nil {
+		return err
+	}
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/"+blockId)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
+		"alis.bl.blocks.v1.BlocksService/DeleteBlock", buf)
+	if err != nil {
+		return fmt.Errorf("DeleteCodeblock: %w", err)
+	}
+	if grpcStatus != 0 {
+		return fmt.Errorf("DeleteCodeblock: grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	return nil
+}
+
 // ListCodeblockVersions lists available versions for a block.
 func (s *ProductService) ListCodeblockVersions(blockId string) ([]CodeblockVersion, error) {
 	if err := s.initTokens(); err != nil {
@@ -2371,7 +2392,6 @@ func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResul
 	// Append proto files from the define repo — optional, silently skip if not checked out.
 	if defineRoot, derr := neuronDefineRoot(neuronPackage); derr == nil {
 		if _, statErr := os.Stat(defineRoot); statErr == nil {
-			definePrefix := filepath.Clean(defineRoot) + string(filepath.Separator)
 			_ = filepath.WalkDir(defineRoot, func(path string, d os.DirEntry, err error) error {
 				if err != nil {
 					return nil
@@ -2382,10 +2402,8 @@ func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResul
 					}
 					return nil
 				}
-				if strings.HasPrefix(filepath.Clean(path)+string(filepath.Separator), definePrefix) {
-					rel, _ := filepath.Rel(defineRoot, path)
-					files = append(files, ScannedNeuronFile{Path: rel, Category: "proto", Selected: true})
-				}
+				rel, _ := filepath.Rel(defineRoot, path)
+				files = append(files, ScannedNeuronFile{Path: rel, Category: "proto", Selected: true})
 				return nil
 			})
 		}
@@ -2405,6 +2423,7 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 	}
 	infraDir := filepath.Join(versionRoot, "infra")
 	buildPrefix := filepath.Clean(versionRoot) + string(filepath.Separator)
+	infraPrefix := filepath.Clean(infraDir) + string(filepath.Separator)
 	definePrefix := filepath.Clean(defineRoot) + string(filepath.Separator)
 
 	marshalFile := func(relPath string, content []byte) []byte {
@@ -2423,16 +2442,20 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 			continue
 		}
 		var absPath, containmentPrefix string
+		var fieldNum protowire.Number
 		switch file.Category {
-		case "infra":
-			absPath = filepath.Join(infraDir, file.Path)
-			containmentPrefix = buildPrefix
 		case "build":
 			absPath = filepath.Join(versionRoot, file.Path)
 			containmentPrefix = buildPrefix
+			fieldNum = 1
+		case "infra":
+			absPath = filepath.Join(infraDir, file.Path)
+			containmentPrefix = infraPrefix
+			fieldNum = 2
 		case "proto":
 			absPath = filepath.Join(defineRoot, file.Path)
 			containmentPrefix = definePrefix
+			fieldNum = 3
 		default:
 			continue
 		}
@@ -2444,17 +2467,6 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 			return nil, fmt.Errorf("read %s: %w", file.Path, err)
 		}
 		fileBytes := marshalFile(file.Path, data)
-		var fieldNum protowire.Number
-		switch file.Category {
-		case "build":
-			fieldNum = 1
-		case "infra":
-			fieldNum = 2
-		case "proto":
-			fieldNum = 3
-		default:
-			continue
-		}
 		content = protowire.AppendTag(content, fieldNum, protowire.BytesType)
 		content = protowire.AppendBytes(content, fileBytes)
 	}

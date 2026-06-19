@@ -99,13 +99,14 @@ interface ConflictFileContent {
   hunks: ConflictHunk[];
 }
 
-const TABS = ['documentation', 'versions', 'instances', 'help'] as const;
+const TABS = ['documentation', 'versions', 'instances', 'help', 'settings'] as const;
 type Tab = typeof TABS[number];
 const TAB_LABEL: Record<Tab, string> = {
   documentation: 'Documentation',
   versions: 'Versions',
   instances: 'Instances',
   help: 'Help',
+  settings: 'Settings',
 };
 
 function formatDate(iso: string): string {
@@ -144,6 +145,9 @@ export function CodeblockDetailsPage() {
   const [instances, setInstances] = useState<CodeblockInstance[]>([]);
   const [instancesLoading, setInstancesLoading] = useState(false);
 
+  const [plans, setPlans] = useState<BlockPlan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+
   const blockId = id ?? '';
 
   // Install Block wizard state
@@ -166,9 +170,9 @@ export function CodeblockDetailsPage() {
     }).catch(console.error).finally(() => setBlockLoading(false));
   }, [blockId]);
 
-  // Lazy load versions
+  // Lazy load versions (also needed for settings tab counts)
   useEffect(() => {
-    if (activeTab !== 'versions' || versions.length > 0) return;
+    if ((activeTab !== 'versions' && activeTab !== 'settings') || versions.length > 0) return;
     setVersionsLoading(true);
     (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
       .then(v => {
@@ -203,15 +207,25 @@ export function CodeblockDetailsPage() {
       .finally(() => setDocLoading(false));
   }, [activeTab, blockId, doc, selectedVersion]);
 
-  // Lazy load instances
+  // Lazy load instances (also needed for settings tab counts)
   useEffect(() => {
-    if (activeTab !== 'instances' || instances.length > 0) return;
+    if ((activeTab !== 'instances' && activeTab !== 'settings') || instances.length > 0) return;
     setInstancesLoading(true);
     (ProductService.ListCodeblockInstances as (id: string) => Promise<CodeblockInstance[]>)(blockId)
       .then(v => setInstances(v ?? []))
       .catch(console.error)
       .finally(() => setInstancesLoading(false));
   }, [activeTab, blockId, instances.length]);
+
+  // Lazy load plans for settings tab
+  useEffect(() => {
+    if (activeTab !== 'settings' || plans.length > 0) return;
+    setPlansLoading(true);
+    (ProductService.ListBlockPlans as (id: string) => Promise<BlockPlan[]>)(blockId)
+      .then(v => setPlans(v ?? []))
+      .catch(console.error)
+      .finally(() => setPlansLoading(false));
+  }, [activeTab, blockId, plans.length]);
 
   const publisherLabel = block?.publisher
     ? block.publisher.replace('accounts/', '')
@@ -393,6 +407,17 @@ export function CodeblockDetailsPage() {
             />
           )}
           {activeTab === 'help' && <HelpTab blockId={blockId} />}
+          {activeTab === 'settings' && (
+            <SettingsTab
+              blockId={blockId}
+              block={block}
+              versions={versions}
+              instances={instances}
+              plans={plans}
+              plansLoading={plansLoading}
+              onNavigate={go}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -1246,6 +1271,8 @@ function DocumentationTab({
   const proseRef = useRef<HTMLDivElement>(null);
   const content = audience === 'agent' ? agentDoc : doc;
   const html = content ? (marked.parse(content) as string) : '';
+  const versionTs = versionCreateTime ? new Date(versionCreateTime).getTime() : NaN;
+  const isGenerating = !isNaN(versionTs) && Date.now() - versionTs < 15 * 60 * 1000;
 
   useEffect(() => {
     if (!proseRef.current || !html) return;
@@ -1335,7 +1362,7 @@ function DocumentationTab({
               [&_hr]:border-[#464646] [&_hr]:my-[20px]"
             dangerouslySetInnerHTML={{ __html: html }}
           />
-        ) : versionCreateTime && Date.now() - new Date(versionCreateTime).getTime() < 15 * 60 * 1000 ? (
+        ) : isGenerating ? (
           <div className="flex flex-col items-center justify-center py-[60px] gap-[16px]">
             <div className="w-[48px] h-[48px] rounded-full bg-white/5 flex items-center justify-center">
               <Icon icon="solar:document-add-linear" className="text-[24px] text-white/30" />
@@ -2001,5 +2028,203 @@ function HelpLink({ icon, title, desc }: { icon: string; title: string; desc: st
       </div>
       <Icon icon="solar:arrow-right-linear" className="text-white/20 group-hover:text-white/50 transition-colors" />
     </button>
+  );
+}
+
+// ── Settings Tab ──────────────────────────────────────────────────────────────
+
+function SettingsTab({
+  blockId,
+  block,
+  versions,
+  instances,
+  plans,
+  plansLoading,
+  onNavigate,
+}: {
+  blockId: string;
+  block: Codeblock | null;
+  versions: CodeblockVersion[];
+  instances: CodeblockInstance[];
+  plans: BlockPlan[];
+  plansLoading: boolean;
+  onNavigate: (tab: Tab) => void;
+}) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex-1 overflow-y-auto p-[32px] flex flex-col gap-[32px]">
+
+      {/* Resources */}
+      <section>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[16px]">Resources</h2>
+        <div className="grid grid-cols-3 gap-[16px]">
+          {[
+            { label: 'Block Versions', count: versions.length, tab: 'versions' as Tab },
+            { label: 'Entitlements', count: 0, tab: null },
+            { label: 'Instances', count: instances.length, tab: 'instances' as Tab },
+          ].map(({ label, count, tab }) => (
+            <button
+              key={label}
+              onClick={() => tab && onNavigate(tab)}
+              disabled={!tab}
+              className="bg-[#2c2c2c] border border-[#464646] rounded-[8px] p-[20px] text-left hover:border-white/30 transition-colors disabled:cursor-default disabled:hover:border-[#464646] group"
+            >
+              <p className="text-[11px] text-white/40 mb-[8px]">{label}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[28px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{count}</span>
+                {tab && <Icon icon="solar:arrow-right-linear" className="text-white/20 group-hover:text-white/50 transition-colors" />}
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Plans */}
+      <section>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[4px]">Plans</h2>
+        <p className="text-[11px] text-white/30 mb-[16px]">
+          Configure Plans as usage models for the block. At least one Plan must be configured before sharing the block.
+        </p>
+        {plansLoading ? (
+          <div className="flex items-center gap-[8px] text-[11px] text-white/40">
+            <Loader size={14} /><span>Loading plans…</span>
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="bg-[#2c2c2c] border border-dashed border-[#464646] rounded-[8px] p-[24px] text-center">
+            <p className="text-[12px] text-white/30">No plans configured.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-[12px]">
+            {plans.map(plan => (
+              <div key={plan.name} className="bg-[#2c2c2c] border border-[#464646] rounded-[8px] p-[20px]">
+                <p className="text-[13px] font-bold text-white mb-[4px]">{plan.displayName || plan.name}</p>
+                <p className="text-[11px] text-white/40 font-['JetBrains_Mono',sans-serif] break-all">{plan.name}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Manage */}
+      <section>
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[16px]">Manage</h2>
+        <div className="bg-[#2c2c2c] border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
+          <div>
+            <p className="text-[12px] font-bold text-red-400 mb-[2px]">Delete Block</p>
+            <p className="text-[11px] text-white/30">Permanently delete this block and all associated data. This action cannot be undone.</p>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={() => setDeleteOpen(true)}
+            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 shrink-0 ml-[24px]"
+          >
+            <Icon icon="solar:trash-bin-minimalistic-linear" className="mr-[6px]" />
+            Delete Block
+          </Button>
+        </div>
+      </section>
+
+      {deleteOpen && (
+        <DeleteBlockModal
+          blockId={blockId}
+          block={block}
+          onClose={() => setDeleteOpen(false)}
+          onDone={() => navigate('/codeblocks')}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Delete Block Modal ────────────────────────────────────────────────────────
+
+function DeleteBlockModal({
+  blockId,
+  block,
+  onClose,
+  onDone,
+}: {
+  blockId: string;
+  block: Codeblock | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [confirm, setConfirm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  function doDelete() {
+    setLoading(true);
+    setError('');
+    (ProductService.DeleteCodeblock as (id: string) => Promise<void>)(blockId)
+      .then(onDone)
+      .catch(e => { setError(String(e)); setLoading(false); });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-[#464646]">
+          <Icon icon="solar:trash-bin-minimalistic-linear" className="text-red-400 text-lg" />
+          <div>
+            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+              Delete Block
+            </h2>
+            <p className="text-[11px] text-white/40 mt-[2px]">
+              This action is permanent and cannot be undone.
+            </p>
+          </div>
+        </div>
+
+        <div className="p-[24px] flex flex-col gap-[16px]">
+          {error && (
+            <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[12px] text-red-400">
+              {error}
+            </div>
+          )}
+
+          <div className="bg-white/3 border border-[#464646] rounded-[4px] text-[11px] overflow-hidden">
+            {[
+              { label: 'Block ID', value: blockId },
+              { label: 'Display Name', value: block?.displayName ?? '—' },
+              { label: 'Resource', value: `blocks/${blockId}` },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex gap-[12px] px-[12px] py-[8px] border-b border-[#464646] last:border-0">
+                <span className="text-white/30 w-[90px] shrink-0">{label}</span>
+                <span className="text-white/70 font-['JetBrains_Mono',sans-serif] break-all">{value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+              Type <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">{blockId}</span> to confirm
+            </label>
+            <input
+              type="text"
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder={blockId}
+              disabled={loading}
+              className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-['JetBrains_Mono',sans-serif] focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+          <Button variant="secondary" onClick={onClose} disabled={loading}>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={doDelete}
+            disabled={confirm !== blockId || loading}
+            className="bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-500/60"
+          >
+            {loading ? <><Loader size={14} /><span className="ml-2">Deleting…</span></> : 'Delete Block'}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
