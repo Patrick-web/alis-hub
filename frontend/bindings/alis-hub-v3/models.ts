@@ -608,6 +608,38 @@ export class CodeblockVersion {
     }
 }
 
+/**
+ * CommitFile describes a file changed in a single commit.
+ */
+export class CommitFile {
+    "path": string;
+    "statusCode": string;
+    "oldPath": string;
+
+    /** Creates a new CommitFile instance. */
+    constructor($$source: Partial<CommitFile> = {}) {
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("statusCode" in $$source)) {
+            this["statusCode"] = "";
+        }
+        if (!("oldPath" in $$source)) {
+            this["oldPath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CommitFile instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CommitFile {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CommitFile($$parsedSource as Partial<CommitFile>);
+    }
+}
+
 export class ConflictFileContent {
     "path": string;
     "hunks": ConflictHunk[];
@@ -1241,6 +1273,150 @@ export class GCloudStatus {
     }
 }
 
+export class GitBranch {
+    "name": string;
+    "isCurrent": boolean;
+    "isRemote": boolean;
+
+    /** Creates a new GitBranch instance. */
+    constructor($$source: Partial<GitBranch> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("isCurrent" in $$source)) {
+            this["isCurrent"] = false;
+        }
+        if (!("isRemote" in $$source)) {
+            this["isRemote"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitBranch instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitBranch {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitBranch($$parsedSource as Partial<GitBranch>);
+    }
+}
+
+export class GitCommit {
+    "hash": string;
+    "parentHashes": string[];
+    "subject": string;
+    "authorName": string;
+    "timestamp": number;
+    "refNames": string[];
+
+    /** Creates a new GitCommit instance. */
+    constructor($$source: Partial<GitCommit> = {}) {
+        if (!("hash" in $$source)) {
+            this["hash"] = "";
+        }
+        if (!("parentHashes" in $$source)) {
+            this["parentHashes"] = [];
+        }
+        if (!("subject" in $$source)) {
+            this["subject"] = "";
+        }
+        if (!("authorName" in $$source)) {
+            this["authorName"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = 0;
+        }
+        if (!("refNames" in $$source)) {
+            this["refNames"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitCommit instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitCommit {
+        const $$createField1_0 = $$createType2;
+        const $$createField5_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("parentHashes" in $$parsedSource) {
+            $$parsedSource["parentHashes"] = $$createField1_0($$parsedSource["parentHashes"]);
+        }
+        if ("refNames" in $$parsedSource) {
+            $$parsedSource["refNames"] = $$createField5_0($$parsedSource["refNames"]);
+        }
+        return new GitCommit($$parsedSource as Partial<GitCommit>);
+    }
+}
+
+export class GitFileDiff {
+    "oldContent": string;
+    "newContent": string;
+    "language": string;
+    "hunks": string[];
+
+    /** Creates a new GitFileDiff instance. */
+    constructor($$source: Partial<GitFileDiff> = {}) {
+        if (!("oldContent" in $$source)) {
+            this["oldContent"] = "";
+        }
+        if (!("newContent" in $$source)) {
+            this["newContent"] = "";
+        }
+        if (!("language" in $$source)) {
+            this["language"] = "";
+        }
+        if (!("hunks" in $$source)) {
+            this["hunks"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitFileDiff instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitFileDiff {
+        const $$createField3_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("hunks" in $$parsedSource) {
+            $$parsedSource["hunks"] = $$createField3_0($$parsedSource["hunks"]);
+        }
+        return new GitFileDiff($$parsedSource as Partial<GitFileDiff>);
+    }
+}
+
+export class GitFileStatus {
+    "path": string;
+    "statusCode": string;
+    "oldPath": string;
+
+    /** Creates a new GitFileStatus instance. */
+    constructor($$source: Partial<GitFileStatus> = {}) {
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("statusCode" in $$source)) {
+            this["statusCode"] = "";
+        }
+        if (!("oldPath" in $$source)) {
+            this["oldPath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitFileStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitFileStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitFileStatus($$parsedSource as Partial<GitFileStatus>);
+    }
+}
+
 export class GitRepoInfo {
     "remoteUri": string;
     "cloudRunUri": string;
@@ -1271,6 +1447,47 @@ export class GitRepoInfo {
     static createFrom($$source: any = {}): GitRepoInfo {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new GitRepoInfo($$parsedSource as Partial<GitRepoInfo>);
+    }
+}
+
+export class GitStatus {
+    "staged": GitFileStatus[];
+    "unstaged": GitFileStatus[];
+    "untracked": string[];
+
+    /** Creates a new GitStatus instance. */
+    constructor($$source: Partial<GitStatus> = {}) {
+        if (!("staged" in $$source)) {
+            this["staged"] = [];
+        }
+        if (!("unstaged" in $$source)) {
+            this["unstaged"] = [];
+        }
+        if (!("untracked" in $$source)) {
+            this["untracked"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitStatus {
+        const $$createField0_0 = $$createType20;
+        const $$createField1_0 = $$createType20;
+        const $$createField2_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("staged" in $$parsedSource) {
+            $$parsedSource["staged"] = $$createField0_0($$parsedSource["staged"]);
+        }
+        if ("unstaged" in $$parsedSource) {
+            $$parsedSource["unstaged"] = $$createField1_0($$parsedSource["unstaged"]);
+        }
+        if ("untracked" in $$parsedSource) {
+            $$parsedSource["untracked"] = $$createField2_0($$parsedSource["untracked"]);
+        }
+        return new GitStatus($$parsedSource as Partial<GitStatus>);
     }
 }
 
@@ -1385,8 +1602,8 @@ export class GlassResult {
      * Creates a new GlassResult instance from a string or object.
      */
     static createFrom($$source: any = {}): GlassResult {
-        const $$createField2_0 = $$createType19;
-        const $$createField3_0 = $$createType21;
+        const $$createField2_0 = $$createType21;
+        const $$createField3_0 = $$createType23;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("definition" in $$parsedSource) {
             $$parsedSource["definition"] = $$createField2_0($$parsedSource["definition"]);
@@ -1538,7 +1755,7 @@ export class InviteInfo {
      */
     static createFrom($$source: any = {}): InviteInfo {
         const $$createField4_0 = $$createType2;
-        const $$createField5_0 = $$createType23;
+        const $$createField5_0 = $$createType25;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("domains" in $$parsedSource) {
             $$parsedSource["domains"] = $$createField4_0($$parsedSource["domains"]);
@@ -1615,8 +1832,8 @@ export class LandingZonesData {
      * Creates a new LandingZonesData instance from a string or object.
      */
     static createFrom($$source: any = {}): LandingZonesData {
-        const $$createField0_0 = $$createType25;
-        const $$createField1_0 = $$createType25;
+        const $$createField0_0 = $$createType27;
+        const $$createField1_0 = $$createType27;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("own" in $$parsedSource) {
             $$parsedSource["own"] = $$createField0_0($$parsedSource["own"]);
@@ -1758,9 +1975,9 @@ export class LogEntry {
      * Creates a new LogEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): LogEntry {
-        const $$createField5_0 = $$createType27;
-        const $$createField6_0 = $$createType28;
-        const $$createField7_0 = $$createType29;
+        const $$createField5_0 = $$createType29;
+        const $$createField6_0 = $$createType30;
+        const $$createField7_0 = $$createType31;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("resource" in $$parsedSource) {
             $$parsedSource["resource"] = $$createField5_0($$parsedSource["resource"]);
@@ -1795,7 +2012,7 @@ export class LogPage {
      * Creates a new LogPage instance from a string or object.
      */
     static createFrom($$source: any = {}): LogPage {
-        const $$createField0_0 = $$createType31;
+        const $$createField0_0 = $$createType33;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("entries" in $$parsedSource) {
             $$parsedSource["entries"] = $$createField0_0($$parsedSource["entries"]);
@@ -1824,7 +2041,7 @@ export class LogResource {
      * Creates a new LogResource instance from a string or object.
      */
     static createFrom($$source: any = {}): LogResource {
-        const $$createField1_0 = $$createType28;
+        const $$createField1_0 = $$createType30;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("labels" in $$parsedSource) {
             $$parsedSource["labels"] = $$createField1_0($$parsedSource["labels"]);
@@ -2128,8 +2345,8 @@ export class ProductOverview {
      */
     static createFrom($$source: any = {}): ProductOverview {
         const $$createField3_0 = $$createType16;
-        const $$createField4_0 = $$createType33;
-        const $$createField5_0 = $$createType35;
+        const $$createField4_0 = $$createType35;
+        const $$createField5_0 = $$createType37;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -2141,6 +2358,34 @@ export class ProductOverview {
             $$parsedSource["packageRegistries"] = $$createField5_0($$parsedSource["packageRegistries"]);
         }
         return new ProductOverview($$parsedSource as Partial<ProductOverview>);
+    }
+}
+
+/**
+ * ProductRepoPaths holds the local filesystem paths for a product's git repos.
+ */
+export class ProductRepoPaths {
+    "buildDir": string;
+    "defineDir": string;
+
+    /** Creates a new ProductRepoPaths instance. */
+    constructor($$source: Partial<ProductRepoPaths> = {}) {
+        if (!("buildDir" in $$source)) {
+            this["buildDir"] = "";
+        }
+        if (!("defineDir" in $$source)) {
+            this["defineDir"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProductRepoPaths instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProductRepoPaths {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ProductRepoPaths($$parsedSource as Partial<ProductRepoPaths>);
     }
 }
 
@@ -2303,7 +2548,7 @@ export class RunDeployResult {
      * Creates a new RunDeployResult instance from a string or object.
      */
     static createFrom($$source: any = {}): RunDeployResult {
-        const $$createField2_0 = $$createType38;
+        const $$createField2_0 = $$createType40;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("deployments" in $$parsedSource) {
             $$parsedSource["deployments"] = $$createField2_0($$parsedSource["deployments"]);
@@ -2336,7 +2581,7 @@ export class SMSecret {
      * Creates a new SMSecret instance from a string or object.
      */
     static createFrom($$source: any = {}): SMSecret {
-        const $$createField2_0 = $$createType28;
+        const $$createField2_0 = $$createType30;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("labels" in $$parsedSource) {
             $$parsedSource["labels"] = $$createField2_0($$parsedSource["labels"]);
@@ -2468,8 +2713,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType40;
-        const $$createField1_0 = $$createType42;
+        const $$createField0_0 = $$createType42;
+        const $$createField1_0 = $$createType44;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -2564,9 +2809,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType44;
-        const $$createField1_0 = $$createType46;
-        const $$createField2_0 = $$createType46;
+        const $$createField0_0 = $$createType46;
+        const $$createField1_0 = $$createType48;
+        const $$createField2_0 = $$createType48;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -2741,7 +2986,7 @@ export class SpannerQueryResult {
      */
     static createFrom($$source: any = {}): SpannerQueryResult {
         const $$createField0_0 = $$createType2;
-        const $$createField1_0 = $$createType47;
+        const $$createField1_0 = $$createType49;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -2910,32 +3155,34 @@ const $$createType15 = GCPProject.createFrom;
 const $$createType16 = $Create.Nullable($$createType15);
 const $$createType17 = GCSObject.createFrom;
 const $$createType18 = $Create.Array($$createType17);
-const $$createType19 = GlassDefinition.createFrom;
-const $$createType20 = GlassArtifact.createFrom;
-const $$createType21 = $Create.Array($$createType20);
-const $$createType22 = InviteUserInfo.createFrom;
+const $$createType19 = GitFileStatus.createFrom;
+const $$createType20 = $Create.Array($$createType19);
+const $$createType21 = GlassDefinition.createFrom;
+const $$createType22 = GlassArtifact.createFrom;
 const $$createType23 = $Create.Array($$createType22);
-const $$createType24 = Organisation.createFrom;
+const $$createType24 = InviteUserInfo.createFrom;
 const $$createType25 = $Create.Array($$createType24);
-const $$createType26 = LogResource.createFrom;
-const $$createType27 = $Create.Nullable($$createType26);
-const $$createType28 = $Create.Map($Create.Any, $Create.Any);
-const $$createType29 = $Create.Map($Create.Any, $Create.Any);
-const $$createType30 = LogEntry.createFrom;
-const $$createType31 = $Create.Array($$createType30);
-const $$createType32 = GitRepoInfo.createFrom;
-const $$createType33 = $Create.Nullable($$createType32);
-const $$createType34 = PkgRegistries.createFrom;
+const $$createType26 = Organisation.createFrom;
+const $$createType27 = $Create.Array($$createType26);
+const $$createType28 = LogResource.createFrom;
+const $$createType29 = $Create.Nullable($$createType28);
+const $$createType30 = $Create.Map($Create.Any, $Create.Any);
+const $$createType31 = $Create.Map($Create.Any, $Create.Any);
+const $$createType32 = LogEntry.createFrom;
+const $$createType33 = $Create.Array($$createType32);
+const $$createType34 = GitRepoInfo.createFrom;
 const $$createType35 = $Create.Nullable($$createType34);
-const $$createType36 = DeployItem.createFrom;
+const $$createType36 = PkgRegistries.createFrom;
 const $$createType37 = $Create.Nullable($$createType36);
-const $$createType38 = $Create.Array($$createType37);
-const $$createType39 = NeuronItem.createFrom;
+const $$createType38 = DeployItem.createFrom;
+const $$createType39 = $Create.Nullable($$createType38);
 const $$createType40 = $Create.Array($$createType39);
-const $$createType41 = EnvDeployments.createFrom;
+const $$createType41 = NeuronItem.createFrom;
 const $$createType42 = $Create.Array($$createType41);
-const $$createType43 = SharePerson.createFrom;
+const $$createType43 = EnvDeployments.createFrom;
 const $$createType44 = $Create.Array($$createType43);
-const $$createType45 = ShareAccount.createFrom;
+const $$createType45 = SharePerson.createFrom;
 const $$createType46 = $Create.Array($$createType45);
-const $$createType47 = $Create.Array($$createType2);
+const $$createType47 = ShareAccount.createFrom;
+const $$createType48 = $Create.Array($$createType47);
+const $$createType49 = $Create.Array($$createType2);

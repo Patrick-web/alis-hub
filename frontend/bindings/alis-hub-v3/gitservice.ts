@@ -26,6 +26,20 @@ export function AbortMerge(repoPath: string): $CancellablePromise<void> {
 }
 
 /**
+ * CheckoutBranch switches to an existing branch.
+ */
+export function CheckoutBranch(repoPath: string, branchName: string): $CancellablePromise<void> {
+    return $Call.ByID(3127373489, repoPath, branchName);
+}
+
+/**
+ * Commit creates a commit with the given message.
+ */
+export function Commit(repoPath: string, message: string): $CancellablePromise<void> {
+    return $Call.ByID(471482348, repoPath, message);
+}
+
+/**
  * CompleteMerge finalises the merge with a commit (non-interactive).
  */
 export function CompleteMerge(repoPath: string): $CancellablePromise<void> {
@@ -33,11 +47,52 @@ export function CompleteMerge(repoPath: string): $CancellablePromise<void> {
 }
 
 /**
+ * CreateBranch creates and switches to a new branch.
+ */
+export function CreateBranch(repoPath: string, branchName: string): $CancellablePromise<void> {
+    return $Call.ByID(301706189, repoPath, branchName);
+}
+
+/**
+ * DiscardFile discards working tree changes for a file.
+ */
+export function DiscardFile(repoPath: string, filePath: string): $CancellablePromise<void> {
+    return $Call.ByID(3427842007, repoPath, filePath);
+}
+
+/**
+ * GetBranches returns all local and remote branches.
+ */
+export function GetBranches(repoPath: string): $CancellablePromise<$models.GitBranch[]> {
+    return $Call.ByID(3919711711, repoPath).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * GetCommitFileDiff returns the diff for a single file within a specific commit.
+ */
+export function GetCommitFileDiff(repoPath: string, hash: string, filePath: string): $CancellablePromise<$models.GitFileDiff | null> {
+    return $Call.ByID(2802220399, repoPath, hash, filePath).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * GetCommitFiles returns the list of files changed by a specific commit.
+ */
+export function GetCommitFiles(repoPath: string, hash: string): $CancellablePromise<$models.CommitFile[]> {
+    return $Call.ByID(434630353, repoPath, hash).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * GetConflictContent reads a conflicted file and parses its conflict hunks.
  */
 export function GetConflictContent(repoPath: string, filePath: string): $CancellablePromise<$models.ConflictFileContent | null> {
     return $Call.ByID(2044518434, repoPath, filePath).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType7($result);
     });
 }
 
@@ -46,8 +101,67 @@ export function GetConflictContent(repoPath: string, filePath: string): $Cancell
  */
 export function GetConflictFiles(repoPath: string): $CancellablePromise<string[]> {
     return $Call.ByID(652532720, repoPath).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType8($result);
     });
+}
+
+/**
+ * GetCurrentBranch returns the name of the currently checked-out branch.
+ */
+export function GetCurrentBranch(repoPath: string): $CancellablePromise<string> {
+    return $Call.ByID(2144274600, repoPath);
+}
+
+/**
+ * GetFileDiff returns old and new file content plus diff hunks for the diff viewer.
+ * staged=true shows index vs HEAD; staged=false shows working tree vs index.
+ */
+export function GetFileDiff(repoPath: string, filePath: string, staged: boolean): $CancellablePromise<$models.GitFileDiff | null> {
+    return $Call.ByID(1333579366, repoPath, filePath, staged).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * GetLog returns commit history for the git graph.
+ */
+export function GetLog(repoPath: string, limit: number): $CancellablePromise<$models.GitCommit[]> {
+    return $Call.ByID(1590913447, repoPath, limit).then(($result: any) => {
+        return $$createType10($result);
+    });
+}
+
+/**
+ * GetProductRepoPaths returns the local build and define repo paths for the given product.
+ * org and product are short names (e.g. "voyage", "vp").
+ */
+export function GetProductRepoPaths(org: string, product: string): $CancellablePromise<$models.ProductRepoPaths | null> {
+    return $Call.ByID(674422590, org, product).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
+ * GetStatus returns staged, unstaged, and untracked file lists.
+ */
+export function GetStatus(repoPath: string): $CancellablePromise<$models.GitStatus | null> {
+    return $Call.ByID(2522644849, repoPath).then(($result: any) => {
+        return $$createType14($result);
+    });
+}
+
+/**
+ * PullOrigin pulls the current branch from origin, streaming output.
+ */
+export function PullOrigin(repoPath: string): $CancellablePromise<void> {
+    return $Call.ByID(1482641752, repoPath);
+}
+
+/**
+ * PushOrigin pushes the current branch to origin, streaming output.
+ */
+export function PushOrigin(repoPath: string): $CancellablePromise<void> {
+    return $Call.ByID(3747123927, repoPath);
 }
 
 /**
@@ -64,19 +178,52 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
 }
 
 /**
+ * StageAll stages all changes.
+ */
+export function StageAll(repoPath: string): $CancellablePromise<void> {
+    return $Call.ByID(4059387404, repoPath);
+}
+
+/**
+ * StageFile stages a single file.
+ */
+export function StageFile(repoPath: string, filePath: string): $CancellablePromise<void> {
+    return $Call.ByID(4185947995, repoPath, filePath);
+}
+
+/**
  * StartLocalMerge runs: git fetch, checkout master, pull, then merge origin/{branchName}.
  * Returns conflict file list if exit code 1 (conflicts detected).
  * Git command output is streamed via "git:log" Wails events.
  */
 export function StartLocalMerge(repoPath: string, branchName: string): $CancellablePromise<$models.LocalMergeResult | null> {
     return $Call.ByID(2277677406, repoPath, branchName).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType16($result);
     });
 }
 
+/**
+ * UnstageFile removes a file from the staging area.
+ */
+export function UnstageFile(repoPath: string, filePath: string): $CancellablePromise<void> {
+    return $Call.ByID(3130933074, repoPath, filePath);
+}
+
 // Private type creation functions
-const $$createType0 = $models.ConflictFileContent.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = $models.LocalMergeResult.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);
+const $$createType0 = $models.GitBranch.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $models.GitFileDiff.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = $models.CommitFile.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.ConflictFileContent.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = $Create.Array($Create.Any);
+const $$createType9 = $models.GitCommit.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = $models.ProductRepoPaths.createFrom;
+const $$createType12 = $Create.Nullable($$createType11);
+const $$createType13 = $models.GitStatus.createFrom;
+const $$createType14 = $Create.Nullable($$createType13);
+const $$createType15 = $models.LocalMergeResult.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
