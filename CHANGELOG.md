@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.2.5] - 2026-06-19
+
+### Bug Fixes
+- Fixed an issue where installing a codeblock would fail to merge the define repository alongside the build repository.
+- Fixed an issue where manifest scanning would incorrectly traverse node_modules and other package cache directories.
+
 ## [v0.2.4] - 2026-06-18
 
 ### What's New

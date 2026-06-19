@@ -15,6 +15,9 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
+import { useNotifications } from '../stores/notifications';
+import { notify } from '../lib/notify';
+import { systemNotify } from '../lib/systemNotify';
 
 type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
 type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
@@ -93,6 +96,7 @@ function formatRelativeTime(unixSeconds: number): string {
 
 export function DevelopPage() {
   const { state, setNeurons } = useWorkspace();
+  const { addNotification } = useNotifications();
   // Define pane state
   const [defineNeuron, setDefineNeuron] = useState<string | null>(null);
   const [defineStep, setDefineStep] = useState<DefineStep>('commits');
@@ -412,6 +416,23 @@ export function DevelopPage() {
         if (result?.done) {
           clearInterval(interval);
           setBuildStep('result');
+          if (!result.error && buildNeuron) {
+            const version = result.neuronVersion || result.version;
+            const body = version ? `${buildNeuron} · ${version}` : buildNeuron;
+            addNotification({
+              severity: 'success',
+              source: 'build',
+              title: 'Build complete',
+              body,
+              persistent: true,
+              actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+            });
+            notify.success('Build complete', {
+              description: body,
+              action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
+            });
+            systemNotify('Build complete', body);
+          }
         } else if (result?.notes) {
           setBuildProgressMsg(result.notes);
         }
@@ -469,6 +490,21 @@ export function DevelopPage() {
             done: true,
             error: chunk.error || undefined,
           } as BuildResult);
+          if (!chunk.error && buildNeuron) {
+            addNotification({
+              severity: 'success',
+              source: 'build',
+              title: 'Local build complete',
+              body: buildNeuron,
+              persistent: true,
+              actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+            });
+            notify.success('Local build complete', {
+              description: buildNeuron,
+              action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
+            });
+            systemNotify('Local build complete', buildNeuron);
+          }
         }
       } catch {
         clearInterval(interval);
