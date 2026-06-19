@@ -889,7 +889,9 @@ func (g *GCloudService) ExecuteSpannerDML(databaseResourceName, sql string) (*Sp
 	payload := map[string]interface{}{
 		"sql": sql,
 		"transaction": map[string]interface{}{
-			"partitionedDml": map[string]interface{}{},
+			"begin": map[string]interface{}{
+				"partitionedDml": map[string]interface{}{},
+			},
 		},
 	}
 	var resp struct {
