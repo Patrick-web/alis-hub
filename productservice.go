@@ -2304,6 +2304,21 @@ func neuronVersionRoot(pkg string) (string, error) {
 	return filepath.Join(home, "alis.build", org, "build", product, neuron, version), nil
 }
 
+// neuronDefineRoot derives ~/alis.build/{org}/define/{org}/{product}/{neuron}/{version} from a package string.
+func neuronDefineRoot(pkg string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	p := strings.TrimPrefix(pkg, "packages/")
+	parts := strings.SplitN(p, ".", 4)
+	if len(parts) < 4 {
+		return "", fmt.Errorf("invalid package: %s", pkg)
+	}
+	org, product, neuron, version := parts[0], parts[1], parts[2], parts[3]
+	return filepath.Join(home, "alis.build", org, "define", org, product, neuron, version), nil
+}
+
 // ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
 // Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
 func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResult, error) {
@@ -2352,6 +2367,30 @@ func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResul
 	if err != nil {
 		return &NeuronScanResult{Package: neuronPackage, Error: fmt.Sprintf("cannot scan neuron directory: %v", err)}, nil
 	}
+
+	// Append proto files from the define repo — optional, silently skip if not checked out.
+	if defineRoot, derr := neuronDefineRoot(neuronPackage); derr == nil {
+		if _, statErr := os.Stat(defineRoot); statErr == nil {
+			definePrefix := filepath.Clean(defineRoot) + string(filepath.Separator)
+			_ = filepath.WalkDir(defineRoot, func(path string, d os.DirEntry, err error) error {
+				if err != nil {
+					return nil
+				}
+				if d.IsDir() {
+					if skipDirs[d.Name()] {
+						return filepath.SkipDir
+					}
+					return nil
+				}
+				if strings.HasPrefix(filepath.Clean(path)+string(filepath.Separator), definePrefix) {
+					rel, _ := filepath.Rel(defineRoot, path)
+					files = append(files, ScannedNeuronFile{Path: rel, Category: "proto", Selected: true})
+				}
+				return nil
+			})
+		}
+	}
+
 	return &NeuronScanResult{Package: neuronPackage, Files: files}, nil
 }
 
@@ -2360,9 +2399,13 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 	if err != nil {
 		return nil, err
 	}
+	defineRoot, err := neuronDefineRoot(p.Package)
+	if err != nil {
+		return nil, err
+	}
 	infraDir := filepath.Join(versionRoot, "infra")
-	// rootPrefix used for path-containment check against frontend-supplied file.Path values.
-	rootPrefix := filepath.Clean(versionRoot) + string(filepath.Separator)
+	buildPrefix := filepath.Clean(versionRoot) + string(filepath.Separator)
+	definePrefix := filepath.Clean(defineRoot) + string(filepath.Separator)
 
 	marshalFile := func(relPath string, content []byte) []byte {
 		var f []byte
@@ -2379,14 +2422,22 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 		if !file.Selected {
 			continue
 		}
-		var absPath string
-		if file.Category == "infra" {
+		var absPath, containmentPrefix string
+		switch file.Category {
+		case "infra":
 			absPath = filepath.Join(infraDir, file.Path)
-		} else {
+			containmentPrefix = buildPrefix
+		case "build":
 			absPath = filepath.Join(versionRoot, file.Path)
+			containmentPrefix = buildPrefix
+		case "proto":
+			absPath = filepath.Join(defineRoot, file.Path)
+			containmentPrefix = definePrefix
+		default:
+			continue
 		}
-		if !strings.HasPrefix(filepath.Clean(absPath)+string(filepath.Separator), rootPrefix) {
-			continue // skip paths that escaped versionRoot
+		if !strings.HasPrefix(filepath.Clean(absPath)+string(filepath.Separator), containmentPrefix) {
+			continue // skip paths that escaped their repo root
 		}
 		data, err := os.ReadFile(absPath)
 		if err != nil {
