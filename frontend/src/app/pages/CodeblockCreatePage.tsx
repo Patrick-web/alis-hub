@@ -68,6 +68,8 @@ export function CodeblockCreatePage() {
   // Cascade picker state (from-neuron)
   const [orgs, setOrgs] = useState<InstallOrg[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
+  const [orgsError, setOrgsError] = useState<string | null>(null);
+  const [orgsLoadAttempt, setOrgsLoadAttempt] = useState(0);
   const [selectedOrg, setSelectedOrg] = useState('');
   const [products, setProducts] = useState<InstallProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -117,11 +119,12 @@ export function CodeblockCreatePage() {
   useEffect(() => {
     if (sourceMode !== 'from-neuron' || orgs.length > 0) return;
     setOrgsLoading(true);
+    setOrgsError(null);
     (ProductService.ListInstallOrgs as () => Promise<InstallOrg[]>)()
       .then(list => setOrgs(list ?? []))
-      .catch(e => setError(String(e)))
+      .catch(e => setOrgsError(String(e)))
       .finally(() => setOrgsLoading(false));
-  }, [sourceMode]);
+  }, [sourceMode, orgsLoadAttempt]);
 
   // Load products when org selected
   useEffect(() => {
@@ -184,6 +187,8 @@ export function CodeblockCreatePage() {
       setSelectedNeuron(null);
       setScannedFiles([]);
       setScanError(null);
+      setOrgsError(null);
+      setOrgsLoadAttempt(0);
       setActiveTab('overview');
     }
   }
@@ -339,6 +344,14 @@ export function CodeblockCreatePage() {
                       emptyLabel="No organisations"
                       options={orgs.map(o => ({ value: o.name, label: o.displayName || o.name.replace('organisations/', '') }))}
                     />
+                    {orgsError && (
+                      <button
+                        onClick={() => setOrgsLoadAttempt(n => n + 1)}
+                        className="mt-[4px] text-[10px] text-[#ff6b6b] hover:underline"
+                      >
+                        Failed to load — retry
+                      </button>
+                    )}
                   </div>
                   <div>
                     <p className={labelClass}>Product</p>
