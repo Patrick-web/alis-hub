@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.3.0] - 2026-06-20
+
+### What's New
+- Updated app icon and website favicon to the new logo
+- Added a SQL canvas with syntax highlighting, multi-tab support, resizing, and tab renaming
+- You can now toggle between unified and split diff views, and switch between list and tree view in Source Control
+- Source Control is now product-aware and supports expanding commit files
+- You can now bootstrap a codeblock directly from a local neuron file using a file picker
+- Proto files are now included when bootstrapping, with a visual "generating" state shown on the doc tab
+
+### Bug Fixes
+- Fixed an issue where diffs weren't rendering correctly due to missing raw diff content
+- Fixed an issue where diff hunks weren't parsing correctly
+
 ## [v0.2.5] - 2026-06-19
 
 ### Bug Fixes

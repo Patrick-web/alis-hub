@@ -13,7 +13,7 @@ export function Button({
   className = '',
   ...props 
 }: ButtonProps) {
-  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-['JetBrains_Mono',sans-serif] transition-all";
+  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-['JetBrains_Mono',sans-serif] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
   
   const variants = {
     primary: 'bg-[#f881a9] text-[#6f0025] px-[10px] py-[5px] hover:bg-[#ff94ba]',

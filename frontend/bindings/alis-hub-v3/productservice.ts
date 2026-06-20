@@ -34,6 +34,14 @@ export function ContributeBlock(params: $models.ContributeBlockParams): $Cancell
 }
 
 /**
+ * ContributeBlockFromCommits publishes a new block version using define and build commit SHAs.
+ * This is the production path that matches the VSCode extension's worktree-based flow.
+ */
+export function ContributeBlockFromCommits(instanceName: string, defineCommitSha: string, buildCommitSha: string, releaseLevel: number, releaseNotes: string): $CancellablePromise<string> {
+    return $Call.ByID(1195485020, instanceName, defineCommitSha, buildCommitSha, releaseLevel, releaseNotes);
+}
+
+/**
  * CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
  */
 export function CreateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<string> {
@@ -62,6 +70,13 @@ export function CreateNeuron(org: string, product: string, neuronId: string): $C
 }
 
 /**
+ * DeleteCodeblock permanently deletes a block by its ID.
+ */
+export function DeleteCodeblock(blockId: string): $CancellablePromise<void> {
+    return $Call.ByID(2167564701, blockId);
+}
+
+/**
  * DeleteEnvironment deletes the environment with the given full resource name.
  */
 export function DeleteEnvironment(envName: string): $CancellablePromise<void> {
@@ -79,11 +94,30 @@ export function DoInstallBlock(params: $models.InstallBlockParams): $Cancellable
 }
 
 /**
+ * GetBlockAccessData fetches the IAM policy for a block and enriches each member with user details.
+ */
+export function GetBlockAccessData(blockId: string): $CancellablePromise<$models.BlockAccessData | null> {
+    return $Call.ByID(171805929, blockId).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * GetBlockCommits returns recent commits from the build or define repo for a given instance.
+ * repoType must be "build" or "define".
+ */
+export function GetBlockCommits(instanceName: string, repoType: string, limit: number): $CancellablePromise<$models.BlockCommit[]> {
+    return $Call.ByID(2047809995, instanceName, repoType, limit).then(($result: any) => {
+        return $$createType9($result);
+    });
+}
+
+/**
  * GetCodeblock fetches a single block by its short ID (e.g. "skills").
  */
 export function GetCodeblock(blockId: string): $CancellablePromise<$models.Codeblock | null> {
     return $Call.ByID(3775238228, blockId).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType11($result);
     });
 }
 
@@ -101,7 +135,7 @@ export function GetCodeblockDoc(versionName: string, audience: string): $Cancell
  */
 export function GetCodeblockMembers(blockId: string): $CancellablePromise<$models.CodeblockMember[]> {
     return $Call.ByID(854804143, blockId).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType13($result);
     });
 }
 
@@ -111,7 +145,7 @@ export function GetCodeblockMembers(blockId: string): $CancellablePromise<$model
  */
 export function GetCodeblockVersion(versionName: string): $CancellablePromise<$models.CodeblockVersion | null> {
     return $Call.ByID(2809120232, versionName).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType15($result);
     });
 }
 
@@ -121,7 +155,7 @@ export function GetCodeblockVersion(versionName: string): $CancellablePromise<$m
  */
 export function GetEnvironmentVariables(envName: string): $CancellablePromise<$models.EnvVariable[]> {
     return $Call.ByID(3106139540, envName).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType17($result);
     });
 }
 
@@ -137,19 +171,19 @@ export function GetMyPrimaryAccountID(): $CancellablePromise<string> {
  */
 export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
     return $Call.ByID(1082294977, org).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType19($result);
     });
 }
 
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType21($result);
     });
 }
 
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType23($result);
     });
 }
 
@@ -159,7 +193,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType25($result);
     });
 }
 
@@ -169,7 +203,7 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
-        return $$createType23($result);
+        return $$createType27($result);
     });
 }
 
@@ -189,11 +223,31 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 }
 
 /**
+ * ListAccountUsers returns all users in the caller's primary account, used to
+ * populate IAM member pickers.
+ */
+export function ListAccountUsers(): $CancellablePromise<$models.AccountUser[]> {
+    return $Call.ByID(2615726607).then(($result: any) => {
+        return $$createType29($result);
+    });
+}
+
+/**
  * ListBlockPlans returns the available entitlement plans for a block.
  */
 export function ListBlockPlans(blockId: string): $CancellablePromise<$models.BlockPlan[]> {
     return $Call.ByID(2087595101, blockId).then(($result: any) => {
-        return $$createType25($result);
+        return $$createType31($result);
+    });
+}
+
+/**
+ * ListBlockRoles returns the IAM roles available for a block via RolesService/ListRoles.
+ * Role proto: field 1 = name, field 5 = title.
+ */
+export function ListBlockRoles(blockId: string): $CancellablePromise<$models.BlockRole[]> {
+    return $Call.ByID(392865116, blockId).then(($result: any) => {
+        return $$createType33($result);
     });
 }
 
@@ -202,7 +256,7 @@ export function ListBlockPlans(blockId: string): $CancellablePromise<$models.Blo
  */
 export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
     return $Call.ByID(2469208404, blockId).then(($result: any) => {
-        return $$createType27($result);
+        return $$createType35($result);
     });
 }
 
@@ -211,7 +265,7 @@ export function ListCodeblockInstances(blockId: string): $CancellablePromise<$mo
  */
 export function ListCodeblockVersions(blockId: string): $CancellablePromise<$models.CodeblockVersion[]> {
     return $Call.ByID(1837251873, blockId).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType36($result);
     });
 }
 
@@ -220,13 +274,13 @@ export function ListCodeblockVersions(blockId: string): $CancellablePromise<$mod
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType29($result);
+        return $$createType37($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType30($result);
+        return $$createType38($result);
     });
 }
 
@@ -235,7 +289,7 @@ export function ListEnvironments(org: string, product: string): $CancellableProm
  */
 export function ListInstallNeurons(org: string, product: string): $CancellablePromise<$models.InstallNeuron[]> {
     return $Call.ByID(426248599, org, product).then(($result: any) => {
-        return $$createType32($result);
+        return $$createType40($result);
     });
 }
 
@@ -244,19 +298,19 @@ export function ListInstallNeurons(org: string, product: string): $CancellablePr
  */
 export function ListInstallOrgs(): $CancellablePromise<$models.Organisation[]> {
     return $Call.ByID(3252611686).then(($result: any) => {
-        return $$createType34($result);
+        return $$createType42($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType36($result);
+        return $$createType44($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType38($result);
+        return $$createType46($result);
     });
 }
 
@@ -265,13 +319,13 @@ export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData
  */
 export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(657485483).then(($result: any) => {
-        return $$createType29($result);
+        return $$createType37($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType40($result);
+        return $$createType48($result);
     });
 }
 
@@ -288,6 +342,14 @@ export function Login(): $CancellablePromise<void> {
  */
 export function Logout(): $CancellablePromise<void> {
     return $Call.ByID(3281387172);
+}
+
+/**
+ * OpenBlockWorktrees creates git worktrees for an instance's build and define repos.
+ * It returns the root worktree path, e.g. "{tmpdir}/.alis-blocks-worktrees/{blockId}/{packageId}/{instanceId}/".
+ */
+export function OpenBlockWorktrees(instanceName: string): $CancellablePromise<string> {
+    return $Call.ByID(2551618999, instanceName);
 }
 
 /**
@@ -308,12 +370,19 @@ export function OpenInIDE(productName: string, ide: string): $CancellablePromise
 }
 
 /**
+ * OpenWorktreeInFinder opens the given directory in macOS Finder.
+ */
+export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
+    return $Call.ByID(1416065536, path);
+}
+
+/**
  * ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
  * Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
  */
 export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
     return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
-        return $$createType42($result);
+        return $$createType50($result);
     });
 }
 
@@ -344,7 +413,7 @@ export function SwitchEnvironment(org: string, product: string, envName: string,
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType44($result);
+        return $$createType52($result);
     });
 }
 
@@ -355,6 +424,14 @@ export function SyncRepos(org: string, product: string): $CancellablePromise<$mo
  */
 export function UninstallCodeblockInstance(instanceName: string): $CancellablePromise<void> {
     return $Call.ByID(598414329, instanceName);
+}
+
+/**
+ * UpdateBlockAccess adds or removes a single member from a role on a block's IAM policy.
+ * member must be in "user:ID" IAM form. grant=true to add, grant=false to remove.
+ */
+export function UpdateBlockAccess(blockId: string, role: string, member: string, grant: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3240839382, blockId, role, member, grant);
 }
 
 /**
@@ -392,42 +469,50 @@ const $$createType2 = $models.NeuronItem.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = $models.InstallBlockResult.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $models.Codeblock.createFrom;
+const $$createType6 = $models.BlockAccessData.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.CodeblockMember.createFrom;
+const $$createType8 = $models.BlockCommit.createFrom;
 const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $models.CodeblockVersion.createFrom;
+const $$createType10 = $models.Codeblock.createFrom;
 const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.EnvVariable.createFrom;
+const $$createType12 = $models.CodeblockMember.createFrom;
 const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = $models.GCPProject.createFrom;
+const $$createType14 = $models.CodeblockVersion.createFrom;
 const $$createType15 = $Create.Nullable($$createType14);
-const $$createType16 = $models.ProductOverview.createFrom;
-const $$createType17 = $Create.Nullable($$createType16);
-const $$createType18 = $models.ServicesOverview.createFrom;
+const $$createType16 = $models.EnvVariable.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = $models.GCPProject.createFrom;
 const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $models.ShareData.createFrom;
+const $$createType20 = $models.ProductOverview.createFrom;
 const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $models.UserProfile.createFrom;
+const $$createType22 = $models.ServicesOverview.createFrom;
 const $$createType23 = $Create.Nullable($$createType22);
-const $$createType24 = $models.BlockPlan.createFrom;
-const $$createType25 = $Create.Array($$createType24);
-const $$createType26 = $models.CodeblockInstance.createFrom;
-const $$createType27 = $Create.Array($$createType26);
-const $$createType28 = $Create.Array($$createType10);
-const $$createType29 = $Create.Array($$createType6);
-const $$createType30 = $Create.Array($$createType0);
-const $$createType31 = $models.InstallNeuron.createFrom;
-const $$createType32 = $Create.Array($$createType31);
-const $$createType33 = $models.Organisation.createFrom;
-const $$createType34 = $Create.Array($$createType33);
-const $$createType35 = $models.InviteInfo.createFrom;
-const $$createType36 = $Create.Array($$createType35);
-const $$createType37 = $models.LandingZonesData.createFrom;
-const $$createType38 = $Create.Nullable($$createType37);
-const $$createType39 = $models.ProductSummary.createFrom;
+const $$createType24 = $models.ShareData.createFrom;
+const $$createType25 = $Create.Nullable($$createType24);
+const $$createType26 = $models.UserProfile.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);
+const $$createType28 = $models.AccountUser.createFrom;
+const $$createType29 = $Create.Array($$createType28);
+const $$createType30 = $models.BlockPlan.createFrom;
+const $$createType31 = $Create.Array($$createType30);
+const $$createType32 = $models.BlockRole.createFrom;
+const $$createType33 = $Create.Array($$createType32);
+const $$createType34 = $models.CodeblockInstance.createFrom;
+const $$createType35 = $Create.Array($$createType34);
+const $$createType36 = $Create.Array($$createType14);
+const $$createType37 = $Create.Array($$createType10);
+const $$createType38 = $Create.Array($$createType0);
+const $$createType39 = $models.InstallNeuron.createFrom;
 const $$createType40 = $Create.Array($$createType39);
-const $$createType41 = $models.NeuronScanResult.createFrom;
-const $$createType42 = $Create.Nullable($$createType41);
-const $$createType43 = $models.SyncReposResult.createFrom;
-const $$createType44 = $Create.Nullable($$createType43);
+const $$createType41 = $models.Organisation.createFrom;
+const $$createType42 = $Create.Array($$createType41);
+const $$createType43 = $models.InviteInfo.createFrom;
+const $$createType44 = $Create.Array($$createType43);
+const $$createType45 = $models.LandingZonesData.createFrom;
+const $$createType46 = $Create.Nullable($$createType45);
+const $$createType47 = $models.ProductSummary.createFrom;
+const $$createType48 = $Create.Array($$createType47);
+const $$createType49 = $models.NeuronScanResult.createFrom;
+const $$createType50 = $Create.Nullable($$createType49);
+const $$createType51 = $models.SyncReposResult.createFrom;
+const $$createType52 = $Create.Nullable($$createType51);

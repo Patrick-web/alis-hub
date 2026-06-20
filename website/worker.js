@@ -1,7 +1,7 @@
 const REPO = "Patrick-web/alis-hub";
 
 const PLATFORM_MATCHERS = {
-  macos: (name) => name.toLowerCase().includes("macos") && name.endsWith(".dmg"),
+  macos: (name) => name.toLowerCase().includes("macos") && name.endsWith(".zip"),
   linux: (name) => name.toLowerCase().includes("linux") && name.endsWith(".tar.gz"),
   windows: (name) => name.toLowerCase().includes("windows") && name.endsWith(".zip"),
 };
