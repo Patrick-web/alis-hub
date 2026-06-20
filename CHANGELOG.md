@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.3.1] - 2026-06-20
+
+### Bug Fixes
+- Fixed an issue where release note images were not displaying in the update modal
+
 ## [v0.3.0] - 2026-06-20
 
 ### What's New
