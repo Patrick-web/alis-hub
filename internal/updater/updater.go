@@ -2,6 +2,7 @@ package updater
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -120,7 +122,7 @@ func (s *Service) CheckForUpdate() (UpdateInfo, error) {
 		info.Available = true
 		info.LatestVersion = latest.String()
 		info.ReleaseURL = rel.URL
-		info.ReleaseNotes = rel.Notes
+		info.ReleaseNotes = inlineImages(rel.Notes)
 		return info, nil
 	}
 
@@ -128,7 +130,7 @@ func (s *Service) CheckForUpdate() (UpdateInfo, error) {
 	if latest.GT(current) {
 		info.Available = true
 		info.ReleaseURL = rel.URL
-		info.ReleaseNotes = rel.Notes
+		info.ReleaseNotes = inlineImages(rel.Notes)
 	}
 	return info, nil
 }
@@ -444,6 +446,36 @@ func (s *Service) AppInfo() map[string]string {
 		"arch":       runtime.GOARCH,
 		"executable": exe,
 	}
+}
+
+// inlineImages replaces markdown image URLs with base64 data URIs so the
+// Wails WebView can render them without loading external resources.
+var mdImageRe = regexp.MustCompile(`!\[([^\]]*)\]\((https?://[^)]+)\)`)
+
+func inlineImages(notes string) string {
+	client := &http.Client{Timeout: 10 * time.Second}
+	return mdImageRe.ReplaceAllStringFunc(notes, func(match string) string {
+		parts := mdImageRe.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		alt, url := parts[1], parts[2]
+		resp, err := client.Get(url)
+		if err != nil || resp.StatusCode != 200 {
+			return match
+		}
+		defer resp.Body.Close()
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return match
+		}
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "image/png"
+		}
+		encoded := base64.StdEncoding.EncodeToString(data)
+		return fmt.Sprintf("![%s](data:%s;base64,%s)", alt, ct, encoded)
+	})
 }
 
 func trimV(v string) string {
