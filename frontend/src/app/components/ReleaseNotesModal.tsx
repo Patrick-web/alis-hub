@@ -48,7 +48,7 @@ export function ReleaseNotesModal({
           </p>
         </DialogHeader>
         <div
-          className="flex-1 overflow-y-auto prose prose-invert prose-sm max-w-none font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] [&_h1]:text-[14px] [&_h2]:text-[13px] [&_h3]:text-[12px] [&_code]:bg-[#1e1e1e] [&_code]:px-1 [&_code]:rounded [&_ul]:pl-4 [&_li]:my-0.5"
+          className="flex-1 overflow-y-auto prose prose-invert prose-sm max-w-none font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] [&_h1]:text-[14px] [&_h2]:text-[13px] [&_h3]:text-[12px] [&_code]:bg-[#1e1e1e] [&_code]:px-1 [&_code]:rounded [&_ul]:pl-4 [&_li]:my-0.5 [&_img]:w-full [&_img]:rounded-lg [&_img]:mb-4"
           dangerouslySetInnerHTML={{ __html: html }}
         />
         <div className="pt-3 border-t border-[#464646]">
