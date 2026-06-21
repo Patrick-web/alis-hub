@@ -71,14 +71,14 @@ function Tag({ label, value }: { label: string; value: string | number | boolean
 // ─── page ──────────────────────────────────────────────────────────────────
 
 const SEVERITIES: NotificationSeverity[] = ['info', 'success', 'warning', 'error'];
-const SOURCES: NotificationSource[] = ['general', 'build', 'deploy', 'git', 'update', 'system'];
+const SOURCES: NotificationSource[] = ['build', 'deploy', 'define', 'packages', 'git', 'update', 'system', 'general'];
 
 const SEVERITY_VARIANT: Record<NotificationSeverity, 'info' | 'success' | 'warning' | 'error'> = {
   info: 'info', success: 'success', warning: 'warning', error: 'error',
 };
 
 export function NotificationsDebugPage() {
-  const { state, addNotification, markAllRead, clearAll, unreadCount } = useNotifications();
+  const { state, addNotification, updateNotification, markAllRead, clearAll, unreadCount } = useNotifications();
 
   const [severity, setSeverity] = useState<NotificationSeverity>('info');
   const [source, setSource] = useState<NotificationSource>('general');
@@ -149,17 +149,52 @@ export function NotificationsDebugPage() {
   }
 
   function pushAll() {
-    for (const sev of SEVERITIES) {
-      for (const src of ['build', 'deploy'] as NotificationSource[]) {
-        addNotification({
-          severity: sev,
-          source: src,
-          title: `${sev.charAt(0).toUpperCase() + sev.slice(1)} from ${src}`,
-          body: `Automated test notification — ${sev}/${src}.`,
-          persistent: true,
-        });
-      }
+    const combos: Array<[NotificationSeverity, NotificationSource]> = [
+      ['success', 'build'],
+      ['info',    'deploy'],
+      ['warning', 'define'],
+      ['error',   'define'],
+      ['success', 'packages'],
+      ['info',    'git'],
+      ['warning', 'system'],
+      ['info',    'update'],
+    ];
+    for (const [sev, src] of combos) {
+      addNotification({
+        severity: sev,
+        source: src,
+        title: `${sev.charAt(0).toUpperCase() + sev.slice(1)} from ${src}`,
+        body: `Automated test notification — ${sev}/${src}.`,
+        persistent: true,
+      });
     }
+  }
+
+  function pushRunningTask() {
+    const id = addNotification({
+      severity: 'info',
+      source: 'build',
+      title: 'Build in progress — alis-hub-v3',
+      body: 'Compiling packages…',
+      persistent: true,
+      task: {
+        type: 'build',
+        status: 'running',
+        neuronId: 'test-neuron',
+        step: 'Compiling',
+        startedAt: Date.now(),
+        logBuffer: [],
+        meta: {},
+      },
+    });
+    setTimeout(() => {
+      updateNotification(id, {
+        severity: 'success',
+        title: 'Build succeeded — alis-hub-v3',
+        body: 'All packages compiled successfully.',
+        task: { status: 'done' },
+      });
+    }, 4000);
   }
 
   return (
@@ -277,44 +312,66 @@ export function NotificationsDebugPage() {
             variant={SEVERITY_VARIANT[severity]}
             onClick={pushNotification}
           />
-          <Btn label="Push all (8 mix)" icon="solar:layers-linear" onClick={pushAll} />
+          <Btn label="Push all sources" icon="solar:layers-linear" onClick={pushAll} />
+          <Btn label="Running task → done (4s)" icon="solar:refresh-linear" variant="info" onClick={pushRunningTask} />
+        </Row>
+        <Row>
           <Btn label="Mark all read" icon="solar:check-read-linear" variant="ghost" onClick={markAllRead} disabled={unreadCount === 0} />
           <Btn label="Clear all" icon="solar:trash-bin-2-linear" variant="danger" onClick={clearAll} disabled={state.notifications.length === 0} />
         </Row>
 
-        {/* Live store preview */}
-        {state.notifications.length > 0 && (
-          <div className="bg-muted rounded-[8px] border border-border overflow-hidden">
-            <div className="px-[12px] py-[8px] border-b border-border flex items-center gap-[6px]">
-              <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-widest">Store state</span>
-              <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
-                {state.notifications.length}
-              </span>
-            </div>
-            <div className="max-h-[200px] overflow-y-auto">
-              {state.notifications.map(n => (
-                <div
-                  key={n.id}
-                  className={`flex items-start gap-[10px] px-[12px] py-[8px] border-b border-border last:border-0 text-[10px] font-mono ${n.read ? 'opacity-40' : ''}`}
-                >
-                  <span className={`shrink-0 mt-[1px] w-[6px] h-[6px] rounded-full ${
-                    n.severity === 'success' ? 'bg-success' :
-                    n.severity === 'warning' ? 'bg-warning' :
-                    n.severity === 'error'   ? 'bg-destructive' : 'bg-info'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-[8px]">
-                      <span className="text-foreground truncate">{n.title}</span>
-                      {!n.read && <span className="text-foreground/30 shrink-0">unread</span>}
-                      {n.persistent && <span className="text-foreground/30 shrink-0">persistent</span>}
+        {/* Live store preview — grouped by source, matching notification center layout */}
+        {state.notifications.length > 0 && (() => {
+          const grouped = new Map<string, typeof state.notifications>();
+          for (const n of state.notifications) {
+            if (!grouped.has(n.source)) grouped.set(n.source, []);
+            grouped.get(n.source)!.push(n);
+          }
+          return (
+            <div className="bg-muted rounded-[8px] border border-border overflow-hidden">
+              <div className="px-[12px] py-[8px] border-b border-border flex items-center gap-[6px]">
+                <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-widest">Store state — grouped by source</span>
+                <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
+                  {state.notifications.length}
+                </span>
+              </div>
+              <div className="max-h-[280px] overflow-y-auto divide-y divide-border">
+                {Array.from(grouped.entries()).map(([source, items]) => {
+                  const unread = items.filter(n => !n.read).length;
+                  return (
+                    <div key={source}>
+                      <div className="px-[12px] py-[5px] bg-foreground/[0.02] flex items-center gap-[8px]">
+                        <span className="text-[9px] font-bold font-mono text-foreground/40 uppercase tracking-wide flex-1">{source}</span>
+                        {unread > 0 && (
+                          <span className="text-[8px] font-mono text-brand bg-brand/10 px-[5px] py-[1px] rounded-[3px]">{unread} new</span>
+                        )}
+                      </div>
+                      {items.map(n => (
+                        <div
+                          key={n.id}
+                          className={`flex items-center gap-[10px] px-[12px] py-[6px] text-[10px] font-mono border-t border-border/50 ${n.read ? 'opacity-35' : ''}`}
+                        >
+                          <span className={`shrink-0 w-[5px] h-[5px] rounded-full ${
+                            n.severity === 'success' ? 'bg-success' :
+                            n.severity === 'warning' ? 'bg-warning' :
+                            n.severity === 'error'   ? 'bg-destructive' : 'bg-info'
+                          }`} />
+                          <span className="flex-1 text-foreground truncate">{n.title}</span>
+                          <div className="flex items-center gap-[6px] shrink-0">
+                            {n.task?.status === 'running' && <span className="text-info">running</span>}
+                            {n.task?.status === 'done' && <span className="text-success">done</span>}
+                            {n.task?.status === 'error' && <span className="text-destructive">error</span>}
+                            <span className="text-foreground/25">{n.severity}</span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <span className="text-foreground/30">{n.source} · {n.severity}</span>
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Section>
 
       {/* ── 3. System (OS) Notifications ─────────────────────────────── */}

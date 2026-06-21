@@ -6,7 +6,6 @@ import { useWorkspace } from '../stores/workspace';
 import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
-import { NotificationCenter } from './NotificationCenter';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 function WindowControls() {
@@ -196,7 +195,6 @@ export function TopNav() {
           </button>
         </div>
 
-        <NotificationCenter />
         <button
           onClick={openProfile}
           className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
