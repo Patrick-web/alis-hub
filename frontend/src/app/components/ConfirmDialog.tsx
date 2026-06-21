@@ -41,7 +41,7 @@ export function ConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(o) => { if (!o && !loading) onOpenChange(false); }}>
-      <AlertDialogContent className="bg-card border border-border text-foreground">
+      <AlertDialogContent className="text-foreground">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground font-mono text-[14px]">
             {title}

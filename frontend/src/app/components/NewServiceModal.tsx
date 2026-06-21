@@ -71,7 +71,7 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!loading) onOpenChange(o); }}>
-      <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 max-w-[420px]">
+      <DialogContent className="text-foreground p-0 gap-0 max-w-[420px]">
         <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:layers-minimalistic-linear" className="text-brand text-xl" />

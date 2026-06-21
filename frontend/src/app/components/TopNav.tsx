@@ -223,7 +223,7 @@ export function TopNav() {
 
       {/* Environment picker modal */}
       <Dialog open={envModalOpen} onOpenChange={setEnvModalOpen}>
-        <DialogContent className="bg-card border border-border text-foreground p-0 max-w-[360px] overflow-hidden">
+        <DialogContent className="text-foreground p-0 max-w-[360px] overflow-hidden">
           <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
             <Icon icon="solar:server-linear" className="text-brand text-lg" />
             <span className="text-[13px] font-bold text-foreground font-mono">Environment</span>

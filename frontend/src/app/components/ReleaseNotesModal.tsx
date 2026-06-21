@@ -38,7 +38,7 @@ export function ReleaseNotesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border border-border text-foreground max-w-[600px] max-h-[80vh] flex flex-col">
+      <DialogContent className="text-foreground max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-foreground font-mono text-[13px] font-bold">
             Release Notes
