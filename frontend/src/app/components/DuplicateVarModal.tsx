@@ -134,7 +134,7 @@ export function DuplicateVarModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!submitting) onOpenChange(o); }}>
-      <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 sm:max-w-[500px]">
+      <DialogContent className="text-foreground p-0 gap-0 sm:max-w-[500px]">
         <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:copy-linear" className="text-brand text-xl" />

@@ -12,6 +12,7 @@ import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
+import { initAccentColor } from './stores/accent';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
 import { Loader } from './components/Loader';
 
@@ -21,6 +22,8 @@ export function RootLayout() {
   const { state, setPhase } = useWorkspace();
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const isOnDevelop = location.pathname === '/develop';
+
+  useEffect(() => { initAccentColor(); }, []);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

@@ -344,7 +344,7 @@ export function EnvironmentsPage() {
 
       {/* View value modal */}
       <Dialog open={Boolean(viewVar)} onOpenChange={(o) => { if (!o) setViewVar(null); }}>
-        <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 sm:max-w-[560px]">
+        <DialogContent className="text-foreground p-0 gap-0 sm:max-w-[560px]">
           <DialogHeader className="px-[20px] py-[14px] border-b border-border">
             <div className="flex items-center gap-[10px]">
               <Icon icon="solar:eye-linear" className="text-brand text-xl" />

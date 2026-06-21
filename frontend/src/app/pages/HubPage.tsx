@@ -114,7 +114,7 @@ export function HubPage() {
                 onError={() => setAvatarImgError(true)}
               />
             ) : avatarName ? (
-              <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.4)] flex items-center justify-center">
+              <div className="size-[24px] rounded-full flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--brand) 20%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 40%, transparent)' }}>
                 <span className="text-[9px] font-bold text-brand font-mono">
                   {avatarName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
                 </span>
@@ -151,7 +151,7 @@ export function HubPage() {
                 className="w-full text-left bg-card border border-border hover:border-brand rounded-[10px] p-[16px] transition-all group"
               >
                 <div className="flex items-center gap-[12px]">
-                  <div className="size-[36px] rounded-[8px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+                  <div className="size-[36px] rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--brand) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 20%, transparent)' }}>
                     <Icon icon="solar:map-point-linear" className="text-brand text-lg" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -187,7 +187,7 @@ export function HubPage() {
                   onClick={s.action}
                   className="text-left bg-card border border-border hover:border-brand rounded-[10px] p-[16px] transition-all group"
                 >
-                  <div className="size-[32px] rounded-[8px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.12)] flex items-center justify-center mb-[12px]">
+                  <div className="size-[32px] rounded-[8px] flex items-center justify-center mb-[12px]" style={{ background: 'color-mix(in srgb, var(--brand) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 15%, transparent)' }}>
                     <Icon icon={s.icon} className="text-brand text-base" />
                   </div>
                   <p className="text-[13px] font-semibold text-foreground group-hover:text-brand transition-colors">

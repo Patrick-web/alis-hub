@@ -567,7 +567,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
 
       {/* ── Destructive context menu confirmation ── */}
       <AlertDialog open={!!pendingDestructive} onOpenChange={(open) => { if (!open) setPendingDestructive(null); }}>
-        <AlertDialogContent className="bg-background border border-border text-foreground">
+        <AlertDialogContent className="text-foreground">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground font-mono text-sm">
               Destructive statement

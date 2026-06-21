@@ -3,7 +3,7 @@ interface LoaderProps {
   color?: string;
 }
 
-export function Loader({ size = 40, color = '#F881A9' }: LoaderProps) {
+export function Loader({ size = 40, color = 'var(--brand)' }: LoaderProps) {
   const bar = `no-repeat linear-gradient(${color} 0 0)`;
   const scale = size / 40;
   const barW = Math.round(8 * scale);

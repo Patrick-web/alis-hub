@@ -1,20 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from 'next-themes';
-import { Sun, Moon } from 'lucide-react';
 import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
 import { Browser, Events } from '@wailsio/runtime';
 import { isSystemNotificationsEnabled, setSystemNotificationsEnabled, requestNotificationAuthorization } from '../lib/systemNotify';
-import {
-  Dialog,
-  DialogContent,
-} from './ui/dialog';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
 import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
 import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
+import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
 interface ProfileModalProps {
@@ -22,7 +20,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'profile' | 'updates' | 'about' | 'changelog' | 'labs';
+type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates';
 
 interface UserProfile {
   email: string;
@@ -89,19 +87,58 @@ function Avatar({ name, picture, size = 48 }: { name: string; picture: string; s
 
 function SettingRow({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between px-[14px] py-[10px] border-b border-border last:border-0">
-      <span className="text-[11px] text-foreground/50 font-mono uppercase tracking-wide">{label}</span>
-      {value && <span className="text-[11px] text-foreground font-mono">{value}</span>}
+    <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0">
+      <span className="text-[12px] text-foreground/70 font-medium">{label}</span>
+      {value && <span className="text-[11px] text-foreground/45 font-mono">{value}</span>}
       {children}
     </div>
   );
 }
 
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px] pb-[2px]">
+      {children}
+    </div>
+  );
+}
+
+function SettingsCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-foreground/[0.04] rounded-[9px] border border-border overflow-hidden">
+      {children}
+    </div>
+  );
+}
+
+const SIDEBAR_GROUPS = [
+  {
+    label: 'Personal',
+    items: [
+      { id: 'account' as Tab,       label: 'Account',       icon: 'solar:user-circle-linear',    color: '#f881a9' },
+      { id: 'appearance' as Tab,    label: 'Appearance',    icon: 'solar:palette-linear',         color: undefined },
+      { id: 'notifications' as Tab, label: 'Notifications', icon: 'solar:bell-linear',            color: undefined },
+    ],
+  },
+  {
+    label: 'Advanced',
+    items: [
+      { id: 'labs' as Tab,    label: 'Labs',    icon: 'solar:test-tube-linear',      color: '#bf5af2' },
+      { id: 'updates' as Tab, label: 'Updates', icon: 'solar:refresh-circle-linear', color: '#3b82f6' },
+    ],
+  },
+];
+
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { setPhase } = useWorkspace();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  const { accentId, setAccent, customHex, setCustomAccent } = useAccentColor();
+  const contrastForCustom = (hex: string) => {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff';
+  };
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
-  const [activeTab, setActiveTab] = useState<Tab>('profile');
+  const [activeTab, setActiveTab] = useState<Tab>('account');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -212,14 +249,6 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     }
   };
 
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'profile', label: 'Profile', icon: 'solar:user-circle-linear' },
-    { id: 'updates', label: 'Updates', icon: 'solar:refresh-circle-linear' },
-    { id: 'about', label: 'About', icon: 'solar:info-circle-linear' },
-    { id: 'changelog', label: 'Changelog', icon: 'solar:history-linear' },
-    { id: 'labs', label: 'Labs', icon: 'solar:test-tube-linear' },
-  ];
-
   const groupedRegistry = useMemo(() => {
     const map: Partial<Record<SuggestionCategory, typeof SUGGESTION_REGISTRY>> = {};
     for (const def of SUGGESTION_REGISTRY) {
@@ -231,292 +260,405 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-card border border-border text-foreground p-0 max-w-[520px] overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
-            <Icon icon="solar:user-circle-bold" className="text-brand text-xl" />
-            <span className="text-[13px] font-bold text-foreground font-mono">Profile & Settings</span>
-          </div>
+        <DialogPortal>
+          {/* Thin overlay — let app content show through for vibrancy */}
+          <DialogOverlay className="bg-black/25" />
 
-          <div className="flex min-h-[380px]">
-            {/* Sidebar tabs */}
-            <div className="w-[130px] border-r border-border flex flex-col pt-[8px] shrink-0">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-[8px] px-[12px] py-[9px] text-left transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-[rgba(248,129,169,0.1)] text-brand'
-                      : 'text-foreground/50 hover:text-foreground hover:bg-foreground/[4%]'
-                  }`}
-                >
-                  <Icon icon={tab.icon} className="text-base shrink-0" />
-                  <span className="text-[11px] font-mono">{tab.label}</span>
-                </button>
-              ))}
-
-              <div className="flex-1" />
-
-              {/* Sign out at bottom of sidebar */}
-              <div className="p-[10px] border-t border-border">
-                <button
-                  onClick={handleLogout}
-                  disabled={loggingOut}
-                  className="flex items-center gap-[7px] w-full px-[8px] py-[7px] rounded text-[rgba(255,92,95,0.8)] hover:text-destructive hover:bg-[rgba(255,92,95,0.08)] transition-colors disabled:opacity-50"
-                >
-                  <Icon icon="solar:logout-linear" className="text-base shrink-0" />
-                  <span className="text-[11px] font-mono">Sign out</span>
-                </button>
+          <DialogPrimitive.Content
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-[640px] rounded-[14px] overflow-hidden text-foreground
+                       border border-border
+                       data-[state=open]:animate-in data-[state=closed]:animate-out
+                       data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0
+                       data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95
+                       duration-200"
+            style={{
+              background: 'var(--modal-bg)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+              boxShadow: '0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)',
+            }}
+          >
+            {/* Title bar */}
+            <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border">
+              <div className="flex items-center gap-[6px]">
+                <div className="w-[12px] h-[12px] rounded-full bg-[#ff5f57]" />
+                <div className="w-[12px] h-[12px] rounded-full bg-[#febc2e]" />
+                <div className="w-[12px] h-[12px] rounded-full bg-[#28c840]" />
               </div>
+              <span className="flex-1 text-center text-[13px] font-semibold text-foreground/45 tracking-[-0.2px]">
+                Settings
+              </span>
+              <div className="w-[52px]" />
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-              {activeTab === 'profile' && (
-                <div className="p-[16px] flex flex-col gap-[16px]">
-                  {/* Avatar + name block */}
-                  <div className="flex items-center gap-[14px]">
-                    <Avatar name={profile?.name || ''} picture={profile?.picture || ''} size={52} />
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-bold text-foreground truncate">{profile?.name || '—'}</p>
-                      <p className="text-[11px] text-foreground/50 font-mono truncate mt-[2px]">{profile?.email || '—'}</p>
+            <div className="flex min-h-[440px]">
+
+              {/* Sidebar */}
+              <div className="w-[160px] border-r border-border flex flex-col shrink-0">
+                {SIDEBAR_GROUPS.map((group, gi) => (
+                  <div key={group.label} className={gi > 0 ? 'mt-[2px]' : ''}>
+                    <div className="px-[12px] pt-[10px] pb-[3px]">
+                      <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/20">
+                        {group.label}
+                      </span>
                     </div>
-                  </div>
-
-                  {profileError && (
-                    <p className="text-[10px] text-destructive font-mono">{profileError}</p>
-                  )}
-
-                  {/* Profile fields */}
-                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
-                    <SettingRow label="Name" value={profile?.name || '—'} />
-                    <SettingRow label="Email" value={profile?.email || '—'} />
-                  </div>
-
-                  {/* Preferences */}
-                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
-                    <SettingRow label="Appearance">
-                      <div className="flex items-center gap-[2px] bg-accent rounded-[6px] p-[2px]">
-                        <button
-                          onClick={() => setTheme('light')}
-                          className={`flex items-center gap-[5px] px-[8px] py-[4px] rounded-[4px] text-[10px] font-mono transition-colors ${resolvedTheme === 'light' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/40 hover:text-foreground'}`}
-                          title="Light mode"
-                        >
-                          <Sun size={11} />
-                          Light
-                        </button>
-                        <button
-                          onClick={() => setTheme('dark')}
-                          className={`flex items-center gap-[5px] px-[8px] py-[4px] rounded-[4px] text-[10px] font-mono transition-colors ${resolvedTheme === 'dark' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/40 hover:text-foreground'}`}
-                          title="Dark mode"
-                        >
-                          <Moon size={11} />
-                          Dark
-                        </button>
-                      </div>
-                    </SettingRow>
-                    <SettingRow label="System notifications">
+                    {group.items.map(item => (
                       <button
-                        onClick={handleSysNotifToggle}
-                        className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? 'bg-success' : 'bg-accent'}`}
-                        title={sysNotifications ? 'Disable system notifications' : 'Enable system notifications'}
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id)}
+                        className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors ${
+                          activeTab === item.id
+                            ? 'bg-foreground/[0.07]'
+                            : 'hover:bg-foreground/[0.04]'
+                        }`}
+                        style={{ width: 'calc(100% - 10px)' }}
                       >
-                        <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysNotifications ? 'left-[16px]' : 'left-[2px]'}`} />
+                        <Icon
+                          icon={item.icon}
+                          className={`text-[15px] shrink-0 ${
+                            activeTab === item.id
+                              ? (item.color ? '' : 'text-foreground/90')
+                              : 'text-foreground/35'
+                          }`}
+                          style={activeTab === item.id && item.color ? { color: item.color } : undefined}
+                        />
+                        <span
+                          className={`text-[12px] font-medium ${
+                            activeTab === item.id
+                              ? (item.color ? '' : 'text-foreground/90')
+                              : 'text-foreground/45'
+                          }`}
+                          style={activeTab === item.id && item.color ? { color: item.color } : undefined}
+                        >
+                          {item.label}
+                        </span>
                       </button>
-                    </SettingRow>
+                    ))}
                   </div>
+                ))}
 
-                  {/* Edit profile link */}
+                <div className="flex-1" />
+
+                <div className="p-[6px] border-t border-border">
                   <button
-                    onClick={() => Browser.OpenURL('https://console.alisx.com/profile')}
-                    className="flex items-center gap-[6px] text-[11px] text-foreground/40 hover:text-foreground transition-colors font-mono"
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="flex items-center gap-[7px] w-full px-[9px] py-[7px] rounded-[7px] text-[rgba(255,92,95,0.65)] hover:text-destructive hover:bg-[rgba(255,92,95,0.08)] transition-colors disabled:opacity-50"
                   >
-                    <Icon icon="solar:link-square-linear" className="text-sm" />
-                    Edit profile on console.alisx.com
+                    <Icon icon="solar:logout-linear" className="text-[14px] shrink-0" />
+                    <span className="text-[12px] font-medium">Sign out</span>
                   </button>
                 </div>
-              )}
+              </div>
 
-              {activeTab === 'updates' && (
-                <div className="p-[16px] flex flex-col gap-[14px]">
-                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
-                    <SettingRow label="Current version" value={updateInfo?.currentVersion || appInfo?.version || '—'} />
-                    {updateInfo?.available && (
-                      <SettingRow label="Latest version">
-                        <span className="text-[11px] font-bold text-success font-mono">
-                          v{updateInfo.latestVersion}
-                        </span>
-                      </SettingRow>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto">
+
+                {/* ── Account ── */}
+                {activeTab === 'account' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex items-center gap-[12px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
+                      <Avatar name={profile?.name || ''} picture={profile?.picture || ''} size={44} />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-foreground tracking-[-0.3px] truncate">
+                          {profile?.name || '—'}
+                        </p>
+                        <p className="text-[11px] text-foreground/45 font-mono truncate mt-[2px]">
+                          {profile?.email || '—'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {profileError && (
+                      <p className="text-[10px] text-destructive font-mono">{profileError}</p>
                     )}
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Profile</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Name" value={profile?.name || '—'} />
+                        <SettingRow label="Email" value={profile?.email || '—'} />
+                      </SettingsCard>
+                    </div>
+
+                    <button
+                      onClick={() => Browser.OpenURL('https://console.alisx.com/profile')}
+                      className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
+                    >
+                      <Icon icon="solar:link-square-linear" className="text-sm" />
+                      Edit profile on console.alisx.com
+                    </button>
                   </div>
+                )}
 
-                  {updateError && (
-                    <p className="text-[10px] text-destructive font-mono px-[2px]">{updateError}</p>
-                  )}
+                {/* ── Appearance ── */}
+                {activeTab === 'appearance' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Theme</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Mode">
+                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                            <button
+                              onClick={() => setTheme('light')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'light' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              Light
+                            </button>
+                            <button
+                              onClick={() => setTheme('dark')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'dark' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              Dark
+                            </button>
+                            <button
+                              onClick={() => setTheme('system')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'system' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              System
+                            </button>
+                          </div>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
 
-                  {/* Update available banner */}
-                  {updateInfo?.available && (
-                    <div className="flex items-center justify-between bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.25)] rounded-[8px] px-[14px] py-[10px]">
-                      <div className="flex items-center gap-[8px]">
-                        <Icon icon="solar:download-minimalistic-linear" className="text-success text-base" />
-                        <div>
-                          <p className="text-[11px] font-bold text-foreground">Update available</p>
-                          <p className="text-[10px] text-foreground/50 font-mono mt-[1px]">
-                            v{updateInfo.currentVersion} → v{updateInfo.latestVersion}
-                          </p>
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Accent color</SectionTitle>
+                      <SettingsCard>
+                        <div className="px-[12px] py-[11px] flex items-center gap-[10px] flex-wrap">
+                          {ACCENT_COLORS.map(color => (
+                            <button
+                              key={color.id}
+                              title={color.label}
+                              onClick={() => setAccent(color.id)}
+                              className="relative w-[24px] h-[24px] rounded-full transition-transform hover:scale-110 shrink-0 focus:outline-none"
+                              style={{ background: color.brand }}
+                            >
+                              {accentId === color.id && (
+                                <span className="absolute inset-0 flex items-center justify-center">
+                                  <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: color.brandFg }} />
+                                </span>
+                              )}
+                              {accentId === color.id && (
+                                <span className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none" style={{ borderColor: color.brand }} />
+                              )}
+                            </button>
+                          ))}
+
+                          {/* Custom color */}
+                          <label
+                            title="Custom color"
+                            className="relative w-[24px] h-[24px] rounded-full cursor-pointer hover:scale-110 transition-transform shrink-0 overflow-hidden"
+                            style={
+                              accentId === 'custom'
+                                ? { background: customHex }
+                                : { background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }
+                            }
+                          >
+                            {accentId === 'custom' && (
+                              <span className="absolute inset-0 flex items-center justify-center">
+                                <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: contrastForCustom(customHex) }} />
+                              </span>
+                            )}
+                            {accentId === 'custom' && (
+                              <span className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none" style={{ borderColor: customHex }} />
+                            )}
+                            <input
+                              type="color"
+                              value={customHex}
+                              onChange={e => setCustomAccent(e.target.value)}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            />
+                          </label>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-[6px]">
-                        <button
-                          onClick={() => setNotesOpen(true)}
-                          className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono uppercase tracking-wide"
-                        >
-                          Notes
-                        </button>
-                        {!downloading ? (
-                          <button
-                            onClick={handleDownload}
-                            className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full hover:bg-success transition-colors font-mono uppercase tracking-wide"
-                          >
-                            Download
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleApply}
-                            className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full hover:bg-success transition-colors font-mono"
-                          >
-                            {downloadPct < 100 ? `${downloadPct}%` : 'Apply & Restart'}
-                          </button>
-                        )}
-                      </div>
+                      </SettingsCard>
                     </div>
-                  )}
-
-                  {/* No update available */}
-                  {updateInfo && !updateInfo.available && (
-                    <div className="flex items-center gap-[8px] px-[14px] py-[10px] bg-[rgba(52,199,89,0.06)] border border-[rgba(52,199,89,0.2)] rounded-[8px]">
-                      <Icon icon="solar:check-circle-linear" className="text-success text-base shrink-0" />
-                      <p className="text-[11px] text-foreground/70 font-mono">You're on the latest version.</p>
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleCheckUpdate}
-                    disabled={checkingUpdate}
-                    className="flex items-center justify-center gap-[8px] h-[34px] rounded-[6px] bg-accent hover:bg-border disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground font-mono"
-                  >
-                    {checkingUpdate ? (
-                      <Loader size={16} />
-                    ) : (
-                      <Icon icon="solar:refresh-linear" className="text-base" />
-                    )}
-                    {checkingUpdate ? 'Checking…' : 'Check for updates'}
-                  </button>
-                </div>
-              )}
-
-              {activeTab === 'changelog' && (
-                <div className="p-[16px] flex flex-col gap-[14px]">
-                  <p className="text-[10px] font-bold text-foreground/30 font-mono uppercase tracking-wide">
-                    v{appInfo?.version || updateInfo?.currentVersion || '—'}
-                  </p>
-                  {changelogHtml ? (
-                    <div
-                      className="prose prose-invert prose-sm max-w-none font-mono text-[12px] text-foreground/80 [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-foreground/40 [&_h3]:mt-[12px] [&_h3]:mb-[4px] [&_ul]:pl-4 [&_li]:my-[2px] [&_p]:text-foreground/60"
-                      dangerouslySetInnerHTML={{ __html: changelogHtml }}
-                    />
-                  ) : (
-                    <p className="text-[11px] text-foreground/30 font-mono">No release notes for this version.</p>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'labs' && (
-                <div className="p-[16px] flex flex-col gap-[16px]">
-                  {/* Master toggle */}
-                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
-                    <SettingRow label="Smart Suggestions">
-                      <button
-                        onClick={() => setMasterEnabled(!labsState.masterEnabled)}
-                        className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-accent'}`}
-                        title={labsState.masterEnabled ? 'Disable smart suggestions' : 'Enable smart suggestions'}
-                      >
-                        <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
-                      </button>
-                    </SettingRow>
                   </div>
+                )}
 
-                  {/* Per-category toggles */}
-                  {SUGGESTION_CATEGORY_ORDER.filter(c => groupedRegistry[c]?.length).map(category => (
-                    <div key={category} className="bg-background rounded-[8px] border border-border overflow-hidden">
-                      <div className="px-[14px] py-[6px] border-b border-border">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-foreground/30 font-mono">
-                          {category}
-                        </span>
-                      </div>
-                      {groupedRegistry[category]!.map(def => (
-                        <SettingRow key={def.id} label={def.title}>
+                {/* ── Notifications ── */}
+                {activeTab === 'notifications' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>System</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="System notifications">
                           <button
-                            onClick={() => setSuggestionEnabled(def.id, !isSuggestionEnabled(def.id))}
-                            disabled={!labsState.masterEnabled}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 disabled:opacity-40 ${isSuggestionEnabled(def.id) ? 'bg-success' : 'bg-accent'}`}
-                            title={def.description}
+                            onClick={handleSysNotifToggle}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? 'bg-success' : 'bg-foreground/[0.1]'}`}
                           >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isSuggestionEnabled(def.id) ? 'left-[16px]' : 'left-[2px]'}`} />
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysNotifications ? 'left-[16px]' : 'left-[2px]'}`} />
                           </button>
                         </SettingRow>
-                      ))}
-                    </div>
-                  ))}
-
-                  <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
-                    alis hub Labs features are experimental and may change without notice.
-                  </p>
-                </div>
-              )}
-
-              {activeTab === 'about' && (
-                <div className="p-[16px] flex flex-col gap-[14px]">
-                  <div className="flex items-center gap-[12px]">
-                    <div className="size-[42px] rounded-[10px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)] flex items-center justify-center shrink-0">
-                      <Icon icon="solar:cloud-bold" className="text-brand text-xl" />
-                    </div>
-                    <div>
-                      <p className="text-[13px] font-bold text-foreground">AlisHub</p>
-                      <p className="text-[11px] text-foreground/40 font-mono mt-[2px]">
-                        v{appInfo?.version || updateInfo?.currentVersion || '—'}
-                      </p>
+                      </SettingsCard>
                     </div>
                   </div>
+                )}
 
-                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
-                    <SettingRow label="Version" value={appInfo?.version || '—'} />
-                    <SettingRow label="OS" value={appInfo ? `${appInfo.os}/${appInfo.arch}` : '—'} />
-                    <SettingRow label="Go" value={appInfo?.go || '—'} />
+                {/* ── Labs ── */}
+                {activeTab === 'labs' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Smart Suggestions</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Smart Suggestions">
+                          <button
+                            onClick={() => setMasterEnabled(!labsState.masterEnabled)}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                          >
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
+                          </button>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
+
+                    {SUGGESTION_CATEGORY_ORDER.filter(c => groupedRegistry[c]?.length).map(category => (
+                      <div key={category} className="flex flex-col gap-[5px]">
+                        <SectionTitle>{category}</SectionTitle>
+                        <SettingsCard>
+                          {groupedRegistry[category]!.map(def => (
+                            <SettingRow key={def.id} label={def.title}>
+                              <button
+                                onClick={() => setSuggestionEnabled(def.id, !isSuggestionEnabled(def.id))}
+                                disabled={!labsState.masterEnabled}
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 disabled:opacity-40 ${isSuggestionEnabled(def.id) ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                                title={def.description}
+                              >
+                                <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isSuggestionEnabled(def.id) ? 'left-[16px]' : 'left-[2px]'}`} />
+                              </button>
+                            </SettingRow>
+                          ))}
+                        </SettingsCard>
+                      </div>
+                    ))}
+
+                    <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                      Labs features are experimental and may change without notice.
+                    </p>
                   </div>
+                )}
 
-                  <div className="flex flex-col gap-[6px]">
+                {/* ── Updates ── */}
+                {activeTab === 'updates' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex items-center gap-[10px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
+                      <div className="size-[34px] rounded-[8px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+                        <Icon icon="solar:cloud-bold" className="text-brand text-base" />
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-bold text-foreground tracking-[-0.2px]">AlisHub</p>
+                        <p className="text-[11px] text-foreground/40 font-mono mt-[1px]">
+                          v{appInfo?.version || updateInfo?.currentVersion || '—'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Version</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Current version" value={updateInfo?.currentVersion || appInfo?.version || '—'} />
+                        <SettingRow label="OS" value={appInfo ? `${appInfo.os}/${appInfo.arch}` : '—'} />
+                        <SettingRow label="Go" value={appInfo?.go || '—'} />
+                        {updateInfo?.available && (
+                          <SettingRow label="Latest version">
+                            <span className="text-[11px] font-bold text-success font-mono">
+                              v{updateInfo.latestVersion}
+                            </span>
+                          </SettingRow>
+                        )}
+                      </SettingsCard>
+                    </div>
+
+                    {updateError && (
+                      <p className="text-[10px] text-destructive font-mono">{updateError}</p>
+                    )}
+
+                    {updateInfo?.available && (
+                      <div className="flex items-center justify-between bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)] rounded-[9px] px-[12px] py-[9px]">
+                        <div className="flex items-center gap-[8px]">
+                          <Icon icon="solar:download-minimalistic-linear" className="text-success text-base" />
+                          <div>
+                            <p className="text-[11px] font-bold text-foreground">Update available</p>
+                            <p className="text-[10px] text-foreground/50 font-mono mt-[1px]">
+                              v{updateInfo.currentVersion} → v{updateInfo.latestVersion}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-[6px]">
+                          <button
+                            onClick={() => setNotesOpen(true)}
+                            className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono uppercase tracking-wide"
+                          >
+                            Notes
+                          </button>
+                          {!downloading ? (
+                            <button
+                              onClick={handleDownload}
+                              className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide"
+                            >
+                              Download
+                            </button>
+                          ) : (
+                            <button
+                              onClick={handleApply}
+                              className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono"
+                            >
+                              {downloadPct < 100 ? `${downloadPct}%` : 'Apply & Restart'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {updateInfo && !updateInfo.available && (
+                      <div className="flex items-center gap-[8px] px-[12px] py-[9px] bg-[rgba(52,199,89,0.06)] border border-[rgba(52,199,89,0.18)] rounded-[9px]">
+                        <Icon icon="solar:check-circle-linear" className="text-success text-base shrink-0" />
+                        <p className="text-[11px] text-foreground/70 font-mono">You're on the latest version.</p>
+                      </div>
+                    )}
+
                     <button
-                      onClick={() => Browser.OpenURL('https://github.com/Patrick-web/alis-hub-v3')}
-                      className="flex items-center gap-[6px] text-[11px] text-foreground/40 hover:text-foreground transition-colors font-mono"
+                      onClick={handleCheckUpdate}
+                      disabled={checkingUpdate}
+                      className="flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono"
                     >
-                      <Icon icon="solar:link-square-linear" className="text-sm" />
-                      View on GitHub
+                      {checkingUpdate ? <Loader size={14} /> : <Icon icon="solar:refresh-linear" className="text-sm" />}
+                      {checkingUpdate ? 'Checking…' : 'Check for updates'}
                     </button>
-                    <button
-                      onClick={() => Browser.OpenURL('https://console.alisx.com')}
-                      className="flex items-center gap-[6px] text-[11px] text-foreground/40 hover:text-foreground transition-colors font-mono"
-                    >
-                      <Icon icon="solar:link-square-linear" className="text-sm" />
-                      Alis Console
-                    </button>
+
+                    {changelogHtml && (
+                      <div className="flex flex-col gap-[5px]">
+                        <SectionTitle>Changelog</SectionTitle>
+                        <div
+                          className="prose prose-invert prose-sm max-w-none font-mono text-[12px] text-foreground/75 [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-foreground/35 [&_h3]:mt-[12px] [&_h3]:mb-[4px] [&_ul]:pl-4 [&_li]:my-[2px] [&_p]:text-foreground/55"
+                          dangerouslySetInnerHTML={{ __html: changelogHtml }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex flex-col gap-[5px] pt-[2px]">
+                      <button
+                        onClick={() => Browser.OpenURL('https://github.com/Patrick-web/alis-hub-v3')}
+                        className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
+                      >
+                        <Icon icon="solar:link-square-linear" className="text-sm" />
+                        View on GitHub
+                      </button>
+                      <button
+                        onClick={() => Browser.OpenURL('https://console.alisx.com')}
+                        className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
+                      >
+                        <Icon icon="solar:link-square-linear" className="text-sm" />
+                        Alis Console
+                      </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+              </div>
             </div>
-          </div>
-        </DialogContent>
+          </DialogPrimitive.Content>
+        </DialogPortal>
       </Dialog>
 
       {updateInfo?.available && (

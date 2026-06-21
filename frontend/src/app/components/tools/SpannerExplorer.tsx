@@ -1007,7 +1007,7 @@ export function SpannerExplorer({ projectID }: Props) {
           if (!open) setDestructivePendingTab(null);
         }}
       >
-        <AlertDialogContent className="bg-background border border-border text-foreground">
+        <AlertDialogContent className="text-foreground">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-foreground font-mono text-sm">
               Destructive statement
