@@ -216,7 +216,7 @@ export function DevelopPage() {
     } else if (type === 'packages') {
       setPackagesNeuron(neuronId);
       setPackagesStep('running');
-      packagesTaskIdRef.current = focusTaskId;
+      setPackagesTaskId(focusTaskId);
     }
   }, [focusTaskId]);
 
