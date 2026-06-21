@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useTheme } from 'next-themes';
+import { Sun, Moon } from 'lucide-react';
 import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
@@ -97,6 +99,7 @@ function SettingRow({ label, value, children }: { label: string; value?: string;
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { setPhase } = useWorkspace();
+  const { resolvedTheme, setTheme } = useTheme();
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -293,6 +296,26 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
                   {/* Preferences */}
                   <div className="bg-background rounded-[8px] border border-border overflow-hidden">
+                    <SettingRow label="Appearance">
+                      <div className="flex items-center gap-[2px] bg-accent rounded-[6px] p-[2px]">
+                        <button
+                          onClick={() => setTheme('light')}
+                          className={`flex items-center gap-[5px] px-[8px] py-[4px] rounded-[4px] text-[10px] font-mono transition-colors ${resolvedTheme === 'light' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/40 hover:text-foreground'}`}
+                          title="Light mode"
+                        >
+                          <Sun size={11} />
+                          Light
+                        </button>
+                        <button
+                          onClick={() => setTheme('dark')}
+                          className={`flex items-center gap-[5px] px-[8px] py-[4px] rounded-[4px] text-[10px] font-mono transition-colors ${resolvedTheme === 'dark' ? 'bg-card text-foreground shadow-sm' : 'text-foreground/40 hover:text-foreground'}`}
+                          title="Dark mode"
+                        >
+                          <Moon size={11} />
+                          Dark
+                        </button>
+                      </div>
+                    </SettingRow>
                     <SettingRow label="System notifications">
                       <button
                         onClick={handleSysNotifToggle}

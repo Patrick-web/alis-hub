@@ -5,7 +5,6 @@ import { Window } from '@wailsio/runtime';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
 import { ProfileModal } from './ProfileModal';
-import { ThemeToggle } from './ThemeToggle';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 function WindowControls() {
@@ -99,12 +98,11 @@ export function StandaloneTopNav() {
         </div>
       </div>
 
-      {/* Right: Theme toggle + Profile */}
+      {/* Right: Profile */}
       <div
-        className="flex items-center h-full px-[10px] gap-[10px]"
+        className="flex items-center h-full px-[10px]"
         style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
       >
-        <ThemeToggle />
         <button
           onClick={() => setProfileOpen(true)}
           className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
