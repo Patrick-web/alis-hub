@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.4.0] - 2026-06-21
+
+### What's New
+- The settings modal has been redesigned with a macOS Sonoma-style look, including an accent color picker to personalize the app's highlight color
+- The notification center now groups notifications by source, matching the familiar macOS layout
+- The app now supports full light and dark mode with a new semantic color system — you can switch themes from the settings modal
+- Smart Suggestions is now available as a Labs feature, offering AI-powered next-step hints after builds and other actions
+- Update notifications now appear as a macOS-style notification card instead of a toast popup
+
+### Bug Fixes
+- Fixed an issue where the terminal and SQL editor didn't respect the selected light/dark theme
+- Fixed an issue where light mode showed white text on white backgrounds in some areas
+- Fixed an issue where an expired session didn't redirect you back to the login page
+- Fixed an issue where navigating back could fail due to a stale reference
+- Fixed an issue where terminal output lines weren't starting at the correct column
+- Fixed an issue where the notification center appeared as a full page instead of an overlay in the workspace
+
 ## [v0.3.1] - 2026-06-20
 
 ### Bug Fixes
