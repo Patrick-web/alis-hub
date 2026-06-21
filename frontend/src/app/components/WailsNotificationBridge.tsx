@@ -6,6 +6,7 @@ import { systemNotify, isSystemNotificationsEnabled, requestNotificationAuthoriz
 import { useNotifications } from '../stores/notifications';
 import type { WailsNotificationPayload } from '../stores/notifications';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
+import { UpdateNotification } from './UpdateNotification';
 
 interface UpdateInfo {
   available: boolean;
@@ -27,6 +28,8 @@ export function WailsNotificationBridge() {
   const { addNotification } = useNotifications();
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
 
   // Stable ref so closures inside useEffect always see the latest addNotification
   const addRef = useRef(addNotification);
@@ -66,6 +69,7 @@ export function WailsNotificationBridge() {
     const offAvailable = Events.On('update:available', (ev) => {
       const info = ev.data as UpdateInfo;
       setUpdateInfo(info);
+      setUpdateDismissed(false);
       addRef.current({
         severity: 'info',
         source: 'update',
@@ -84,11 +88,6 @@ export function WailsNotificationBridge() {
           },
         ],
       });
-      notify.info(`Update available: v${info.latestVersion}`, {
-        persistent: true,
-        action: { label: 'Download', onClick: () => handleDownload(info) },
-        cancel: { label: 'Release notes', onClick: () => setNotesOpenRef.current(true) },
-      });
     });
 
     return () => {
@@ -103,24 +102,22 @@ export function WailsNotificationBridge() {
       return;
     }
 
-    const toastId = notify.loading('Downloading update…');
+    setDownloadProgress({ downloaded: 0, total: 0, done: false });
 
     const offProgress = Events.On('update:progress', (ev) => {
       const p = ev.data as DownloadProgress;
       if (p.error) {
-        notify.error(`Download failed: ${p.error}`, { id: toastId });
+        setDownloadProgress(null);
+        notify.error(`Download failed: ${p.error}`);
         offProgress();
         return;
       }
       if (p.done && p.path) {
         offProgress();
-        applyUpdate(toastId);
+        applyUpdate();
         return;
       }
-      if (p.total > 0) {
-        const pct = Math.round((p.downloaded / p.total) * 100);
-        notify.loading(`Downloading… ${pct}%`, { id: toastId });
-      }
+      setDownloadProgress({ downloaded: p.downloaded, total: p.total, done: false });
     });
 
     try {
@@ -130,17 +127,27 @@ export function WailsNotificationBridge() {
     }
   }
 
-  async function applyUpdate(toastId: string | number) {
+  async function applyUpdate() {
     try {
       await UpdaterService.ApplyUpdate();
-      notify.success('Restarting…', { id: toastId });
+      notify.success('Restarting…');
     } catch (err) {
-      notify.error(`Failed to apply update: ${String(err)}`, { id: toastId });
+      notify.error(`Failed to apply update: ${String(err)}`);
+      setDownloadProgress(null);
     }
   }
 
   return (
     <>
+      {updateInfo && !updateDismissed && (
+        <UpdateNotification
+          info={updateInfo}
+          progress={downloadProgress}
+          onDownload={() => handleDownload(updateInfo)}
+          onViewNotes={() => setNotesOpen(true)}
+          onDismiss={() => setUpdateDismissed(true)}
+        />
+      )}
       {updateInfo && (
         <ReleaseNotesModal
           open={notesOpen}
