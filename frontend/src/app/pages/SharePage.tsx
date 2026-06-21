@@ -41,7 +41,7 @@ function Avatar({ name, photoUrl, isGroup }: { name: string; photoUrl: string; i
       <img
         src={photoUrl}
         alt={name}
-        className="size-[28px] rounded-full object-cover shrink-0 border border-[rgba(255,255,255,0.1)]"
+        className="size-[28px] rounded-full object-cover shrink-0 border border-foreground/10"
         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
     );
@@ -65,8 +65,8 @@ function AccountAvatar({ name }: { name: string }) {
     .map(p => p[0]?.toUpperCase() ?? '')
     .join('');
   return (
-    <div className="size-[28px] rounded-[6px] bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] flex items-center justify-center shrink-0">
-      <span className="text-[10px] font-bold text-[rgba(255,255,255,0.6)]">{initials || '?'}</span>
+    <div className="size-[28px] rounded-[6px] bg-foreground/[8%] border border-foreground/12 flex items-center justify-center shrink-0">
+      <span className="text-[10px] font-bold text-foreground/60">{initials || '?'}</span>
     </div>
   );
 }
@@ -89,14 +89,14 @@ function RoleBadge({ role }: { role: string }) {
       );
     case 'Viewer':
       return (
-        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)]">
-          <Icon icon="solar:eye-linear" className="text-[rgba(255,255,255,0.4)] text-[10px]" />
-          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">Viewer</span>
+        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-foreground/[6%] border border-foreground/10">
+          <Icon icon="solar:eye-linear" className="text-foreground/40 text-[10px]" />
+          <span className="text-[10px] font-bold font-mono text-foreground/40">Viewer</span>
         </span>
       );
     default:
       return (
-        <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)]">{role}</span>
+        <span className="text-[10px] font-mono text-foreground/40">{role}</span>
       );
   }
 }
@@ -104,12 +104,12 @@ function RoleBadge({ role }: { role: string }) {
 function SectionHeader({ title, tooltip }: { title: string; tooltip?: string }) {
   return (
     <div className="flex items-center gap-[6px] px-[20px] py-[10px] border-b border-border">
-      <span className="text-[11px] font-bold text-white">{title}</span>
+      <span className="text-[11px] font-bold text-foreground">{title}</span>
       {tooltip && (
         <div className="relative group">
-          <Icon icon="solar:info-circle-linear" className="text-[rgba(255,255,255,0.3)] text-[12px] cursor-help" />
+          <Icon icon="solar:info-circle-linear" className="text-foreground/30 text-[12px] cursor-help" />
           <div className="absolute left-0 bottom-[calc(100%+4px)] hidden group-hover:block z-50 bg-muted border border-border rounded-[6px] p-[8px] w-[200px] shadow-lg">
-            <p className="text-[10px] text-[rgba(255,255,255,0.6)] leading-[1.4]">{tooltip}</p>
+            <p className="text-[10px] text-foreground/60 leading-[1.4]">{tooltip}</p>
           </div>
         </div>
       )}
@@ -123,12 +123,12 @@ function PersonRow({ person }: { person: SharePerson }) {
     : (person.displayName || person.email || person.member);
 
   return (
-    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-foreground/[2%] transition-colors">
       <Avatar name={person.displayName} photoUrl={person.photoUrl} isGroup={person.isGroup} />
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-semibold text-white leading-tight truncate">{label}</p>
+        <p className="text-[12px] font-semibold text-foreground leading-tight truncate">{label}</p>
         {!person.isGroup && person.email && (
-          <p className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] truncate">
+          <p className="text-[10px] font-mono text-foreground/40 truncate">
             {person.email}
           </p>
         )}
@@ -143,11 +143,11 @@ function AccountRow({ account }: { account: ShareAccount }) {
     ? `All users that are part of ${account.displayName}`
     : 'Everyone in the associated account';
   return (
-    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-foreground/[2%] transition-colors">
       <AccountAvatar name={account.displayName} />
       <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-semibold text-white leading-tight truncate">{account.displayName}</p>
-        <p className="text-[10px] text-[rgba(255,255,255,0.4)] truncate">{subtitle}</p>
+        <p className="text-[12px] font-semibold text-foreground leading-tight truncate">{account.displayName}</p>
+        <p className="text-[10px] text-foreground/40 truncate">{subtitle}</p>
       </div>
       <RoleBadge role={account.role} />
     </div>
@@ -182,11 +182,11 @@ export function SharePage() {
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between shrink-0">
-        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
           Sharing
         </p>
         {data && (
-          <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">
+          <p className="text-[10px] text-foreground/30 font-mono">
             {peopleCount} {peopleCount === 1 ? 'member' : 'members'}
           </p>
         )}
@@ -197,7 +197,7 @@ export function SharePage() {
         {!loading && !error && (
           <button
             onClick={load}
-            className="flex items-center gap-[4px] px-[8px] h-[34px] text-[rgba(255,255,255,0.5)] hover:text-white transition-colors text-[10px]"
+            className="flex items-center gap-[4px] px-[8px] h-[34px] text-foreground/50 hover:text-foreground transition-colors text-[10px]"
             title="Refresh"
           >
             <Icon icon="solar:refresh-linear" className="text-base" />
@@ -218,9 +218,9 @@ export function SharePage() {
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
                 <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
-                <p className="text-[12px] font-bold text-white">Failed to load</p>
+                <p className="text-[12px] font-bold text-foreground">Failed to load</p>
               </div>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
+              <p className="text-[11px] text-foreground/60">{error}</p>
               <button
                 onClick={load}
                 className="mt-[10px] text-[10px] text-brand hover:underline"
@@ -269,8 +269,8 @@ export function SharePage() {
             {/* Empty state */}
             {peopleCount === 0 && (
               <div className="flex flex-col items-center justify-center h-full gap-[8px] pt-[80px]">
-                <Icon icon="solar:users-group-rounded-linear" className="text-[rgba(255,255,255,0.2)] text-4xl" />
-                <p className="text-[12px] text-[rgba(255,255,255,0.3)]">No members yet</p>
+                <Icon icon="solar:users-group-rounded-linear" className="text-foreground/20 text-4xl" />
+                <p className="text-[12px] text-foreground/30">No members yet</p>
               </div>
             )}
           </div>

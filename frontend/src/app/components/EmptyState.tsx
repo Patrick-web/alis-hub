@@ -12,13 +12,13 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <div className={`flex flex-col items-center justify-center gap-[10px] py-[60px] ${className ?? ''}`}>
       {icon && (
-        <Icon icon={icon} className="text-5xl text-[rgba(255,255,255,0.12)]" />
+        <Icon icon={icon} className="text-5xl text-foreground/12" />
       )}
-      <p className="text-[13px] text-[rgba(255,255,255,0.3)] font-mono">
+      <p className="text-[13px] text-foreground/30 font-mono">
         {title}
       </p>
       {description && (
-        <p className="text-[11px] text-[rgba(255,255,255,0.2)] font-mono">
+        <p className="text-[11px] text-foreground/20 font-mono">
           {description}
         </p>
       )}

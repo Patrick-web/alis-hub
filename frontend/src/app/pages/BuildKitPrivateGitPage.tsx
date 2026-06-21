@@ -37,7 +37,7 @@ export function BuildKitPrivateGitPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             Alis Build Private Git is a managed Forgejo installation inside your Alis Build organisation. It is
             designed for secure, backed-up, organisation-owned Git hosting without sending private source code to a
             shared public forge.
@@ -53,12 +53,12 @@ export function BuildKitPrivateGitPage() {
                 <Icon icon="solar:code-square-linear" className="text-brand text-[16px]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-white font-mono mb-[4px]">
+                <p className="text-[12px] font-bold text-foreground font-mono mb-[4px]">
                   Private Git for your organisation
                 </p>
-                <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+                <p className="text-[11px] text-foreground/60 leading-[1.5]">
                   Your Forgejo instance lives at{' '}
-                  <span className="text-white font-mono">git.{org}.alis.build</span>.
+                  <span className="text-foreground font-mono">git.{org}.alis.build</span>.
                   Access it through your browser to create repositories, manage teams, and review pull requests.
                 </p>
               </div>
@@ -70,32 +70,32 @@ export function BuildKitPrivateGitPage() {
             title="Workspace Repositories"
             icon={<Icon icon="solar:folder-path-connect-linear" className="text-brand" />}
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 mb-[14px] leading-[1.5]">
               Your local Alis Build workspace syncs two key repositories for the active product.
             </p>
             <div className="flex flex-col gap-[10px]">
               <div className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
+                <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[4px]">
                   Define repo
                 </p>
-                <p className="text-[10px] text-[rgba(255,255,255,0.5)] mb-[6px]">
+                <p className="text-[10px] text-foreground/50 mb-[6px]">
                   Stores the protocol buffer definitions for the organisation.
                 </p>
                 <div className="flex items-center gap-[8px]">
-                  <Icon icon="solar:folder-linear" className="text-[rgba(255,255,255,0.35)] text-[13px] shrink-0" />
-                  <span className="text-[11px] text-white font-mono">{defineRepo}</span>
+                  <Icon icon="solar:folder-linear" className="text-foreground/35 text-[13px] shrink-0" />
+                  <span className="text-[11px] text-foreground font-mono">{defineRepo}</span>
                 </div>
               </div>
               <div className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
+                <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[4px]">
                   Product repo
                 </p>
-                <p className="text-[10px] text-[rgba(255,255,255,0.5)] mb-[6px]">
+                <p className="text-[10px] text-foreground/50 mb-[6px]">
                   Stores the generated services and business logic for the selected product.
                 </p>
                 <div className="flex items-center gap-[8px]">
-                  <Icon icon="solar:folder-linear" className="text-[rgba(255,255,255,0.35)] text-[13px] shrink-0" />
-                  <span className="text-[11px] text-white font-mono">{buildRepo}</span>
+                  <Icon icon="solar:folder-linear" className="text-foreground/35 text-[13px] shrink-0" />
+                  <span className="text-[11px] text-foreground font-mono">{buildRepo}</span>
                 </div>
               </div>
             </div>
@@ -103,7 +103,7 @@ export function BuildKitPrivateGitPage() {
 
           {/* Getting started */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[10px]">
               Getting started
             </p>
             <div className="flex flex-col gap-[8px]">
@@ -115,9 +115,9 @@ export function BuildKitPrivateGitPage() {
                   <div>
                     <div className="flex items-center gap-[8px] mb-[2px]">
                       <Icon icon={step.icon} className="text-brand text-[13px]" />
-                      <p className="text-[11px] font-bold text-white font-mono">{step.title}</p>
+                      <p className="text-[11px] font-bold text-foreground font-mono">{step.title}</p>
                     </div>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{step.description}</p>
+                    <p className="text-[10px] text-foreground/55 leading-[1.5]">{step.description}</p>
                   </div>
                 </div>
               ))}

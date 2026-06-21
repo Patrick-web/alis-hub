@@ -26,9 +26,9 @@ const STATE_COLOR: Record<number, string> = {
   4: 'text-red-400 bg-red-400/10',
 };
 
-const labelClass = 'text-[10px] font-bold uppercase text-white/40 mb-[4px]';
-const selectClass = "bg-background border border-border rounded-[4px] px-[10px] py-[8px] text-white text-[12px] outline-none focus:border-brand w-full transition-colors appearance-none";
-const textareaClass = "bg-background border border-border rounded-[4px] p-[10px] text-white text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors";
+const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[4px]';
+const selectClass = "bg-background border border-border rounded-[4px] px-[10px] py-[8px] text-foreground text-[12px] outline-none focus:border-brand w-full transition-colors appearance-none";
+const textareaClass = "bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors";
 
 function relativeDate(iso: string): string {
   const d = new Date(iso);
@@ -151,7 +151,7 @@ export function CodeblockContributePage() {
       <div className="w-[260px] shrink-0 flex flex-col border-r border-border">
         <button
           onClick={() => navigate(`/codeblocks/${blockId}/versions`)}
-          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-border transition-colors"
+          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-foreground/50 hover:text-foreground/80 border-b border-border transition-colors"
         >
           <Icon icon="solar:arrow-left-linear" />
           Versions
@@ -159,7 +159,7 @@ export function CodeblockContributePage() {
 
         <div className="flex-1 overflow-auto p-[16px] flex flex-col gap-[20px]">
           <div>
-            <p className="text-[11px] font-bold text-white mb-[12px]">Contribute Version</p>
+            <p className="text-[11px] font-bold text-foreground mb-[12px]">Contribute Version</p>
             <div className="flex flex-col gap-[8px]">
               <StepIndicator index={1} label="Pick Instance" active={step === 'instance'} done={step === 'edit' || step === 'version'} />
               <StepIndicator index={2} label="Open Worktrees" active={step === 'edit'} done={step === 'version'} />
@@ -170,15 +170,15 @@ export function CodeblockContributePage() {
           {selectedInstance && (
             <div className="bg-card border border-border rounded-[4px] p-[12px]">
               <p className={labelClass}>Selected Instance</p>
-              <p className="text-[12px] font-bold text-white font-mono">{selectedInstance.shortId}</p>
-              <p className="text-[10px] text-white/40 font-mono mt-[2px] break-all">{selectedInstance.package}</p>
+              <p className="text-[12px] font-bold text-foreground font-mono">{selectedInstance.shortId}</p>
+              <p className="text-[10px] text-foreground/40 font-mono mt-[2px] break-all">{selectedInstance.package}</p>
             </div>
           )}
 
           {worktreePath && (
             <div className="bg-card border border-border rounded-[4px] p-[12px]">
               <p className={labelClass}>Worktree Path</p>
-              <p className="text-[10px] text-white/60 font-mono break-all">{worktreePath}</p>
+              <p className="text-[10px] text-foreground/60 font-mono break-all">{worktreePath}</p>
             </div>
           )}
         </div>
@@ -270,11 +270,11 @@ function StepIndicator({ index, label, active, done }: {
   return (
     <div className={`flex items-center gap-[10px] ${active ? 'opacity-100' : done ? 'opacity-60' : 'opacity-30'}`}>
       <div className={`w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-        done ? 'bg-brand/20 text-brand' : active ? 'bg-brand text-foreground' : 'bg-white/10 text-white/40'
+        done ? 'bg-brand/20 text-brand' : active ? 'bg-brand text-brand-foreground' : 'bg-foreground/10 text-brand-foreground/40'
       }`}>
         {done ? <Icon icon="solar:check-circle-bold" className="text-xs" /> : index}
       </div>
-      <span className={`text-[11px] ${active ? 'text-white font-bold' : 'text-white/60'}`}>{label}</span>
+      <span className={`text-[11px] ${active ? 'text-foreground font-bold' : 'text-foreground/60'}`}>{label}</span>
     </div>
   );
 }
@@ -294,8 +294,8 @@ function InstancePickerStep({ instances, loading, selected, onSelect, onOpen, op
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-[24px] py-[16px] border-b border-border flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-bold text-white">Pick an Instance</p>
-          <p className="text-[11px] text-white/40 mt-[2px]">Select the instance whose branch you want to contribute to</p>
+          <p className="text-[13px] font-bold text-foreground">Pick an Instance</p>
+          <p className="text-[11px] text-foreground/40 mt-[2px]">Select the instance whose branch you want to contribute to</p>
         </div>
         <Button
           variant="primary"
@@ -311,7 +311,7 @@ function InstancePickerStep({ instances, loading, selected, onSelect, onOpen, op
         {loading ? (
           <div className="flex items-center justify-center h-[120px]"><Loader /></div>
         ) : instances.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-[120px] gap-[8px] text-white/30">
+          <div className="flex flex-col items-center justify-center h-[120px] gap-[8px] text-foreground/30">
             <Icon icon="solar:box-linear" className="text-[32px]" />
             <p className="text-[12px]">No instances found for this block</p>
           </div>
@@ -329,20 +329,20 @@ function InstancePickerStep({ instances, loading, selected, onSelect, onOpen, op
                 >
                   <div className="flex items-center justify-between mb-[8px]">
                     <div className="flex items-center gap-[10px]">
-                      <span className="font-mono font-bold text-[13px] text-white">
+                      <span className="font-mono font-bold text-[13px] text-foreground">
                         {inst.shortId}
                       </span>
                       {inst.state > 0 && (
-                        <span className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? 'text-white/50 bg-white/5'}`}>
+                        <span className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? 'text-foreground/50 bg-foreground/5'}`}>
                           {STATE_LABEL[inst.state] ?? 'Unknown'}
                         </span>
                       )}
                     </div>
                     {isSelected && <Icon icon="solar:check-circle-bold" className="text-brand text-base" />}
                   </div>
-                  <p className="text-[11px] text-white/50 font-mono">{inst.package}</p>
+                  <p className="text-[11px] text-foreground/50 font-mono">{inst.package}</p>
                   {inst.blockVersion && (
-                    <p className="text-[10px] text-white/30 mt-[6px] font-mono">
+                    <p className="text-[10px] text-foreground/30 mt-[6px] font-mono">
                       {inst.blockVersion.split('/').pop()}
                     </p>
                   )}
@@ -373,20 +373,20 @@ function EditStep({ worktreePath, onOpenFinder, onProceed, error }: {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-[24px] py-[16px] border-b border-border">
-        <p className="text-[13px] font-bold text-white">Edit & Push</p>
-        <p className="text-[11px] text-white/40 mt-[2px]">Make your changes in the worktree, commit, and push</p>
+        <p className="text-[13px] font-bold text-foreground">Edit & Push</p>
+        <p className="text-[11px] text-foreground/40 mt-[2px]">Make your changes in the worktree, commit, and push</p>
       </div>
 
       <div className="flex-1 overflow-auto p-[24px] flex flex-col gap-[24px]">
         <div className="bg-card border border-border rounded-[4px] p-[16px]">
-          <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">Worktree Location</p>
+          <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[8px]">Worktree Location</p>
           <div className="flex items-start gap-[12px]">
-            <code className="flex-1 text-[11px] text-white/80 font-mono break-all leading-[1.6]">
+            <code className="flex-1 text-[11px] text-foreground/80 font-mono break-all leading-[1.6]">
               {worktreePath}
             </code>
             <button
               onClick={onOpenFinder}
-              className="shrink-0 flex items-center gap-[6px] text-[11px] text-white/50 hover:text-white/80 border border-border hover:border-border rounded px-[10px] py-[6px] transition-colors"
+              className="shrink-0 flex items-center gap-[6px] text-[11px] text-foreground/50 hover:text-foreground/80 border border-border hover:border-border rounded px-[10px] py-[6px] transition-colors"
             >
               <Icon icon="solar:folder-open-linear" className="text-sm" />
               Open in Finder
@@ -395,7 +395,7 @@ function EditStep({ worktreePath, onOpenFinder, onProceed, error }: {
         </div>
 
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[11px] font-bold text-white">How to contribute</p>
+          <p className="text-[11px] font-bold text-foreground">How to contribute</p>
           <div className="flex flex-col gap-[8px]">
             {[
               { n: 1, icon: 'solar:folder-open-linear', text: 'Open the worktree folder in Finder or your editor' },
@@ -403,11 +403,11 @@ function EditStep({ worktreePath, onOpenFinder, onProceed, error }: {
               { n: 3, icon: 'solar:code-linear', text: 'Commit your changes with git and push to origin' },
               { n: 4, icon: 'solar:arrow-right-linear', text: 'Return here and click "Choose Commits" to select what to publish' },
             ].map(({ n, icon, text }) => (
-              <div key={n} className="flex items-center gap-[12px] text-[12px] text-white/60">
-                <div className="w-[22px] h-[22px] rounded-full bg-white/5 flex items-center justify-center text-[10px] font-bold text-white/30 shrink-0">
+              <div key={n} className="flex items-center gap-[12px] text-[12px] text-foreground/60">
+                <div className="w-[22px] h-[22px] rounded-full bg-foreground/5 flex items-center justify-center text-[10px] font-bold text-foreground/30 shrink-0">
                   {n}
                 </div>
-                <Icon icon={icon} className="text-white/30 text-base shrink-0" />
+                <Icon icon={icon} className="text-foreground/30 text-base shrink-0" />
                 <span>{text}</span>
               </div>
             ))}
@@ -448,8 +448,8 @@ function CommitPickerStep({ defineCommits, buildCommits, loading, selectedDefine
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-[24px] py-[16px] border-b border-border">
-        <p className="text-[13px] font-bold text-white">Choose Commits</p>
-        <p className="text-[11px] text-white/40 mt-[2px]">Select the define and build commits to include in this version</p>
+        <p className="text-[13px] font-bold text-foreground">Choose Commits</p>
+        <p className="text-[11px] text-foreground/40 mt-[2px]">Select the define and build commits to include in this version</p>
       </div>
 
       {loading ? (
@@ -489,7 +489,7 @@ function CommitList({ label, commits, selected, onSelect }: {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-[16px] py-[10px] border-b border-border flex items-center justify-between shrink-0">
-        <p className="text-[10px] font-bold uppercase text-white/40">{label}</p>
+        <p className="text-[10px] font-bold uppercase text-foreground/40">{label}</p>
         {selected && (
           <span className="text-[10px] text-brand font-mono">
             {commits.find(c => c.fullHash === selected)?.hash ?? selected.slice(0, 8)}
@@ -498,7 +498,7 @@ function CommitList({ label, commits, selected, onSelect }: {
       </div>
       <div className="flex-1 overflow-auto">
         {commits.length === 0 ? (
-          <div className="flex items-center justify-center h-[80px] text-[11px] text-white/30">
+          <div className="flex items-center justify-center h-[80px] text-[11px] text-foreground/30">
             No commits found on this branch
           </div>
         ) : (
@@ -508,7 +508,7 @@ function CommitList({ label, commits, selected, onSelect }: {
               <button
                 key={commit.fullHash}
                 onClick={() => onSelect(commit.fullHash)}
-                className={`w-full text-left px-[16px] py-[10px] border-b border-border transition-colors hover:bg-white/[0.03] ${
+                className={`w-full text-left px-[16px] py-[10px] border-b border-border transition-colors hover:bg-foreground/[3%] ${
                   isSelected ? 'bg-[rgba(248,129,169,0.07)] border-l-2 border-l-[#f881a9]' : ''
                 }`}
               >
@@ -516,10 +516,10 @@ function CommitList({ label, commits, selected, onSelect }: {
                   <code className="text-[11px] text-brand font-mono shrink-0">
                     {commit.hash}
                   </code>
-                  <span className="text-[10px] text-white/30 shrink-0">{relativeDate(commit.date)}</span>
+                  <span className="text-[10px] text-foreground/30 shrink-0">{relativeDate(commit.date)}</span>
                 </div>
-                <p className="text-[11px] text-white/80 mt-[2px] truncate">{commit.message}</p>
-                <p className="text-[10px] text-white/40 mt-[1px]">{commit.author}</p>
+                <p className="text-[11px] text-foreground/80 mt-[2px] truncate">{commit.message}</p>
+                <p className="text-[10px] text-foreground/40 mt-[1px]">{commit.author}</p>
               </button>
             );
           })

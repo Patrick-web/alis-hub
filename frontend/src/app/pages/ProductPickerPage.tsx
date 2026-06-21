@@ -30,8 +30,8 @@ function StateIndicator({ state }: { state: number }) {
   }
   return (
     <span className="flex items-center gap-[4px]">
-      <span className="size-[6px] rounded-full bg-[rgba(255,255,255,0.3)] shrink-0" />
-      <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)]">Inactive</span>
+      <span className="size-[6px] rounded-full bg-foreground/30 shrink-0" />
+      <span className="text-[10px] font-mono text-foreground/30">Inactive</span>
     </span>
   );
 }
@@ -151,7 +151,7 @@ export function ProductPickerPage() {
       <div className="px-[24px] pt-[24px] pb-[16px] shrink-0">
         <button
           onClick={() => setPhase('picking-org')}
-          className="flex items-center gap-[6px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] text-[11px]"
+          className="flex items-center gap-[6px] text-foreground/40 hover:text-foreground transition-colors mb-[16px] text-[11px]"
         >
           <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
           All landing zones
@@ -162,7 +162,7 @@ export function ProductPickerPage() {
             <img
               src={org.logo}
               alt={org.displayName}
-              className="size-[40px] rounded-[10px] object-cover shrink-0 border border-[rgba(255,255,255,0.08)]"
+              className="size-[40px] rounded-[10px] object-cover shrink-0 border border-foreground/8"
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
@@ -173,12 +173,12 @@ export function ProductPickerPage() {
             </div>
           )}
           <div>
-            <h1 className="text-[20px] font-bold text-white">{org.displayName}</h1>
-            <p className="text-[11px] font-mono text-[rgba(255,255,255,0.3)]">{orgId}</p>
+            <h1 className="text-[20px] font-bold text-foreground">{org.displayName}</h1>
+            <p className="text-[11px] font-mono text-foreground/30">{orgId}</p>
           </div>
         </div>
 
-        <p className="text-[12px] text-[rgba(255,255,255,0.4)] mt-[12px]">
+        <p className="text-[12px] text-foreground/40 mt-[12px]">
           Select a product to open its workspace
         </p>
       </div>
@@ -186,22 +186,22 @@ export function ProductPickerPage() {
       {/* Search */}
       <div className="px-[24px] pb-[14px] shrink-0 flex items-center gap-[10px]">
         <div className="flex-1 flex items-center gap-[8px] bg-card border border-border rounded-[8px] px-[12px] h-[34px]">
-          <Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
+          <Icon icon="solar:magnifer-linear" className="text-foreground/30 text-sm shrink-0" />
           <input
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search products…"
-            className="flex-1 bg-transparent text-[12px] text-white outline-none placeholder:text-[rgba(255,255,255,0.25)]"
+            className="flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-foreground/25"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="text-[rgba(255,255,255,0.3)] hover:text-white">
+            <button onClick={() => setSearch('')} className="text-foreground/30 hover:text-foreground">
               <Icon icon="solar:close-circle-linear" className="text-sm" />
             </button>
           )}
         </div>
         {!loading && (
-          <button onClick={load} className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors" title="Refresh">
+          <button onClick={load} className="text-foreground/40 hover:text-foreground transition-colors" title="Refresh">
             <Icon icon="solar:refresh-linear" className="text-base" />
           </button>
         )}
@@ -220,9 +220,9 @@ export function ProductPickerPage() {
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
                 <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
-                <p className="text-[12px] font-bold text-white">Failed to load</p>
+                <p className="text-[12px] font-bold text-foreground">Failed to load</p>
               </div>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
+              <p className="text-[11px] text-foreground/60">{error}</p>
               <button onClick={load} className="mt-[10px] text-[10px] text-brand hover:underline">Try again</button>
             </div>
           </div>
@@ -256,10 +256,10 @@ export function ProductPickerPage() {
                       <Icon icon="solar:box-linear" className="text-brand text-base" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-semibold transition-colors truncate ${isExpanded ? 'text-brand' : 'text-white group-hover:text-brand'}`}>
+                      <p className={`text-[13px] font-semibold transition-colors truncate ${isExpanded ? 'text-brand' : 'text-foreground group-hover:text-brand'}`}>
                         {p.displayName}
                       </p>
-                      <p className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] mt-[1px]">
+                      <p className="text-[10px] font-mono text-foreground/30 mt-[1px]">
                         {isSyncing ? 'Syncing repositories…' : productId}
                       </p>
                     </div>
@@ -274,10 +274,10 @@ export function ProductPickerPage() {
                       {isSyncing
                         ? <Loader size={16} />
                         : isCloned
-                          ? <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-brand text-base transition-colors" />
+                          ? <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/20 group-hover:text-brand text-base transition-colors" />
                           : <Icon
                               icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                              className={`text-base transition-colors ${isExpanded ? 'text-brand' : 'text-[rgba(255,255,255,0.2)] group-hover:text-brand'}`}
+                              className={`text-base transition-colors ${isExpanded ? 'text-brand' : 'text-foreground/20 group-hover:text-brand'}`}
                             />
                       }
                     </div>
@@ -288,19 +288,19 @@ export function ProductPickerPage() {
                     <div className="border-t border-border bg-muted">
                       {syncState === 'idle' && (
                         <div className="px-[16px] py-[14px] flex items-center justify-between gap-[12px]">
-                          <p className="text-[12px] text-[rgba(255,255,255,0.5)]">
+                          <p className="text-[12px] text-foreground/50">
                             Clone repositories to your local machine?
                           </p>
                           <div className="flex items-center gap-[8px] shrink-0">
                             <button
                               onClick={() => handleOpenWithoutClone(p)}
-                              className="text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                              className="text-[11px] text-foreground/40 hover:text-foreground transition-colors"
                             >
                               Open without cloning
                             </button>
                             <button
                               onClick={() => handleClone(p)}
-                              className="px-[10px] py-[5px] rounded-[5px] bg-brand text-[11px] font-semibold text-foreground hover:bg-[#f96bb0] transition-colors"
+                              className="px-[10px] py-[5px] rounded-[5px] bg-brand text-[11px] font-semibold text-brand-foreground hover:bg-[#f96bb0] transition-colors"
                             >
                               Clone &amp; open
                             </button>
@@ -312,7 +312,7 @@ export function ProductPickerPage() {
                         <div className="flex flex-col">
                           <div className="flex items-center gap-[8px] px-[14px] py-[10px] border-b border-border">
                             <span className="w-[6px] h-[6px] rounded-full bg-brand animate-pulse shrink-0" />
-                            <p className="text-[9px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono tracking-wider">
+                            <p className="text-[9px] font-bold text-foreground/40 uppercase font-mono tracking-wider">
                               Syncing repos…
                             </p>
                           </div>
@@ -322,7 +322,7 @@ export function ProductPickerPage() {
 
                       {syncState === 'error' && pendingProduct?.name === p.name && (
                         <div className="px-[16px] py-[14px]">
-                          <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[10px]">
+                          <p className="text-[11px] text-foreground/60 mb-[10px]">
                             Failed to sync: {syncError}
                           </p>
                           <div className="flex items-center gap-[10px]">
@@ -334,13 +334,13 @@ export function ProductPickerPage() {
                             </button>
                             <button
                               onClick={() => handleOpenWithoutClone(p)}
-                              className="text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+                              className="text-[11px] text-foreground/40 hover:text-foreground transition-colors"
                             >
                               Open without cloning
                             </button>
                             <button
                               onClick={handleCancelExpand}
-                              className="text-[11px] text-[rgba(255,255,255,0.25)] hover:text-white transition-colors"
+                              className="text-[11px] text-foreground/25 hover:text-foreground transition-colors"
                             >
                               Cancel
                             </button>
@@ -355,8 +355,8 @@ export function ProductPickerPage() {
 
             {filtered.length === 0 && !loading && (
               <div className="flex flex-col items-center justify-center pt-[60px] gap-[8px]">
-                <Icon icon="solar:box-linear" className="text-[rgba(255,255,255,0.15)] text-4xl" />
-                <p className="text-[12px] text-[rgba(255,255,255,0.3)]">
+                <Icon icon="solar:box-linear" className="text-foreground/15 text-4xl" />
+                <p className="text-[12px] text-foreground/30">
                   {search ? 'No matching products' : 'No products found'}
                 </p>
               </div>

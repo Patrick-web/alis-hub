@@ -15,11 +15,11 @@ export function Breadcrumb({ items }: BreadcrumbProps) {
       <div aria-hidden="true" className="absolute border-border border-b border-r border-solid border-t inset-0 pointer-events-none" />
       <div className="flex flex-row items-center size-full">
         <div className="content-stretch flex items-center px-[10px] relative size-full space-x-1">
-          <Icon icon="solar:folder-linear" className="text-white text-base" />
+          <Icon icon="solar:folder-linear" className="text-foreground text-base" />
           {items.map((item, index) => (
             <div key={index} className="flex items-center">
-              <Icon icon="solar:alt-arrow-right-linear" className="text-white text-sm mx-1" />
-              <p className={`font-mono leading-[normal] not-italic relative shrink-0 text-[${index === 0 ? '11px' : '12px'}] text-white whitespace-nowrap ${
+              <Icon icon="solar:alt-arrow-right-linear" className="text-foreground text-sm mx-1" />
+              <p className={`font-mono leading-[normal] not-italic relative shrink-0 text-[${index === 0 ? '11px' : '12px'}] text-foreground whitespace-nowrap ${
                 item.lowercase ? 'lowercase' : ''
               }`}>
                 {item.label}

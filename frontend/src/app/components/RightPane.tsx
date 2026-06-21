@@ -28,15 +28,15 @@ export function RightPane({
       <div className="px-[16px] py-[12px] border-b border-border flex items-center justify-between shrink-0">
         {title ? (
           <div>
-            <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
+            <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">
               {label}
             </p>
-            <p className="text-[13px] font-bold text-white font-mono">
+            <p className="text-[13px] font-bold text-foreground font-mono">
               {title}
             </p>
           </div>
         ) : (
-          <p className="font-mono font-bold text-[11px] text-white uppercase opacity-70">
+          <p className="font-mono font-bold text-[11px] text-foreground uppercase opacity-70">
             {label}
           </p>
         )}
@@ -45,7 +45,7 @@ export function RightPane({
           {onClose && (
             <button
               onClick={onClose}
-              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-accent transition-colors"
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-foreground/40 hover:text-foreground hover:bg-accent transition-colors"
             >
               <Icon icon="solar:close-circle-linear" className="text-sm" />
             </button>

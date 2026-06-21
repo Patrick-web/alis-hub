@@ -71,11 +71,11 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!loading) onOpenChange(o); }}>
-      <DialogContent className="bg-card border border-border text-white p-0 gap-0 max-w-[420px]">
+      <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 max-w-[420px]">
         <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:layers-minimalistic-linear" className="text-brand text-xl" />
-            <DialogTitle className="text-white font-mono text-[13px] font-bold">
+            <DialogTitle className="text-foreground font-mono text-[13px] font-bold">
               New Service
             </DialogTitle>
           </div>
@@ -83,7 +83,7 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
 
         <div className="flex flex-col gap-[16px] px-[20px] py-[20px]">
           <div className="flex flex-col gap-[6px]">
-            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-foreground/50 uppercase">
               Service ID
             </p>
             <Input
@@ -107,12 +107,12 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
             )}
 
             <div className="flex flex-col gap-[4px] mt-[4px]">
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
-                Format: <span className="text-[rgba(255,255,255,0.55)]">{'{name}-v{N}'}</span> — e.g.{' '}
-                <span className="text-[rgba(255,255,255,0.55)]">bookings-v1</span>,{' '}
-                <span className="text-[rgba(255,255,255,0.55)]">payments-v2</span>
+              <p className="text-[10px] text-foreground/35 font-mono">
+                Format: <span className="text-foreground/55">{'{name}-v{N}'}</span> — e.g.{' '}
+                <span className="text-foreground/55">bookings-v1</span>,{' '}
+                <span className="text-foreground/55">payments-v2</span>
               </p>
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
+              <p className="text-[10px] text-foreground/35 font-mono">
                 Lowercase letters, digits, and hyphens only · Max {MAX_LEN} chars
               </p>
             </div>

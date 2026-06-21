@@ -158,7 +158,7 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
 
   if (commits.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-white/20 text-sm">
+      <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
         No commits
       </div>
     );
@@ -177,7 +177,7 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
                 key={`${item.commitHash}:${item.file.path}`}
                 style={{ position: 'absolute', top: vItem.start, height: FILE_ROW_H, width: '100%' }}
                 className={`flex items-center gap-1.5 pl-6 pr-3 cursor-pointer transition-colors text-xs ${
-                  isFileSelected ? 'bg-pink-500/15 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/80'
+                  isFileSelected ? 'bg-pink-500/15 text-foreground' : 'text-foreground/50 hover:bg-foreground/5 hover:text-foreground/80'
                 }`}
                 onClick={() => onSelectCommitFile?.(item.commitHash, item.file.path)}
               >
@@ -187,7 +187,7 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
                 <span className="truncate flex-1 font-mono text-[11px]" title={item.file.path}>
                   {fileName(item.file.path)}
                 </span>
-                <span className="text-[10px] text-white/20 truncate shrink-0 max-w-[40%]" title={item.file.path}>
+                <span className="text-[10px] text-foreground/20 truncate shrink-0 max-w-[40%]" title={item.file.path}>
                   {item.file.path.includes('/') ? item.file.path.split('/').slice(0, -1).join('/') : ''}
                 </span>
               </div>
@@ -206,7 +206,7 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
               key={commit.hash}
               style={{ position: 'absolute', top: vItem.start, height: ROW_H, width: '100%' }}
               className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                isSelected ? 'bg-pink-500/10' : 'hover:bg-white/5'
+                isSelected ? 'bg-pink-500/10' : 'hover:bg-foreground/5'
               }`}
               onClick={() => handleCommitClick(commit.hash)}
             >
@@ -237,10 +237,10 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
               {/* Text */}
               <div className="flex-1 min-w-0 flex items-center gap-2 pr-3">
                 {/* Expand indicator */}
-                <span className="text-[9px] text-white/20 shrink-0 w-3 text-center">
+                <span className="text-[9px] text-foreground/20 shrink-0 w-3 text-center">
                   {isLoading ? '…' : isExpanded ? '▾' : '▸'}
                 </span>
-                <span className="text-xs text-white/80 truncate flex-1">{commit.subject}</span>
+                <span className="text-xs text-foreground/80 truncate flex-1">{commit.subject}</span>
                 {commit.refNames.length > 0 && (
                   <div className="flex items-center gap-1 shrink-0">
                     {commit.refNames.slice(0, 2).map(ref => (
@@ -250,8 +250,8 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
                     ))}
                   </div>
                 )}
-                <span className="text-[10px] text-white/30 shrink-0 font-mono">{commit.hash.slice(0, 7)}</span>
-                <span className="text-[10px] text-white/30 shrink-0">{formatRelTime(commit.timestamp)}</span>
+                <span className="text-[10px] text-foreground/30 shrink-0 font-mono">{commit.hash.slice(0, 7)}</span>
+                <span className="text-[10px] text-foreground/30 shrink-0">{formatRelTime(commit.timestamp)}</span>
               </div>
             </div>
           );

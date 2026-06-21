@@ -361,7 +361,7 @@ export function CodeblockDetailsPage() {
         {/* Back */}
         <button
           onClick={() => navigate("/codeblocks")}
-          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-border transition-colors"
+          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-foreground/50 hover:text-foreground/80 border-b border-border transition-colors"
         >
           <Icon icon="solar:arrow-left-linear" />
           All Blocks
@@ -376,47 +376,47 @@ export function CodeblockDetailsPage() {
             <>
               {/* Title + badge */}
               <div>
-                <h1 className="font-mono font-bold text-[15px] text-white uppercase leading-[1.3] mb-[8px]">
+                <h1 className="font-mono font-bold text-[15px] text-foreground uppercase leading-[1.3] mb-[8px]">
                   {block.displayName}
                 </h1>
                 {block.releaseLevel > 0 && (
                   <span
-                    className={`text-[9px] font-bold uppercase border rounded px-[6px] py-[2px] ${LEVEL_COLOR[block.releaseLevel] ?? "text-white/50 border-white/10 bg-white/5"}`}
+                    className={`text-[9px] font-bold uppercase border rounded px-[6px] py-[2px] ${LEVEL_COLOR[block.releaseLevel] ?? "text-foreground/50 border-foreground/10 bg-foreground/5"}`}
                   >
                     {LEVEL_LABEL[block.releaseLevel] ?? "Unknown"}
                   </span>
                 )}
               </div>
 
-              <p className="text-[12px] text-white/60 leading-[1.5]">
+              <p className="text-[12px] text-foreground/60 leading-[1.5]">
                 {block.headline || block.description}
               </p>
 
               {/* Meta */}
-              <div className="bg-white/3 border border-border rounded-[4px] overflow-hidden text-[11px]">
+              <div className="bg-foreground/3 border border-border rounded-[4px] overflow-hidden text-[11px]">
                 {block.latestVersion && (
                   <div className="px-[12px] py-[10px] border-b border-border">
-                    <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
+                    <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                       Latest Version
                     </p>
-                    <p className="text-white font-mono">
+                    <p className="text-foreground font-mono">
                       {block.latestVersion}
                     </p>
                   </div>
                 )}
                 <div className="px-[12px] py-[10px] border-b border-border">
-                  <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
+                  <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                     Publisher
                   </p>
-                  <p className="text-white font-mono truncate">
+                  <p className="text-foreground font-mono truncate">
                     {publisherLabel}
                   </p>
                 </div>
                 <div className="px-[12px] py-[10px]">
-                  <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
+                  <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                     Installs
                   </p>
-                  <p className="text-white font-mono">
+                  <p className="text-foreground font-mono">
                     {block.installCount ?? 0}
                   </p>
                 </div>
@@ -425,7 +425,7 @@ export function CodeblockDetailsPage() {
               {/* Members */}
               {members.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-white/40 mb-[10px]">
+                  <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[10px]">
                     Members
                   </p>
                   <div className="flex -space-x-2">
@@ -514,7 +514,7 @@ export function CodeblockDetailsPage() {
               className={`px-[24px] py-[12px] text-[11px] font-bold uppercase tracking-wider transition-all relative ${
                 activeTab === t
                   ? "text-brand"
-                  : "text-white/40 hover:text-white/70"
+                  : "text-foreground/40 hover:text-foreground/70"
               }`}
             >
               {TAB_LABEL[t]}
@@ -925,10 +925,10 @@ function InstallBlockWizard({
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border shrink-0">
           <div>
-            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Install Block
             </h2>
-            <p className="text-[11px] text-white/40 mt-[2px]">
+            <p className="text-[11px] text-foreground/40 mt-[2px]">
               {blockDisplayName}
             </p>
           </div>
@@ -936,7 +936,7 @@ function InstallBlockWizard({
             !(step === "merge" && mergePhase === "merging") && (
               <button
                 onClick={onClose}
-                className="text-white/40 hover:text-white/80 transition-colors p-[4px]"
+                className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
               >
                 <Icon icon="solar:close-circle-linear" className="text-lg" />
               </button>
@@ -972,11 +972,11 @@ function InstallBlockWizard({
                 <div key={s} className="flex items-center gap-[8px]">
                   {i > 0 && (
                     <div
-                      className={`w-[24px] h-[1px] ${done ? "bg-brand" : "bg-white/20"}`}
+                      className={`w-[24px] h-[1px] ${done ? "bg-brand" : "bg-foreground/20"}`}
                     />
                   )}
                   <span
-                    className={`text-[10px] font-bold uppercase ${active ? "text-brand" : done ? "text-white/60" : "text-white/25"}`}
+                    className={`text-[10px] font-bold uppercase ${active ? "text-brand" : done ? "text-foreground/60" : "text-foreground/25"}`}
                   >
                     {labels[s]}
                   </span>
@@ -996,12 +996,12 @@ function InstallBlockWizard({
 
           {step === "location" && (
             <div className="flex flex-col gap-[16px]">
-              <p className="text-[12px] text-white/50">
+              <p className="text-[12px] text-foreground/50">
                 Select where to install this block.
               </p>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Landing Zone
                 </label>
                 <FilterSelect
@@ -1020,7 +1020,7 @@ function InstallBlockWizard({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Product
                 </label>
                 <FilterSelect
@@ -1039,7 +1039,7 @@ function InstallBlockWizard({
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Neuron
                 </label>
                 <FilterSelect
@@ -1058,7 +1058,7 @@ function InstallBlockWizard({
                   }))}
                 />
                 {selectedNeuron && (
-                  <p className="mt-[6px] text-[10px] font-mono text-white/30">
+                  <p className="mt-[6px] text-[10px] font-mono text-foreground/30">
                     {selectedNeuron.package}
                   </p>
                 )}
@@ -1068,7 +1068,7 @@ function InstallBlockWizard({
 
           {step === "plan" && (
             <div className="flex flex-col gap-[12px]">
-              <p className="text-[12px] text-white/50">
+              <p className="text-[12px] text-foreground/50">
                 Select an entitlement plan.
               </p>
               {plansLoading ? (
@@ -1076,7 +1076,7 @@ function InstallBlockWizard({
                   <Loader />
                 </div>
               ) : plans.length === 0 ? (
-                <p className="text-[12px] text-white/40">No plans available.</p>
+                <p className="text-[12px] text-foreground/40">No plans available.</p>
               ) : (
                 plans.map((plan) => (
                   <button
@@ -1085,13 +1085,13 @@ function InstallBlockWizard({
                     className={`w-full text-left p-[16px] border rounded-[4px] transition-all ${
                       selectedPlan?.name === plan.name
                         ? "border-brand bg-brand/5"
-                        : "border-border bg-white/3 hover:border-white/30"
+                        : "border-border bg-foreground/3 hover:border-foreground/30"
                     }`}
                   >
-                    <p className="font-mono text-[12px] font-bold text-white">
+                    <p className="font-mono text-[12px] font-bold text-foreground">
                       {plan.displayName || plan.name.split("/").pop()}
                     </p>
-                    <p className="text-[10px] text-white/30 mt-[2px] font-mono">
+                    <p className="text-[10px] text-foreground/30 mt-[2px] font-mono">
                       {plan.name}
                     </p>
                   </button>
@@ -1102,24 +1102,24 @@ function InstallBlockWizard({
 
           {step === "configure" && (
             <div className="flex flex-col gap-[16px]">
-              <p className="text-[12px] text-white/50">
+              <p className="text-[12px] text-foreground/50">
                 Configure the installation.
               </p>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Build Folder
                 </label>
                 <input
                   type="text"
                   value={buildFolder}
                   onChange={(e) => setBuildFolder(e.target.value)}
-                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-brand transition-colors"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground font-mono focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Block Version
                 </label>
                 <FilterSelect
@@ -1138,25 +1138,25 @@ function InstallBlockWizard({
                 />
               </div>
 
-              <div className="p-[12px] bg-white/3 border border-border rounded-[4px] text-[11px] text-white/50">
-                <p className="font-bold text-white/30 uppercase text-[9px] mb-[6px]">
+              <div className="p-[12px] bg-foreground/3 border border-border rounded-[4px] text-[11px] text-foreground/50">
+                <p className="font-bold text-foreground/30 uppercase text-[9px] mb-[6px]">
                   Summary
                 </p>
                 <p>
                   Block:{" "}
-                  <span className="text-white/70 font-mono">
+                  <span className="text-foreground/70 font-mono">
                     {blockId}
                   </span>
                 </p>
                 <p>
                   Package:{" "}
-                  <span className="text-white/70 font-mono">
+                  <span className="text-foreground/70 font-mono">
                     {selectedNeuron?.package}
                   </span>
                 </p>
                 <p>
                   Plan:{" "}
-                  <span className="text-white/70 font-mono">
+                  <span className="text-foreground/70 font-mono">
                     {selectedPlan?.displayName || selectedPlan?.name}
                   </span>
                 </p>
@@ -1167,8 +1167,8 @@ function InstallBlockWizard({
           {step === "installing" && (
             <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
               <Loader />
-              <p className="text-[13px] text-white/60">Installing block…</p>
-              <p className="text-[11px] text-white/30">
+              <p className="text-[13px] text-foreground/60">Installing block…</p>
+              <p className="text-[11px] text-foreground/30">
                 This may take a few minutes.
               </p>
             </div>
@@ -1200,12 +1200,12 @@ function InstallBlockWizard({
                 icon="solar:check-circle-bold"
                 className="text-5xl text-green-400"
               />
-              <p className="text-[14px] font-bold text-white">
+              <p className="text-[14px] font-bold text-foreground">
                 Block Installed
               </p>
-              <p className="text-[12px] text-white/50 text-center">
+              <p className="text-[12px] text-foreground/50 text-center">
                 The block has been installed and merged into{" "}
-                <span className="text-white/80 font-mono">
+                <span className="text-foreground/80 font-mono">
                   {selectedNeuron?.package}
                 </span>
                 .
@@ -1355,26 +1355,26 @@ function MergeStepContent({
   if (mergePhase === "ready") {
     return (
       <div className="flex flex-col gap-[16px]">
-        <p className="text-[12px] text-white/50">
+        <p className="text-[12px] text-foreground/50">
           The installation created a branch in your local build repo. Merge it
           into master to complete the setup.
         </p>
-        <div className="p-[12px] bg-white/3 border border-border rounded-[4px] text-[11px] text-white/50 flex flex-col gap-[6px]">
+        <div className="p-[12px] bg-foreground/3 border border-border rounded-[4px] text-[11px] text-foreground/50 flex flex-col gap-[6px]">
           <div className="flex items-center gap-[8px]">
             <Icon
               icon="solar:git-branch-linear"
               className="text-brand text-sm shrink-0"
             />
-            <span className="font-mono text-white/80">
+            <span className="font-mono text-foreground/80">
               {branchName || "(branch name unknown)"}
             </span>
           </div>
           <div className="flex items-center gap-[8px]">
             <Icon
               icon="solar:folder-linear"
-              className="text-white/30 text-sm shrink-0"
+              className="text-foreground/30 text-sm shrink-0"
             />
-            <span className="font-mono text-white/40 text-[10px] break-all">
+            <span className="font-mono text-foreground/40 text-[10px] break-all">
               {repoPath || "(repo path unknown)"}
             </span>
           </div>
@@ -1384,7 +1384,7 @@ function MergeStepContent({
             {mergeError}
           </div>
         )}
-        <p className="text-[11px] text-white/30">
+        <p className="text-[11px] text-foreground/30">
           This will run:{" "}
           <span className="font-mono">
             git fetch --all --prune → checkout master → pull → merge origin/
@@ -1400,7 +1400,7 @@ function MergeStepContent({
       <div className="flex flex-col gap-[10px] h-full">
         <div className="flex items-center gap-[8px]">
           <span className="inline-block w-[6px] h-[6px] rounded-full bg-brand animate-pulse" />
-          <p className="text-[11px] text-white/50">Running git operations…</p>
+          <p className="text-[11px] text-foreground/50">Running git operations…</p>
         </div>
         <div
           className="flex-1 rounded-[4px] overflow-hidden"
@@ -1419,9 +1419,9 @@ function MergeStepContent({
           icon="solar:check-circle-bold"
           className="text-5xl text-green-400"
         />
-        <p className="text-[14px] font-bold text-white">Branch Merged</p>
-        <p className="text-[12px] text-white/50 text-center">
-          <span className="font-mono text-white/80">
+        <p className="text-[14px] font-bold text-foreground">Branch Merged</p>
+        <p className="text-[12px] text-foreground/50 text-center">
+          <span className="font-mono text-foreground/80">
             {branchName}
           </span>{" "}
           has been merged into master.
@@ -1443,7 +1443,7 @@ function MergeStepContent({
       {/* Left panel — file list */}
       <div className="w-[180px] shrink-0 border-r border-border flex flex-col overflow-hidden">
         <div className="px-[12px] py-[10px] border-b border-border shrink-0">
-          <p className="text-[9px] font-bold uppercase text-white/30 tracking-wider">
+          <p className="text-[9px] font-bold uppercase text-foreground/30 tracking-wider">
             Conflicts ({conflictFiles.length} files)
           </p>
         </div>
@@ -1460,7 +1460,7 @@ function MergeStepContent({
               <button
                 key={fp}
                 onClick={() => onLoadFile(fp)}
-                className={`w-full flex items-center gap-[6px] px-[12px] py-[7px] text-left transition-colors ${isActive ? "bg-white/8 text-white" : "text-white/60 hover:bg-white/4 hover:text-white/80"}`}
+                className={`w-full flex items-center gap-[6px] px-[12px] py-[7px] text-left transition-colors ${isActive ? "bg-foreground/8 text-foreground" : "text-foreground/60 hover:bg-foreground/4 hover:text-foreground/80"}`}
               >
                 {saved ? (
                   <Icon
@@ -1490,7 +1490,7 @@ function MergeStepContent({
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border shrink-0 gap-[8px]">
-          <span className="text-[10px] font-mono text-white/40 truncate">
+          <span className="text-[10px] font-mono text-foreground/40 truncate">
             {selectedConflictFile}
           </span>
           <div className="flex items-center gap-[6px] shrink-0">
@@ -1526,7 +1526,7 @@ function MergeStepContent({
         {/* File content */}
         <div className="flex-1 overflow-auto font-mono text-[11px]">
           {!conflictContent ? (
-            <div className="flex items-center justify-center h-full text-white/30">
+            <div className="flex items-center justify-center h-full text-foreground/30">
               <Loader size={20} />
             </div>
           ) : (
@@ -1570,7 +1570,7 @@ function ConflictEditor({
           {hunk.before.map((line, i) => (
             <div
               key={i}
-              className="px-[12px] py-[1px] text-white/50 leading-[1.6]"
+              className="px-[12px] py-[1px] text-foreground/50 leading-[1.6]"
             >
               {line || " "}
             </div>
@@ -1584,17 +1584,17 @@ function ConflictEditor({
       parts.push(
         <div
           key={`resolved-${hunkIdx}`}
-          className="border-l-2 border-white/20 my-[2px]"
+          className="border-l-2 border-foreground/20 my-[2px]"
         >
-          <div className="flex items-center gap-[8px] px-[12px] py-[4px] bg-white/5">
+          <div className="flex items-center gap-[8px] px-[12px] py-[4px] bg-foreground/5">
             <Icon
               icon="solar:check-circle-bold"
               className="text-green-400 text-xs"
             />
-            <span className="text-[10px] text-white/40">Resolved</span>
+            <span className="text-[10px] text-foreground/40">Resolved</span>
             <button
               onClick={() => onResolve(hunkIdx, null)}
-              className="text-[10px] text-white/30 hover:text-white/60 transition-colors ml-auto"
+              className="text-[10px] text-foreground/30 hover:text-foreground/60 transition-colors ml-auto"
             >
               Undo
             </button>
@@ -1602,7 +1602,7 @@ function ConflictEditor({
           {resolved.map((line, i) => (
             <div
               key={i}
-              className="px-[12px] py-[1px] text-white/70 leading-[1.6]"
+              className="px-[12px] py-[1px] text-foreground/70 leading-[1.6]"
             >
               {line || " "}
             </div>
@@ -1631,7 +1631,7 @@ function ConflictEditor({
               onClick={() =>
                 onResolve(hunkIdx, [...hunk.current, ...hunk.incoming])
               }
-              className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-white/5 text-white/50 hover:bg-white/10 transition-colors border border-white/15"
+              className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-foreground/5 text-foreground/50 hover:bg-foreground/10 transition-colors border border-foreground/15"
             >
               Accept Both
             </button>
@@ -1660,11 +1660,11 @@ function ConflictEditor({
 
           {/* Divider */}
           <div className="flex items-center px-[12px] py-[2px] bg-muted">
-            <div className="flex-1 h-[1px] bg-white/10" />
-            <span className="px-[8px] text-[9px] text-white/20 uppercase tracking-widest">
+            <div className="flex-1 h-[1px] bg-foreground/10" />
+            <span className="px-[8px] text-[9px] text-foreground/20 uppercase tracking-widest">
               =======
             </span>
-            <div className="flex-1 h-[1px] bg-white/10" />
+            <div className="flex-1 h-[1px] bg-foreground/10" />
           </div>
 
           {/* Incoming change (branch) — blue */}
@@ -1698,7 +1698,7 @@ function ConflictEditor({
           {hunk.after.map((line, i) => (
             <div
               key={i}
-              className="px-[12px] py-[1px] text-white/50 leading-[1.6]"
+              className="px-[12px] py-[1px] text-foreground/50 leading-[1.6]"
             >
               {line || " "}
             </div>
@@ -1786,7 +1786,7 @@ function DocumentationTab({
             className={`px-[14px] py-[8px] text-[10px] font-bold uppercase relative transition-all ${
               audience === a
                 ? "text-brand"
-                : "text-white/40 hover:text-white/70"
+                : "text-foreground/40 hover:text-foreground/70"
             }`}
           >
             {a === "user" ? "User Facing" : "Agent Facing"}
@@ -1832,37 +1832,37 @@ function DocumentationTab({
           <div
             ref={proseRef}
             className="prose prose-invert prose-sm max-w-none break-words
-              text-[13px] leading-[1.7] text-[rgba(255,255,255,0.75)]
-              [&_h1]:font-mono [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-white [&_h1]:mb-[12px]
-              [&_h2]:font-mono [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-white [&_h2]:mb-[8px]
-              [&_h3]:font-mono [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-white [&_h3]:mb-[6px]
-              [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-white [&_h4]:mb-[4px]
-              [&_h5]:text-[11px] [&_h5]:font-semibold [&_h5]:text-white/80 [&_h5]:mb-[4px]
-              [&_h6]:text-[11px] [&_h6]:font-medium [&_h6]:text-white/60 [&_h6]:mb-[4px]
-              [&_p]:text-[rgba(255,255,255,0.7)] [&_p]:mb-[10px]
-              [&_code]:text-brand [&_code]:bg-white/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
+              text-[13px] leading-[1.7] text-foreground/75
+              [&_h1]:font-mono [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-foreground [&_h1]:mb-[12px]
+              [&_h2]:font-mono [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-foreground [&_h2]:mb-[8px]
+              [&_h3]:font-mono [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mb-[6px]
+              [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:mb-[4px]
+              [&_h5]:text-[11px] [&_h5]:font-semibold [&_h5]:text-foreground/80 [&_h5]:mb-[4px]
+              [&_h6]:text-[11px] [&_h6]:font-medium [&_h6]:text-foreground/60 [&_h6]:mb-[4px]
+              [&_p]:text-foreground/70 [&_p]:mb-[10px]
+              [&_code]:text-brand [&_code]:bg-foreground/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
               [&_pre]:bg-card [&_pre]:border [&_pre]:border-border [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
-              [&_pre_code]:bg-transparent [&_pre_code]:text-[rgba(255,255,255,0.8)] [&_pre_code]:p-0
+              [&_pre_code]:bg-transparent [&_pre_code]:text-foreground/80 [&_pre_code]:p-0
               [&_a]:text-brand [&_a]:no-underline hover:[&_a]:underline
-              [&_strong]:text-white
-              [&_li]:text-[rgba(255,255,255,0.7)] [&_li]:mb-[4px]
+              [&_strong]:text-foreground
+              [&_li]:text-foreground/70 [&_li]:mb-[4px]
               [&_ul]:mb-[10px] [&_ol]:mb-[10px]
               [&_hr]:border-border [&_hr]:my-[20px]"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : isGenerating ? (
           <div className="flex flex-col items-center justify-center py-[60px] gap-[16px]">
-            <div className="w-[48px] h-[48px] rounded-full bg-white/5 flex items-center justify-center">
+            <div className="w-[48px] h-[48px] rounded-full bg-foreground/5 flex items-center justify-center">
               <Icon
                 icon="solar:document-add-linear"
-                className="text-[24px] text-white/30"
+                className="text-[24px] text-foreground/30"
               />
             </div>
             <div className="text-center">
-              <p className="text-white/60 text-[13px] font-medium">
+              <p className="text-foreground/60 text-[13px] font-medium">
                 Generating documentation
               </p>
-              <p className="text-white/30 text-[11px] mt-[4px]">
+              <p className="text-foreground/30 text-[11px] mt-[4px]">
                 This may take a few minutes after publishing
               </p>
             </div>
@@ -1966,7 +1966,7 @@ function VersionsTab({
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter bar */}
       <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-border shrink-0 flex-wrap">
-        <span className="text-[11px] text-white/40 mr-[4px]">Filters:</span>
+        <span className="text-[11px] text-foreground/40 mr-[4px]">Filters:</span>
         {VERSION_FILTERS.map((f) => (
           <button
             key={f.level}
@@ -1974,7 +1974,7 @@ function VersionsTab({
             className={`text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] transition-colors ${
               filter === f.level
                 ? LEVEL_COLOR[f.level]
-                : "text-white/40 border-white/20 hover:border-white/40"
+                : "text-foreground/40 border-foreground/20 hover:border-foreground/40"
             }`}
           >
             {f.label}
@@ -1983,7 +1983,7 @@ function VersionsTab({
         {filter !== null && (
           <button
             onClick={() => setFilter(null)}
-            className="text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] text-white/60 border-white/30 hover:border-white/50 ml-[4px]"
+            className="text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] text-foreground/60 border-foreground/30 hover:border-foreground/50 ml-[4px]"
           >
             Show all
           </button>
@@ -1994,7 +1994,7 @@ function VersionsTab({
         {/* Version list */}
         <div className="w-[260px] shrink-0 border-r border-border overflow-auto">
           {filtered.length === 0 && (
-            <p className="text-[12px] text-white/30 p-[16px]">
+            <p className="text-[12px] text-foreground/30 p-[16px]">
               No versions match this filter
             </p>
           )}
@@ -2003,19 +2003,19 @@ function VersionsTab({
               key={v.name}
               onClick={() => onSelect(v)}
               className={`w-full text-left px-[16px] py-[14px] border-b border-border transition-colors ${
-                selected?.name === v.name ? "bg-white/5" : "hover:bg-white/3"
+                selected?.name === v.name ? "bg-foreground/5" : "hover:bg-foreground/3"
               }`}
             >
               <div className="flex items-center justify-between mb-[4px]">
-                <span className="font-mono text-[12px] text-white font-bold">
+                <span className="font-mono text-[12px] text-foreground font-bold">
                   {v.versionTag}
                 </span>
                 <span
                   className={`text-[8px] font-bold uppercase border rounded px-[5px] py-[1px] ${
                     v.releaseLevel > 0
                       ? (LEVEL_COLOR[v.releaseLevel] ??
-                        "text-white/50 border-white/10 bg-white/5")
-                      : "text-white/30 border-white/10 bg-white/5"
+                        "text-foreground/50 border-foreground/10 bg-foreground/5")
+                      : "text-foreground/30 border-foreground/10 bg-foreground/5"
                   }`}
                 >
                   {v.releaseLevel > 0
@@ -2024,7 +2024,7 @@ function VersionsTab({
                 </span>
               </div>
               {v.createTime && (
-                <p className="text-[10px] text-white/40">
+                <p className="text-[10px] text-foreground/40">
                   {formatDate(v.createTime)}
                 </p>
               )}
@@ -2043,10 +2043,10 @@ function VersionsTab({
               displayDetail && (
                 <div className="max-w-[700px] flex flex-col gap-[20px]">
                   <div>
-                    <h2 className="font-mono font-bold text-[16px] text-white uppercase mb-[4px]">
+                    <h2 className="font-mono font-bold text-[16px] text-foreground uppercase mb-[4px]">
                       {displayDetail.versionTag}
                     </h2>
-                    <div className="flex items-center gap-[12px] text-[11px] text-white/40">
+                    <div className="flex items-center gap-[12px] text-[11px] text-foreground/40">
                       {displayDetail.createTime && (
                         <span>
                           Published {formatDate(displayDetail.createTime)}
@@ -2056,8 +2056,8 @@ function VersionsTab({
                         className={`text-[9px] font-bold uppercase border rounded px-[5px] py-[1px] ${
                           displayDetail.releaseLevel > 0
                             ? (LEVEL_COLOR[displayDetail.releaseLevel] ??
-                              "text-white/50 border-white/10 bg-white/5")
-                            : "text-white/30 border-white/10 bg-white/5"
+                              "text-foreground/50 border-foreground/10 bg-foreground/5")
+                            : "text-foreground/30 border-foreground/10 bg-foreground/5"
                         }`}
                       >
                         {displayDetail.releaseLevel > 0
@@ -2068,16 +2068,16 @@ function VersionsTab({
                   </div>
 
                   <div>
-                    <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">
+                    <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[8px]">
                       Release Notes
                     </p>
                     <div className="bg-card border border-border rounded-[4px] p-[16px]">
                       {displayDetail.releaseNotes ? (
-                        <p className="text-[13px] text-white/80 leading-[1.6]">
+                        <p className="text-[13px] text-foreground/80 leading-[1.6]">
                           {displayDetail.releaseNotes}
                         </p>
                       ) : (
-                        <p className="text-[13px] text-white/30 italic">
+                        <p className="text-[13px] text-foreground/30 italic">
                           No release notes written.
                         </p>
                       )}
@@ -2086,7 +2086,7 @@ function VersionsTab({
 
                   {displayDetail.files && displayDetail.files.length > 0 && (
                     <div>
-                      <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">
+                      <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[8px]">
                         Files
                       </p>
                       <div className="flex flex-col gap-[4px]">
@@ -2099,7 +2099,7 @@ function VersionsTab({
                             >
                               <button
                                 onClick={() => toggleFolder(folder.name)}
-                                className="w-full flex items-center gap-[8px] px-[12px] py-[10px] border-b border-border hover:bg-white/3 transition-colors text-left"
+                                className="w-full flex items-center gap-[8px] px-[12px] py-[10px] border-b border-border hover:bg-foreground/3 transition-colors text-left"
                               >
                                 <Icon
                                   icon={
@@ -2107,13 +2107,13 @@ function VersionsTab({
                                       ? "solar:alt-arrow-down-linear"
                                       : "solar:alt-arrow-right-linear"
                                   }
-                                  className="text-white/40 text-xs shrink-0"
+                                  className="text-foreground/40 text-xs shrink-0"
                                 />
                                 <Icon
                                   icon="solar:folder-linear"
-                                  className="text-white/50 text-sm shrink-0"
+                                  className="text-foreground/50 text-sm shrink-0"
                                 />
-                                <span className="text-[12px] text-white font-mono">
+                                <span className="text-[12px] text-foreground font-mono">
                                   {folder.name}
                                 </span>
                               </button>
@@ -2127,18 +2127,18 @@ function VersionsTab({
                                         content: f.content ?? "",
                                       })
                                     }
-                                    className="w-full flex items-center gap-[8px] px-[12px] py-[8px] pl-[36px] border-b border-border last:border-0 hover:bg-white/5 transition-colors text-left group"
+                                    className="w-full flex items-center gap-[8px] px-[12px] py-[8px] pl-[36px] border-b border-border last:border-0 hover:bg-foreground/5 transition-colors text-left group"
                                   >
                                     <Icon
                                       icon="solar:file-linear"
-                                      className="text-white/30 text-xs shrink-0 group-hover:text-white/50"
+                                      className="text-foreground/30 text-xs shrink-0 group-hover:text-foreground/50"
                                     />
-                                    <span className="text-[11px] text-white/70 font-mono group-hover:text-white/90">
+                                    <span className="text-[11px] text-foreground/70 font-mono group-hover:text-foreground/90">
                                       {f.name}
                                     </span>
                                     <Icon
                                       icon="solar:alt-arrow-right-linear"
-                                      className="text-white/20 text-xs ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="text-foreground/20 text-xs ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
                                     />
                                   </button>
                                 ))}
@@ -2261,23 +2261,23 @@ function FileViewerModal({
         <div className="flex items-center gap-[10px]">
           <Icon
             icon="solar:file-code-linear"
-            className="text-white/50 text-base"
+            className="text-foreground/50 text-base"
           />
-          <span className="font-mono text-[13px] text-white">
+          <span className="font-mono text-[13px] text-foreground">
             {shortName}
           </span>
           {shortName !== file.name && (
-            <span className="text-[11px] text-white/30 font-mono">
+            <span className="text-[11px] text-foreground/30 font-mono">
               {file.name}
             </span>
           )}
-          <span className="text-[10px] font-bold uppercase text-white/30 border border-white/15 rounded px-[6px] py-[1px]">
+          <span className="text-[10px] font-bold uppercase text-foreground/30 border border-foreground/15 rounded px-[6px] py-[1px]">
             {extToLang(file.name)}
           </span>
         </div>
         <button
           onClick={onClose}
-          className="flex items-center gap-[6px] text-[11px] text-white/50 hover:text-white/80 transition-colors border border-white/15 hover:border-white/30 rounded px-[10px] py-[4px]"
+          className="flex items-center gap-[6px] text-[11px] text-foreground/50 hover:text-foreground/80 transition-colors border border-foreground/15 hover:border-foreground/30 rounded px-[10px] py-[4px]"
         >
           <Icon icon="solar:close-circle-linear" className="text-xs" />
           Close
@@ -2297,7 +2297,7 @@ function FileViewerModal({
             style={{ "--shiki-dark-bg": "#1a1a1a" } as React.CSSProperties}
           />
         ) : (
-          <pre className="p-[24px] text-[12px] text-white/70 font-mono whitespace-pre-wrap leading-[1.6]">
+          <pre className="p-[24px] text-[12px] text-foreground/70 font-mono whitespace-pre-wrap leading-[1.6]">
             {file.content}
           </pre>
         )}
@@ -2355,25 +2355,25 @@ function InstancesTab({
               <div className="flex items-start justify-between mb-[12px]">
                 <div>
                   <div className="flex items-center gap-[10px] mb-[4px]">
-                    <span className="font-mono font-bold text-[13px] text-white">
+                    <span className="font-mono font-bold text-[13px] text-foreground">
                       {inst.shortId}
                     </span>
                     {inst.state > 0 && (
                       <span
-                        className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? "text-white/50 bg-white/5"}`}
+                        className={`text-[9px] font-bold uppercase rounded px-[6px] py-[2px] ${STATE_COLOR[inst.state] ?? "text-foreground/50 bg-foreground/5"}`}
                       >
                         {STATE_LABEL[inst.state] ?? "Unknown"}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-white/50 font-mono">
+                  <p className="text-[11px] text-foreground/50 font-mono">
                     {inst.package}
                   </p>
                 </div>
                 <div className="flex items-center gap-[8px]">
                   <button
                     onClick={() => setConfigureTarget(inst)}
-                    className="text-[10px] text-white/40 hover:text-white/70 border border-border rounded px-[10px] py-[4px] transition-colors"
+                    className="text-[10px] text-foreground/40 hover:text-foreground/70 border border-border rounded px-[10px] py-[4px] transition-colors"
                   >
                     Configure
                   </button>
@@ -2389,30 +2389,30 @@ function InstancesTab({
               <div className="grid grid-cols-2 gap-[12px] text-[11px]">
                 {inst.blockVersion && (
                   <div>
-                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">
+                    <p className="text-foreground/30 uppercase text-[9px] font-bold mb-[2px]">
                       Version
                     </p>
-                    <p className="text-white/70 font-mono">
+                    <p className="text-foreground/70 font-mono">
                       {shortBlockId(inst.blockVersion)}
                     </p>
                   </div>
                 )}
                 {inst.createTime && (
                   <div>
-                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">
+                    <p className="text-foreground/30 uppercase text-[9px] font-bold mb-[2px]">
                       Installed
                     </p>
-                    <p className="text-white/70">
+                    <p className="text-foreground/70">
                       {formatDate(inst.createTime)}
                     </p>
                   </div>
                 )}
                 {inst.entitlement && (
                   <div className="col-span-2">
-                    <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">
+                    <p className="text-foreground/30 uppercase text-[9px] font-bold mb-[2px]">
                       Entitlement
                     </p>
-                    <p className="text-white/50 font-mono text-[10px] truncate">
+                    <p className="text-foreground/50 font-mono text-[10px] truncate">
                       {inst.entitlement}
                     </p>
                   </div>
@@ -2488,10 +2488,10 @@ function UninstallModal({
             className="text-red-400 text-lg"
           />
           <div>
-            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Uninstall Instance
             </h2>
-            <p className="text-[11px] text-white/40 mt-[2px]">
+            <p className="text-[11px] text-foreground/40 mt-[2px]">
               Configuration is preserved for potential reinstallation.
             </p>
           </div>
@@ -2504,7 +2504,7 @@ function UninstallModal({
             </div>
           )}
 
-          <div className="bg-white/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
+          <div className="bg-foreground/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
             {[
               { label: "Instance", value: inst.name },
               {
@@ -2519,7 +2519,7 @@ function UninstallModal({
                 key={label}
                 className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
-                <span className="text-white/30 w-[90px] shrink-0">{label}</span>
+                <span className="text-foreground/30 w-[90px] shrink-0">{label}</span>
                 {color ? (
                   <span
                     className={`text-[9px] font-bold uppercase rounded px-[6px] py-[1px] self-center ${color}`}
@@ -2527,7 +2527,7 @@ function UninstallModal({
                     {value}
                   </span>
                 ) : (
-                  <span className="text-white/70 font-mono break-all">
+                  <span className="text-foreground/70 font-mono break-all">
                     {value}
                   </span>
                 )}
@@ -2536,9 +2536,9 @@ function UninstallModal({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+            <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
               Type{" "}
-              <span className="text-white/70 font-mono">
+              <span className="text-foreground/70 font-mono">
                 {inst.shortId}
               </span>{" "}
               to confirm
@@ -2549,7 +2549,7 @@ function UninstallModal({
               onChange={(e) => setConfirm(e.target.value)}
               placeholder={inst.shortId}
               disabled={loading}
-              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
             />
           </div>
         </div>
@@ -2637,17 +2637,17 @@ function ConfigureModal({
       <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
         <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border">
           <div>
-            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Configure Installation
             </h2>
-            <p className="text-[11px] text-white/40 mt-[2px] font-mono">
+            <p className="text-[11px] text-foreground/40 mt-[2px] font-mono">
               {inst.name}
             </p>
           </div>
           {!loading && (
             <button
               onClick={onClose}
-              className="text-white/40 hover:text-white/80 transition-colors p-[4px]"
+              className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
             >
               <Icon icon="solar:close-circle-linear" className="text-lg" />
             </button>
@@ -2662,7 +2662,7 @@ function ConfigureModal({
           )}
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+            <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
               Block Version
             </label>
             <FilterSelect
@@ -2677,7 +2677,7 @@ function ConfigureModal({
               }))}
             />
             {selectedVersion && selectedVersion === inst.blockVersion && (
-              <p className="mt-[6px] text-[10px] text-white/30">
+              <p className="mt-[6px] text-[10px] text-foreground/30">
                 This is the currently installed version.
               </p>
             )}
@@ -2715,10 +2715,10 @@ function HelpTab({ blockId }: { blockId: string }) {
     <div className="h-full overflow-auto p-[32px]">
       <div className="max-w-[600px] flex flex-col gap-[24px]">
         <div>
-          <h2 className="font-mono font-bold text-[14px] text-white uppercase mb-[8px]">
+          <h2 className="font-mono font-bold text-[14px] text-foreground uppercase mb-[8px]">
             Get Help
           </h2>
-          <p className="text-[12px] text-white/60 leading-[1.6]">
+          <p className="text-[12px] text-foreground/60 leading-[1.6]">
             Have questions about this block or need support? Use the links below
             to get in touch or report an issue.
           </p>
@@ -2756,18 +2756,18 @@ function HelpLink({
   desc: string;
 }) {
   return (
-    <button className="flex items-center gap-[16px] bg-card border border-border rounded-[4px] p-[16px] text-left hover:border-white/30 transition-colors group w-full">
+    <button className="flex items-center gap-[16px] bg-card border border-border rounded-[4px] p-[16px] text-left hover:border-foreground/30 transition-colors group w-full">
       <Icon
         icon={icon}
-        className="text-xl text-white/40 group-hover:text-white/70 shrink-0 transition-colors"
+        className="text-xl text-foreground/40 group-hover:text-foreground/70 shrink-0 transition-colors"
       />
       <div className="flex-1">
-        <p className="text-[12px] text-white font-bold mb-[2px]">{title}</p>
-        <p className="text-[11px] text-white/40">{desc}</p>
+        <p className="text-[12px] text-foreground font-bold mb-[2px]">{title}</p>
+        <p className="text-[11px] text-foreground/40">{desc}</p>
       </div>
       <Icon
         icon="solar:arrow-right-linear"
-        className="text-white/20 group-hover:text-white/50 transition-colors"
+        className="text-foreground/20 group-hover:text-foreground/50 transition-colors"
       />
     </button>
   );
@@ -2799,7 +2799,7 @@ function SettingsTab({
     <div className="flex-1 overflow-y-auto p-[32px] flex flex-col gap-[32px]">
       {/* Resources */}
       <section>
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[16px]">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground/40 mb-[16px]">
           Resources
         </h2>
         <div className="grid grid-cols-3 gap-[16px]">
@@ -2820,17 +2820,17 @@ function SettingsTab({
               key={label}
               onClick={() => tab && onNavigate(tab)}
               disabled={!tab}
-              className="bg-card border border-border rounded-[8px] p-[20px] text-left hover:border-white/30 transition-colors disabled:cursor-default disabled:hover:border-border group"
+              className="bg-card border border-border rounded-[8px] p-[20px] text-left hover:border-foreground/30 transition-colors disabled:cursor-default disabled:hover:border-border group"
             >
-              <p className="text-[11px] text-white/40 mb-[8px]">{label}</p>
+              <p className="text-[11px] text-foreground/40 mb-[8px]">{label}</p>
               <div className="flex items-center justify-between">
-                <span className="text-[28px] font-bold text-white font-mono">
+                <span className="text-[28px] font-bold text-foreground font-mono">
                   {count}
                 </span>
                 {tab && (
                   <Icon
                     icon="solar:arrow-right-linear"
-                    className="text-white/20 group-hover:text-white/50 transition-colors"
+                    className="text-foreground/20 group-hover:text-foreground/50 transition-colors"
                   />
                 )}
               </div>
@@ -2841,21 +2841,21 @@ function SettingsTab({
 
       {/* Plans */}
       <section>
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[4px]">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground/40 mb-[4px]">
           Plans
         </h2>
-        <p className="text-[11px] text-white/30 mb-[16px]">
+        <p className="text-[11px] text-foreground/30 mb-[16px]">
           Configure Plans as usage models for the block. At least one Plan must
           be configured before sharing the block.
         </p>
         {plansLoading ? (
-          <div className="flex items-center gap-[8px] text-[11px] text-white/40">
+          <div className="flex items-center gap-[8px] text-[11px] text-foreground/40">
             <Loader size={14} />
             <span>Loading plans…</span>
           </div>
         ) : plans.length === 0 ? (
           <div className="bg-card border border-dashed border-border rounded-[8px] p-[24px] text-center">
-            <p className="text-[12px] text-white/30">No plans configured.</p>
+            <p className="text-[12px] text-foreground/30">No plans configured.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-[12px]">
@@ -2864,10 +2864,10 @@ function SettingsTab({
                 key={plan.name}
                 className="bg-card border border-border rounded-[8px] p-[20px]"
               >
-                <p className="text-[13px] font-bold text-white mb-[4px]">
+                <p className="text-[13px] font-bold text-foreground mb-[4px]">
                   {plan.displayName || plan.name}
                 </p>
-                <p className="text-[11px] text-white/40 font-mono break-all">
+                <p className="text-[11px] text-foreground/40 font-mono break-all">
                   {plan.name}
                 </p>
               </div>
@@ -2878,7 +2878,7 @@ function SettingsTab({
 
       {/* Manage */}
       <section>
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[16px]">
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground/40 mb-[16px]">
           Manage
         </h2>
         <div className="bg-card border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
@@ -2886,7 +2886,7 @@ function SettingsTab({
             <p className="text-[12px] font-bold text-red-400 mb-[2px]">
               Delete Block
             </p>
-            <p className="text-[11px] text-white/30">
+            <p className="text-[11px] text-foreground/30">
               Permanently delete this block and all associated data. This action
               cannot be undone.
             </p>
@@ -2954,10 +2954,10 @@ function DeleteBlockModal({
             className="text-red-400 text-lg"
           />
           <div>
-            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Delete Block
             </h2>
-            <p className="text-[11px] text-white/40 mt-[2px]">
+            <p className="text-[11px] text-foreground/40 mt-[2px]">
               This action is permanent and cannot be undone.
             </p>
           </div>
@@ -2970,7 +2970,7 @@ function DeleteBlockModal({
             </div>
           )}
 
-          <div className="bg-white/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
+          <div className="bg-foreground/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
             {[
               { label: "Block ID", value: blockId },
               { label: "Display Name", value: block?.displayName ?? "—" },
@@ -2980,8 +2980,8 @@ function DeleteBlockModal({
                 key={label}
                 className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
-                <span className="text-white/30 w-[90px] shrink-0">{label}</span>
-                <span className="text-white/70 font-mono break-all">
+                <span className="text-foreground/30 w-[90px] shrink-0">{label}</span>
+                <span className="text-foreground/70 font-mono break-all">
                   {value}
                 </span>
               </div>
@@ -2989,9 +2989,9 @@ function DeleteBlockModal({
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+            <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
               Type{" "}
-              <span className="text-white/70 font-mono normal-case">
+              <span className="text-foreground/70 font-mono normal-case">
                 {blockId}
               </span>{" "}
               to confirm
@@ -3002,7 +3002,7 @@ function DeleteBlockModal({
               onChange={(e) => setConfirm(e.target.value)}
               placeholder={blockId}
               disabled={loading}
-              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
             />
           </div>
         </div>
@@ -3069,24 +3069,24 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
       );
     case "Viewer":
       return (
-        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)]">
+        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-foreground/[6%] border border-foreground/10">
           <Icon
             icon="solar:eye-linear"
-            className="text-[rgba(255,255,255,0.4)] text-[10px]"
+            className="text-foreground/40 text-[10px]"
           />
-          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">
+          <span className="text-[10px] font-bold font-mono text-foreground/40">
             Viewer
           </span>
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)]">
+        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-foreground/[6%] border border-foreground/10">
           <Icon
             icon="solar:key-linear"
-            className="text-[rgba(255,255,255,0.4)] text-[10px]"
+            className="text-foreground/40 text-[10px]"
           />
-          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">
+          <span className="text-[10px] font-bold font-mono text-foreground/40">
             {roleLabel || "Unknown"}
           </span>
         </span>
@@ -3100,7 +3100,7 @@ function MemberAvatar({ name, photoUrl }: { name: string; photoUrl: string }) {
       <img
         src={photoUrl}
         alt={name}
-        className="size-[32px] rounded-full object-cover shrink-0 border border-white/10"
+        className="size-[32px] rounded-full object-cover shrink-0 border border-foreground/10"
         onError={(e) => {
           (e.target as HTMLImageElement).style.display = "none";
         }}
@@ -3304,11 +3304,11 @@ function AccessTab({
               icon="solar:close-circle-linear"
               className="text-red-400 text-lg"
             />
-            <p className="text-[12px] font-bold text-white">
+            <p className="text-[12px] font-bold text-foreground">
               Failed to load access data
             </p>
           </div>
-          <p className="text-[11px] text-white/60">{error}</p>
+          <p className="text-[11px] text-foreground/60">{error}</p>
           <button
             onClick={onRefresh}
             className="mt-[10px] text-[10px] text-brand hover:underline"
@@ -3329,12 +3329,12 @@ function AccessTab({
         <div className="flex items-center gap-[8px]">
           <button
             onClick={onRefresh}
-            className="flex items-center gap-[4px] px-[8px] h-[28px] text-white/40 hover:text-white/70 transition-colors text-[10px] rounded border border-transparent hover:border-border"
+            className="flex items-center gap-[4px] px-[8px] h-[28px] text-foreground/40 hover:text-foreground/70 transition-colors text-[10px] rounded border border-transparent hover:border-border"
             title="Refresh"
           >
             <Icon icon="solar:refresh-linear" className="text-sm" />
           </button>
-          <span className="text-[10px] text-white/30 font-mono">
+          <span className="text-[10px] text-foreground/30 font-mono">
             {members.length} {members.length === 1 ? "member" : "members"}
           </span>
         </div>
@@ -3361,9 +3361,9 @@ function AccessTab({
           <div className="flex flex-col items-center justify-center h-full gap-[10px] pt-[60px]">
             <Icon
               icon="solar:users-group-rounded-linear"
-              className="text-white/20 text-4xl"
+              className="text-foreground/20 text-4xl"
             />
-            <p className="text-[12px] text-white/30">
+            <p className="text-[12px] text-foreground/30">
               No members with explicit access
             </p>
           </div>
@@ -3372,20 +3372,20 @@ function AccessTab({
             {members.map((m, i) => (
               <div
                 key={`${m.member}-${i}`}
-                className="flex items-center gap-[12px] px-[16px] py-[12px] bg-card border border-border rounded-[4px] hover:border-white/20 transition-colors group"
+                className="flex items-center gap-[12px] px-[16px] py-[12px] bg-card border border-border rounded-[4px] hover:border-foreground/20 transition-colors group"
               >
                 <MemberAvatar name={m.displayName} photoUrl={m.photoUrl} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-white leading-tight truncate">
+                  <p className="text-[12px] font-semibold text-foreground leading-tight truncate">
                     {m.displayName || m.member}
                   </p>
                   {m.email && (
-                    <p className="text-[10px] font-mono text-white/40 truncate">
+                    <p className="text-[10px] font-mono text-foreground/40 truncate">
                       {m.email}
                     </p>
                   )}
                   {!m.email && m.displayName !== m.member && (
-                    <p className="text-[10px] font-mono text-white/30 truncate">
+                    <p className="text-[10px] font-mono text-foreground/30 truncate">
                       {m.member}
                     </p>
                   )}
@@ -3405,7 +3405,7 @@ function AccessTab({
                   <button
                     onClick={() => removeMember(m)}
                     disabled={removingMember === m.member}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-red-400 disabled:opacity-50 p-[4px] rounded"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity text-foreground/30 hover:text-red-400 disabled:opacity-50 p-[4px] rounded"
                     title="Remove member"
                   >
                     {removingMember === m.member ? (
@@ -3430,16 +3430,16 @@ function AccessTab({
           <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px] max-h-[80vh]">
             <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border shrink-0">
               <div>
-                <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+                <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
                   Add Member
                 </h2>
-                <p className="text-[11px] text-white/40 mt-[2px]">
+                <p className="text-[11px] text-foreground/40 mt-[2px]">
                   Grant access to this block
                 </p>
               </div>
               <button
                 onClick={() => setAddOpen(false)}
-                className="text-white/40 hover:text-white/80 transition-colors p-[4px]"
+                className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
               >
                 <Icon icon="solar:close-circle-linear" className="text-lg" />
               </button>
@@ -3454,7 +3454,7 @@ function AccessTab({
 
               {/* User picker */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   User
                 </label>
                 <input
@@ -3463,7 +3463,7 @@ function AccessTab({
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search by name or email…"
                   disabled={addLoading}
-                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white focus:outline-none focus:border-brand transition-colors disabled:opacity-50 placeholder:text-white/20 mb-[6px]"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground focus:outline-none focus:border-brand transition-colors disabled:opacity-50 placeholder:text-foreground/20 mb-[6px]"
                 />
                 <div className="border border-border rounded-[4px] overflow-hidden max-h-[200px] overflow-y-auto">
                   {usersLoading ? (
@@ -3478,7 +3478,7 @@ function AccessTab({
                         u.email.toLowerCase().includes(q)
                       );
                     }).length === 0 ? (
-                    <div className="py-[12px] px-[12px] text-[11px] text-white/30 text-center">
+                    <div className="py-[12px] px-[12px] text-[11px] text-foreground/30 text-center">
                       {accountUsers.length === 0
                         ? "No users found"
                         : "No matches"}
@@ -3501,7 +3501,7 @@ function AccessTab({
                           className={`w-full flex items-center gap-[10px] px-[12px] py-[10px] border-b border-border last:border-0 text-left transition-colors ${
                             selectedUser?.name === u.name
                               ? "bg-[rgba(248,129,169,0.08)]"
-                              : "hover:bg-white/[0.03]"
+                              : "hover:bg-foreground/[3%]"
                           }`}
                         >
                           <MemberAvatar
@@ -3509,10 +3509,10 @@ function AccessTab({
                             photoUrl={u.photoUrl}
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-[12px] text-white font-semibold truncate">
+                            <p className="text-[12px] text-foreground font-semibold truncate">
                               {u.displayName}
                             </p>
-                            <p className="text-[10px] text-white/40 font-mono truncate">
+                            <p className="text-[10px] text-foreground/40 font-mono truncate">
                               {u.email}
                             </p>
                           </div>
@@ -3530,7 +3530,7 @@ function AccessTab({
 
               {/* Role picker */}
               <div>
-                <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
+                <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Role
                 </label>
                 {rolesLoading ? (
@@ -3547,14 +3547,14 @@ function AccessTab({
                         className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                           addRole === r.name
                             ? "border-brand bg-[rgba(248,129,169,0.06)]"
-                            : "border-border bg-white/2 hover:border-white/30"
+                            : "border-border bg-foreground/2 hover:border-foreground/30"
                         }`}
                       >
                         <div
                           className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
                             addRole === r.name
                               ? "border-brand"
-                              : "border-white/30"
+                              : "border-foreground/30"
                           }`}
                         >
                           {addRole === r.name && (
@@ -3602,16 +3602,16 @@ function AccessTab({
           <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[400px]">
             <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border">
               <div>
-                <h2 className="font-mono font-bold text-[13px] text-white uppercase">
+                <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
                   Change Role
                 </h2>
-                <p className="text-[11px] text-white/40 mt-[2px]">
+                <p className="text-[11px] text-foreground/40 mt-[2px]">
                   {changingRoleMember.displayName || changingRoleMember.member}
                 </p>
               </div>
               <button
                 onClick={() => setChangingRoleMember(null)}
-                className="text-white/40 hover:text-white/80 transition-colors p-[4px]"
+                className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
               >
                 <Icon icon="solar:close-circle-linear" className="text-lg" />
               </button>
@@ -3637,14 +3637,14 @@ function AccessTab({
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                         changeRole === r.name
                           ? "border-brand bg-[rgba(248,129,169,0.06)]"
-                          : "border-border bg-white/2 hover:border-white/30"
+                          : "border-border bg-foreground/2 hover:border-foreground/30"
                       }`}
                     >
                       <div
                         className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
                           changeRole === r.name
                             ? "border-brand"
-                            : "border-white/30"
+                            : "border-foreground/30"
                         }`}
                       >
                         {changeRole === r.name && (

@@ -285,7 +285,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <div className="relative shrink-0" ref={colPickerRef}>
             <button
               onClick={() => setShowColPicker((v) => !v)}
-              className="flex items-center gap-[5px] h-[26px] px-[8px] bg-muted border border-border rounded-[3px] text-[10px] font-mono text-white hover:border-[rgba(248,129,169,0.5)] transition-colors"
+              className="flex items-center gap-[5px] h-[26px] px-[8px] bg-muted border border-border rounded-[3px] text-[10px] font-mono text-foreground hover:border-[rgba(248,129,169,0.5)] transition-colors"
             >
               <Icon icon="solar:filter-table-linear" className="text-[11px] text-brand" />
               <span>
@@ -293,16 +293,16 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                   ? 'All columns'
                   : `${selectedColumns.length} col${selectedColumns.length > 1 ? 's' : ''}`}
               </span>
-              <Icon icon={showColPicker ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} className="text-[9px] text-[rgba(255,255,255,0.35)]" />
+              <Icon icon={showColPicker ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'} className="text-[9px] text-foreground/35" />
             </button>
 
             {showColPicker && (
               <div className="absolute z-20 top-[calc(100%+4px)] left-0 bg-muted border border-border rounded-[4px] shadow-xl min-w-[160px]">
                 <div className="flex items-center justify-between px-[10px] py-[6px] border-b border-border">
-                  <span className="text-[8px] uppercase text-[rgba(255,255,255,0.3)] font-mono font-bold">Columns</span>
+                  <span className="text-[8px] uppercase text-foreground/30 font-mono font-bold">Columns</span>
                   <button
                     onClick={() => setSelectedColumns([])}
-                    className="text-[8px] text-[rgba(255,255,255,0.35)] hover:text-brand font-mono transition-colors"
+                    className="text-[8px] text-foreground/35 hover:text-brand font-mono transition-colors"
                   >
                     All
                   </button>
@@ -314,17 +314,17 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                       <button
                         key={col}
                         onClick={() => toggleColumn(col)}
-                        className="w-full flex items-center gap-[8px] px-[10px] py-[5px] hover:bg-[rgba(255,255,255,0.04)] text-left"
+                        className="w-full flex items-center gap-[8px] px-[10px] py-[5px] hover:bg-foreground/[4%] text-left"
                       >
                         <div className={`w-[11px] h-[11px] border rounded-[2px] flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand border-brand' : 'border-border'}`}>
                           {checked && <Icon icon="solar:check-read-linear" className="text-[7px] text-foreground" />}
                         </div>
-                        <span className="text-[10px] font-mono text-[rgba(255,255,255,0.7)] truncate">{col}</span>
+                        <span className="text-[10px] font-mono text-foreground/70 truncate">{col}</span>
                       </button>
                     );
                   })}
                   {columns.length === 0 && (
-                    <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono px-[10px] py-[8px]">
+                    <p className="text-[9px] text-foreground/30 font-mono px-[10px] py-[8px]">
                       Run a query first
                     </p>
                   )}
@@ -337,11 +337,11 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <div className="flex-1 flex flex-col gap-[5px] min-w-0">
             {whereConditions.map((cond) => (
               <div key={cond.id} className="flex items-center gap-[5px]">
-                <Icon icon="solar:filter-linear" className="text-[10px] text-[rgba(255,255,255,0.25)] shrink-0" />
+                <Icon icon="solar:filter-linear" className="text-[10px] text-foreground/25 shrink-0" />
                 <select
                   value={cond.column}
                   onChange={(e) => updateCondition(cond.id, { column: e.target.value })}
-                  className="bg-muted border border-border text-white text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer max-w-[130px]"
+                  className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer max-w-[130px]"
                 >
                   {(columns.length > 0 ? columns : [cond.column]).map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -350,7 +350,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                 <select
                   value={cond.op}
                   onChange={(e) => updateCondition(cond.id, { op: e.target.value as WhereOp })}
-                  className="bg-muted border border-border text-white text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer"
+                  className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer"
                 >
                   {OPS.map((op) => <option key={op} value={op}>{op}</option>)}
                 </select>
@@ -360,12 +360,12 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                     onChange={(e) => updateCondition(cond.id, { value: e.target.value })}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
                     placeholder="value"
-                    className="bg-muted border border-border text-white text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] w-[120px]"
+                    className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] w-[120px]"
                   />
                 )}
                 <button
                   onClick={() => removeCondition(cond.id)}
-                  className="text-[rgba(255,255,255,0.2)] hover:text-brand transition-colors shrink-0"
+                  className="text-foreground/20 hover:text-brand transition-colors shrink-0"
                 >
                   <Icon icon="solar:close-circle-linear" className="text-sm" />
                 </button>
@@ -373,7 +373,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             ))}
             <button
               onClick={addCondition}
-              className="flex items-center gap-[4px] text-[9px] text-[rgba(255,255,255,0.3)] hover:text-[rgba(255,255,255,0.65)] font-mono transition-colors w-fit"
+              className="flex items-center gap-[4px] text-[9px] text-foreground/30 hover:text-foreground/65 font-mono transition-colors w-fit"
             >
               <Icon icon="solar:add-circle-linear" className="text-[11px]" />
               Add filter
@@ -384,7 +384,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
         {/* Row 2: ORDER BY + LIMIT + Run */}
         <div className="flex items-center gap-[10px] flex-wrap">
           <div className="flex items-center gap-[5px]">
-            <span className="text-[8px] uppercase text-[rgba(255,255,255,0.35)] font-mono font-bold">Order</span>
+            <span className="text-[8px] uppercase text-foreground/35 font-mono font-bold">Order</span>
             <FilterSelect
               value={orderBy}
               options={orderByOptions}
@@ -393,7 +393,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             {orderBy && (
               <button
                 onClick={() => { const d = orderDir === 'ASC' ? 'DESC' : 'ASC'; setOrderDir(d); runQuery({ od: d }); }}
-                className="flex items-center gap-[3px] h-[24px] px-[6px] bg-card border border-border rounded-[3px] text-[9px] font-mono text-white hover:border-[rgba(248,129,169,0.4)] transition-colors"
+                className="flex items-center gap-[3px] h-[24px] px-[6px] bg-card border border-border rounded-[3px] text-[9px] font-mono text-foreground hover:border-[rgba(248,129,169,0.4)] transition-colors"
               >
                 <Icon
                   icon={orderDir === 'ASC' ? 'solar:sort-from-bottom-to-top-linear' : 'solar:sort-from-top-to-bottom-linear'}
@@ -405,7 +405,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           </div>
 
           <div className="flex items-center gap-[5px]">
-            <span className="text-[8px] uppercase text-[rgba(255,255,255,0.35)] font-mono font-bold">Limit</span>
+            <span className="text-[8px] uppercase text-foreground/35 font-mono font-bold">Limit</span>
             <FilterSelect
               value={String(pageSize)}
               options={pageSizeOptions}
@@ -426,12 +426,12 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           </Button>
 
           <details className="ml-auto group">
-            <summary className="text-[8px] uppercase text-[rgba(255,255,255,0.25)] font-mono cursor-pointer hover:text-[rgba(255,255,255,0.5)] transition-colors list-none flex items-center gap-[4px]">
+            <summary className="text-[8px] uppercase text-foreground/25 font-mono cursor-pointer hover:text-foreground/50 transition-colors list-none flex items-center gap-[4px]">
               <Icon icon="solar:code-square-linear" className="text-[11px]" />
               SQL
             </summary>
             <div className="absolute z-10 right-[14px] mt-[4px] max-w-[500px] bg-background border border-border rounded-[4px] p-[10px] shadow-xl">
-              <pre className="text-[9px] font-mono text-[rgba(255,255,255,0.65)] whitespace-pre-wrap break-all">
+              <pre className="text-[9px] font-mono text-foreground/65 whitespace-pre-wrap break-all">
                 {generatedSql}
               </pre>
             </div>
@@ -457,7 +457,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                 {result.columns.map((col) => (
                   <th
                     key={col}
-                    className="text-left px-[12px] py-[7px] text-[rgba(255,255,255,0.5)] font-bold text-[9px] whitespace-nowrap border-r border-border last:border-0 cursor-pointer hover:bg-[rgba(255,255,255,0.03)] transition-colors select-none"
+                    className="text-left px-[12px] py-[7px] text-foreground/50 font-bold text-[9px] whitespace-nowrap border-r border-border last:border-0 cursor-pointer hover:bg-foreground/[3%] transition-colors select-none"
                     onClick={() => sortByColumn(col)}
                     onContextMenu={(e) => openContextMenu(e, buildColumnMenu(col))}
                   >
@@ -469,7 +469,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                             ? (orderDir === 'ASC' ? 'solar:sort-from-bottom-to-top-linear' : 'solar:sort-from-top-to-bottom-linear')
                             : 'solar:sort-linear'
                         }
-                        className={`text-[9px] transition-colors ${orderBy === col ? 'text-brand' : 'text-[rgba(255,255,255,0.15)]'}`}
+                        className={`text-[9px] transition-colors ${orderBy === col ? 'text-brand' : 'text-foreground/15'}`}
                       />
                     </div>
                   </th>
@@ -480,7 +480,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
               {result.rows.map((row, i) => (
                 <tr
                   key={i}
-                  className="border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors cursor-pointer"
+                  className="border-b border-border hover:bg-foreground/[2%] transition-colors cursor-pointer"
                   onClick={() => setSelectedRow(row)}
                 >
                   {row.map((cell, j) => (
@@ -491,8 +491,8 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                       onContextMenu={(e) => openContextMenu(e, buildCellMenu(result.columns[j], cell))}
                     >
                       {cell === 'NULL'
-                        ? <span className="text-[rgba(255,255,255,0.2)] italic">NULL</span>
-                        : <span className="text-[rgba(255,255,255,0.72)] truncate block">{cell}</span>
+                        ? <span className="text-foreground/20 italic">NULL</span>
+                        : <span className="text-foreground/72 truncate block">{cell}</span>
                       }
                     </td>
                   ))}
@@ -502,7 +502,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           </table>
         ) : !loading && !error ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">No rows</p>
+            <p className="text-[10px] text-foreground/30 font-mono">No rows</p>
           </div>
         ) : null}
       </div>
@@ -510,7 +510,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
       {/* ── Pagination ── */}
       {result && !loading && result.columns.length > 0 && (
         <div className="flex items-center justify-between px-[14px] py-[7px] border-t border-border shrink-0 bg-background">
-          <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono">
+          <p className="text-[9px] text-foreground/30 font-mono">
             {result.rows.length} row{result.rows.length !== 1 ? 's' : ''}
             {page > 0 && ` · offset ${page * pageSize}`}
           </p>
@@ -518,18 +518,18 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             <button
               onClick={() => changePage(page - 1)}
               disabled={!hasPrev}
-              className="flex items-center gap-[3px] h-[22px] px-[8px] text-[9px] font-mono border border-border rounded-[3px] text-white disabled:opacity-30 hover:enabled:border-[rgba(255,255,255,0.3)] transition-colors disabled:cursor-not-allowed"
+              className="flex items-center gap-[3px] h-[22px] px-[8px] text-[9px] font-mono border border-border rounded-[3px] text-foreground disabled:opacity-30 hover:enabled:border-foreground/30 transition-colors disabled:cursor-not-allowed"
             >
               <Icon icon="solar:alt-arrow-left-linear" className="text-xs" />
               Prev
             </button>
-            <span className="text-[9px] text-[rgba(255,255,255,0.35)] font-mono">
+            <span className="text-[9px] text-foreground/35 font-mono">
               p{page + 1}
             </span>
             <button
               onClick={() => changePage(page + 1)}
               disabled={!hasNext}
-              className="flex items-center gap-[3px] h-[22px] px-[8px] text-[9px] font-mono border border-border rounded-[3px] text-white disabled:opacity-30 hover:enabled:border-[rgba(255,255,255,0.3)] transition-colors disabled:cursor-not-allowed"
+              className="flex items-center gap-[3px] h-[22px] px-[8px] text-[9px] font-mono border border-border rounded-[3px] text-foreground disabled:opacity-30 hover:enabled:border-foreground/30 transition-colors disabled:cursor-not-allowed"
             >
               Next
               <Icon icon="solar:alt-arrow-right-linear" className="text-xs" />
@@ -554,8 +554,8 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                 onClick={item.onClick}
                 className={`w-full text-left px-[12px] py-[6px] text-[9px] font-mono uppercase transition-colors ${
                   item.destructive
-                    ? 'text-red-400 hover:bg-red-600 hover:text-white'
-                    : 'text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.06)] hover:text-white'
+                    ? 'text-red-400 hover:bg-red-600 hover:text-foreground'
+                    : 'text-foreground/60 hover:bg-foreground/[6%] hover:text-foreground'
                 }`}
               >
                 {item.label}
@@ -567,12 +567,12 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
 
       {/* ── Destructive context menu confirmation ── */}
       <AlertDialog open={!!pendingDestructive} onOpenChange={(open) => { if (!open) setPendingDestructive(null); }}>
-        <AlertDialogContent className="bg-background border border-border text-white">
+        <AlertDialogContent className="bg-background border border-border text-foreground">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-mono text-sm">
+            <AlertDialogTitle className="text-foreground font-mono text-sm">
               Destructive statement
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[rgba(255,255,255,0.5)] text-[10px] font-mono">
+            <AlertDialogDescription className="text-foreground/50 text-[10px] font-mono">
               This will prefill a destructive SQL statement in the Query tab. Review carefully before running.
               <pre className="mt-[10px] text-[9px] text-red-400 bg-background border border-border p-[8px] rounded-[3px] overflow-x-auto whitespace-pre-wrap break-all">
                 {pendingDestructive?.sql}
@@ -580,11 +580,11 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-muted border-border text-white hover:bg-card font-mono text-[10px]">
+            <AlertDialogCancel className="bg-muted border-border text-foreground hover:bg-card font-mono text-[10px]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white font-mono text-[10px]"
+              className="bg-red-600 hover:bg-red-700 text-foreground font-mono text-[10px]"
               onClick={() => { pendingDestructive?.action(); setPendingDestructive(null); }}
             >
               Open in Query tab
@@ -597,10 +597,10 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
       <Sheet open={!!selectedRow} onOpenChange={(open) => { if (!open) setSelectedRow(null); }}>
         <SheetContent
           side="right"
-          className="w-[360px] bg-background border-l border-border p-0 flex flex-col gap-0 text-white"
+          className="w-[360px] bg-background border-l border-border p-0 flex flex-col gap-0 text-foreground"
         >
           <SheetHeader className="px-[16px] py-[12px] border-b border-border">
-            <SheetTitle className="text-[11px] text-white font-mono uppercase tracking-wider">
+            <SheetTitle className="text-[11px] text-foreground font-mono uppercase tracking-wider">
               Row · {tableName}
             </SheetTitle>
           </SheetHeader>
@@ -608,16 +608,16 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <div className="flex-1 overflow-y-auto">
             {selectedRow && columns.map((col, i) => (
               <div key={col} className="flex items-start gap-[8px] px-[14px] py-[8px] border-b border-border last:border-0 group">
-                <span className="text-[8px] uppercase text-[rgba(255,255,255,0.3)] font-mono shrink-0 w-[100px] pt-[2px] truncate">
+                <span className="text-[8px] uppercase text-foreground/30 font-mono shrink-0 w-[100px] pt-[2px] truncate">
                   {col}
                 </span>
-                <span className={`text-[10px] font-mono flex-1 break-all ${selectedRow[i] === 'NULL' ? 'text-[rgba(255,255,255,0.2)] italic' : 'text-[rgba(255,255,255,0.85)]'}`}>
+                <span className={`text-[10px] font-mono flex-1 break-all ${selectedRow[i] === 'NULL' ? 'text-foreground/20 italic' : 'text-foreground/85'}`}>
                   {selectedRow[i]}
                 </span>
                 <button
                   onClick={() => navigator.clipboard.writeText(selectedRow[i])}
                   title="Copy value"
-                  className="opacity-0 group-hover:opacity-100 shrink-0 p-[2px] text-[rgba(255,255,255,0.3)] hover:text-white transition-all"
+                  className="opacity-0 group-hover:opacity-100 shrink-0 p-[2px] text-foreground/30 hover:text-foreground transition-all"
                 >
                   <Icon icon="solar:copy-linear" className="text-[11px]" />
                 </button>
@@ -628,14 +628,14 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <div className="px-[14px] py-[10px] border-t border-border flex gap-[8px]">
             <button
               onClick={() => selectedRow && copyRowAsJSON(selectedRow)}
-              className="flex items-center gap-[5px] px-[10px] py-[5px] bg-muted border border-border rounded-[3px] text-[9px] font-mono text-[rgba(255,255,255,0.6)] hover:text-white hover:border-[rgba(255,255,255,0.3)] transition-colors uppercase"
+              className="flex items-center gap-[5px] px-[10px] py-[5px] bg-muted border border-border rounded-[3px] text-[9px] font-mono text-foreground/60 hover:text-foreground hover:border-foreground/30 transition-colors uppercase"
             >
               <Icon icon="solar:code-2-linear" className="text-[11px]" />
               Copy JSON
             </button>
             <button
               onClick={() => selectedRow && copyRowAsCSV(selectedRow)}
-              className="flex items-center gap-[5px] px-[10px] py-[5px] bg-muted border border-border rounded-[3px] text-[9px] font-mono text-[rgba(255,255,255,0.6)] hover:text-white hover:border-[rgba(255,255,255,0.3)] transition-colors uppercase"
+              className="flex items-center gap-[5px] px-[10px] py-[5px] bg-muted border border-border rounded-[3px] text-[9px] font-mono text-foreground/60 hover:text-foreground hover:border-foreground/30 transition-colors uppercase"
             >
               <Icon icon="solar:document-text-linear" className="text-[11px]" />
               Copy CSV

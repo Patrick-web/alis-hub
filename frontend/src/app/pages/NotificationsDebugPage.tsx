@@ -12,7 +12,7 @@ function Section({ title, icon, children }: { title: string; icon: string; child
     <div className="flex flex-col gap-[12px]">
       <div className="flex items-center gap-[8px] pb-[8px] border-b border-border">
         <Icon icon={icon} className="text-brand text-[15px]" />
-        <span className="text-[11px] font-bold text-white uppercase tracking-widest font-mono">
+        <span className="text-[11px] font-bold text-foreground uppercase tracking-widest font-mono">
           {title}
         </span>
       </div>
@@ -39,12 +39,12 @@ function Btn({
   disabled?: boolean;
 }) {
   const colors: Record<string, string> = {
-    default:  'bg-accent text-white hover:bg-border',
+    default:  'bg-accent text-foreground hover:bg-border',
     success:  'bg-[rgba(52,199,89,0.15)] text-success border border-[rgba(52,199,89,0.3)] hover:bg-[rgba(52,199,89,0.25)]',
     error:    'bg-[rgba(212,24,61,0.15)] text-destructive border border-[rgba(212,24,61,0.3)] hover:bg-[rgba(212,24,61,0.25)]',
     warning:  'bg-[rgba(250,200,0,0.12)] text-warning border border-[rgba(250,200,0,0.3)] hover:bg-[rgba(250,200,0,0.22)]',
     info:     'bg-[rgba(59,130,246,0.15)] text-info border border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.25)]',
-    ghost:    'bg-transparent text-[rgba(255,255,255,0.4)] border border-border hover:text-white hover:border-border',
+    ghost:    'bg-transparent text-foreground/40 border border-border hover:text-foreground hover:border-border',
     danger:   'bg-[rgba(255,92,95,0.1)] text-destructive hover:bg-[rgba(255,92,95,0.2)]',
   };
   return (
@@ -62,8 +62,8 @@ function Btn({
 function Tag({ label, value }: { label: string; value: string | number | boolean }) {
   return (
     <div className="flex items-center gap-[6px] text-[10px] font-mono">
-      <span className="text-[rgba(255,255,255,0.3)] uppercase tracking-wide">{label}</span>
-      <span className="text-white font-bold">{String(value)}</span>
+      <span className="text-foreground/30 uppercase tracking-wide">{label}</span>
+      <span className="text-foreground font-bold">{String(value)}</span>
     </div>
   );
 }
@@ -169,11 +169,11 @@ export function NotificationsDebugPage() {
         <div className="flex flex-col gap-[4px]">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:bell-bing-bold" className="text-brand text-[22px]" />
-            <h1 className="text-[16px] font-bold text-white font-mono">
+            <h1 className="text-[16px] font-bold text-foreground font-mono">
               Notifications Debug
             </h1>
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.35)] font-mono ml-[32px]">
+          <p className="text-[11px] text-foreground/35 font-mono ml-[32px]">
             Test all three notification layers
           </p>
         </div>
@@ -211,7 +211,7 @@ export function NotificationsDebugPage() {
         <div className="bg-muted rounded-[8px] border border-border p-[14px] flex flex-col gap-[12px]">
           {/* Severity */}
           <div className="flex items-center gap-[10px]">
-            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide w-[70px] shrink-0">Severity</span>
+            <span className="text-[10px] text-foreground/30 font-mono uppercase tracking-wide w-[70px] shrink-0">Severity</span>
             <div className="flex gap-[6px]">
               {SEVERITIES.map(s => (
                 <button
@@ -220,7 +220,7 @@ export function NotificationsDebugPage() {
                   className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     severity === s
                       ? 'bg-brand text-black font-bold'
-                      : 'bg-accent text-[rgba(255,255,255,0.5)] hover:text-white'
+                      : 'bg-accent text-foreground/50 hover:text-foreground'
                   }`}
                 >
                   {s}
@@ -231,7 +231,7 @@ export function NotificationsDebugPage() {
 
           {/* Source */}
           <div className="flex items-center gap-[10px]">
-            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide w-[70px] shrink-0">Source</span>
+            <span className="text-[10px] text-foreground/30 font-mono uppercase tracking-wide w-[70px] shrink-0">Source</span>
             <div className="flex flex-wrap gap-[6px]">
               {SOURCES.map(s => (
                 <button
@@ -240,7 +240,7 @@ export function NotificationsDebugPage() {
                   className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     source === s
                       ? 'bg-brand text-black font-bold'
-                      : 'bg-accent text-[rgba(255,255,255,0.5)] hover:text-white'
+                      : 'bg-accent text-foreground/50 hover:text-foreground'
                   }`}
                 >
                   {s}
@@ -259,7 +259,7 @@ export function NotificationsDebugPage() {
               <button
                 key={label}
                 onClick={() => set(!val)}
-                className="flex items-center gap-[7px] text-[10px] font-mono text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
+                className="flex items-center gap-[7px] text-[10px] font-mono text-foreground/50 hover:text-foreground transition-colors"
               >
                 <span className={`relative w-[28px] h-[16px] rounded-full transition-colors ${val ? 'bg-brand' : 'bg-accent'}`}>
                   <span className={`absolute top-[2px] w-[12px] h-[12px] rounded-full bg-white shadow transition-all ${val ? 'left-[14px]' : 'left-[2px]'}`} />
@@ -286,7 +286,7 @@ export function NotificationsDebugPage() {
         {state.notifications.length > 0 && (
           <div className="bg-muted rounded-[8px] border border-border overflow-hidden">
             <div className="px-[12px] py-[8px] border-b border-border flex items-center gap-[6px]">
-              <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-widest">Store state</span>
+              <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-widest">Store state</span>
               <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
                 {state.notifications.length}
               </span>
@@ -304,11 +304,11 @@ export function NotificationsDebugPage() {
                   }`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-[8px]">
-                      <span className="text-white truncate">{n.title}</span>
-                      {!n.read && <span className="text-[rgba(255,255,255,0.3)] shrink-0">unread</span>}
-                      {n.persistent && <span className="text-[rgba(255,255,255,0.3)] shrink-0">persistent</span>}
+                      <span className="text-foreground truncate">{n.title}</span>
+                      {!n.read && <span className="text-foreground/30 shrink-0">unread</span>}
+                      {n.persistent && <span className="text-foreground/30 shrink-0">persistent</span>}
                     </div>
-                    <span className="text-[rgba(255,255,255,0.3)]">{n.source} · {n.severity}</span>
+                    <span className="text-foreground/30">{n.source} · {n.severity}</span>
                   </div>
                 </div>
               ))}
@@ -322,8 +322,8 @@ export function NotificationsDebugPage() {
         <div className="bg-muted rounded-[8px] border border-border p-[14px] flex flex-col gap-[12px]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-white font-mono">macOS notification center</p>
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono mt-[2px]">
+              <p className="text-[11px] text-foreground font-mono">macOS notification center</p>
+              <p className="text-[10px] text-foreground/35 font-mono mt-[2px]">
                 Fires a native notification via UserNotifications. Also togglable in Profile → System notifications.
               </p>
             </div>

@@ -469,7 +469,7 @@ export function BuildsPage() {
       header: 'VERSION',
       render: (item: VersionEntry) => (
         <span className="flex items-center">
-          <span className={`font-mono font-bold text-[12px] ${activeVersionId === item.version ? 'text-brand' : 'text-white'}`}>
+          <span className={`font-mono font-bold text-[12px] ${activeVersionId === item.version ? 'text-brand' : 'text-foreground'}`}>
             {item.version}
           </span>
           {versionStateBadge(item.state)}
@@ -480,7 +480,7 @@ export function BuildsPage() {
     {
       header: 'COMMIT',
       render: (item: VersionEntry) => (
-        <span className="font-mono text-[11px] text-[rgba(255,255,255,0.45)]">
+        <span className="font-mono text-[11px] text-foreground/45">
           {item.buildCommit ? item.buildCommit.substring(0, 7) : '—'}
         </span>
       ),
@@ -505,14 +505,14 @@ export function BuildsPage() {
               </span>
             ))}
           </div>
-        ) : <span className="text-[9px] text-[rgba(255,255,255,0.15)]">—</span>;
+        ) : <span className="text-[9px] text-foreground/15">—</span>;
       },
       className: 'w-[100px]',
     },
     {
       header: '',
       render: (item: VersionEntry) => (
-        <span className="text-[9px] text-[rgba(255,255,255,0.3)]">
+        <span className="text-[9px] text-foreground/30">
           {item.createTime > 0 ? formatRelativeTime(item.createTime) : ''}
           {isLatest(item) && <span className="ml-[6px] text-brand">LATEST</span>}
         </span>
@@ -535,7 +535,7 @@ export function BuildsPage() {
         <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
           <div className="flex items-center h-[34px]">
             <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-              <p className="text-[12px] text-white">/</p>
+              <p className="text-[12px] text-foreground">/</p>
             </div>
             <Input
               placeholder="Filter..."
@@ -573,11 +573,11 @@ export function BuildsPage() {
           {versionsLoading ? (
             <div className="flex items-center justify-center h-full gap-[10px]">
               <Loader size={20} />
-              <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading versions...</span>
+              <span className="text-[11px] text-foreground/50">Loading versions...</span>
             </div>
           ) : !activeNeuron ? (
             <div className="px-[20px] py-[20px]">
-              <p className="text-[11px] text-[rgba(255,255,255,0.3)]">Select a neuron to view its build history.</p>
+              <p className="text-[11px] text-foreground/30">Select a neuron to view its build history.</p>
             </div>
           ) : filteredVersions.length === 0 && !versionsLoading ? (
             <EmptyState
@@ -622,7 +622,7 @@ export function BuildsPage() {
             <button
               onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
               title="Open logs in browser"
-              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-accent transition-colors"
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-foreground/40 hover:text-foreground hover:bg-accent transition-colors"
             >
               <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
             </button>
@@ -649,7 +649,7 @@ export function BuildsPage() {
                 <div className="flex gap-[8px]">
                   <button
                     onClick={() => Browser.OpenURL(commitUrl)}
-                    className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-border hover:border-border rounded-[4px] transition-colors"
+                    className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-foreground/35 hover:text-foreground border border-border hover:border-border rounded-[4px] transition-colors"
                   >
                     <Icon icon="solar:code-square-linear" className="text-sm" />
                     View commit
@@ -658,7 +658,7 @@ export function BuildsPage() {
                   {compareUrl && (
                     <button
                       onClick={() => Browser.OpenURL(compareUrl!)}
-                      className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-border hover:border-border rounded-[4px] transition-colors"
+                      className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-foreground/35 hover:text-foreground border border-border hover:border-border rounded-[4px] transition-colors"
                     >
                       <Icon icon="solar:graph-new-up-linear" className="text-sm" />
                       View changes
@@ -704,34 +704,34 @@ export function BuildsPage() {
                   <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
                     <div className="flex flex-col gap-[14px]">
                       <div>
-                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Version</p>
-                        <p className="font-mono font-bold text-[13px] text-white">{selectedVersion.version}</p>
+                        <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[3px]">Version</p>
+                        <p className="font-mono font-bold text-[13px] text-foreground">{selectedVersion.version}</p>
                       </div>
                       {selectedVersion.createTime > 0 && (
                         <div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Built</p>
-                          <p className="text-[11px] text-[rgba(255,255,255,0.5)]">{formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}</p>
+                          <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[3px]">Built</p>
+                          <p className="text-[11px] text-foreground/50">{formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}</p>
                         </div>
                       )}
                       {selectedVersion.buildCommit && (
                         <div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit</p>
-                          <p className="font-mono text-[11px] text-[rgba(255,255,255,0.5)]">{selectedVersion.buildCommit.substring(0, 12)}</p>
+                          <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[3px]">Commit</p>
+                          <p className="font-mono text-[11px] text-foreground/50">{selectedVersion.buildCommit.substring(0, 12)}</p>
                         </div>
                       )}
                       {selectedVersion.buildCommit && (() => {
                         const msg = changelogCommits.find(c => c.sha === selectedVersion.buildCommit)?.message;
                         if (changelogLoading) return (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit Message</p>
-                            <p className="text-[11px] text-[rgba(255,255,255,0.25)] italic">Loading...</p>
+                            <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[3px]">Commit Message</p>
+                            <p className="text-[11px] text-foreground/25 italic">Loading...</p>
                           </div>
                         );
                         if (!msg) return null;
                         return (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit Message</p>
-                            <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.5]">{msg}</p>
+                            <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[3px]">Commit Message</p>
+                            <p className="text-[11px] text-foreground/50 leading-[1.5]">{msg}</p>
                           </div>
                         );
                       })()}
@@ -739,7 +739,7 @@ export function BuildsPage() {
                         const envNames = deployedEnvsForVersion(selectedVersion.version);
                         return envNames.length > 0 ? (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[6px]">Deployed In</p>
+                            <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[6px]">Deployed In</p>
                             <div className="flex flex-wrap gap-[4px]">
                               {envNames.map(name => (
                                 <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-mono text-success">
@@ -759,24 +759,24 @@ export function BuildsPage() {
                   <div className="flex-1 overflow-y-auto">
                     {!selectedVersion.logsUrl ? (
                       <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
-                        <Icon icon="solar:document-text-linear" className="text-white text-[24px]" />
-                        <p className="text-[11px] text-white">No logs for this build</p>
+                        <Icon icon="solar:document-text-linear" className="text-foreground text-[24px]" />
+                        <p className="text-[11px] text-foreground">No logs for this build</p>
                       </div>
                     ) : logsLoading ? (
                       <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                         <Loader size={20} />
-                        <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading logs...</span>
+                        <span className="text-[11px] text-foreground/50">Loading logs...</span>
                       </div>
                     ) : logsError ? (
                       <p className="text-[10px] text-[rgba(255,92,95,0.8)] px-[16px] py-[20px]">{logsError}</p>
                     ) : logsContent !== null ? (
-                      <pre className="p-[12px] text-[10px] leading-[1.6] text-[rgba(255,255,255,0.75)] font-mono whitespace-pre-wrap break-words">
+                      <pre className="p-[12px] text-[10px] leading-[1.6] text-foreground/75 font-mono whitespace-pre-wrap break-words">
                         {logsContent || '(no log output)'}
                       </pre>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
-                        <Icon icon="solar:document-text-linear" className="text-white text-[24px]" />
-                        <p className="text-[11px] text-white">No log output</p>
+                        <Icon icon="solar:document-text-linear" className="text-foreground text-[24px]" />
+                        <p className="text-[11px] text-foreground">No log output</p>
                       </div>
                     )}
                   </div>
@@ -788,16 +788,16 @@ export function BuildsPage() {
                     {changelogLoading ? (
                       <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                         <Loader size={20} />
-                        <span className="text-[11px] text-[rgba(255,255,255,0.3)]">Loading commits...</span>
+                        <span className="text-[11px] text-foreground/30">Loading commits...</span>
                       </div>
                     ) : changelogCommits.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
-                        <Icon icon="solar:history-linear" className="text-white text-[24px]" />
-                        <p className="text-[11px] text-white">No changelog available</p>
+                        <Icon icon="solar:history-linear" className="text-foreground text-[24px]" />
+                        <p className="text-[11px] text-foreground">No changelog available</p>
                       </div>
                     ) : (
                       <div className="flex flex-col">
-                        <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-mono">
+                        <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-foreground/30 uppercase font-bold font-mono">
                           {changelogCommits.length} commit{changelogCommits.length !== 1 ? 's' : ''} since {versions[versions.findIndex(v => v.version === activeVersionId) + 1]?.version ?? 'start'}
                         </p>
                         {changelogCommits.map(c => (
@@ -806,8 +806,8 @@ export function BuildsPage() {
                               {c.sha.substring(0, 7)}
                             </span>
                             <div className="min-w-0 flex-1">
-                              <p className="text-[10px] text-white leading-tight">{c.message}</p>
-                              <p className="text-[9px] text-[rgba(255,255,255,0.35)] mt-[2px]">
+                              <p className="text-[10px] text-foreground leading-tight">{c.message}</p>
+                              <p className="text-[9px] text-foreground/35 mt-[2px]">
                                 {c.author} · {formatRelativeTime(c.timestamp)}
                               </p>
                             </div>
@@ -820,8 +820,8 @@ export function BuildsPage() {
               </>
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-[12px] opacity-30 pb-[40px]">
-                <Icon icon="solar:box-linear" className="text-white text-[32px]" />
-                <p className="text-[11px] text-white">
+                <Icon icon="solar:box-linear" className="text-foreground text-[32px]" />
+                <p className="text-[11px] text-foreground">
                   {activeNeuron ? 'Select a version or click BUILD' : 'Select a neuron to get started'}
                 </p>
               </div>
@@ -834,18 +834,18 @@ export function BuildsPage() {
           <div className="flex-1 flex flex-col min-h-0">
             {/* Branch selector */}
             <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
-              <Icon icon="solar:branch-linear" className="text-[rgba(255,255,255,0.35)] text-sm shrink-0" />
+              <Icon icon="solar:branch-linear" className="text-foreground/35 text-sm shrink-0" />
               <div className="relative flex-1 min-w-0">
                 <select
                   value={buildBranch}
                   onChange={(e) => handleBranchChange(e.target.value)}
-                  className="w-full appearance-none bg-transparent text-[10px] text-white font-mono outline-none cursor-pointer pr-[16px]"
+                  className="w-full appearance-none bg-transparent text-[10px] text-foreground font-mono outline-none cursor-pointer pr-[16px]"
                 >
                   {buildBranches.map(b => (
-                    <option key={b} value={b} className="bg-background text-white">{b}</option>
+                    <option key={b} value={b} className="bg-background text-foreground">{b}</option>
                   ))}
                 </select>
-                <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.35)] text-xs pointer-events-none" />
+                <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-foreground/35 text-xs pointer-events-none" />
               </div>
             </div>
 
@@ -854,11 +854,11 @@ export function BuildsPage() {
               {buildCommitsLoading ? (
                 <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                   <Loader size={20} />
-                  <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+                  <span className="text-[11px] text-foreground/50">Loading commits...</span>
                 </div>
               ) : buildCommits.length === 0 ? (
                 <div className="px-[16px] py-[20px]">
-                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found for this branch.</p>
+                  <p className="text-[11px] text-foreground/40">No commits found for this branch.</p>
                 </div>
               ) : (
                 <div className="flex flex-col">
@@ -872,9 +872,9 @@ export function BuildsPage() {
                         <span className="text-[10px] font-bold font-mono text-brand">
                           {c.sha.substring(0, 7)}
                         </span>
-                        <span className="text-[10px] text-white leading-tight truncate">{c.message}</span>
+                        <span className="text-[10px] text-foreground leading-tight truncate">{c.message}</span>
                       </div>
-                      <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
+                      <p className="text-[9px] text-foreground/35">
                         {c.author} · {formatTimestamp(c.timestamp)}
                       </p>
                     </button>
@@ -890,18 +890,18 @@ export function BuildsPage() {
           <div className="flex-1 overflow-y-auto px-[16px] py-[20px]">
             <button
               onClick={() => setBuildStep('commits')}
-              className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[20px] transition-colors"
+              className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[20px] transition-colors"
             >
               <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
               Back to commits
             </button>
 
             <div className="bg-card border border-border rounded-[8px] p-[14px] mb-[20px]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
+              <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">
                 {buildBranch} · {selectedCommit.sha.substring(0, 7)}
               </p>
-              <p className="text-[11px] text-white leading-[1.5] mb-[8px]">{selectedCommit.message}</p>
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)]">
+              <p className="text-[11px] text-foreground leading-[1.5] mb-[8px]">{selectedCommit.message}</p>
+              <p className="text-[9px] text-foreground/40">
                 {selectedCommit.author} · {formatTimestamp(selectedCommit.timestamp)}
               </p>
             </div>
@@ -920,17 +920,17 @@ export function BuildsPage() {
         {deployStep === 'select-env' && (
           <div className="flex-1 overflow-y-auto">
             <div className="px-[16px] py-[16px]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[4px]">
+              <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[4px]">
                 Version
               </p>
               <p className="font-mono font-bold text-[16px] text-brand mb-[20px]">
                 {activeVersionId}
               </p>
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
+              <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[10px]">
                 Environments
               </p>
               {state.loadedEnvs.length === 0 ? (
-                <p className="text-[11px] text-[rgba(255,255,255,0.3)] mb-[20px]">No environments loaded.</p>
+                <p className="text-[11px] text-foreground/30 mb-[20px]">No environments loaded.</p>
               ) : (
                 <div className="flex flex-col gap-[6px] mb-[20px]">
                   {state.loadedEnvs.map(env => {
@@ -953,8 +953,8 @@ export function BuildsPage() {
                           {selected && <Icon icon="solar:check-linear" className="text-black text-[10px]" />}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-white truncate">{env.displayName}</p>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate">{env.name.split('/').pop()}</p>
+                          <p className="text-[11px] font-bold text-foreground truncate">{env.displayName}</p>
+                          <p className="text-[9px] text-foreground/40 font-mono truncate">{env.name.split('/').pop()}</p>
                         </div>
                       </button>
                     );
@@ -980,8 +980,8 @@ export function BuildsPage() {
               <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                 <Loader size={20} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-white leading-tight">Deploying · {activeVersionId}</p>
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
+                  <p className="text-[11px] font-bold text-foreground leading-tight">Deploying · {activeVersionId}</p>
+                  <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
                 </div>
               </div>
             )}
@@ -992,15 +992,15 @@ export function BuildsPage() {
                 {deployResult?.error ? (
                   <div className="flex items-start gap-[8px]">
                     <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                    <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{deployResult.error}</p>
+                    <p className="text-[10px] text-foreground/70 leading-relaxed">{deployResult.error}</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-[8px]">
                     <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-white leading-tight">Deploy Complete</p>
+                      <p className="text-[11px] font-bold text-foreground leading-tight">Deploy Complete</p>
                       {deployResult?.version && (
-                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
+                        <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
                           {deployResult.version}
                         </p>
                       )}
@@ -1008,7 +1008,7 @@ export function BuildsPage() {
                     {deployResult?.deployments?.[0]?.logsUrl && (
                       <button
                         onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
-                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
+                        className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                         title="Open in browser"
                       >
                         <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1023,7 +1023,7 @@ export function BuildsPage() {
               <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                 <button
                   onClick={openDeployFlow}
-                  className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                  className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
                 >
                   <Icon icon="solar:refresh-linear" className="text-sm" />
                   Deploy again
@@ -1041,11 +1041,11 @@ export function BuildsPage() {
               <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                 <Loader size={20} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold text-white leading-tight">Running Build · {activeNeuron}</p>
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
+                  <p className="text-[11px] font-bold text-foreground leading-tight">Running Build · {activeNeuron}</p>
+                  <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
                 </div>
                 {buildResult?.version && (
-                  <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.35)] shrink-0">
+                  <span className="text-[9px] font-bold font-mono text-foreground/35 shrink-0">
                     {buildResult.version}
                   </span>
                 )}
@@ -1060,15 +1060,15 @@ export function BuildsPage() {
                 {buildResult?.error ? (
                   <div className="flex items-start gap-[8px]">
                     <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                    <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
+                    <p className="text-[10px] text-foreground/70 leading-relaxed">{buildResult.error}</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-[8px]">
                     <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-bold text-white leading-tight">Build Complete</p>
+                      <p className="text-[11px] font-bold text-foreground leading-tight">Build Complete</p>
                       {(buildResult?.neuronVersion || buildResult?.version) && (
-                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
+                        <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
                           {buildResult.neuronVersion || buildResult.version}
                         </p>
                       )}
@@ -1076,7 +1076,7 @@ export function BuildsPage() {
                     {buildResult?.logsUrl && (
                       <button
                         onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
+                        className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                         title="Open in browser"
                       >
                         <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1095,7 +1095,7 @@ export function BuildsPage() {
               <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                 <button
                   onClick={openBuildFlow}
-                  className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                  className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
                 >
                   <Icon icon="solar:refresh-linear" className="text-sm" />
                   Build again

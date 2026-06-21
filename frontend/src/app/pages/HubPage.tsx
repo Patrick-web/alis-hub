@@ -120,7 +120,7 @@ export function HubPage() {
                 </span>
               </div>
             ) : (
-              <Icon icon="solar:user-circle-linear" className="text-white text-[22px]" />
+              <Icon icon="solar:user-circle-linear" className="text-foreground text-[22px]" />
             )}
           </button>
         </div>
@@ -133,8 +133,8 @@ export function HubPage() {
           <div className="flex flex-col items-center text-center gap-[14px]">
             <img src="/appicon.png" alt="Alis" className="size-[64px] rounded-[16px]" />
             <div>
-              <h1 className="text-[24px] font-bold text-white tracking-tight">AlisHub</h1>
-              <p className="text-[13px] text-[rgba(255,255,255,0.45)] mt-[5px] italic tracking-wide">
+              <h1 className="text-[24px] font-bold text-foreground tracking-tight">AlisHub</h1>
+              <p className="text-[13px] text-foreground/45 mt-[5px] italic tracking-wide">
                 From Idea to Impact, Faster
               </p>
             </div>
@@ -143,7 +143,7 @@ export function HubPage() {
           {/* Recent landing zone */}
           {state.recentLandingZone && (
             <div>
-              <p className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] uppercase tracking-wide mb-[10px]">
+              <p className="text-[10px] font-mono text-foreground/30 uppercase tracking-wide mb-[10px]">
                 Recent
               </p>
               <button
@@ -155,18 +155,18 @@ export function HubPage() {
                     <Icon icon="solar:map-point-linear" className="text-brand text-lg" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-semibold text-white group-hover:text-brand transition-colors truncate">
+                    <p className="text-[13px] font-semibold text-foreground group-hover:text-brand transition-colors truncate">
                       {state.recentLandingZone.orgDisplayName || state.recentLandingZone.org}
                     </p>
-                    <p className="text-[11px] text-[rgba(255,255,255,0.4)] mt-[1px] truncate">
+                    <p className="text-[11px] text-foreground/40 mt-[1px] truncate">
                       {state.recentLandingZone.productDisplayName || state.recentLandingZone.product}
                     </p>
                   </div>
                   <div className="flex items-center gap-[6px] shrink-0">
-                    <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] group-hover:text-brand transition-colors">
+                    <span className="text-[10px] font-mono text-foreground/30 group-hover:text-brand transition-colors">
                       Resume
                     </span>
-                    <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.3)] group-hover:text-brand text-base transition-colors" />
+                    <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/30 group-hover:text-brand text-base transition-colors" />
                   </div>
                 </div>
               </button>
@@ -176,7 +176,7 @@ export function HubPage() {
           {/* Shortcut cards */}
           <div>
             {state.recentLandingZone && (
-              <p className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] uppercase tracking-wide mb-[10px]">
+              <p className="text-[10px] font-mono text-foreground/30 uppercase tracking-wide mb-[10px]">
                 Explore
               </p>
             )}
@@ -190,10 +190,10 @@ export function HubPage() {
                   <div className="size-[32px] rounded-[8px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.12)] flex items-center justify-center mb-[12px]">
                     <Icon icon={s.icon} className="text-brand text-base" />
                   </div>
-                  <p className="text-[13px] font-semibold text-white group-hover:text-brand transition-colors">
+                  <p className="text-[13px] font-semibold text-foreground group-hover:text-brand transition-colors">
                     {s.label}
                   </p>
-                  <p className="text-[11px] text-[rgba(255,255,255,0.35)] mt-[3px] leading-snug">
+                  <p className="text-[11px] text-foreground/35 mt-[3px] leading-snug">
                     {s.description}
                   </p>
                 </button>

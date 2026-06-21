@@ -134,16 +134,16 @@ export function DuplicateVarModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!submitting) onOpenChange(o); }}>
-      <DialogContent className="bg-card border border-border text-white p-0 gap-0 sm:max-w-[500px]">
+      <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 sm:max-w-[500px]">
         <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:copy-linear" className="text-brand text-xl" />
-            <DialogTitle className="text-white font-mono text-[13px] font-bold">
+            <DialogTitle className="text-foreground font-mono text-[13px] font-bold">
               Duplicate Variable
             </DialogTitle>
           </div>
-          <p className="font-mono text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px]">
-            Copy <span className="text-white">{varLabel}</span> to other environments
+          <p className="font-mono text-[11px] text-foreground/50 mt-[4px]">
+            Copy <span className="text-foreground">{varLabel}</span> to other environments
           </p>
         </DialogHeader>
 
@@ -153,7 +153,7 @@ export function DuplicateVarModal({
               <Loader size={20} />
             </div>
           ) : targets.length === 0 ? (
-            <p className="font-mono text-[11px] text-[rgba(255,255,255,0.4)] text-center py-[20px]">
+            <p className="font-mono text-[11px] text-foreground/40 text-center py-[20px]">
               No other environments available.
             </p>
           ) : (
@@ -161,7 +161,7 @@ export function DuplicateVarModal({
               <div
                 key={target.env.name}
                 className={`flex items-start gap-[10px] p-[12px] rounded-[4px] border transition-colors cursor-pointer ${
-                  target.checked ? 'border-brand bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-[rgba(255,255,255,0.03)]'
+                  target.checked ? 'border-brand bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-foreground/[3%]'
                 }`}
                 onClick={() => !target.loading && toggle(target.env.name)}
               >
@@ -172,7 +172,7 @@ export function DuplicateVarModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-[8px]">
-                    <span className="font-mono text-[12px] text-white">
+                    <span className="font-mono text-[12px] text-foreground">
                       {target.env.displayName}
                     </span>
                     {target.env.envType === 3 && (
@@ -191,9 +191,9 @@ export function DuplicateVarModal({
                     <div className="flex items-center gap-[5px] mt-[4px]">
                       <Icon
                         icon="solar:danger-triangle-linear"
-                        className={`text-[13px] ${target.env.envType === 3 ? 'text-warning' : 'text-[rgba(255,255,255,0.4)]'}`}
+                        className={`text-[13px] ${target.env.envType === 3 ? 'text-warning' : 'text-foreground/40'}`}
                       />
-                      <span className={`font-mono text-[10px] ${target.env.envType === 3 ? 'text-warning' : 'text-[rgba(255,255,255,0.4)]'}`}>
+                      <span className={`font-mono text-[10px] ${target.env.envType === 3 ? 'text-warning' : 'text-foreground/40'}`}>
                         Already exists — will override
                       </span>
                     </div>

@@ -33,9 +33,9 @@ const ACTION_FACTORIES: Record<string, ActionFactory> = {
 function SuggestionCard({ suggestion, actions }: { suggestion: Suggestion; actions: SuggestionAction[] }) {
   return (
     <div className="px-[14px] py-[12px] border-b border-border last:border-0">
-      <p className="text-[12px] font-bold text-white font-mono">{suggestion.title}</p>
+      <p className="text-[12px] font-bold text-foreground font-mono">{suggestion.title}</p>
       {suggestion.body && (
-        <p className="text-[11px] text-[rgba(255,255,255,0.5)] font-mono mt-[2px]">{suggestion.body}</p>
+        <p className="text-[11px] text-foreground/50 font-mono mt-[2px]">{suggestion.body}</p>
       )}
       {actions.length > 0 && (
         <div className="flex items-center gap-[6px] mt-[8px]">
@@ -46,7 +46,7 @@ function SuggestionCard({ suggestion, actions }: { suggestion: Suggestion; actio
               className={`text-[10px] font-mono font-bold px-[8px] py-[4px] rounded-full transition-colors ${
                 action.variant === 'primary'
                   ? 'bg-brand text-black hover:opacity-90'
-                  : 'text-[rgba(255,255,255,0.4)] hover:text-white'
+                  : 'text-foreground/40 hover:text-foreground'
               }`}
             >
               {action.label}
@@ -76,13 +76,13 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
       <SheetContent
         side="right"
-        className="bg-card border-l border-border text-white w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
+        className="bg-card border-l border-border text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-[14px] pt-[14px] pb-[12px] border-b border-border pr-[44px]">
           <div className="flex items-center gap-[8px]">
             <Icon icon="solar:lightbulb-bold" className="text-brand text-[16px]" />
-            <span className="text-[13px] font-bold text-white font-mono">Suggestions</span>
+            <span className="text-[13px] font-bold text-foreground font-mono">Suggestions</span>
             {count > 0 && (
               <span className="text-[10px] bg-[rgba(248,129,169,0.15)] text-brand px-[6px] py-[1px] rounded-full font-mono font-bold">
                 {count}
@@ -92,7 +92,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
           {count > 0 && (
             <button
               onClick={dismissAll}
-              className="text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono"
+              className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono"
             >
               Dismiss all
             </button>
@@ -101,7 +101,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
 
         {/* Body */}
         {count === 0 ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-[10px] text-[rgba(255,255,255,0.2)]">
+          <div className="flex flex-col items-center justify-center flex-1 gap-[10px] text-foreground/20">
             <Icon icon="solar:lightbulb-linear" className="text-[36px]" />
             <span className="text-[12px] font-mono">No suggestions</span>
           </div>
@@ -110,7 +110,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
             {orderedCategories.map(category => (
               <div key={category}>
                 <div className="px-[14px] py-[6px] sticky top-0 bg-card z-10">
-                  <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-bold uppercase tracking-widest font-mono">
+                  <span className="text-[10px] text-foreground/30 font-bold uppercase tracking-widest font-mono">
                     {category}
                   </span>
                 </div>
@@ -125,7 +125,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
 
         {/* Footer */}
         <div className="border-t border-border px-[14px] py-[8px] flex items-center justify-between">
-          <span className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">alis hub Labs</span>
+          <span className="text-[10px] text-foreground/20 font-mono">alis hub Labs</span>
           <span className="text-[10px] bg-[rgba(248,129,169,0.1)] text-brand px-[6px] py-[1px] rounded-full font-mono uppercase tracking-wide">
             beta
           </span>

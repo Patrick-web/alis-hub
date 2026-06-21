@@ -79,13 +79,13 @@ export function StatusStrip() {
               >
                 <Icon
                   icon={TASK_ICON[task.type]}
-                  className="text-[10px] text-[rgba(255,255,255,0.4)] shrink-0"
+                  className="text-[10px] text-foreground/40 shrink-0"
                 />
-                <span className="text-[9px] font-mono text-[rgba(255,255,255,0.7)] truncate max-w-[120px]">
+                <span className="text-[9px] font-mono text-foreground/70 truncate max-w-[120px]">
                   {n.body || TASK_LABEL[task.type]}
                 </span>
                 {isRunning && (
-                  <span className="text-[9px] font-mono text-[rgba(255,255,255,0.3)] shrink-0">
+                  <span className="text-[9px] font-mono text-foreground/30 shrink-0">
                     {/* tick is used to re-render elapsed time */}
                     {formatElapsed(task.startedAt)}
                     {tick > -1 ? '' : ''}
@@ -96,7 +96,7 @@ export function StatusStrip() {
               {/* Dismiss */}
               <button
                 onClick={() => dismiss(n.id)}
-                className="w-[14px] h-[14px] flex items-center justify-center rounded-[2px] text-[rgba(255,255,255,0.2)] hover:text-white hover:bg-accent transition-colors shrink-0 opacity-0 group-hover/chip:opacity-100"
+                className="w-[14px] h-[14px] flex items-center justify-center rounded-[2px] text-foreground/20 hover:text-foreground hover:bg-accent transition-colors shrink-0 opacity-0 group-hover/chip:opacity-100"
                 title="Dismiss"
               >
                 <Icon icon="solar:close-circle-linear" className="text-[9px]" />

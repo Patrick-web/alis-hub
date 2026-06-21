@@ -41,7 +41,7 @@ function DateSection({ label, notifications, onMarkRead, onDismiss }: {
   return (
     <div>
       <div className="px-[14px] py-[6px] sticky top-0 bg-card z-10">
-        <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-bold uppercase tracking-widest font-mono">
+        <span className="text-[10px] text-foreground/30 font-bold uppercase tracking-widest font-mono">
           {label}
         </span>
       </div>
@@ -68,13 +68,13 @@ export function NotificationCenter() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
-          className="relative h-full flex items-center px-[10px] border-l border-border hover:bg-[rgba(255,255,255,0.05)] transition-colors focus:outline-none"
+          className="relative h-full flex items-center px-[10px] border-l border-border hover:bg-foreground/5 transition-colors focus:outline-none"
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           title="Notifications"
         >
-          <Icon icon="solar:bell-linear" className="text-white text-[17px]" />
+          <Icon icon="solar:bell-linear" className="text-foreground text-[17px]" />
           {unreadCount > 0 && (
-            <span className="absolute top-[6px] right-[5px] min-w-[14px] h-[14px] rounded-full bg-destructive text-white text-[8px] font-bold flex items-center justify-center px-[3px] font-mono">
+            <span className="absolute top-[6px] right-[5px] min-w-[14px] h-[14px] rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center px-[3px] font-mono">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
@@ -83,13 +83,13 @@ export function NotificationCenter() {
 
       <SheetContent
         side="right"
-        className="bg-card border-l border-border text-white w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
+        className="bg-card border-l border-border text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-[14px] pt-[14px] pb-[12px] border-b border-border pr-[44px]">
           <div className="flex items-center gap-[8px]">
             <Icon icon="solar:bell-bold" className="text-brand text-[16px]" />
-            <span className="text-[13px] font-bold text-white font-mono">
+            <span className="text-[13px] font-bold text-foreground font-mono">
               Notifications
             </span>
             {unreadCount > 0 && (
@@ -102,7 +102,7 @@ export function NotificationCenter() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono"
+                className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono"
               >
                 Mark all read
               </button>
@@ -110,7 +110,7 @@ export function NotificationCenter() {
             {!isEmpty && (
               <button
                 onClick={clearAll}
-                className="text-[10px] text-[rgba(255,255,255,0.4)] hover:text-destructive transition-colors font-mono"
+                className="text-[10px] text-foreground/40 hover:text-destructive transition-colors font-mono"
               >
                 Clear all
               </button>
@@ -120,7 +120,7 @@ export function NotificationCenter() {
 
         {/* Notification list */}
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center flex-1 gap-[10px] text-[rgba(255,255,255,0.2)]">
+          <div className="flex flex-col items-center justify-center flex-1 gap-[10px] text-foreground/20">
             <Icon icon="solar:bell-off-linear" className="text-[36px]" />
             <span className="text-[12px] font-mono">No notifications</span>
           </div>
@@ -150,7 +150,7 @@ export function NotificationCenter() {
         <div className="border-t border-border px-[14px] py-[8px] flex items-center justify-end">
           <button
             onClick={() => { setOpen(false); navigate('/debug/notifications'); }}
-            className="flex items-center gap-[5px] text-[10px] text-[rgba(255,255,255,0.2)] hover:text-[rgba(255,255,255,0.5)] transition-colors font-mono"
+            className="flex items-center gap-[5px] text-[10px] text-foreground/20 hover:text-foreground/50 transition-colors font-mono"
           >
             <Icon icon="solar:bug-linear" className="text-[11px]" />
             debug

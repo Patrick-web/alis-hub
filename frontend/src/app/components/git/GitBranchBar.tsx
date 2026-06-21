@@ -33,29 +33,29 @@ export function GitBranchBar({
   const remoteBranches = branches.filter(b => b.isRemote);
 
   return (
-    <div className="flex items-center gap-1 px-3 py-2 border-b border-white/10">
-      <BranchIcon size={13} className="text-white/40 shrink-0" />
+    <div className="flex items-center gap-1 px-3 py-2 border-b border-foreground/10">
+      <BranchIcon size={13} className="text-foreground/40 shrink-0" />
 
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
-          <button className="flex items-center gap-1 text-xs text-white/80 hover:text-white transition-colors min-w-0">
+          <button className="flex items-center gap-1 text-xs text-foreground/80 hover:text-foreground transition-colors min-w-0">
             <span className="truncate max-w-[120px]">{currentBranch || 'HEAD'}</span>
-            <ChevronDown size={11} className="shrink-0 text-white/40" />
+            <ChevronDown size={11} className="shrink-0 text-foreground/40" />
           </button>
         </DropdownMenu.Trigger>
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto rounded-md bg-background border border-white/10 shadow-xl py-1 text-xs"
+            className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto rounded-md bg-background border border-foreground/10 shadow-xl py-1 text-xs"
             sideOffset={4}
           >
             {localBranches.length > 0 && (
               <>
-                <div className="px-3 py-1 text-[10px] text-white/30 uppercase tracking-wider">Local</div>
+                <div className="px-3 py-1 text-[10px] text-foreground/30 uppercase tracking-wider">Local</div>
                 {localBranches.map(b => (
                   <DropdownMenu.Item
                     key={b.name}
-                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-white/5 outline-none text-white/80"
+                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/80"
                     onSelect={() => onCheckout(b.name)}
                   >
                     {b.isCurrent && <Check size={11} className="text-pink-400 shrink-0" />}
@@ -68,12 +68,12 @@ export function GitBranchBar({
             )}
             {remoteBranches.length > 0 && (
               <>
-                <DropdownMenu.Separator className="my-1 border-t border-white/10" />
-                <div className="px-3 py-1 text-[10px] text-white/30 uppercase tracking-wider">Remote</div>
+                <DropdownMenu.Separator className="my-1 border-t border-foreground/10" />
+                <div className="px-3 py-1 text-[10px] text-foreground/30 uppercase tracking-wider">Remote</div>
                 {remoteBranches.map(b => (
                   <DropdownMenu.Item
                     key={b.name}
-                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-white/5 outline-none text-white/60"
+                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/60"
                     onSelect={() => onCheckout(b.name.replace(/^remotes\//, ''))}
                   >
                     <span style={{ marginLeft: 15 }}>{b.name.replace(/^remotes\/origin\//, '')}</span>
@@ -91,7 +91,7 @@ export function GitBranchBar({
         <div className="flex items-center gap-1">
           <input
             autoFocus
-            className="text-xs bg-white/5 border border-white/20 rounded px-2 py-0.5 text-white/80 outline-none w-32"
+            className="text-xs bg-foreground/5 border border-foreground/20 rounded px-2 py-0.5 text-foreground/80 outline-none w-32"
             placeholder="branch name"
             value={newBranchName}
             onChange={e => setNewBranchName(e.target.value)}
@@ -106,7 +106,7 @@ export function GitBranchBar({
         <button
           onClick={() => setCreating(true)}
           title="New branch"
-          className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors"
+          className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
         >
           <Plus size={13} />
         </button>
@@ -116,7 +116,7 @@ export function GitBranchBar({
         onClick={onPull}
         disabled={pulling}
         title="Pull"
-        className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
+        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 19V5M5 12l7 7 7-7" />
@@ -127,7 +127,7 @@ export function GitBranchBar({
         onClick={onPush}
         disabled={pushing}
         title="Push"
-        className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors disabled:opacity-40"
+        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M19 12l-7-7-7 7" />
@@ -137,7 +137,7 @@ export function GitBranchBar({
       <button
         onClick={onRefresh}
         title="Refresh"
-        className="p-1 rounded hover:bg-white/5 text-white/40 hover:text-white/70 transition-colors"
+        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
       >
         <RefreshCw size={12} />
       </button>

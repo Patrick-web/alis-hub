@@ -19,16 +19,16 @@ export function PageLayout({ title, subtitle, children, actions, parentRoute }: 
         <div className="flex items-center gap-[12px]">
           <button
             onClick={() => (parentRoute ? navigate(parentRoute) : navigate(-1))}
-            className="text-white opacity-50 hover:opacity-100 transition-opacity flex items-center"
+            className="text-foreground opacity-50 hover:opacity-100 transition-opacity flex items-center"
           >
             <Icon icon="solar:alt-arrow-left-linear" className="text-xl" />
           </button>
           <div className="flex flex-col">
-            <h1 className="font-mono font-bold text-[13px] text-white uppercase leading-[1.2]">
+            <h1 className="font-mono font-bold text-[13px] text-foreground uppercase leading-[1.2]">
               {title}
             </h1>
             {subtitle && (
-              <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.2]">{subtitle}</p>
+              <p className="text-[10px] text-foreground/50 leading-[1.2]">{subtitle}</p>
             )}
           </div>
         </div>

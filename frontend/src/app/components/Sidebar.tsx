@@ -27,12 +27,12 @@ const envNavItems = [
   {
     id: "staging",
     label: "Staging",
-    icon: <Icon icon="solar:cloud-linear" className="text-white text-xl" />,
+    icon: <Icon icon="solar:cloud-linear" className="text-foreground text-xl" />,
   },
   {
     id: "development",
     label: "Development",
-    icon: <Icon icon="solar:code-linear" className="text-white text-xl" />,
+    icon: <Icon icon="solar:code-linear" className="text-foreground text-xl" />,
   },
 ];
 
@@ -47,13 +47,13 @@ const codeblockNavItems = [
     id: "mine",
     label: "My Codeblocks",
     route: "/codeblocks/mine",
-    icon: <Icon icon="solar:user-linear" className="text-white text-xl" />,
+    icon: <Icon icon="solar:user-linear" className="text-foreground text-xl" />,
   },
   {
     id: "starred",
     label: "Starred",
     route: null,
-    icon: <Icon icon="solar:star-linear" className="text-white text-xl" />,
+    icon: <Icon icon="solar:star-linear" className="text-foreground text-xl" />,
   },
 ];
 
@@ -252,7 +252,7 @@ export function Sidebar() {
         <div className="content-stretch flex flex-col items-center justify-between overflow-clip relative rounded-[inherit] size-full">
           <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
             <div className="px-[20px] py-[10px] w-full border-b border-border">
-              <p className="font-mono font-bold text-[11px] text-white uppercase opacity-50">
+              <p className="font-mono font-bold text-[11px] text-foreground uppercase opacity-50">
                 {header}
               </p>
             </div>
@@ -262,7 +262,7 @@ export function Sidebar() {
                   placeholder="Filter services..."
                   value={neuronFilter}
                   onChange={(e) => setNeuronFilter(e.target.value)}
-                  icon={<Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm" />}
+                  icon={<Icon icon="solar:magnifer-linear" className="text-foreground/30 text-sm" />}
                   className="w-full"
                 />
               </div>
@@ -363,7 +363,7 @@ export function Sidebar() {
         description={
           <>
             Delete{" "}
-            <span className="text-white">{deleteTarget?.displayName}</span>?
+            <span className="text-foreground">{deleteTarget?.displayName}</span>?
             This cannot be undone.
           </>
         }

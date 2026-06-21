@@ -30,7 +30,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
 
   if (!diffFile || !filePath) {
     return (
-      <div className="flex items-center justify-center h-full text-white/20 text-sm select-none">
+      <div className="flex items-center justify-center h-full text-foreground/20 text-sm select-none">
         Select a file to view changes
       </div>
     );
@@ -42,13 +42,13 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-white/10 text-xs text-white/60">
+      <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-foreground/10 text-xs text-foreground/60">
         <span className="truncate font-mono">{filePath}</span>
-        <span className="shrink-0 text-white/30">
+        <span className="shrink-0 text-foreground/30">
           {commitHash ? `@${commitHash.slice(0, 7)}` : staged ? '(staged)' : '(unstaged)'}
         </span>
         {diff!.hunks.length > 0 && (
-          <span className="shrink-0 text-white/30">
+          <span className="shrink-0 text-foreground/30">
             +{addCount} -{delCount}
           </span>
         )}
@@ -57,7 +57,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
             <TooltipTrigger asChild>
               <button
                 onClick={() => setSplitMode(false)}
-                className={`p-1 rounded transition-colors ${!splitMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+                className={`p-1 rounded transition-colors ${!splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
               >
                 <AlignJustify size={13} />
               </button>
@@ -68,7 +68,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
             <TooltipTrigger asChild>
               <button
                 onClick={() => setSplitMode(true)}
-                className={`p-1 rounded transition-colors ${splitMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+                className={`p-1 rounded transition-colors ${splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
               >
                 <Columns2 size={13} />
               </button>

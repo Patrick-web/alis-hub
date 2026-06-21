@@ -14,7 +14,7 @@ export function ConfigValue({ label, value, mono = true, copyable = false }: Con
 
   return (
     <div className="flex flex-col gap-[4px]">
-      <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-mono">
+      <p className="text-[9px] text-foreground/50 uppercase font-bold font-mono">
         {label}
       </p>
       <div
@@ -24,7 +24,7 @@ export function ConfigValue({ label, value, mono = true, copyable = false }: Con
         onClick={handleCopy}
       >
         <p
-          className={`text-[11px] text-white ${
+          className={`text-[11px] text-foreground ${
             mono ? "font-mono" : ''
           }`}
         >

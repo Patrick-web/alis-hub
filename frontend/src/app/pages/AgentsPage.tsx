@@ -11,8 +11,8 @@ export function AgentsPage() {
       parentRoute="/"
     >
       <div className="p-[24px] max-w-[1000px] mx-auto">
-        <p className="text-[11px] text-[rgba(255,255,255,0.5)] uppercase font-bold mb-[16px]">Registry</p>
-        <h2 className="text-[18px] font-bold text-white font-mono mb-[24px]">
+        <p className="text-[11px] text-foreground/50 uppercase font-bold mb-[16px]">Registry</p>
+        <h2 className="text-[18px] font-bold text-foreground font-mono mb-[24px]">
           Agent Management Hub
         </h2>
 
@@ -27,7 +27,7 @@ export function AgentsPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Provisions the necessary infrastructure for hosting and managing
               AI agents, including identity services and runtime environments.
             </p>
@@ -43,7 +43,7 @@ export function AgentsPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Register a new AI agent with your workspace. Agents can be
               configured with custom tools, MCP servers, and enterprise
               integrations.
@@ -60,7 +60,7 @@ export function AgentsPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Register MCP servers that expose tools and resources to coding
               agents like Claude Code, Codex CLI, and Gemini CLI.
             </p>
@@ -76,7 +76,7 @@ export function AgentsPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Set up client interfaces for agents, including OAuth connectors,
               API keys for Claude Code, Codex, Gemini CLI, and OpenCode.
             </p>

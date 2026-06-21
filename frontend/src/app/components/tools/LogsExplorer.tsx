@@ -21,8 +21,8 @@ const SEVERITY_STYLES: Record<string, string> = {
   WARNING: 'text-yellow-400 bg-yellow-400/10',
   NOTICE: 'text-blue-400 bg-blue-400/10',
   INFO: 'text-green-400 bg-green-400/10',
-  DEBUG: 'text-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)]',
-  DEFAULT: 'text-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.05)]',
+  DEBUG: 'text-foreground/30 bg-foreground/5',
+  DEFAULT: 'text-foreground/40 bg-foreground/5',
 };
 
 const RESOURCE_TYPE_OPTIONS: FilterSelectOption[] = [
@@ -205,7 +205,7 @@ export function LogsExplorer({ projectID }: Props) {
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load()}
           placeholder="Search logs..."
-          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-white placeholder-[rgba(255,255,255,0.3)] font-mono outline-none focus:border-brand w-[180px]"
+          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-foreground placeholder:text-foreground/30 font-mono outline-none focus:border-brand w-[180px]"
         />
 
         <Button
@@ -223,7 +223,7 @@ export function LogsExplorer({ projectID }: Props) {
           variant="ghost"
           onClick={() => GS.OpenInConsole('logs', projectID, '')}
           icon={<Icon icon="solar:export-linear" className="text-xs" />}
-          className="text-[rgba(255,255,255,0.5)] hover:text-white"
+          className="text-foreground/50 hover:text-foreground"
         >
           Open in Console
         </Button>
@@ -235,8 +235,8 @@ export function LogsExplorer({ projectID }: Props) {
           <>
             {!hasLoaded && !loading && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-[8px]">
-                <Icon icon="solar:document-text-linear" className="text-4xl text-[rgba(255,255,255,0.1)]" />
-                <p className="text-[11px] text-[rgba(255,255,255,0.3)]">Click Fetch to load logs</p>
+                <Icon icon="solar:document-text-linear" className="text-4xl text-foreground/10" />
+                <p className="text-[11px] text-foreground/30">Click Fetch to load logs</p>
               </div>
             )}
             {loading && (
@@ -244,7 +244,7 @@ export function LogsExplorer({ projectID }: Props) {
             )}
             {hasLoaded && !loading && (
               <div className="flex items-center justify-center py-[48px]">
-                <p className="text-[10px] text-[rgba(255,255,255,0.3)]">No log entries found</p>
+                <p className="text-[10px] text-foreground/30">No log entries found</p>
               </div>
             )}
           </>
@@ -289,21 +289,21 @@ export function LogsExplorer({ projectID }: Props) {
                 >
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : id)}
-                    className="w-full flex items-start gap-[10px] px-[16px] py-[6px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors text-left"
+                    className="w-full flex items-start gap-[10px] px-[16px] py-[6px] border-b border-border hover:bg-foreground/[2%] transition-colors text-left"
                   >
-                    <span className="text-[9px] text-[rgba(255,255,255,0.3)] shrink-0 mt-[1px] w-[70px]">{ts}</span>
+                    <span className="text-[9px] text-foreground/30 shrink-0 mt-[1px] w-[70px]">{ts}</span>
                     <span className={`text-[8px] uppercase px-[5px] py-[1px] rounded-[2px] shrink-0 ${SEVERITY_STYLES[sev] ?? SEVERITY_STYLES['DEFAULT']}`}>
                       {sev.slice(0, 4)}
                     </span>
-                    <span className="text-[10px] text-[rgba(255,255,255,0.7)] truncate flex-1">{msg}</span>
+                    <span className="text-[10px] text-foreground/70 truncate flex-1">{msg}</span>
                     <Icon
                       icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                      className="text-xs text-[rgba(255,255,255,0.2)] shrink-0"
+                      className="text-xs text-foreground/20 shrink-0"
                     />
                   </button>
                   {isExpanded && (
                     <div className="bg-muted border-b border-border px-[16px] py-[12px]">
-                      <pre className="text-[9px] text-[rgba(255,255,255,0.6)] whitespace-pre-wrap break-all leading-[1.6]">
+                      <pre className="text-[9px] text-foreground/60 whitespace-pre-wrap break-all leading-[1.6]">
                         {JSON.stringify(entry, null, 2)}
                       </pre>
                     </div>

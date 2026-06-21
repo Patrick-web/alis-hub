@@ -210,7 +210,7 @@ export function GitPage() {
   if (!state.organisation || !state.product) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
-        <p className="text-sm text-white/40">Select a product to view source control.</p>
+        <p className="text-sm text-foreground/40">Select a product to view source control.</p>
       </div>
     );
   }
@@ -231,13 +231,13 @@ export function GitPage() {
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       {/* Repo selector bar */}
-      <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-b border-white/10 bg-black/10">
+      <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-b border-foreground/10 bg-black/10">
         <button
           onClick={() => switchRepo('build')}
           className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
             activeRepo === 'build'
               ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30'
-              : 'text-white/40 hover:text-white/70 border border-transparent'
+              : 'text-foreground/40 hover:text-foreground/70 border border-transparent'
           }`}
         >
           Build
@@ -247,12 +247,12 @@ export function GitPage() {
           className={`px-2.5 py-0.5 rounded text-[11px] font-medium transition-colors ${
             activeRepo === 'define'
               ? 'bg-pink-600/30 text-pink-400 border border-pink-500/30'
-              : 'text-white/40 hover:text-white/70 border border-transparent'
+              : 'text-foreground/40 hover:text-foreground/70 border border-transparent'
           }`}
         >
           Define
         </button>
-        <span className="text-[11px] text-white/25 font-mono truncate flex-1 ml-2">{repoPath}</span>
+        <span className="text-[11px] text-foreground/25 font-mono truncate flex-1 ml-2">{repoPath}</span>
       </div>
 
       {error && (
@@ -304,7 +304,7 @@ export function GitPage() {
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel defaultSize={60} minSize={30}>
                 {diffLoading ? (
-                  <div className="flex items-center justify-center h-full text-white/20 text-sm">
+                  <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
                     Loading diff…
                   </div>
                 ) : diffError ? (
@@ -325,7 +325,7 @@ export function GitPage() {
 
               <ResizablePanel defaultSize={40} minSize={20}>
                 <div className="h-full flex flex-col overflow-hidden">
-                  <div className="shrink-0 px-4 py-2 border-b border-white/10 text-[11px] text-white/40 uppercase tracking-wider font-semibold">
+                  <div className="shrink-0 px-4 py-2 border-b border-foreground/10 text-[11px] text-foreground/40 uppercase tracking-wider font-semibold">
                     Git Graph · {commits.length} commits
                   </div>
                   <div className="flex-1 overflow-hidden">

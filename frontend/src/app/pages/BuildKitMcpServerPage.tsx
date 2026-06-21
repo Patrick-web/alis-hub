@@ -126,7 +126,7 @@ export function BuildKitMcpServerPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The Alis Build MCP server exposes platform tools — build specs, codeblocks, skills, definitions — directly
             to any coding agent that supports the Model Context Protocol. Select your tool to see the connection config.
           </p>
@@ -134,8 +134,8 @@ export function BuildKitMcpServerPage() {
           {/* Server URL */}
           <div className="flex items-center gap-[10px] px-[14px] py-[10px] bg-card border border-border rounded-[4px]">
             <Icon icon="solar:server-linear" className="text-brand text-[15px] shrink-0" />
-            <span className="text-[11px] text-[rgba(255,255,255,0.5)] font-mono">MCP Server URL</span>
-            <span className="text-[11px] text-white font-mono font-bold">{MCP_SERVER_URL}</span>
+            <span className="text-[11px] text-foreground/50 font-mono">MCP Server URL</span>
+            <span className="text-[11px] text-foreground font-mono font-bold">{MCP_SERVER_URL}</span>
           </div>
 
           {/* Tool picker */}
@@ -147,7 +147,7 @@ export function BuildKitMcpServerPage() {
                 className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                   activeClient === c.id
                     ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
-                    : 'bg-card border-border text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
+                    : 'bg-card border-border text-foreground/60 hover:border-foreground/30'
                 }`}
               >
                 <Icon icon={c.icon} className="text-[13px]" />
@@ -176,10 +176,10 @@ export function BuildKitMcpServerPage() {
               ) : undefined
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 mb-[14px] leading-[1.5]">
               {selected.description}
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[6px]">
               {selected.configLabel}
             </p>
             <CodeBlock code={selected.config} language={selected.configLang} />

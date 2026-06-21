@@ -76,10 +76,10 @@ const flows = [
 
 const STATUS_LABELS: Record<number, string> = { 0: 'Unknown', 1: 'New', 2: 'Active', 3: 'Completed' };
 const STATUS_COLORS: Record<number, string> = {
-  0: 'text-[rgba(255,255,255,0.4)] border-border',
+  0: 'text-foreground/40 border-border',
   1: 'text-warning border-warning',
   2: 'text-success border-success',
-  3: 'text-[rgba(255,255,255,0.4)] border-border',
+  3: 'text-foreground/40 border-border',
 };
 
 function productResourceToLandingZoneUrl(resource: string): string {
@@ -179,10 +179,10 @@ export function BuildKitPage() {
       <div className="max-w-[1100px] mx-auto px-[24px] py-[24px]">
         {/* Banner */}
         <div className="mb-[32px] p-[24px] bg-gradient-to-r from-card to-secondary border border-border rounded-[4px]">
-          <h1 className="text-[22px] font-bold text-white font-mono mb-[6px]">
+          <h1 className="text-[22px] font-bold text-foreground font-mono mb-[6px]">
             Alis Build Kit
           </h1>
-          <p className="text-[12px] text-[rgba(255,255,255,0.6)]">
+          <p className="text-[12px] text-foreground/60">
             Accelerate your development on the AlisX Platform
           </p>
         </div>
@@ -190,14 +190,14 @@ export function BuildKitPage() {
         {/* Build Specification Panel */}
         <div className="mb-[40px]">
           <div className="flex items-center justify-between mb-[4px]">
-            <h2 className="text-[11px] font-bold text-white uppercase font-mono">
+            <h2 className="text-[11px] font-bold text-foreground uppercase font-mono">
               Build Specification
             </h2>
             {specs.length > 0 && (
               <select
                 value={selectedSpecName}
                 onChange={(e) => setSelectedSpecName(e.target.value)}
-                className="bg-card border border-border text-white text-[11px] font-mono px-[8px] py-[4px] rounded-[4px] focus:outline-none focus:border-[rgba(248,129,169,0.5)] cursor-pointer hover:border-[rgba(255,255,255,0.3)] transition-colors max-w-[280px]"
+                className="bg-card border border-border text-foreground text-[11px] font-mono px-[8px] py-[4px] rounded-[4px] focus:outline-none focus:border-[rgba(248,129,169,0.5)] cursor-pointer hover:border-foreground/30 transition-colors max-w-[280px]"
               >
                 {specs.map((s: any) => (
                   <option key={s.name} value={s.name}>
@@ -207,13 +207,13 @@ export function BuildKitPage() {
               </select>
             )}
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.45)] mb-[12px]">
+          <p className="text-[11px] text-foreground/45 mb-[12px]">
             Your active build specification
           </p>
           <div className="border-b border-border mb-[16px]" />
 
           {specsLoading && (
-            <div className="flex items-center gap-[8px] text-[11px] text-[rgba(255,255,255,0.4)] py-[20px]">
+            <div className="flex items-center gap-[8px] text-[11px] text-foreground/40 py-[20px]">
               <Icon icon="solar:refresh-linear" className="text-[14px] animate-spin" />
               Loading build specifications...
             </div>
@@ -227,7 +227,7 @@ export function BuildKitPage() {
           )}
 
           {!specsLoading && !specsError && specs.length === 0 && (
-            <div className="text-[11px] text-[rgba(255,255,255,0.4)] py-[20px]">
+            <div className="text-[11px] text-foreground/40 py-[20px]">
               No build specifications found.
             </div>
           )}
@@ -239,10 +239,10 @@ export function BuildKitPage() {
                 <div className="flex items-center gap-[12px]">
                   <Icon icon="solar:document-text-linear" className="text-brand text-[18px] shrink-0" />
                   <div>
-                    <p className="text-[13px] font-bold text-white font-mono">
+                    <p className="text-[13px] font-bold text-foreground font-mono">
                       {selectedSpec.displayName || selectedSpec.name}
                     </p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-mono mt-[2px]">
+                    <p className="text-[10px] text-foreground/40 font-mono mt-[2px]">
                       {selectedSpec.name}
                     </p>
                   </div>
@@ -255,10 +255,10 @@ export function BuildKitPage() {
               {/* Summary */}
               {selectedSpec.summary && (
                 <div className="px-[20px] py-[14px] border-b border-border">
-                  <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
+                  <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[6px]">
                     Summary
                   </p>
-                  <p className="text-[12px] text-[rgba(255,255,255,0.75)] leading-[1.6]">
+                  <p className="text-[12px] text-foreground/75 leading-[1.6]">
                     {selectedSpec.summary}
                   </p>
                 </div>
@@ -267,7 +267,7 @@ export function BuildKitPage() {
               {/* Products */}
               {selectedSpec.products && selectedSpec.products.length > 0 && (
                 <div className="px-[20px] py-[14px]">
-                  <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
+                  <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[10px]">
                     Products ({selectedSpec.products.length})
                   </p>
                   <div className="flex flex-col gap-[6px]">
@@ -278,12 +278,12 @@ export function BuildKitPage() {
                         className="flex items-center justify-between px-[12px] py-[8px] bg-muted border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.4)] hover:bg-muted transition-all group text-left"
                       >
                         <div className="flex items-center gap-[8px]">
-                          <Icon icon="solar:box-linear" className="text-[rgba(255,255,255,0.35)] text-[13px] shrink-0" />
-                          <span className="text-[11px] font-mono text-[rgba(255,255,255,0.7)] group-hover:text-white transition-colors">
+                          <Icon icon="solar:box-linear" className="text-foreground/35 text-[13px] shrink-0" />
+                          <span className="text-[11px] font-mono text-foreground/70 group-hover:text-foreground transition-colors">
                             {productResourceToLabel(product)}
                           </span>
                         </div>
-                        <Icon icon="solar:arrow-right-up-linear" className="text-[rgba(255,255,255,0.25)] text-[12px] shrink-0 group-hover:text-brand transition-colors" />
+                        <Icon icon="solar:arrow-right-up-linear" className="text-foreground/25 text-[12px] shrink-0 group-hover:text-brand transition-colors" />
                       </button>
                     ))}
                   </div>
@@ -296,11 +296,11 @@ export function BuildKitPage() {
         {/* Flows */}
         <div className="mb-[16px]">
           <div className="flex items-baseline gap-[8px] mb-[4px]">
-            <h2 className="text-[11px] font-bold text-white uppercase font-mono">
+            <h2 className="text-[11px] font-bold text-foreground uppercase font-mono">
               Flows
             </h2>
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.45)] mb-[12px]">
+          <p className="text-[11px] text-foreground/45 mb-[12px]">
             Select a workflow to start building
           </p>
           <div className="border-b border-border mb-[16px]" />
@@ -314,25 +314,25 @@ export function BuildKitPage() {
               className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.5)] hover:bg-accent transition-all group"
             >
               <div className="flex items-start justify-between mb-[10px]">
-                <h3 className="text-[11px] font-bold text-white font-mono uppercase leading-tight group-hover:text-brand transition-colors">
+                <h3 className="text-[11px] font-bold text-foreground font-mono uppercase leading-tight group-hover:text-brand transition-colors">
                   {flow.title}
                 </h3>
-                <span className="text-[7px] font-bold font-mono px-[4px] py-[1px] border border-border text-[rgba(255,255,255,0.4)] rounded-[2px] shrink-0 ml-[8px] uppercase">
+                <span className="text-[7px] font-bold font-mono px-[4px] py-[1px] border border-border text-foreground/40 rounded-[2px] shrink-0 ml-[8px] uppercase">
                   {flow.status}
                 </span>
               </div>
               <div className="border-b border-border mb-[10px]" />
-              <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{flow.description}</p>
+              <p className="text-[11px] text-foreground/55 leading-[1.5]">{flow.description}</p>
             </button>
           ))}
         </div>
 
         {/* Shortcuts */}
         <div className="mb-[16px]">
-          <h2 className="text-[11px] font-bold text-white uppercase font-mono mb-[4px]">
+          <h2 className="text-[11px] font-bold text-foreground uppercase font-mono mb-[4px]">
             Shortcuts
           </h2>
-          <p className="text-[11px] text-[rgba(255,255,255,0.45)] mb-[12px]">
+          <p className="text-[11px] text-foreground/45 mb-[12px]">
             Quick access to Alis Build related components
           </p>
           <div className="border-b border-border mb-[16px]" />
@@ -346,16 +346,16 @@ export function BuildKitPage() {
               className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.5)] hover:bg-accent transition-all group"
             >
               <div className="flex items-start justify-between mb-[10px]">
-                <h3 className="text-[11px] font-bold text-white font-mono uppercase leading-tight group-hover:text-brand transition-colors">
+                <h3 className="text-[11px] font-bold text-foreground font-mono uppercase leading-tight group-hover:text-brand transition-colors">
                   {s.title}
                 </h3>
                 <Icon
                   icon={s.url ? 'solar:arrow-right-up-linear' : 'solar:alt-arrow-right-linear'}
-                  className="text-[rgba(255,255,255,0.35)] text-sm shrink-0 ml-[8px] group-hover:text-brand transition-colors"
+                  className="text-foreground/35 text-sm shrink-0 ml-[8px] group-hover:text-brand transition-colors"
                 />
               </div>
               <div className="border-b border-border mb-[10px]" />
-              <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{s.description}</p>
+              <p className="text-[11px] text-foreground/55 leading-[1.5]">{s.description}</p>
             </button>
           ))}
         </div>

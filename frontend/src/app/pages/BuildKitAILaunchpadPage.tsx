@@ -58,7 +58,7 @@ export function BuildKitAILaunchpadPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The AI Launchpad flow guides you through setting up an enterprise AI launchpad — a unified entry point for
             your organisation's AI tools, agents, and workflows. It covers user management, domain configuration, and
             launchpad service deployment.
@@ -84,13 +84,13 @@ export function BuildKitAILaunchpadPage() {
                 )
               }
             >
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">{stage.description}</p>
+              <p className="text-[11px] text-foreground/60 leading-[1.5]">{stage.description}</p>
             </StageCard>
           ))}
 
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Full AI Launchpad setup is guided step-by-step in the VS Code extension. Use the Alis Build extension in
               VS Code for the complete interactive workflow including service selection and automated configuration.
             </p>

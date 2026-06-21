@@ -23,7 +23,7 @@ export function ModuleSidebar({
   return (
     <div className="bg-card w-[260px] shrink-0 h-full flex flex-col overflow-hidden border-r border-border">
       <div className="px-[20px] py-[10px] border-b border-border shrink-0">
-        <p className="font-mono font-bold text-[11px] text-white uppercase opacity-50">
+        <p className="font-mono font-bold text-[11px] text-foreground uppercase opacity-50">
           Learning Path
         </p>
       </div>
@@ -42,7 +42,7 @@ export function ModuleSidebar({
                 className={`relative w-full text-left transition-colors ${
                   isActive
                     ? 'bg-[rgba(248,129,169,0.1)]'
-                    : 'hover:bg-[rgba(255,255,255,0.04)]'
+                    : 'hover:bg-foreground/[4%]'
                 }`}
               >
                 <div
@@ -58,7 +58,7 @@ export function ModuleSidebar({
                     ) : (
                       <span
                         className={`text-[11px] font-bold font-mono ${
-                          isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.35)]'
+                          isActive ? 'text-brand' : 'text-foreground/35'
                         }`}
                       >
                         {mIdx + 1}
@@ -68,18 +68,18 @@ export function ModuleSidebar({
                   <div className="flex-1 min-w-0">
                     <p
                       className={`text-[12px] font-bold font-mono leading-[1.2] truncate ${
-                        isActive ? 'text-brand' : isDone ? 'text-[rgba(255,255,255,0.6)]' : 'text-white'
+                        isActive ? 'text-brand' : isDone ? 'text-foreground/60' : 'text-foreground'
                       }`}
                     >
                       {module.title}
                     </p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.3)] mt-[1px]">
+                    <p className="text-[10px] text-foreground/30 mt-[1px]">
                       {completedCount}/{totalSteps} steps
                     </p>
                   </div>
                   <Icon
                     icon={isActive ? 'solar:alt-arrow-down-linear' : 'solar:alt-arrow-right-linear'}
-                    className={`text-[12px] shrink-0 ${isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.25)]'}`}
+                    className={`text-[12px] shrink-0 ${isActive ? 'text-brand' : 'text-foreground/25'}`}
                   />
                 </div>
               </button>
@@ -97,7 +97,7 @@ export function ModuleSidebar({
                         className={`w-full text-left px-[16px] py-[8px] flex items-center gap-[10px] transition-colors ${
                           isStepActive
                             ? 'bg-[rgba(248,129,169,0.08)]'
-                            : 'hover:bg-[rgba(255,255,255,0.03)]'
+                            : 'hover:bg-foreground/[3%]'
                         }`}
                       >
                         <div className="pl-[20px] shrink-0 flex items-center justify-center size-[16px]">
@@ -106,7 +106,7 @@ export function ModuleSidebar({
                           ) : (
                             <div
                               className={`size-[6px] rounded-full ${
-                                isStepActive ? 'bg-brand' : 'bg-[rgba(255,255,255,0.2)]'
+                                isStepActive ? 'bg-brand' : 'bg-foreground/20'
                               }`}
                             />
                           )}
@@ -116,8 +116,8 @@ export function ModuleSidebar({
                             isStepActive
                               ? 'text-brand'
                               : done
-                              ? 'text-[rgba(255,255,255,0.4)]'
-                              : 'text-[rgba(255,255,255,0.65)]'
+                              ? 'text-foreground/40'
+                              : 'text-foreground/65'
                           }`}
                         >
                           {step.title}
@@ -144,10 +144,10 @@ export function ModuleSidebar({
           return (
             <>
               <div className="flex items-center justify-between mb-[6px]">
-                <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
+                <p className="text-[10px] text-foreground/35 font-mono">
                   Overall progress
                 </p>
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.5)] font-mono">
+                <p className="text-[10px] font-bold text-foreground/50 font-mono">
                   {pct}%
                 </p>
               </div>

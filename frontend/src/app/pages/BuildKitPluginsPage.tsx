@@ -109,7 +109,7 @@ export function BuildKitPluginsPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             Alis Build plugins bring the full power of Alis Build — MCP tools, skills, and guided workflows — directly
             into your preferred AI coding tool. Select your tool below to get started.
           </p>
@@ -123,7 +123,7 @@ export function BuildKitPluginsPage() {
                 className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                   activeClient === c.id
                     ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
-                    : 'bg-card border-border text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
+                    : 'bg-card border-border text-foreground/60 hover:border-foreground/30'
                 }`}
               >
                 <Icon icon={c.icon} className="text-[13px]" />
@@ -145,10 +145,10 @@ export function BuildKitPluginsPage() {
               ) : undefined
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 mb-[14px] leading-[1.5]">
               {selected.description}
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[6px]">
               {selected.installLabel}
             </p>
             <CodeBlock code={selected.installCode} language={selected.installLang} />
@@ -157,9 +157,9 @@ export function BuildKitPluginsPage() {
           {/* MCP connection note */}
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               All plugins connect to the hosted{' '}
-              <span className="text-white font-mono">https://mcp.alis.build</span> MCP server.
+              <span className="text-foreground font-mono">https://mcp.alis.build</span> MCP server.
               See the <strong>Alis Build MCP Server</strong> shortcut on the Build Kit home page for full connection details.
             </p>
           </div>

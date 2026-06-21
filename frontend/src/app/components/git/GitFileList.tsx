@@ -80,7 +80,7 @@ function FileRow({
   return (
     <div
       className={`group flex items-center gap-1.5 py-[3px] pr-3 cursor-pointer text-xs transition-colors ${
-        selected ? 'bg-pink-500/15 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white/80'
+        selected ? 'bg-pink-500/15 text-foreground' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground/80'
       }`}
       style={{ paddingLeft: `${indent ?? 12}px` }}
       onMouseEnter={() => setHover(true)}
@@ -93,12 +93,12 @@ function FileRow({
       {hover && (
         <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
           {onAction1 && (
-            <button title={action1Title} onClick={onAction1} className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90">
+            <button title={action1Title} onClick={onAction1} className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90">
               {action1Icon}
             </button>
           )}
           {onAction2 && (
-            <button title={action2Title} onClick={onAction2} className="p-0.5 rounded hover:bg-white/10 text-white/50 hover:text-white/90">
+            <button title={action2Title} onClick={onAction2} className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90">
               {action2Icon}
             </button>
           )}
@@ -133,7 +133,7 @@ function TreeDir({
     <>
       {node.name && (
         <div
-          className="flex items-center gap-1 py-[3px] pr-3 cursor-pointer text-xs text-white/40 hover:text-white/60 hover:bg-white/5 select-none"
+          className="flex items-center gap-1 py-[3px] pr-3 cursor-pointer text-xs text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5 select-none"
           style={{ paddingLeft: `${pl}px` }}
           onClick={() => setOpen(o => !o)}
         >
@@ -142,8 +142,8 @@ function TreeDir({
             : <ChevronRight size={10} className="shrink-0" />
           }
           {open
-            ? <FolderOpen size={11} className="shrink-0 text-white/30" />
-            : <Folder size={11} className="shrink-0 text-white/30" />
+            ? <FolderOpen size={11} className="shrink-0 text-foreground/30" />
+            : <Folder size={11} className="shrink-0 text-foreground/30" />
           }
           <span className="truncate">{node.name}</span>
         </div>
@@ -205,10 +205,10 @@ function Section({
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen}>
       <Collapsible.Trigger asChild>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer hover:bg-white/5 group">
-          {open ? <ChevronDown size={11} className="text-white/40 shrink-0" /> : <ChevronRight size={11} className="text-white/40 shrink-0" />}
-          <span className="text-[10px] uppercase tracking-wider text-white/50 font-semibold flex-1">{title}</span>
-          <span className="text-[10px] text-white/30">{count}</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 group">
+          {open ? <ChevronDown size={11} className="text-foreground/40 shrink-0" /> : <ChevronRight size={11} className="text-foreground/40 shrink-0" />}
+          <span className="text-[10px] uppercase tracking-wider text-foreground/50 font-semibold flex-1">{title}</span>
+          <span className="text-[10px] text-foreground/30">{count}</span>
           {headerAction && <div onClick={e => e.stopPropagation()}>{headerAction}</div>}
         </div>
       </Collapsible.Trigger>
@@ -231,12 +231,12 @@ export function GitFileList({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* View toggle */}
-      <div className="shrink-0 flex items-center justify-end gap-1 px-2 py-1 border-b border-white/10">
+      <div className="shrink-0 flex items-center justify-end gap-1 px-2 py-1 border-b border-foreground/10">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
               onClick={() => setTreeMode(false)}
-              className={`p-1 rounded transition-colors ${!treeMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+              className={`p-1 rounded transition-colors ${!treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
             >
               <List size={12} />
             </button>
@@ -247,7 +247,7 @@ export function GitFileList({
           <TooltipTrigger asChild>
             <button
               onClick={() => setTreeMode(true)}
-              className={`p-1 rounded transition-colors ${treeMode ? 'text-white/80 bg-white/10' : 'text-white/30 hover:text-white/50'}`}
+              className={`p-1 rounded transition-colors ${treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
             >
               <FolderTree size={12} />
             </button>
@@ -266,7 +266,7 @@ export function GitFileList({
               <button
                 title="Unstage all"
                 onClick={() => status.staged.forEach(f => onUnstage(f.path))}
-                className="p-0.5 rounded hover:bg-white/10 text-white/30 hover:text-white/70"
+                className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
               >
                 <Minus size={11} />
               </button>
@@ -300,7 +300,7 @@ export function GitFileList({
             ))
           )}
           {status.staged.length === 0 && (
-            <div className="px-3 py-1 text-[11px] text-white/20 italic">No staged changes</div>
+            <div className="px-3 py-1 text-[11px] text-foreground/20 italic">No staged changes</div>
           )}
         </Section>
 
@@ -313,7 +313,7 @@ export function GitFileList({
               <button
                 title="Stage all changes"
                 onClick={onStageAll}
-                className="p-0.5 rounded hover:bg-white/10 text-white/30 hover:text-white/70"
+                className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
               >
                 <Plus size={11} />
               </button>
@@ -353,7 +353,7 @@ export function GitFileList({
             ))
           )}
           {status.unstaged.length === 0 && (
-            <div className="px-3 py-1 text-[11px] text-white/20 italic">No changes</div>
+            <div className="px-3 py-1 text-[11px] text-foreground/20 italic">No changes</div>
           )}
         </Section>
 
@@ -391,9 +391,9 @@ export function GitFileList({
       </div>
 
       {/* Commit box */}
-      <div className="shrink-0 border-t border-white/10 p-3 flex flex-col gap-2">
+      <div className="shrink-0 border-t border-foreground/10 p-3 flex flex-col gap-2">
         <textarea
-          className="w-full bg-white/5 border border-white/10 rounded text-xs text-white/80 placeholder-white/25 p-2 resize-none outline-none focus:border-pink-500/40 transition-colors"
+          className="w-full bg-foreground/5 border border-foreground/10 rounded text-xs text-foreground/80 placeholder-white/25 p-2 resize-none outline-none focus:border-pink-500/40 transition-colors"
           rows={3}
           placeholder="Commit message…"
           value={commitMessage}
@@ -402,7 +402,7 @@ export function GitFileList({
         <button
           onClick={onCommit}
           disabled={!canCommit}
-          className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-white"
+          className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
         >
           {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
         </button>

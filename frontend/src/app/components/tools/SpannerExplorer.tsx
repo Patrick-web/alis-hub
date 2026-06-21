@@ -445,14 +445,14 @@ export function SpannerExplorer({ projectID }: Props) {
       {/* ── Left tree pane ──────────────────────────────────────────────── */}
       <div className="w-[220px] shrink-0 border-r border-border flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-[12px] py-[9px] border-b border-border shrink-0">
-          <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">
+          <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">
             {instances.length} instance{instances.length !== 1 ? "s" : ""}
           </p>
           <Button
             variant="ghost"
             onClick={() => GS.OpenInConsole("spanner", projectID, "")}
             icon={<Icon icon="solar:export-linear" className="text-xs" />}
-            className="text-[rgba(255,255,255,0.4)] hover:text-white"
+            className="text-foreground/40 hover:text-foreground"
           >
             Console
           </Button>
@@ -471,7 +471,7 @@ export function SpannerExplorer({ projectID }: Props) {
             </div>
           ) : instances.length === 0 ? (
             <div className="flex items-center justify-center py-[40px]">
-              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">
+              <p className="text-[10px] text-foreground/30 font-mono">
                 No instances
               </p>
             </div>
@@ -482,13 +482,13 @@ export function SpannerExplorer({ projectID }: Props) {
               const loadingDbs = dbLoading[instance.name] ?? false;
               const ss =
                 STATE_STYLE[instance.state] ??
-                "text-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)]";
+                "text-foreground/30 bg-foreground/5";
 
               return (
                 <div key={instance.name} className="border-b border-border">
                   <button
                     onClick={() => toggleInstance(instance)}
-                    className="w-full flex items-center gap-[7px] px-[10px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] transition-colors text-left"
+                    className="w-full flex items-center gap-[7px] px-[10px] py-[8px] hover:bg-foreground/[3%] transition-colors text-left"
                   >
                     <Icon
                       icon={
@@ -496,13 +496,13 @@ export function SpannerExplorer({ projectID }: Props) {
                           ? "solar:alt-arrow-down-linear"
                           : "solar:alt-arrow-right-linear"
                       }
-                      className="text-[10px] text-[rgba(255,255,255,0.3)] shrink-0"
+                      className="text-[10px] text-foreground/30 shrink-0"
                     />
                     <Icon
                       icon="solar:server-bold"
-                      className="text-sm text-[rgba(255,255,255,0.45)] shrink-0"
+                      className="text-sm text-foreground/45 shrink-0"
                     />
-                    <span className="text-[10px] font-mono text-white flex-1 truncate">
+                    <span className="text-[10px] font-mono text-foreground flex-1 truncate">
                       {instance.displayName || shortName(instance.name)}
                     </span>
                     <span
@@ -519,7 +519,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           <Loader size={16} />
                         </div>
                       ) : dbs.length === 0 ? (
-                        <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono pl-[28px] py-[8px]">
+                        <p className="text-[9px] text-foreground/20 font-mono pl-[28px] py-[8px]">
                           No databases
                         </p>
                       ) : (
@@ -530,7 +530,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           const loadingTables = tableLoading[db.name] ?? false;
                           const ds =
                             STATE_STYLE[db.state] ??
-                            "text-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)]";
+                            "text-foreground/30 bg-foreground/5";
                           const filteredTables = tableFilter
                             ? dbTables.filter((t) =>
                                 t.name
@@ -546,7 +546,7 @@ export function SpannerExplorer({ projectID }: Props) {
                             >
                               <button
                                 onClick={() => toggleDatabase(db)}
-                                className={`w-full flex items-center gap-[7px] pl-[24px] pr-[10px] py-[7px] transition-colors text-left ${dbSelected ? "bg-[rgba(248,129,169,0.07)]" : "hover:bg-[rgba(255,255,255,0.02)]"}`}
+                                className={`w-full flex items-center gap-[7px] pl-[24px] pr-[10px] py-[7px] transition-colors text-left ${dbSelected ? "bg-[rgba(248,129,169,0.07)]" : "hover:bg-foreground/[2%]"}`}
                               >
                                 <Icon
                                   icon={
@@ -554,14 +554,14 @@ export function SpannerExplorer({ projectID }: Props) {
                                       ? "solar:alt-arrow-down-linear"
                                       : "solar:alt-arrow-right-linear"
                                   }
-                                  className="text-[9px] text-[rgba(255,255,255,0.2)] shrink-0"
+                                  className="text-[9px] text-foreground/20 shrink-0"
                                 />
                                 <Icon
                                   icon="solar:database-bold"
-                                  className={`text-xs shrink-0 ${dbSelected ? "text-brand" : "text-[rgba(255,255,255,0.3)]"}`}
+                                  className={`text-xs shrink-0 ${dbSelected ? "text-brand" : "text-foreground/30"}`}
                                 />
                                 <span
-                                  className={`text-[10px] font-mono flex-1 truncate ${dbSelected ? "text-white" : "text-[rgba(255,255,255,0.6)]"}`}
+                                  className={`text-[10px] font-mono flex-1 truncate ${dbSelected ? "text-foreground" : "text-foreground/60"}`}
                                 >
                                   {shortName(db.name)}
                                 </span>
@@ -587,11 +587,11 @@ export function SpannerExplorer({ projectID }: Props) {
                                             setTableFilter(e.target.value)
                                           }
                                           placeholder="Filter tables…"
-                                          className="w-full px-[8px] py-[3px] bg-background border border-border rounded-[3px] text-[9px] font-mono text-white placeholder-[rgba(255,255,255,0.2)] focus:outline-none focus:border-[rgba(255,255,255,0.25)] mb-[4px]"
+                                          className="w-full px-[8px] py-[3px] bg-background border border-border rounded-[3px] text-[9px] font-mono text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-foreground/25 mb-[4px]"
                                         />
                                       )}
                                       {filteredTables.length === 0 ? (
-                                        <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono py-[4px]">
+                                        <p className="text-[9px] text-foreground/20 font-mono py-[4px]">
                                           {dbTables.length === 0
                                             ? "No tables"
                                             : "No match"}
@@ -610,14 +610,14 @@ export function SpannerExplorer({ projectID }: Props) {
                                                   db.name,
                                                 )
                                               }
-                                              className={`w-full flex items-center gap-[7px] px-[4px] py-[4px] rounded-[2px] transition-colors text-left group ${isActive ? "bg-[rgba(248,129,169,0.1)]" : "hover:bg-[rgba(255,255,255,0.03)]"}`}
+                                              className={`w-full flex items-center gap-[7px] px-[4px] py-[4px] rounded-[2px] transition-colors text-left group ${isActive ? "bg-[rgba(248,129,169,0.1)]" : "hover:bg-foreground/[3%]"}`}
                                             >
                                               <Icon
                                                 icon="hugeicons:table"
-                                                className={`text-xs shrink-0 transition-colors ${isActive ? "text-brand" : isOpen ? "text-[rgba(248,129,169,0.5)]" : "text-[rgba(255,255,255,0.3)]"}`}
+                                                className={`text-xs shrink-0 transition-colors ${isActive ? "text-brand" : isOpen ? "text-[rgba(248,129,169,0.5)]" : "text-foreground/30"}`}
                                               />
                                               <span
-                                                className={`text-[9px] font-mono flex-1 truncate transition-colors ${isActive ? "text-white" : isOpen ? "text-[rgba(255,255,255,0.7)]" : "text-[rgba(255,255,255,0.5)] group-hover:text-white"}`}
+                                                className={`text-[9px] font-mono flex-1 truncate transition-colors ${isActive ? "text-foreground" : isOpen ? "text-foreground/70" : "text-foreground/50 group-hover:text-foreground"}`}
                                               >
                                                 {table.name}
                                               </span>
@@ -702,8 +702,8 @@ export function SpannerExplorer({ projectID }: Props) {
                 }}
                 className={`flex items-center gap-[6px] pl-[10px] pr-[4px] text-[10px] font-mono shrink-0 border-r border-border cursor-pointer transition-colors select-none group ${
                   isActive
-                    ? "text-white bg-background shadow-[inset_0_-2px_0_#f881a9]"
-                    : "text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[rgba(255,255,255,0.03)]"
+                    ? "text-foreground bg-background shadow-[inset_0_-2px_0_#f881a9]"
+                    : "text-foreground/40 hover:text-foreground hover:bg-foreground/[3%]"
                 } ${isDragging ? "opacity-40" : ""} ${isDragOver ? "border-l-2 border-l-[#f881a9]" : ""}`}
                 style={{ minHeight: 36 }}
               >
@@ -729,7 +729,7 @@ export function SpannerExplorer({ projectID }: Props) {
                       e.stopPropagation();
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-[90px] bg-transparent outline-none text-white text-[10px] font-mono border-b border-[rgba(248,129,169,0.6)]"
+                    className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-[rgba(248,129,169,0.6)]"
                   />
                 ) : (
                   <span
@@ -750,7 +750,7 @@ export function SpannerExplorer({ projectID }: Props) {
                   <span
                     onClick={(e) => closeTab(tabId, e)}
                     role="button"
-                    className="ml-[2px] p-[3px] rounded opacity-0 group-hover:opacity-100 text-[rgba(255,255,255,0.4)] hover:text-brand hover:bg-[rgba(248,129,169,0.1)] transition-all shrink-0"
+                    className="ml-[2px] p-[3px] rounded opacity-0 group-hover:opacity-100 text-foreground/40 hover:text-brand hover:bg-[rgba(248,129,169,0.1)] transition-all shrink-0"
                   >
                     <Icon
                       icon="solar:close-circle-linear"
@@ -765,7 +765,7 @@ export function SpannerExplorer({ projectID }: Props) {
           })}
           <button
             onClick={addQueryTab}
-            className="flex items-center justify-center w-[32px] shrink-0 border-l border-border text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.06)] transition-colors self-stretch"
+            className="flex items-center justify-center w-[32px] shrink-0 border-l border-border text-foreground/50 hover:text-foreground hover:bg-foreground/[6%] transition-colors self-stretch"
             title="New query tab"
           >
             <Icon
@@ -793,9 +793,9 @@ export function SpannerExplorer({ projectID }: Props) {
                       <div className="flex-1 flex flex-col items-center justify-center gap-[8px]">
                         <Icon
                           icon="solar:database-linear"
-                          className="text-[28px] text-[rgba(255,255,255,0.08)]"
+                          className="text-[28px] text-foreground/8"
                         />
-                        <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-mono">
+                        <p className="text-[11px] text-foreground/30 font-mono">
                           Select a database to run queries
                         </p>
                       </div>
@@ -807,11 +807,11 @@ export function SpannerExplorer({ projectID }: Props) {
                               icon="solar:database-bold"
                               className="text-sm text-brand"
                             />
-                            <p className="text-[10px] font-mono text-[rgba(255,255,255,0.7)]">
+                            <p className="text-[10px] font-mono text-foreground/70">
                               {shortName(selectedDatabase)}
                             </p>
                           </div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono">
+                          <p className="text-[9px] text-foreground/30 font-mono">
                             ⌘↩ to run
                           </p>
                         </div>
@@ -883,7 +883,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           )}
                           {queryResult && queryResult.columns.length === 0 && (
                             <div className="flex items-center justify-center py-[40px]">
-                              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">
+                              <p className="text-[10px] text-foreground/30 font-mono">
                                 No results
                               </p>
                             </div>
@@ -891,7 +891,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           {queryResult && queryResult.columns.length > 0 && (
                             <>
                               <div className="px-[14px] py-[8px] border-b border-border">
-                                <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono uppercase font-bold">
+                                <p className="text-[9px] text-foreground/30 font-mono uppercase font-bold">
                                   {queryResult.rows.length} row
                                   {queryResult.rows.length !== 1 ? "s" : ""}
                                 </p>
@@ -902,7 +902,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                     {queryResult.columns.map((col) => (
                                       <th
                                         key={col}
-                                        className="text-left px-[12px] py-[7px] text-[rgba(255,255,255,0.5)] font-bold uppercase text-[9px] whitespace-nowrap border-r border-border last:border-0"
+                                        className="text-left px-[12px] py-[7px] text-foreground/50 font-bold uppercase text-[9px] whitespace-nowrap border-r border-border last:border-0"
                                       >
                                         {col}
                                       </th>
@@ -913,7 +913,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                   {queryResult.rows.map((row, i) => (
                                     <tr
                                       key={i}
-                                      className="border-b border-border hover:bg-[rgba(255,255,255,0.02)]"
+                                      className="border-b border-border hover:bg-foreground/[2%]"
                                     >
                                       {row.map((cell, j) => (
                                         <td
@@ -921,11 +921,11 @@ export function SpannerExplorer({ projectID }: Props) {
                                           className="px-[12px] py-[6px] border-r border-border last:border-0 max-w-[280px]"
                                         >
                                           {cell === "NULL" ? (
-                                            <span className="text-[rgba(255,255,255,0.2)] italic">
+                                            <span className="text-foreground/20 italic">
                                               NULL
                                             </span>
                                           ) : (
-                                            <span className="text-[rgba(255,255,255,0.72)] truncate block">
+                                            <span className="text-foreground/72 truncate block">
                                               {cell}
                                             </span>
                                           )}
@@ -991,7 +991,7 @@ export function SpannerExplorer({ projectID }: Props) {
               <button
                 key={i}
                 onClick={item.onClick}
-                className="w-full text-left px-[12px] py-[6px] text-[9px] font-mono uppercase transition-colors text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.06)] hover:text-white"
+                className="w-full text-left px-[12px] py-[6px] text-[9px] font-mono uppercase transition-colors text-foreground/60 hover:bg-foreground/[6%] hover:text-foreground"
               >
                 {item.label}
               </button>
@@ -1007,12 +1007,12 @@ export function SpannerExplorer({ projectID }: Props) {
           if (!open) setDestructivePendingTab(null);
         }}
       >
-        <AlertDialogContent className="bg-background border border-border text-white">
+        <AlertDialogContent className="bg-background border border-border text-foreground">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white font-mono text-sm">
+            <AlertDialogTitle className="text-foreground font-mono text-sm">
               Destructive statement
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-[rgba(255,255,255,0.5)] text-[10px] font-mono">
+            <AlertDialogDescription className="text-foreground/50 text-[10px] font-mono">
               This will permanently modify or destroy data. This cannot be
               undone.
               <pre className="mt-[10px] text-[9px] text-red-400 bg-background border border-border p-[8px] rounded-[3px] overflow-x-auto whitespace-pre-wrap break-all">
@@ -1023,11 +1023,11 @@ export function SpannerExplorer({ projectID }: Props) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-muted border-border text-white hover:bg-card font-mono text-[10px]">
+            <AlertDialogCancel className="bg-muted border-border text-foreground hover:bg-card font-mono text-[10px]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700 text-white font-mono text-[10px]"
+              className="bg-red-600 hover:bg-red-700 text-foreground font-mono text-[10px]"
               onClick={() => {
                 const tabId = destructivePendingTab!;
                 setDestructivePendingTab(null);

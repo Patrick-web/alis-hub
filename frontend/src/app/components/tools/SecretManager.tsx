@@ -11,7 +11,7 @@ interface Props {
 
 const VERSION_STATE_STYLES: Record<string, string> = {
   ENABLED: 'text-green-400 bg-green-400/10',
-  DISABLED: 'text-[rgba(255,255,255,0.3)] bg-[rgba(255,255,255,0.05)]',
+  DISABLED: 'text-foreground/30 bg-foreground/5',
   DESTROYED: 'text-red-400/50 bg-red-400/05',
 };
 
@@ -67,14 +67,14 @@ export function SecretManager({ projectID }: Props) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-border">
-        <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">
+        <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">
           {secrets.length} secrets · Values are never shown
         </p>
         <Button
           variant="ghost"
           onClick={() => GS.OpenInConsole('secrets', projectID, '')}
           icon={<Icon icon="solar:export-linear" className="text-xs" />}
-          className="text-[rgba(255,255,255,0.5)] hover:text-white"
+          className="text-foreground/50 hover:text-foreground"
         >
           Open in Console
         </Button>
@@ -83,7 +83,7 @@ export function SecretManager({ projectID }: Props) {
       {/* Notice */}
       <div className="flex items-center gap-[8px] px-[16px] py-[8px] bg-[rgba(248,129,169,0.05)] border-b border-border">
         <Icon icon="solar:shield-warning-linear" className="text-sm text-[rgba(248,129,169,0.5)] shrink-0" />
-        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono">
+        <p className="text-[9px] text-foreground/40 font-mono">
           Secret values are access-controlled and are never fetched or displayed here
         </p>
       </div>
@@ -98,7 +98,7 @@ export function SecretManager({ projectID }: Props) {
           </div>
         ) : secrets.length === 0 ? (
           <div className="flex items-center justify-center py-[48px]">
-            <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">No secrets found</p>
+            <p className="text-[10px] text-foreground/30 font-mono">No secrets found</p>
           </div>
         ) : (
           secrets.map((secret) => {
@@ -110,21 +110,21 @@ export function SecretManager({ projectID }: Props) {
               <div key={secret.name} className="border-b border-border">
                 <button
                   onClick={() => toggleSecret(secret)}
-                  className="w-full flex items-center gap-[10px] px-[16px] py-[10px] hover:bg-[rgba(255,255,255,0.03)] transition-colors text-left"
+                  className="w-full flex items-center gap-[10px] px-[16px] py-[10px] hover:bg-foreground/[3%] transition-colors text-left"
                 >
-                  <Icon icon="solar:lock-keyhole-linear" className="text-base text-[rgba(255,255,255,0.3)] shrink-0" />
+                  <Icon icon="solar:lock-keyhole-linear" className="text-base text-foreground/30 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-mono text-white truncate">
+                    <p className="text-[10px] font-mono text-foreground truncate">
                       {shortSecretName(secret.name)}
                     </p>
                     {secret.createTime && (
-                      <p className="text-[9px] text-[rgba(255,255,255,0.3)]">Created {formatDate(secret.createTime)}</p>
+                      <p className="text-[9px] text-foreground/30">Created {formatDate(secret.createTime)}</p>
                     )}
                   </div>
                   {secret.labels && Object.keys(secret.labels).length > 0 && (
                     <div className="flex gap-[4px] flex-wrap shrink-0 max-w-[120px]">
                       {Object.entries(secret.labels).slice(0, 2).map(([k, v]) => (
-                        <span key={k} className="text-[8px] px-[4px] py-[1px] bg-[rgba(255,255,255,0.05)] rounded-[2px] text-[rgba(255,255,255,0.3)] font-mono">
+                        <span key={k} className="text-[8px] px-[4px] py-[1px] bg-foreground/5 rounded-[2px] text-foreground/30 font-mono">
                           {k}={v as string}
                         </span>
                       ))}
@@ -132,19 +132,19 @@ export function SecretManager({ projectID }: Props) {
                   )}
                   <Icon
                     icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                    className="text-xs text-[rgba(255,255,255,0.3)] shrink-0"
+                    className="text-xs text-foreground/30 shrink-0"
                   />
                 </button>
 
                 {isExpanded && (
                   <div className="bg-background border-t border-border">
                     <div className="px-[16px] py-[8px] border-b border-border">
-                      <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono uppercase font-bold">Versions</p>
+                      <p className="text-[9px] text-foreground/30 font-mono uppercase font-bold">Versions</p>
                     </div>
                     {secretLoading ? (
                       <div className="flex items-center justify-center py-[20px]"><Loader size={20} /></div>
                     ) : secretVersions.length === 0 ? (
-                      <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono px-[16px] py-[12px]">
+                      <p className="text-[10px] text-foreground/20 font-mono px-[16px] py-[12px]">
                         No versions
                       </p>
                     ) : (
@@ -156,14 +156,14 @@ export function SecretManager({ projectID }: Props) {
                             key={v.name}
                             className="flex items-center gap-[12px] px-[24px] py-[8px] border-b border-border last:border-0"
                           >
-                            <Icon icon="solar:document-linear" className="text-sm text-[rgba(255,255,255,0.2)] shrink-0" />
-                            <span className="text-[10px] font-mono text-[rgba(255,255,255,0.6)] w-[60px] shrink-0">
+                            <Icon icon="solar:document-linear" className="text-sm text-foreground/20 shrink-0" />
+                            <span className="text-[10px] font-mono text-foreground/60 w-[60px] shrink-0">
                               v{shortVersionName(v.name)}
                             </span>
                             <span className={`text-[8px] uppercase px-[5px] py-[1px] rounded-[2px] font-mono shrink-0 ${stateStyle}`}>
                               {state}
                             </span>
-                            <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono flex-1 text-right">
+                            <span className="text-[9px] text-foreground/20 font-mono flex-1 text-right">
                               {formatDate(v.createTime)}
                             </span>
                           </div>

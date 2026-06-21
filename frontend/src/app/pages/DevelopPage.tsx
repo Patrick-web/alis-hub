@@ -809,7 +809,7 @@ export function DevelopPage() {
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between">
-        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
           SERVICES
         </p>
       </div>
@@ -818,7 +818,7 @@ export function DevelopPage() {
       <div className="border-b border-border px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
         <div className="flex items-center h-[34px]">
           <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-white">/</p>
+            <p className="text-[12px] text-foreground">/</p>
           </div>
           <Input
             placeholder="Filter services..."
@@ -869,13 +869,13 @@ export function DevelopPage() {
                         </button>
                       </th>
                       <th className="text-left px-[20px] py-[8px]">
-                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Service</span>
+                        <span className="text-[10px] font-bold font-mono text-foreground/40 uppercase">Service</span>
                       </th>
                       <th className="text-left px-[16px] py-[8px] w-[100px]">
-                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Version</span>
+                        <span className="text-[10px] font-bold font-mono text-foreground/40 uppercase">Version</span>
                       </th>
                       <th className="text-left px-[16px] py-[8px] w-[260px]">
-                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Actions</span>
+                        <span className="text-[10px] font-bold font-mono text-foreground/40 uppercase">Actions</span>
                       </th>
                     </tr>
                   </thead>
@@ -886,7 +886,7 @@ export function DevelopPage() {
                       return (
                         <tr
                           key={name}
-                          className={`border-b border-border transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
+                          className={`border-b border-border transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-foreground/[2%]'}`}
                         >
                           <td className="px-[16px] py-[10px]">
                             <button
@@ -903,16 +903,16 @@ export function DevelopPage() {
                           <td className="px-[20px] py-[10px]">
                             <div className="flex items-center gap-[8px]">
                               <div className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? 'bg-success' : neuron.state === 4 ? 'bg-warning' : 'bg-destructive'}`} />
-                              <span className="text-[12px] font-bold font-mono text-white">{name}</span>
+                              <span className="text-[12px] font-bold font-mono text-foreground">{name}</span>
                             </div>
                           </td>
                           <td className="px-[16px] py-[10px]">
                             {neuron.latestBuild ? (
-                              <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] bg-card border border-border px-[6px] py-[2px]">
+                              <span className="text-[10px] font-mono text-foreground/40 bg-card border border-border px-[6px] py-[2px]">
                                 {neuron.latestBuild}
                               </span>
                             ) : (
-                              <span className="text-[10px] text-[rgba(255,255,255,0.2)]">—</span>
+                              <span className="text-[10px] text-foreground/20">—</span>
                             )}
                           </td>
                           <td className="px-[16px] py-[10px]">
@@ -969,11 +969,11 @@ export function DevelopPage() {
                 {commitsLoading ? (
                   <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                     <Loader size={20} />
-                    <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+                    <span className="text-[11px] text-foreground/50">Loading commits...</span>
                   </div>
                 ) : commits.length === 0 ? (
                   <div className="px-[16px] py-[20px]">
-                    <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found in define repo.</p>
+                    <p className="text-[11px] text-foreground/40">No commits found in define repo.</p>
                   </div>
                 ) : (
                   <div className="flex flex-col">
@@ -987,9 +987,9 @@ export function DevelopPage() {
                           <span className="text-[10px] font-bold font-mono text-brand">
                             {c.sha.substring(0, 7)}
                           </span>
-                          <span className="text-[10px] text-white leading-tight">{c.message}</span>
+                          <span className="text-[10px] text-foreground leading-tight">{c.message}</span>
                         </div>
-                        <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
+                        <p className="text-[9px] text-foreground/35">
                           {c.author} · {formatTimestamp(c.timestamp)}
                         </p>
                       </button>
@@ -1004,23 +1004,23 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto px-[16px] py-[20px]">
                 <button
                   onClick={() => setDefineStep('commits')}
-                  className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[20px] transition-colors"
+                  className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[20px] transition-colors"
                 >
                   <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
                   Back to commits
                 </button>
 
                 <div className="bg-card border border-border rounded-[8px] p-[16px] mb-[20px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
+                  <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[10px]">
                     Selected Commit
                   </p>
-                  <p className="text-[11px] text-white leading-[1.5] mb-[10px]">{selectedCommit.message}</p>
+                  <p className="text-[11px] text-foreground leading-[1.5] mb-[10px]">{selectedCommit.message}</p>
                   <div className="flex items-center gap-[8px] mb-[4px]">
                     <span className="text-[10px] font-bold font-mono text-brand">
                       {selectedCommit.sha.substring(0, 12)}
                     </span>
                   </div>
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)]">
+                  <p className="text-[9px] text-foreground/40">
                     {selectedCommit.author} · {formatTimestamp(selectedCommit.timestamp)}
                   </p>
                 </div>
@@ -1043,14 +1043,14 @@ export function DevelopPage() {
                     <Loader size={20} />
                   </div>
                   <div className="text-center">
-                    <p className="text-[12px] font-bold text-white mb-[6px]">Running Define</p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.5] max-w-[280px] text-center">
+                    <p className="text-[12px] font-bold text-foreground mb-[6px]">Running Define</p>
+                    <p className="text-[10px] text-foreground/50 leading-[1.5] max-w-[280px] text-center">
                       {progressMsg}
                     </p>
                   </div>
                   {defineResult?.version && (
                     <div className="bg-card border border-border rounded-[6px] px-[12px] py-[6px]">
-                      <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.5)]">
+                      <span className="text-[9px] font-bold font-mono text-foreground/50">
                         v{defineResult.version}
                       </span>
                     </div>
@@ -1067,7 +1067,7 @@ export function DevelopPage() {
                   <div className="px-[16px] py-[16px] border-b border-border">
                     <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
                       <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                      <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{defineResult.error}</p>
+                      <p className="text-[10px] text-foreground/70 leading-relaxed">{defineResult.error}</p>
                     </div>
                   </div>
                 )}
@@ -1077,10 +1077,10 @@ export function DevelopPage() {
                   <div className="px-[16px] py-[14px] border-b border-border bg-[rgba(52,199,89,0.05)]">
                     <div className="flex items-center gap-[8px] mb-[4px]">
                       <Icon icon="solar:check-circle-linear" className="text-success text-base" />
-                      <p className="text-[11px] font-bold text-white">Define Complete</p>
+                      <p className="text-[11px] font-bold text-foreground">Define Complete</p>
                     </div>
                     {defineResult?.version && (
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono">
+                      <p className="text-[9px] text-foreground/40 font-mono">
                         {defineResult.definition} · v{defineResult.version}
                       </p>
                     )}
@@ -1091,7 +1091,7 @@ export function DevelopPage() {
                 {glassLoading && (
                   <div className="flex items-center gap-[10px] px-[16px] py-[16px]">
                     <Loader size={20} />
-                    <span className="text-[10px] text-[rgba(255,255,255,0.4)]">Loading Glass...</span>
+                    <span className="text-[10px] text-foreground/40">Loading Glass...</span>
                   </div>
                 )}
 
@@ -1099,17 +1099,17 @@ export function DevelopPage() {
                 {!glassLoading && glassResult && (
                   <div className="px-[16px] py-[16px]">
                     {glassResult.title && (
-                      <p className="text-[13px] font-bold text-white mb-[6px]">{glassResult.title}</p>
+                      <p className="text-[13px] font-bold text-foreground mb-[6px]">{glassResult.title}</p>
                     )}
                     {glassResult.summary && (
-                      <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.6] mb-[16px]">{glassResult.summary}</p>
+                      <p className="text-[11px] text-foreground/55 leading-[1.6] mb-[16px]">{glassResult.summary}</p>
                     )}
 
                     {/* Definition meta badges */}
                     {(glassResult.definition?.version || glassResult.definition?.releaseType) && (
                       <div className="flex gap-[6px] mb-[16px]">
                         {glassResult.definition.version && (
-                          <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-card border border-border text-[rgba(255,255,255,0.5)]">
+                          <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-card border border-border text-foreground/50">
                             {glassResult.definition.version}
                           </span>
                         )}
@@ -1124,7 +1124,7 @@ export function DevelopPage() {
                     {/* Artifacts vertical list */}
                     {glassResult.artifacts && glassResult.artifacts.length > 0 && (
                       <div>
-                        <p className="text-[9px] uppercase font-bold text-[rgba(255,255,255,0.3)] mb-[10px] font-mono">
+                        <p className="text-[9px] uppercase font-bold text-foreground/30 mb-[10px] font-mono">
                           Artifacts ({glassResult.artifacts.length})
                         </p>
                         <div className="flex flex-col gap-[2px]">
@@ -1145,12 +1145,12 @@ export function DevelopPage() {
                                 }}
                               />
                               {/* Artifact type */}
-                              <span className="text-[10px] font-bold font-mono text-white flex-1 min-w-0 truncate">
+                              <span className="text-[10px] font-bold font-mono text-foreground flex-1 min-w-0 truncate">
                                 {a.type}
                               </span>
                               {/* Extra (package name/import path) */}
                               {a.extra && (
-                                <span className="text-[9px] text-[rgba(255,255,255,0.35)] max-w-[100px] truncate shrink-0">
+                                <span className="text-[9px] text-foreground/35 max-w-[100px] truncate shrink-0">
                                   {a.extra}
                                 </span>
                               )}
@@ -1158,7 +1158,7 @@ export function DevelopPage() {
                               {a.locationUri && (
                                 <button
                                   onClick={() => Browser.OpenURL(a.locationUri)}
-                                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[rgba(255,255,255,0.4)] hover:text-brand"
+                                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-foreground/40 hover:text-brand"
                                   title={a.locationUri}
                                 >
                                   <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1172,7 +1172,7 @@ export function DevelopPage() {
 
                     {/* No glass data fallback */}
                     {(!glassResult.artifacts || glassResult.artifacts.length === 0) && !glassResult.title && (
-                      <p className="text-[10px] text-[rgba(255,255,255,0.3)]">No Glass data available.</p>
+                      <p className="text-[10px] text-foreground/30">No Glass data available.</p>
                     )}
                   </div>
                 )}
@@ -1180,7 +1180,7 @@ export function DevelopPage() {
                 {/* Glass not available (no result after loading) */}
                 {!glassLoading && !glassResult && !defineResult?.error && (
                   <div className="px-[16px] py-[12px]">
-                    <p className="text-[10px] text-[rgba(255,255,255,0.3)]">Glass data not available for this definition.</p>
+                    <p className="text-[10px] text-foreground/30">Glass data not available for this definition.</p>
                   </div>
                 )}
 
@@ -1188,7 +1188,7 @@ export function DevelopPage() {
                 <div className="px-[16px] py-[12px] border-t border-border mt-[8px]">
                   <button
                     onClick={() => openDefinePane(defineNeuron!)}
-                    className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                    className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
                   >
                     <Icon icon="solar:refresh-linear" className="text-sm" />
                     Run Define again
@@ -1207,7 +1207,7 @@ export function DevelopPage() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
                   <Loader size={20} />
-                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Loading deployment info...</p>
+                  <p className="text-[11px] text-foreground/40">Loading deployment info...</p>
                 </div>
               </div>
             )}
@@ -1220,13 +1220,13 @@ export function DevelopPage() {
                   {/* Version section */}
                   <div className="border-b border-border">
                     <div className="px-[16px] pt-[14px] pb-[8px]">
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
+                      <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">
                         Build Version
                       </p>
                     </div>
                     {deployVersions.length === 0 ? (
                       <div className="px-[16px] pb-[12px]">
-                        <p className="text-[11px] text-[rgba(255,255,255,0.3)]">No built versions found.</p>
+                        <p className="text-[11px] text-foreground/30">No built versions found.</p>
                       </div>
                     ) : (
                       <div className="max-h-[160px] overflow-y-auto">
@@ -1240,7 +1240,7 @@ export function DevelopPage() {
                               key={v.version}
                               onClick={() => setDeployVersion(v.version)}
                               className={`w-full text-left px-[16px] py-[9px] border-b border-border flex items-center gap-[10px] transition-colors ${
-                                selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                                selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-foreground/[2%]'
                               }`}
                             >
                               <span className={`size-[14px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${
@@ -1248,11 +1248,11 @@ export function DevelopPage() {
                               }`}>
                                 {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                               </span>
-                              <span className={`text-[12px] font-bold font-mono ${selected ? 'text-brand' : 'text-white'}`}>
+                              <span className={`text-[12px] font-bold font-mono ${selected ? 'text-brand' : 'text-foreground'}`}>
                                 {v.version}
                               </span>
                               {ago && (
-                                <span className="ml-auto text-[9px] text-[rgba(255,255,255,0.3)] shrink-0">{ago}</span>
+                                <span className="ml-auto text-[9px] text-foreground/30 shrink-0">{ago}</span>
                               )}
                             </button>
                           );
@@ -1263,13 +1263,13 @@ export function DevelopPage() {
 
                   {/* Environments section */}
                   <div className="px-[16px] pt-[12px] pb-[4px]">
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
+                    <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">
                       Target Environments
                     </p>
                   </div>
                   {deployEnvs.length === 0 ? (
                     <div className="px-[16px] pb-[12px]">
-                      <p className="text-[11px] text-[rgba(255,255,255,0.3)]">No environments found.</p>
+                      <p className="text-[11px] text-foreground/30">No environments found.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col">
@@ -1284,7 +1284,7 @@ export function DevelopPage() {
                               selected ? prev.filter(e => e !== env.name) : [...prev, env.name]
                             )}
                             className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${
-                              selected ? 'bg-[rgba(248,129,169,0.05)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                              selected ? 'bg-[rgba(248,129,169,0.05)]' : 'hover:bg-foreground/[2%]'
                             }`}
                           >
                             {/* Checkbox */}
@@ -1296,7 +1296,7 @@ export function DevelopPage() {
 
                             {/* Env name */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-[11px] font-medium text-white leading-tight">
+                              <p className="text-[11px] font-medium text-foreground leading-tight">
                                 {env.displayName || env.name}
                               </p>
                             </div>
@@ -1309,17 +1309,17 @@ export function DevelopPage() {
                                 </span>
                               ) : (
                                 <div className="flex items-center gap-[4px] shrink-0">
-                                  <span className="text-[9px] font-mono text-[rgba(255,255,255,0.3)] line-through">
+                                  <span className="text-[9px] font-mono text-foreground/30 line-through">
                                     {env.currentVersion}
                                   </span>
-                                  <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.25)] text-[10px]" />
+                                  <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/25 text-[10px]" />
                                   <span className="text-[9px] font-bold font-mono text-brand">
                                     {deployVersion || '?'}
                                   </span>
                                 </div>
                               )
                             ) : (
-                              <span className="text-[9px] text-[rgba(255,255,255,0.25)] shrink-0">not deployed</span>
+                              <span className="text-[9px] text-foreground/25 shrink-0">not deployed</span>
                             )}
                           </button>
                         );
@@ -1329,7 +1329,7 @@ export function DevelopPage() {
 
                   {/* Options */}
                   <div className="px-[16px] pt-[14px] pb-[16px] border-t border-border mt-[4px]">
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
+                    <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[10px]">
                       Options
                     </p>
                     <div className="flex flex-col gap-[8px]">
@@ -1341,8 +1341,8 @@ export function DevelopPage() {
                           className="accent-brand"
                         />
                         <div>
-                          <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Plan only</span>
-                          <span className="text-[9px] text-[rgba(255,255,255,0.3)] ml-[6px]">terraform plan, no apply</span>
+                          <span className="text-[10px] text-foreground/70">Plan only</span>
+                          <span className="text-[9px] text-foreground/30 ml-[6px]">terraform plan, no apply</span>
                         </div>
                       </label>
                       <label className="flex items-center gap-[8px] cursor-pointer">
@@ -1353,8 +1353,8 @@ export function DevelopPage() {
                           className="accent-brand"
                         />
                         <div>
-                          <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Beta</span>
-                          <span className="text-[9px] text-[rgba(255,255,255,0.3)] ml-[6px]">sets ALIS_BETA_VERSION</span>
+                          <span className="text-[10px] text-foreground/70">Beta</span>
+                          <span className="text-[9px] text-foreground/30 ml-[6px]">sets ALIS_BETA_VERSION</span>
                         </div>
                       </label>
                     </div>
@@ -1384,10 +1384,10 @@ export function DevelopPage() {
                   <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                     <Loader size={20} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-white leading-tight">
+                      <p className="text-[11px] font-bold text-foreground leading-tight">
                         {deployPlanOnly ? 'Planning' : 'Deploying'} · {deployVersion}
                       </p>
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
+                      <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{deployProgressMsg}</p>
                     </div>
                   </div>
                 )}
@@ -1400,17 +1400,17 @@ export function DevelopPage() {
                     {deployResult?.error ? (
                       <div className="flex items-start gap-[8px]">
                         <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{deployResult.error}</p>
+                        <p className="text-[10px] text-foreground/70 leading-relaxed">{deployResult.error}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-[8px]">
                         <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-white leading-tight">
+                          <p className="text-[11px] font-bold text-foreground leading-tight">
                             {deployPlanOnly ? 'Plan Complete' : 'Deploy Complete'}
                           </p>
                           {(deployResult?.version || deployVersion) && (
-                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
+                            <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
                               {deployResult?.version || deployVersion}
                             </p>
                           )}
@@ -1418,7 +1418,7 @@ export function DevelopPage() {
                         {deployResult?.deployments?.[0]?.logsUrl && (
                           <button
                             onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
-                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
+                            className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                             title="Open in browser"
                           >
                             <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1437,7 +1437,7 @@ export function DevelopPage() {
                   <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                     <button
                       onClick={() => openDeployPane(deployNeuron!)}
-                      className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                      className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
                     >
                       <Icon icon="solar:refresh-linear" className="text-sm" />
                       Run Deploy again
@@ -1458,18 +1458,18 @@ export function DevelopPage() {
               <div className="flex-1 flex flex-col min-h-0">
                 {/* Branch selector */}
                 <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
-                  <Icon icon="solar:branch-linear" className="text-[rgba(255,255,255,0.35)] text-sm shrink-0" />
+                  <Icon icon="solar:branch-linear" className="text-foreground/35 text-sm shrink-0" />
                   <div className="relative flex-1 min-w-0">
                     <select
                       value={buildBranch}
                       onChange={(e) => handleBranchChange(e.target.value)}
-                      className="w-full appearance-none bg-transparent text-[10px] text-white font-mono outline-none cursor-pointer pr-[16px]"
+                      className="w-full appearance-none bg-transparent text-[10px] text-foreground font-mono outline-none cursor-pointer pr-[16px]"
                     >
                       {buildBranches.map((b) => (
-                        <option key={b} value={b} className="bg-background text-white">{b}</option>
+                        <option key={b} value={b} className="bg-background text-foreground">{b}</option>
                       ))}
                     </select>
-                    <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.35)] text-xs pointer-events-none" />
+                    <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-foreground/35 text-xs pointer-events-none" />
                   </div>
                 </div>
 
@@ -1478,11 +1478,11 @@ export function DevelopPage() {
                   {buildCommitsLoading ? (
                     <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                       <Loader size={20} />
-                      <span className="text-[11px] text-[rgba(255,255,255,0.5)]">Loading commits...</span>
+                      <span className="text-[11px] text-foreground/50">Loading commits...</span>
                     </div>
                   ) : buildCommits.length === 0 ? (
                     <div className="px-[16px] py-[20px]">
-                      <p className="text-[11px] text-[rgba(255,255,255,0.4)]">No commits found for this branch.</p>
+                      <p className="text-[11px] text-foreground/40">No commits found for this branch.</p>
                     </div>
                   ) : (
                     <div className="flex flex-col">
@@ -1496,9 +1496,9 @@ export function DevelopPage() {
                             <span className="text-[10px] font-bold font-mono text-brand">
                               {c.sha.substring(0, 7)}
                             </span>
-                            <span className="text-[10px] text-white leading-tight truncate">{c.message}</span>
+                            <span className="text-[10px] text-foreground leading-tight truncate">{c.message}</span>
                           </div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.35)]">
+                          <p className="text-[9px] text-foreground/35">
                             {c.author} · {formatTimestamp(c.timestamp)}
                           </p>
                         </button>
@@ -1514,7 +1514,7 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto px-[16px] py-[20px]">
                 <button
                   onClick={() => setBuildStep('commits')}
-                  className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[20px] transition-colors"
+                  className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[20px] transition-colors"
                 >
                   <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
                   Back to commits
@@ -1522,17 +1522,17 @@ export function DevelopPage() {
 
                 {/* Selected commit */}
                 <div className="bg-card border border-border rounded-[8px] p-[14px] mb-[20px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
+                  <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">
                     {buildBranch} · {selectedBuildCommit.sha.substring(0, 7)}
                   </p>
-                  <p className="text-[11px] text-white leading-[1.5] mb-[8px]">{selectedBuildCommit.message}</p>
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)]">
+                  <p className="text-[11px] text-foreground leading-[1.5] mb-[8px]">{selectedBuildCommit.message}</p>
+                  <p className="text-[9px] text-foreground/40">
                     {selectedBuildCommit.author} · {formatTimestamp(selectedBuildCommit.timestamp)}
                   </p>
                 </div>
 
                 {/* Build mode selector */}
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
+                <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">
                   Action
                 </p>
                 <div className="flex flex-col gap-[2px] mb-[20px]">
@@ -1546,15 +1546,15 @@ export function DevelopPage() {
                       onClick={() => setBuildMode(mode)}
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                         buildMode === mode
-                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
-                          : 'bg-background border-border text-[rgba(255,255,255,0.5)] hover:border-border hover:text-[rgba(255,255,255,0.7)]'
+                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                          : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                       }`}
                     >
                       <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-brand' : 'bg-accent'}`} />
                       <Icon icon={icon} className="text-sm shrink-0" />
                       <span className="text-[11px] font-medium flex-1">{label}</span>
                       {soon && (
-                        <span className="text-[8px] font-bold uppercase font-mono text-[rgba(255,255,255,0.25)] border border-border rounded px-[4px] py-[1px]">
+                        <span className="text-[8px] font-bold uppercase font-mono text-foreground/25 border border-border rounded px-[4px] py-[1px]">
                           soon
                         </span>
                       )}
@@ -1581,11 +1581,11 @@ export function DevelopPage() {
                   <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                     <Loader size={20} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-bold text-white leading-tight">Running Build</p>
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
+                      <p className="text-[11px] font-bold text-foreground leading-tight">Running Build</p>
+                      <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
                     </div>
                     {buildResult?.version && (
-                      <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.35)] shrink-0">
+                      <span className="text-[9px] font-bold font-mono text-foreground/35 shrink-0">
                         {buildResult.version}
                       </span>
                     )}
@@ -1602,22 +1602,22 @@ export function DevelopPage() {
                     {buildResult?.stub ? (
                       <div className="flex items-center gap-[8px]">
                         <Icon icon="solar:clock-circle-linear" className="text-warning text-sm shrink-0" />
-                        <p className="text-[10px] font-bold text-[rgba(255,255,255,0.7)] leading-tight">
+                        <p className="text-[10px] font-bold text-foreground/70 leading-tight">
                           Build and Deploy — Coming Soon
                         </p>
                       </div>
                     ) : buildResult?.error ? (
                       <div className="flex items-start gap-[8px]">
                         <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                        <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
+                        <p className="text-[10px] text-foreground/70 leading-relaxed">{buildResult.error}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-[8px]">
                         <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                         <div className="min-w-0">
-                          <p className="text-[11px] font-bold text-white leading-tight">Build Complete</p>
+                          <p className="text-[11px] font-bold text-foreground leading-tight">Build Complete</p>
                           {(buildResult?.neuronVersion || buildResult?.version) && (
-                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
+                            <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
                               {buildResult.neuronVersion || buildResult.version}
                             </p>
                           )}
@@ -1625,7 +1625,7 @@ export function DevelopPage() {
                         {buildResult?.logsUrl && (
                           <button
                             onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
+                            className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                             title="Open in browser"
                           >
                             <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1644,7 +1644,7 @@ export function DevelopPage() {
                   <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                     <button
                       onClick={() => openBuildPane(buildNeuron!)}
-                      className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
+                      className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
                     >
                       <Icon icon="solar:refresh-linear" className="text-sm" />
                       Run Build again
@@ -1664,7 +1664,7 @@ export function DevelopPage() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
                   <Loader size={20} />
-                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Scanning packages...</p>
+                  <p className="text-[11px] text-foreground/40">Scanning packages...</p>
                 </div>
               </div>
             )}
@@ -1675,10 +1675,10 @@ export function DevelopPage() {
                 {packagesError && (
                   <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] mb-[16px]">
                     <Icon icon="solar:danger-triangle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                    <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{packagesError}</p>
+                    <p className="text-[10px] text-foreground/70 leading-relaxed">{packagesError}</p>
                   </div>
                 )}
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
+                <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[10px]">
                   Action
                 </p>
                 <div className="flex flex-col gap-[2px] mb-[20px]">
@@ -1693,14 +1693,14 @@ export function DevelopPage() {
                       onClick={() => setPackagesAction(value)}
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                         packagesAction === value
-                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
-                          : 'bg-background border-border text-[rgba(255,255,255,0.5)] hover:border-border hover:text-[rgba(255,255,255,0.7)]'
+                          ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                          : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                       }`}
                     >
                       <span className={`size-[6px] rounded-full shrink-0 ${packagesAction === value ? 'bg-brand' : 'bg-accent'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-medium">{label}</p>
-                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] leading-snug mt-[1px]">{desc}</p>
+                        <p className="text-[9px] text-foreground/35 leading-snug mt-[1px]">{desc}</p>
                       </div>
                     </button>
                   ))}
@@ -1714,7 +1714,7 @@ export function DevelopPage() {
                   {packageScripts.length === 1 ? 'Run' : 'Next →'}
                 </Button>
                 {packageScripts.length === 0 && !packagesError && (
-                  <p className="text-[10px] text-[rgba(255,255,255,0.3)] text-center mt-[12px]">No package scripts available</p>
+                  <p className="text-[10px] text-foreground/30 text-center mt-[12px]">No package scripts available</p>
                 )}
               </div>
             )}
@@ -1726,12 +1726,12 @@ export function DevelopPage() {
                   <div className="px-[16px] pt-[14px] pb-[8px]">
                     <button
                       onClick={() => setPackagesStep('select-action')}
-                      className="flex items-center gap-[6px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white mb-[12px] transition-colors"
+                      className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[12px] transition-colors"
                     >
                       <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
                       Back
                     </button>
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
+                    <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">
                       Select Folders
                     </p>
                   </div>
@@ -1748,7 +1748,7 @@ export function DevelopPage() {
                             return next;
                           })}
                           className={`text-left px-[16px] py-[10px] border-b border-border flex items-center gap-[10px] transition-colors ${
-                            checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
+                            checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-foreground/[2%]'
                           }`}
                         >
                           <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
@@ -1757,10 +1757,10 @@ export function DevelopPage() {
                             {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-medium text-white truncate">
+                            <p className="text-[11px] font-medium text-foreground truncate">
                               {s.name || s.workDir.split('/').slice(-2).join('/')}
                             </p>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] font-mono uppercase leading-snug mt-[1px]">
+                            <p className="text-[9px] text-foreground/35 font-mono uppercase leading-snug mt-[1px]">
                               {s.lang}
                             </p>
                           </div>
@@ -1788,8 +1788,8 @@ export function DevelopPage() {
                 <div className="flex items-start gap-[10px] p-[12px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.25)] rounded-[6px] mb-[20px]">
                   <Icon icon="solar:info-circle-linear" className="text-brand text-base shrink-0 mt-[1px]" />
                   <div>
-                    <p className="text-[11px] font-medium text-white leading-snug">Python virtual environment not found</p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-relaxed mt-[4px]">
+                    <p className="text-[11px] font-medium text-foreground leading-snug">Python virtual environment not found</p>
+                    <p className="text-[10px] text-foreground/50 leading-relaxed mt-[4px]">
                       A <code className="font-mono text-brand">.venv</code> is required at the product build root before running Python package scripts.
                     </p>
                   </div>
@@ -1804,13 +1804,13 @@ export function DevelopPage() {
                   </Button>
                   <button
                     onClick={() => doRunScripts(false)}
-                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono uppercase"
+                    className="w-full py-[9px] text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono uppercase"
                   >
                     Skip &amp; Run Anyway
                   </button>
                   <button
                     onClick={() => setPackagesStep('select-folders')}
-                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.3)] hover:text-white transition-colors font-mono"
+                    className="w-full py-[9px] text-[10px] text-foreground/30 hover:text-foreground transition-colors font-mono"
                   >
                     ← Back
                   </button>
@@ -1823,7 +1823,7 @@ export function DevelopPage() {
               <div className="flex-1 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-[12px]">
                   <Loader size={20} />
-                  <p className="text-[11px] text-[rgba(255,255,255,0.4)]">Starting scripts...</p>
+                  <p className="text-[11px] text-foreground/40">Starting scripts...</p>
                 </div>
               </div>
             )}
@@ -1831,7 +1831,7 @@ export function DevelopPage() {
             {/* Step: running */}
             {packagesStep === 'running' && (
               <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[12px]">
+                <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[12px]">
                   Running · {packageSessions.filter(s => !s.done).length} active
                 </p>
                 <div className="flex flex-col gap-[6px] mb-[16px]">
@@ -1844,14 +1844,14 @@ export function DevelopPage() {
                       ) : (
                         <span className="w-[8px] h-[8px] rounded-full bg-brand animate-pulse shrink-0" />
                       )}
-                      <span className="text-[10px] text-white font-mono flex-1 truncate min-w-0">
+                      <span className="text-[10px] text-foreground font-mono flex-1 truncate min-w-0">
                         {s.title}
                       </span>
-                      <span className="text-[9px] text-[rgba(255,255,255,0.3)] shrink-0 uppercase">{s.lang}</span>
+                      <span className="text-[9px] text-foreground/30 shrink-0 uppercase">{s.lang}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[9px] text-[rgba(255,255,255,0.3)] text-center">
+                <p className="text-[9px] text-foreground/30 text-center">
                   Output in the terminal pane ↓
                 </p>
               </div>

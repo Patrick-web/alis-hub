@@ -126,7 +126,7 @@ export function BuildKitMcpFlowPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             Build and deploy your own Model Context Protocol (MCP) server on Alis Build. MCP servers expose tools and
             resources to coding agents like Claude Code, Gemini CLI, and Cursor, enabling them to interact with your
             product's APIs and data.
@@ -148,13 +148,13 @@ export function BuildKitMcpFlowPage() {
                   <div className={`size-[16px] rounded-full border flex items-center justify-center shrink-0 ${
                     selectedStage === s.id ? 'bg-[rgba(248,129,169,0.2)] border-brand' : 'border-border'
                   }`}>
-                    <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-[rgba(255,255,255,0.4)]'}`}>{i + 1}</span>
+                    <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/40'}`}>{i + 1}</span>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase font-mono ${selectedStage === s.id ? 'text-brand' : 'text-[rgba(255,255,255,0.35)]'}`}>
+                  <span className={`text-[9px] font-bold uppercase font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/35'}`}>
                     {s.eyebrow}
                   </span>
                 </div>
-                <span className={`text-[11px] font-bold font-mono ${selectedStage === s.id ? 'text-white' : 'text-[rgba(255,255,255,0.6)]'}`}>
+                <span className={`text-[11px] font-bold font-mono ${selectedStage === s.id ? 'text-foreground' : 'text-foreground/60'}`}>
                   {s.title}
                 </span>
               </button>
@@ -169,7 +169,7 @@ export function BuildKitMcpFlowPage() {
               subtitle="Confirm the product and target service for your MCP server"
               icon={<Icon icon="solar:checklist-linear" className="text-brand" />}
             >
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Before building your MCP server, confirm the following:
               </p>
               <div className="flex flex-col gap-[8px]">
@@ -180,7 +180,7 @@ export function BuildKitMcpFlowPage() {
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-[8px]">
                     <Icon icon="solar:point-on-map-linear" className="text-brand text-[12px] shrink-0 mt-[2px]" />
-                    <span className="text-[11px] text-[rgba(255,255,255,0.6)]">{item}</span>
+                    <span className="text-[11px] text-foreground/60">{item}</span>
                   </div>
                 ))}
               </div>
@@ -200,7 +200,7 @@ export function BuildKitMcpFlowPage() {
               subtitle="Install the codeblock, define, build, and deploy"
               icon={<Icon icon="solar:server-square-linear" className="text-brand" />}
             >
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Install the MCP codeblock into your service, then use the standard Alis Build workflow to define, build,
                 and deploy it to your environment.
               </p>
@@ -215,8 +215,8 @@ export function BuildKitMcpFlowPage() {
                       <span className="text-[9px] font-bold text-brand font-mono">{i + 1}</span>
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-white">{item.label}</p>
-                      <p className="text-[10px] text-[rgba(255,255,255,0.5)]">{item.desc}</p>
+                      <p className="text-[11px] font-bold text-foreground">{item.label}</p>
+                      <p className="text-[10px] text-foreground/50">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -241,9 +241,9 @@ export function BuildKitMcpFlowPage() {
               subtitle="Configure your coding agents to use your MCP server"
               icon={<Icon icon="solar:link-linear" className="text-brand" />}
             >
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[14px] leading-[1.5]">
                 Once deployed, connect your coding agents to your MCP server. Replace{' '}
-                <span className="text-white font-mono">{'{your-mcp-domain}'}</span> with your
+                <span className="text-foreground font-mono">{'{your-mcp-domain}'}</span> with your
                 actual service domain.
               </p>
               <div className="flex items-center gap-[6px] flex-wrap mb-[12px]">
@@ -254,7 +254,7 @@ export function BuildKitMcpFlowPage() {
                     className={`flex items-center gap-[6px] px-[10px] py-[5px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                       activeClient === c.id
                         ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
-                        : 'bg-muted border-border text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
+                        : 'bg-muted border-border text-foreground/60 hover:border-foreground/30'
                     }`}
                   >
                     <Icon icon={c.icon} className="text-[12px]" />
@@ -262,7 +262,7 @@ export function BuildKitMcpFlowPage() {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
+              <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[6px]">
                 {selectedAgentConfig.configLabel}
               </p>
               <CodeBlock code={selectedAgentConfig.config} language={selectedAgentConfig.lang} />
@@ -271,9 +271,9 @@ export function BuildKitMcpFlowPage() {
 
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               To connect to the hosted{' '}
-              <span className="text-white font-mono">Alis Build MCP Server</span> (instead of
+              <span className="text-foreground font-mono">Alis Build MCP Server</span> (instead of
               your own), see the shortcut on the Build Kit home page.
             </p>
           </div>
