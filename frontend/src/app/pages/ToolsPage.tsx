@@ -29,8 +29,13 @@ const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = 
   { id: 'spanner', label: 'Spanner', subtitle: 'Cloud Spanner', icon: 'solar:database-bold' },
 ];
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 export function ToolsPage() {
-  const { state } = useWorkspace();
+  const { state, setPhase } = useWorkspace();
   const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
   const [gcloudReady, setGcloudReady] = useState(false);
 
@@ -86,7 +91,10 @@ export function ToolsPage() {
           return list[0] ?? null;
         });
       })
-      .catch((e: unknown) => setContextsError(String(e)))
+      .catch((e: unknown) => {
+        if (isAuthError(e)) { setPhase('login'); return; }
+        setContextsError(String(e));
+      })
       .finally(() => setContextsLoading(false));
   }, [state.organisation, state.product]);
 

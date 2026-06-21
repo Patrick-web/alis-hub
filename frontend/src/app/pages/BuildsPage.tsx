@@ -82,8 +82,13 @@ function buildGCSRUrl(remoteUri: string, sha: string): string | null {
   return `https://source.cloud.google.com/${m[1]}/${m[2]}/+/${sha}`;
 }
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 export function BuildsPage() {
-  const { state, setNeurons, setActiveNeurons } = useWorkspace();
+  const { state, setNeurons, setActiveNeurons, setPhase } = useWorkspace();
 
   // Derive selected neuron from workspace (sidebar controls selection)
   const activeNeuron = state.activeNeuronIds[0] ?? '';
@@ -168,7 +173,7 @@ export function BuildsPage() {
     setRepoRemoteUri(null);
     ProductService.GetProductOverview(state.organisation, state.product)
       .then((overview) => setRepoRemoteUri(overview?.gitRepo?.remoteUri ?? ''))
-      .catch(() => setRepoRemoteUri(''));
+      .catch((e: unknown) => { if (isAuthError(e)) setPhase('login'); else setRepoRemoteUri(''); });
   }, [state.organisation, state.product]);
 
   // Load versions and reset build state whenever active neuron changes
