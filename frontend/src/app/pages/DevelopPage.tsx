@@ -5,9 +5,10 @@ import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { RightPane } from '../components/RightPane';
-import { PackageTerminalPane, type TerminalSession, type PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../components/ui/resizable';
+import type { TerminalSession } from '../components/PackageTerminalPane';
 import { useWorkspace } from '../stores/workspace';
+import { useNotifications } from '../stores/notifications';
+import { usePackageSessions } from '../stores/packageSessions';
 import * as DefineService from '../../../bindings/alis-hub-v3/defineservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
@@ -15,7 +16,6 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../components/BuildTerminal';
-import { useNotifications } from '../stores/notifications';
 import { notify } from '../lib/notify';
 import { systemNotify } from '../lib/systemNotify';
 
@@ -96,7 +96,17 @@ function formatRelativeTime(unixSeconds: number): string {
 
 export function DevelopPage() {
   const { state, setNeurons } = useWorkspace();
-  const { addNotification } = useNotifications();
+  const { addNotification, updateNotification, focusTaskId, setFocusTaskId, state: notifState } = useNotifications();
+  const { sessions: packageSessions, addSessions, setTaskId: setPackagesTaskId } = usePackageSessions();
+
+  // Task notification IDs — kept in refs so effects can reference without re-running
+  const buildTaskIdRef = useRef<string | null>(null);
+  const deployTaskIdRef = useRef<string | null>(null);
+  const defineTaskIdRef = useRef<string | null>(null);
+
+  // Log buffer refs for replay on navigate-back
+  const buildLogBufferRef = useRef<string[]>([]);
+  const deployLogBufferRef = useRef<string[]>([]);
   // Define pane state
   const [defineNeuron, setDefineNeuron] = useState<string | null>(null);
   const [defineStep, setDefineStep] = useState<DefineStep>('commits');
@@ -150,11 +160,6 @@ export function DevelopPage() {
   const [selectedScripts, setSelectedScripts] = useState<Set<string>>(new Set());
   const [packagesError, setPackagesError] = useState('');
 
-  // Terminal sessions (bottom pane)
-  const [packageSessions, setPackageSessions] = useState<TerminalSession[]>([]);
-  const paneRef = useRef<PackageTerminalPaneHandle>(null);
-  const pkgOffsetRefs = useRef<Record<string, number>>({});
-
   useEffect(() => {
     if (!state.organisation || !state.product) return;
     const load = async () => {
@@ -176,6 +181,44 @@ export function DevelopPage() {
     };
     load();
   }, [state.organisation, state.product]);
+
+  // Restore the correct pane when navigating back via a status strip chip
+  useEffect(() => {
+    if (!focusTaskId) return;
+    const n = notifState.notifications.find(notif => notif.id === focusTaskId);
+    setFocusTaskId(null);
+    if (!n?.task) return;
+    const { type, neuronId, step, meta } = n.task;
+
+    if (type === 'build') {
+      setBuildNeuron(neuronId);
+      setBuildStep(step as BuildStep);
+      buildTaskIdRef.current = focusTaskId;
+      buildLogBufferRef.current = [...n.task.logBuffer];
+      if (step === 'running' && meta.operationName) {
+        setBuildResult({ operationName: meta.operationName as string, version: '', neuronVersion: '', logsUrl: (meta.logsUrl as string) || '', notes: '', done: false });
+      }
+    } else if (type === 'deploy') {
+      setDeployNeuron(neuronId);
+      setDeployStep(step as DeployStep);
+      deployTaskIdRef.current = focusTaskId;
+      deployLogBufferRef.current = [...n.task.logBuffer];
+      if (step === 'running' && meta.operationName) {
+        setDeployResult({ operationName: meta.operationName as string, version: (meta.version as string) || '', deployments: meta.logsUrl ? [{ logsUrl: meta.logsUrl as string }] : [], notes: '', done: false });
+      }
+    } else if (type === 'define') {
+      setDefineNeuron(neuronId);
+      setDefineStep(step as DefineStep);
+      defineTaskIdRef.current = focusTaskId;
+      if (step === 'running' && meta.operationName) {
+        setDefineResult({ operationName: meta.operationName as string, definition: '', version: '', notes: '', definitionArtifacts: [], done: false });
+      }
+    } else if (type === 'packages') {
+      setPackagesNeuron(neuronId);
+      setPackagesStep('running');
+      packagesTaskIdRef.current = focusTaskId;
+    }
+  }, [focusTaskId]);
 
   const parseNeuron = (name: string) => {
     // Dot notation from alis API: "bookings.v2" → { id: 'bookings', version: 'v2' }
@@ -245,17 +288,25 @@ export function DevelopPage() {
 
   const handleRunBuild = async () => {
     if (!buildNeuron || !selectedBuildCommit) return;
+    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
+    buildLogBufferRef.current = [];
 
     if (buildMode === 'local') {
-      const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
       setBuildStep('running');
       setBuildProgressMsg('Building locally...');
+      const taskId = addNotification({
+        severity: 'info', source: 'build', title: 'Local build started', body: buildNeuron, persistent: true,
+        task: { type: 'build', status: 'running', neuronId: buildNeuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: { mode: 'local' } },
+      });
+      buildTaskIdRef.current = taskId;
       try {
         const result = await BuildService.StartLocalBuild(neuronResource, selectedBuildCommit.sha);
         if (result) setLocalBuildId(result.buildId);
       } catch (e: any) {
         setBuildStep('result');
         setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: e?.message || 'Failed to start local build' } as BuildResult);
+        updateNotification(taskId, { severity: 'error', title: 'Local build failed', task: { status: 'error', step: 'result' } });
+        buildTaskIdRef.current = null;
       }
       return;
     }
@@ -271,14 +322,23 @@ export function DevelopPage() {
       return;
     }
 
-    const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${buildNeuron}`;
     setBuildStep('running');
     setBuildProgressMsg('Starting Build...');
+    const taskId = addNotification({
+      severity: 'info', source: 'build', title: 'Build started', body: buildNeuron, persistent: true,
+      task: { type: 'build', status: 'running', neuronId: buildNeuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: {} },
+    });
+    buildTaskIdRef.current = taskId;
     try {
       const result = await BuildService.RunBuild(neuronResource, selectedBuildCommit.sha);
       setBuildResult(result as BuildResult);
+      updateNotification(taskId, {
+        task: { meta: { operationName: (result as BuildResult).operationName, logsUrl: (result as BuildResult).logsUrl } },
+      });
     } catch (e: any) {
       setBuildProgressMsg(`Failed: ${e?.message || e}`);
+      updateNotification(taskId, { severity: 'error', title: 'Build failed', task: { status: 'error' } });
+      buildTaskIdRef.current = null;
     }
   };
 
@@ -351,13 +411,24 @@ export function DevelopPage() {
     setDeployProgressMsg('Starting Deploy...');
     deployTermRef.current?.clear();
     deployLogOffsetRef.current = 0;
+    deployLogBufferRef.current = [];
+    const taskId = addNotification({
+      severity: 'info', source: 'deploy', title: 'Deploy started', body: deployNeuron, persistent: true,
+      task: { type: 'deploy', status: 'running', neuronId: deployNeuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: {} },
+    });
+    deployTaskIdRef.current = taskId;
     try {
       const result = await DeployService.RunDeploy(neuronResource, deployVersion, selectedDeployEnvs, deployPlanOnly, deployBeta);
       setDeployResult(result as any);
+      updateNotification(taskId, {
+        task: { meta: { operationName: (result as any).operationName, version: (result as any).version, logsUrl: (result as any).deployments?.[0]?.logsUrl || '' } },
+      });
     } catch (e: any) {
       setDeployProgressMsg(`Failed: ${e?.message || e}`);
       setDeployStep('result');
       setDeployResult({ operationName: '', version: '', deployments: [], notes: '', done: true, error: e?.message || 'Deploy failed' });
+      updateNotification(taskId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
+      deployTaskIdRef.current = null;
     }
   };
 
@@ -371,6 +442,18 @@ export function DevelopPage() {
         if (result?.done) {
           clearInterval(interval);
           setDeployStep('result');
+          if (deployTaskIdRef.current) {
+            const doneId = deployTaskIdRef.current;
+            deployTaskIdRef.current = null;
+            if (result.error) {
+              updateNotification(doneId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
+            } else {
+              updateNotification(doneId, {
+                severity: 'success', title: 'Deploy complete', task: { status: 'done', step: 'result' },
+                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => setFocusTaskId(doneId) }],
+              });
+            }
+          }
         } else if (result?.notes) {
           setDeployProgressMsg(result.notes);
         }
@@ -392,6 +475,10 @@ export function DevelopPage() {
         if (chunk?.content) {
           deployTermRef.current?.write(chunk.content);
           deployLogOffsetRef.current = chunk.nextOffset;
+          deployLogBufferRef.current.push(chunk.content);
+          if (deployTaskIdRef.current) {
+            updateNotification(deployTaskIdRef.current, { task: { logBuffer: [...deployLogBufferRef.current] } });
+          }
         }
       } catch {}
     };
@@ -419,19 +506,22 @@ export function DevelopPage() {
           if (!result.error && buildNeuron) {
             const version = result.neuronVersion || result.version;
             const body = version ? `${buildNeuron} · ${version}` : buildNeuron;
-            addNotification({
-              severity: 'success',
-              source: 'build',
-              title: 'Build complete',
-              body,
-              persistent: true,
-              actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
-            });
+            if (buildTaskIdRef.current) {
+              updateNotification(buildTaskIdRef.current, {
+                severity: 'success', title: 'Build complete', body,
+                task: { status: 'done', step: 'result' },
+                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+              });
+              buildTaskIdRef.current = null;
+            }
             notify.success('Build complete', {
               description: body,
               action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
             });
             systemNotify('Build complete', body);
+          } else if (buildTaskIdRef.current) {
+            updateNotification(buildTaskIdRef.current, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
+            buildTaskIdRef.current = null;
           }
         } else if (result?.notes) {
           setBuildProgressMsg(result.notes);
@@ -453,6 +543,10 @@ export function DevelopPage() {
         if (chunk?.content) {
           termRef.current?.write(chunk.content);
           logOffsetRef.current = chunk.nextOffset;
+          buildLogBufferRef.current.push(chunk.content);
+          if (buildTaskIdRef.current) {
+            updateNotification(buildTaskIdRef.current, { task: { logBuffer: [...buildLogBufferRef.current] } });
+          }
         }
       } catch {}
     };
@@ -477,33 +571,34 @@ export function DevelopPage() {
         if (chunk?.content) {
           termRef.current?.write(chunk.content);
           offset = chunk.nextOffset;
+          buildLogBufferRef.current.push(chunk.content);
+          if (buildTaskIdRef.current) {
+            updateNotification(buildTaskIdRef.current, { task: { logBuffer: [...buildLogBufferRef.current] } });
+          }
         }
         if (chunk?.done) {
           clearInterval(interval);
           setBuildStep('result');
           setBuildResult({
-            operationName: '',
-            version: '',
-            neuronVersion: '',
-            logsUrl: '',
-            notes: '',
-            done: true,
-            error: chunk.error || undefined,
+            operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: chunk.error || undefined,
           } as BuildResult);
           if (!chunk.error && buildNeuron) {
-            addNotification({
-              severity: 'success',
-              source: 'build',
-              title: 'Local build complete',
-              body: buildNeuron,
-              persistent: true,
-              actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
-            });
+            if (buildTaskIdRef.current) {
+              updateNotification(buildTaskIdRef.current, {
+                severity: 'success', title: 'Local build complete',
+                task: { status: 'done', step: 'result' },
+                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+              });
+              buildTaskIdRef.current = null;
+            }
             notify.success('Local build complete', {
               description: buildNeuron,
               action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
             });
             systemNotify('Local build complete', buildNeuron);
+          } else if (buildTaskIdRef.current) {
+            updateNotification(buildTaskIdRef.current, { severity: 'error', title: 'Local build failed', task: { status: 'error', step: 'result' } });
+            buildTaskIdRef.current = null;
           }
         }
       } catch {
@@ -518,11 +613,19 @@ export function DevelopPage() {
     const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${defineNeuron}`;
     setDefineStep('running');
     setProgressMsg('Starting Define...');
+    const taskId = addNotification({
+      severity: 'info', source: 'define', title: 'Define started', body: defineNeuron, persistent: true,
+      task: { type: 'define', status: 'running', neuronId: defineNeuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: {} },
+    });
+    defineTaskIdRef.current = taskId;
     try {
       const result = await DefineService.RunDefine(neuronResource, selectedCommit.sha, '');
       setDefineResult(result as DefineResult);
+      updateNotification(taskId, { task: { meta: { operationName: (result as DefineResult).operationName } } });
     } catch (e: any) {
       setProgressMsg(`Failed: ${e?.message || e}`);
+      updateNotification(taskId, { severity: 'error', title: 'Define failed', task: { status: 'error' } });
+      defineTaskIdRef.current = null;
     }
   };
 
@@ -542,6 +645,14 @@ export function DevelopPage() {
             setDefineStep('glass');
             setGlassLoading(true);
             setProgressMsg('Define complete — loading Glass...');
+            if (defineTaskIdRef.current) {
+              const doneId = defineTaskIdRef.current;
+              updateNotification(doneId, {
+                severity: 'success', title: 'Define complete', task: { status: 'done', step: 'glass' },
+                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => setFocusTaskId(doneId) }],
+              });
+              defineTaskIdRef.current = null;
+            }
             try {
               const glass = await DefineService.ExplainDefine(
                 result.definition,
@@ -556,6 +667,10 @@ export function DevelopPage() {
             }
           } else {
             setProgressMsg(`Define failed: ${result.error}`);
+            if (defineTaskIdRef.current) {
+              updateNotification(defineTaskIdRef.current, { severity: 'error', title: 'Define failed', task: { status: 'error', step: 'running' } });
+              defineTaskIdRef.current = null;
+            }
           }
         } else if (result?.notes) {
           setProgressMsg(result.notes);
@@ -566,32 +681,6 @@ export function DevelopPage() {
     }, 2000);
     return () => clearInterval(interval);
   }, [defineResult?.operationName, defineResult?.done, defineStep]);
-
-  // Package session polling
-  useEffect(() => {
-    const running = packageSessions.filter(s => !s.done && !s.error);
-    if (running.length === 0) return;
-    const interval = setInterval(async () => {
-      for (const session of running) {
-        try {
-          const chunk = await PackageService.PollPackageRun(session.runID, pkgOffsetRefs.current[session.runID] ?? 0);
-          if (!chunk) continue;
-          if (chunk.content) paneRef.current?.write(session.runID, chunk.content);
-          pkgOffsetRefs.current[session.runID] = chunk.nextOffset;
-          if (chunk.done || chunk.error) {
-            setPackageSessions(prev => prev.map(s =>
-              s.runID === session.runID
-                ? { ...s, done: chunk.done, error: chunk.error || undefined }
-                : s
-            ));
-          }
-        } catch {
-          // ignore poll errors
-        }
-      }
-    }, 500);
-    return () => clearInterval(interval);
-  }, [packageSessions]);
 
   const openPackagesPane = useCallback(async (neuronNames: string[]) => {
     if (neuronNames.length === 0) return;
@@ -634,7 +723,6 @@ export function DevelopPage() {
       try {
         await PackageService.StartVenvSetup(venvRunID, state.organisation, state.product);
         newSessions.push({ runID: venvRunID, title: '.venv setup', lang: 'python', done: false });
-        pkgOffsetRefs.current[venvRunID] = 0;
       } catch { /* continue even if venv start fails */ }
     }
 
@@ -649,13 +737,21 @@ export function DevelopPage() {
       try {
         await PackageService.StartPackageScript(runID, cmd, script.workDir);
         newSessions.push({ runID, title, lang: script.lang, done: false });
-        pkgOffsetRefs.current[runID] = 0;
       } catch { /* skip scripts that fail to start */ }
     }
 
     if (newSessions.length > 0) {
-      setPackageSessions(prev => [...prev, ...newSessions]);
+      addSessions(newSessions);
       setPackagesStep('running');
+      const neuronLabel = packagesNeuron || 'packages';
+      const taskId = addNotification({
+        severity: 'info', source: 'packages', title: 'Packages running', body: neuronLabel, persistent: true,
+        task: {
+          type: 'packages', status: 'running', neuronId: neuronLabel, step: 'running',
+          startedAt: Date.now(), logBuffer: [], meta: { sessionIds: newSessions.map(s => s.runID) },
+        },
+      });
+      setPackagesTaskId(taskId);
     } else {
       setPackagesError('Failed to start any package scripts');
       setPackagesStep('select-folders');
@@ -675,12 +771,6 @@ export function DevelopPage() {
     }
     await doRunScripts(false);
   };
-
-  const handleCloseSession = (runID: string) => {
-    PackageService.CancelPackageRun(runID).catch(() => {});
-    setPackageSessions(prev => prev.filter(s => s.runID !== runID));
-  };
-
 
   const formatTimestamp = (ts: number) => {
     const d = new Date(ts * 1000);
@@ -751,12 +841,10 @@ export function DevelopPage() {
         </div>
       </div>
 
-      {/* Main content: detail + optional right pane + optional terminal bottom pane */}
-      <ResizablePanelGroup direction="vertical" className="flex-1 overflow-hidden">
-        <ResizablePanel defaultSize={packageSessions.length > 0 ? 65 : 100} minSize={25}>
-          <div className="flex h-full overflow-hidden">
-            {/* Services table — left side */}
-            <div className="flex-1 overflow-y-auto">
+      {/* Main content: services table + optional right pane */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Services table — left side */}
+        <div className="flex-1 overflow-y-auto">
               {state.neurons.length === 0 ? (
                 <div className="flex items-center justify-center h-full">
                   <EmptyState icon="solar:server-minimalistic-linear" title="No services found" />
@@ -1771,24 +1859,6 @@ export function DevelopPage() {
           </RightPane>
         )}
       </div>
-        </ResizablePanel>
-
-        {packageSessions.length > 0 && (
-          <>
-            <ResizableHandle withHandle className="bg-[#464646] data-[resize-handle-active=pointer]:bg-[#f881a9] data-[resize-handle-active=keyboard]:bg-[#f881a9]" />
-            <ResizablePanel defaultSize={35} minSize={12} maxSize={70}>
-              <PackageTerminalPane
-                ref={paneRef}
-                sessions={packageSessions}
-                onCloseSession={handleCloseSession}
-                onClose={() => setPackageSessions([])}
-                onInput={(runID, data) => PackageService.WritePackageInput(runID, data).catch(() => {})}
-                onResize={(runID, cols, rows) => PackageService.ResizePackageTerminal(runID, cols, rows).catch(() => {})}
-              />
-            </ResizablePanel>
-          </>
-        )}
-      </ResizablePanelGroup>
     </div>
   );
 }
