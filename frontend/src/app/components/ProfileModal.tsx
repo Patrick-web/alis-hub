@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
@@ -12,6 +12,7 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
 import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
 import { useWorkspace } from '../stores/workspace';
+import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
 interface ProfileModalProps {
@@ -19,7 +20,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'profile' | 'updates' | 'about' | 'changelog';
+type Tab = 'profile' | 'updates' | 'about' | 'changelog' | 'labs';
 
 interface UserProfile {
   email: string;
@@ -96,6 +97,7 @@ function SettingRow({ label, value, children }: { label: string; value?: string;
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { setPhase } = useWorkspace();
+  const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -212,7 +214,16 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     { id: 'updates', label: 'Updates', icon: 'solar:refresh-circle-linear' },
     { id: 'about', label: 'About', icon: 'solar:info-circle-linear' },
     { id: 'changelog', label: 'Changelog', icon: 'solar:history-linear' },
+    { id: 'labs', label: 'Labs', icon: 'solar:test-tube-linear' },
   ];
+
+  const groupedRegistry = useMemo(() => {
+    const map: Partial<Record<SuggestionCategory, typeof SUGGESTION_REGISTRY>> = {};
+    for (const def of SUGGESTION_REGISTRY) {
+      (map[def.category] ??= []).push(def);
+    }
+    return map;
+  }, []);
 
   return (
     <>
@@ -395,6 +406,50 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   ) : (
                     <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-mono">No release notes for this version.</p>
                   )}
+                </div>
+              )}
+
+              {activeTab === 'labs' && (
+                <div className="p-[16px] flex flex-col gap-[16px]">
+                  {/* Master toggle */}
+                  <div className="bg-background rounded-[8px] border border-border overflow-hidden">
+                    <SettingRow label="Smart Suggestions">
+                      <button
+                        onClick={() => setMasterEnabled(!labsState.masterEnabled)}
+                        className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-accent'}`}
+                        title={labsState.masterEnabled ? 'Disable smart suggestions' : 'Enable smart suggestions'}
+                      >
+                        <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
+                      </button>
+                    </SettingRow>
+                  </div>
+
+                  {/* Per-category toggles */}
+                  {SUGGESTION_CATEGORY_ORDER.filter(c => groupedRegistry[c]?.length).map(category => (
+                    <div key={category} className="bg-background rounded-[8px] border border-border overflow-hidden">
+                      <div className="px-[14px] py-[6px] border-b border-border">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[rgba(255,255,255,0.3)] font-mono">
+                          {category}
+                        </span>
+                      </div>
+                      {groupedRegistry[category]!.map(def => (
+                        <SettingRow key={def.id} label={def.title}>
+                          <button
+                            onClick={() => setSuggestionEnabled(def.id, !isSuggestionEnabled(def.id))}
+                            disabled={!labsState.masterEnabled}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 disabled:opacity-40 ${isSuggestionEnabled(def.id) ? 'bg-success' : 'bg-accent'}`}
+                            title={def.description}
+                          >
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isSuggestionEnabled(def.id) ? 'left-[16px]' : 'left-[2px]'}`} />
+                          </button>
+                        </SettingRow>
+                      ))}
+                    </div>
+                  ))}
+
+                  <p className="text-[10px] text-[rgba(255,255,255,0.25)] font-mono leading-relaxed">
+                    alis hub Labs features are experimental and may change without notice.
+                  </p>
                 </div>
               )}
 
