@@ -38,7 +38,7 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, BuildTerminalProps>
         cursorBlink: true,
         disableStdin: !onInput,
         scrollback: 10000,
-        convertEol: false,
+        convertEol: true,
       });
 
       const fit = new FitAddon();
