@@ -74,7 +74,7 @@ export function NotificationItem({
       className={`relative flex gap-[10px] py-[10px] pr-[12px] border-b border-border cursor-pointer transition-colors ${
         notification.read
           ? "opacity-50 hover:opacity-70"
-          : "hover:bg-[rgba(255,255,255,0.03)]"
+          : "hover:bg-foreground/[3%]"
       }`}
       style={{
         paddingLeft: "12px",
@@ -103,17 +103,17 @@ export function NotificationItem({
       <div className="flex-1 min-w-0 pr-[14px]">
         {/* Title + timestamp */}
         <div className="flex items-start justify-between gap-[6px]">
-          <p className="text-[12px] font-semibold text-white leading-snug line-clamp-2 font-mono">
+          <p className="text-[12px] font-semibold text-foreground leading-snug line-clamp-2 font-mono">
             {notification.title}
           </p>
-          <span className="text-[10px] text-[rgba(255,255,255,0.35)] shrink-0 font-mono mt-[1px]">
+          <span className="text-[10px] text-foreground/35 shrink-0 font-mono mt-[1px]">
             {formatRelativeTime(notification.timestamp)}
           </span>
         </div>
 
         {/* Body */}
         {notification.body && (
-          <p className="text-[11px] text-[rgba(255,255,255,0.5)] mt-[3px] line-clamp-2 leading-relaxed">
+          <p className="text-[11px] text-foreground/50 mt-[3px] line-clamp-2 leading-relaxed">
             {notification.body}
           </p>
         )}
@@ -122,9 +122,9 @@ export function NotificationItem({
         <div className="flex items-center gap-[4px] mt-[5px]">
           <Icon
             icon={SOURCE_ICON[notification.source]}
-            className="text-[10px] text-[rgba(255,255,255,0.3)]"
+            className="text-[10px] text-foreground/30"
           />
-          <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono capitalize">
+          <span className="text-[10px] text-foreground/30 font-mono capitalize">
             {notification.source}
           </span>
         </div>
@@ -143,7 +143,7 @@ export function NotificationItem({
                   action.variant === "destructive"
                     ? "bg-[rgba(212,24,61,0.2)] text-destructive hover:bg-[rgba(212,24,61,0.35)]"
                     : action.variant === "ghost"
-                      ? "bg-transparent text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-[rgba(255,255,255,0.08)]"
+                      ? "bg-transparent text-foreground/50 hover:text-foreground hover:bg-foreground/[8%]"
                       : "bg-[rgba(248,129,169,0.15)] text-brand hover:bg-[rgba(248,129,169,0.25)]"
                 }`}
               >
@@ -162,7 +162,7 @@ export function NotificationItem({
       >
         <Icon
           icon="solar:close-circle-linear"
-          className="text-[12px] text-white"
+          className="text-[12px] text-foreground"
         />
       </button>
     </div>

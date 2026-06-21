@@ -73,14 +73,14 @@ export function BuildKitGlassModePage() {
                 icon="solar:eye-linear"
                 className="text-brand text-[16px]"
               />
-              <span className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono">
+              <span className="text-[10px] font-bold text-foreground/40 uppercase font-mono">
                 Glass Mode
               </span>
             </div>
-            <h2 className="text-[15px] font-bold text-white font-mono mb-[8px]">
+            <h2 className="text-[15px] font-bold text-foreground font-mono mb-[8px]">
               Understand what Alis Build just did
             </h2>
-            <p className="text-[12px] text-[rgba(255,255,255,0.65)] leading-[1.6]">
+            <p className="text-[12px] text-foreground/65 leading-[1.6]">
               Glass Mode is a just-in-time explanation layer for Alis Build
               actions. It opens a transparent view of the generated code,
               artifacts, resources, commits, and follow-up work behind a
@@ -95,8 +95,8 @@ export function BuildKitGlassModePage() {
               <Icon icon="solar:eye-scan-linear" className="text-brand" />
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
-              Look for <strong className="text-white">Glass Mode</strong>{" "}
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
+              Look for <strong className="text-foreground">Glass Mode</strong>{" "}
               buttons that appear after an action completes in the Builds tab.
               These open a detailed explanation of exactly what the platform did
               and what to do next.
@@ -123,7 +123,7 @@ export function BuildKitGlassModePage() {
 
           {/* Examples */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[10px]">
               Where Glass Mode appears
             </p>
             <div className="flex flex-col gap-[8px]">
@@ -139,10 +139,10 @@ export function BuildKitGlassModePage() {
                     />
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-white font-mono">
+                    <p className="text-[11px] font-bold text-foreground font-mono">
                       {ex.title}
                     </p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5] mt-[2px]">
+                    <p className="text-[10px] text-foreground/55 leading-[1.5] mt-[2px]">
                       {ex.description}
                     </p>
                   </div>
@@ -153,7 +153,7 @@ export function BuildKitGlassModePage() {
 
           {/* Principles */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[10px]">
               Design principles
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
@@ -166,10 +166,10 @@ export function BuildKitGlassModePage() {
                     icon={p.icon}
                     className="text-brand text-[18px] mb-[8px]"
                   />
-                  <p className="text-[11px] font-bold text-white font-mono mb-[4px]">
+                  <p className="text-[11px] font-bold text-foreground font-mono mb-[4px]">
                     {p.title}
                   </p>
-                  <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">
+                  <p className="text-[10px] text-foreground/55 leading-[1.5]">
                     {p.description}
                   </p>
                 </div>

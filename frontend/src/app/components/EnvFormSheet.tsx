@@ -104,12 +104,12 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-card border-l border-border text-white w-[380px] sm:max-w-[380px] flex flex-col p-0"
+        className="bg-card border-l border-border text-foreground w-[380px] sm:max-w-[380px] flex flex-col p-0"
       >
         <SheetHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:server-square-cloud-linear" className="text-brand text-xl" />
-            <SheetTitle className="text-white font-mono text-[13px] font-bold">
+            <SheetTitle className="text-foreground font-mono text-[13px] font-bold">
               {mode === 'create' ? 'New Environment' : 'Edit Environment'}
             </SheetTitle>
           </div>
@@ -118,7 +118,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
         <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1 overflow-y-auto">
           {/* Display Name */}
           <div className="flex flex-col gap-[6px]">
-            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-foreground/50 uppercase">
               Display Name
             </p>
             <Input
@@ -134,7 +134,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
             <>
               {/* Type */}
               <div className="flex flex-col gap-[6px]">
-                <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                <p className="font-mono text-[10px] font-bold text-foreground/50 uppercase">
                   Type
                 </p>
                 <div className="flex flex-col gap-[4px]">
@@ -146,14 +146,14 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
                         envType === t.value
                           ? 'border-brand bg-[rgba(248,129,169,0.08)]'
-                          : 'border-border hover:bg-[rgba(255,255,255,0.04)]'
+                          : 'border-border hover:bg-foreground/[4%]'
                       }`}
                     >
                       <Icon
                         icon={t.icon}
-                        className={`text-xl ${envType === t.value ? 'text-brand' : 'text-[rgba(255,255,255,0.5)]'}`}
+                        className={`text-xl ${envType === t.value ? 'text-brand' : 'text-foreground/50'}`}
                       />
-                      <span className={`font-mono text-[12px] ${envType === t.value ? 'text-brand' : 'text-white'}`}>
+                      <span className={`font-mono text-[12px] ${envType === t.value ? 'text-brand' : 'text-foreground'}`}>
                         {t.label}
                       </span>
                     </button>
@@ -163,7 +163,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
 
               {/* Region */}
               <div className="flex flex-col gap-[6px]">
-                <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                <p className="font-mono text-[10px] font-bold text-foreground/50 uppercase">
                   Region
                 </p>
                 <Input
@@ -182,7 +182,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
                         region === r
                           ? 'bg-[rgba(248,129,169,0.12)] text-brand'
-                          : 'text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.04)]'
+                          : 'text-foreground/70 hover:bg-foreground/[4%]'
                       }`}
                     >
                       <span className="font-mono text-[11px]">{r}</span>

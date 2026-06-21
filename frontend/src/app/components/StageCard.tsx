@@ -20,11 +20,11 @@ export function StageCard({ step, title, subtitle, icon, children, action, class
               <span className="text-[11px] font-bold text-brand font-mono">{step}</span>
             </div>
           )}
-          {icon && <div className="text-white shrink-0">{icon}</div>}
+          {icon && <div className="text-foreground shrink-0">{icon}</div>}
           <div>
-            <h3 className="font-mono font-bold text-[12px] text-white uppercase">{title}</h3>
+            <h3 className="font-mono font-bold text-[12px] text-foreground uppercase">{title}</h3>
             {subtitle && (
-              <p className="text-[10px] text-[rgba(255,255,255,0.5)] mt-[2px]">{subtitle}</p>
+              <p className="text-[10px] text-foreground/50 mt-[2px]">{subtitle}</p>
             )}
           </div>
         </div>

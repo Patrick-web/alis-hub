@@ -69,10 +69,10 @@ function DbdDiagram() {
         <div key={s.label} className="flex items-center">
           <div className="flex flex-col items-center gap-[6px] px-[16px] py-[12px] bg-card border border-border rounded-[4px]">
             <Icon icon={s.icon} className="text-brand text-[18px]" />
-            <span className="text-[10px] font-bold text-white font-mono uppercase">{s.label}</span>
+            <span className="text-[10px] font-bold text-foreground font-mono uppercase">{s.label}</span>
           </div>
           {i < stages.length - 1 && (
-            <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] text-[18px] mx-[8px]" />
+            <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/20 text-[18px] mx-[8px]" />
           )}
         </div>
       ))}
@@ -91,7 +91,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
       }`}>
         {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[10px]" />}
       </div>
-      <span className="text-[11px] text-[rgba(255,255,255,0.7)] leading-[1.4]">{label}</span>
+      <span className="text-[11px] text-foreground/70 leading-[1.4]">{label}</span>
     </button>
   );
 }
@@ -102,8 +102,8 @@ function ActionAlert({ icon, title, description, action }: { icon: string; title
       <div className="flex items-center gap-[12px]">
         <Icon icon={icon} className="text-brand text-[18px] shrink-0" />
         <div>
-          <p className="text-[11px] font-bold text-white font-mono">{title}</p>
-          <p className="text-[10px] text-[rgba(255,255,255,0.55)] mt-[1px]">{description}</p>
+          <p className="text-[11px] font-bold text-foreground font-mono">{title}</p>
+          <p className="text-[10px] text-foreground/55 mt-[1px]">{description}</p>
         </div>
       </div>
       <div className="shrink-0">{action}</div>
@@ -139,7 +139,7 @@ export function BuildKitCustomApisPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The core workflow of the Alis Build Platform revolves around the Define, Build, and Deploy (DBD)
             process. This cycle ensures your services are strictly defined, consistently built, and reliably deployed.
           </p>
@@ -148,7 +148,7 @@ export function BuildKitCustomApisPage() {
 
           {/* Quick Start */}
           <StageCard title="Quick Start" icon={<Icon icon="solar:rocket-launch-linear" className="text-brand" />}>
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px]">
+            <p className="text-[11px] text-foreground/60 mb-[12px]">
               Your environment will be set up in three simple steps:
             </p>
             <div className="flex flex-col gap-[8px] mb-[16px]">
@@ -162,8 +162,8 @@ export function BuildKitCustomApisPage() {
                     <span className="text-[9px] font-bold text-brand font-mono">{n}</span>
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-white">{title}</p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.5)] mt-[1px]">{sub}</p>
+                    <p className="text-[11px] font-bold text-foreground">{title}</p>
+                    <p className="text-[10px] text-foreground/50 mt-[1px]">{sub}</p>
                   </div>
                 </div>
               ))}
@@ -186,35 +186,35 @@ export function BuildKitCustomApisPage() {
             title="Define: Defining Your API"
             subtitle="Define your API contract using Protocol Buffers"
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.6]">
               In this step, you define your service's API contract using the{' '}
               <button onClick={() => Browser.OpenURL('https://protobuf.dev/')} className="text-brand hover:underline">
                 Protocol Buffers
               </button>{' '}
-              (<code className="font-mono text-[rgba(255,255,255,0.8)]">.proto</code>) language.
-              Examine the contents of the <code className="font-mono text-[rgba(255,255,255,0.8)]">hello.proto</code> file in your workspace.
+              (<code className="font-mono text-foreground/80">.proto</code>) language.
+              Examine the contents of the <code className="font-mono text-foreground/80">hello.proto</code> file in your workspace.
             </p>
 
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px] mt-[12px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[4px] mt-[12px]">
               1. The Service: CalculationsService
             </p>
-            <p className="text-[11px] text-[rgba(255,255,255,0.55)] mb-[6px]">
+            <p className="text-[11px] text-foreground/55 mb-[6px]">
               The <code className="font-mono">service</code> block is the container for all related functions, similar to a class or interface in other languages.
             </p>
             <CodeBlock code={defineServiceCode} language="protobuf" />
 
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px] mt-[16px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[4px] mt-[16px]">
               2. The Method (RPC): CalculateRandomNumber
             </p>
-            <p className="text-[11px] text-[rgba(255,255,255,0.55)] mb-[6px]">
+            <p className="text-[11px] text-foreground/55 mb-[6px]">
               The <code className="font-mono">rpc</code> keyword defines a Remotely Callable Function (a method on the service).
             </p>
             <CodeBlock code={defineMethodCode} language="protobuf" />
 
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px] mt-[16px]">
+            <p className="text-[10px] font-bold text-foreground/40 uppercase font-mono mb-[4px] mt-[16px]">
               3. The Messages (Data Contract)
             </p>
-            <p className="text-[11px] text-[rgba(255,255,255,0.55)] mb-[6px]">
+            <p className="text-[11px] text-foreground/55 mb-[6px]">
               <code className="font-mono">message</code> blocks define the strongly-typed data structures (request and response) that travel to and from the service.
             </p>
             <CodeBlock code={defineMessageCode} language="protobuf" />
@@ -253,11 +253,11 @@ export function BuildKitCustomApisPage() {
             title="Build: Implementing the Logic"
             subtitle="Write the code that fulfils the API contract"
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.6]">
               In the previous Define step, we created the service definitions. Now, we use those definitions
               (in this case, in <code className="font-mono">golang</code>) as the blueprint for our logic.
             </p>
-            <p className="text-[11px] text-[rgba(255,255,255,0.55)] mb-[6px]">
+            <p className="text-[11px] text-foreground/55 mb-[6px]">
               Example: implementing the business logic to calculate the random number.
             </p>
             <CodeBlock code={buildGoCode} language="go" />
@@ -296,14 +296,14 @@ export function BuildKitCustomApisPage() {
             title="Deploy: Configure & Deploy Infrastructure"
             subtitle="Use Terraform to provision and deploy your service"
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.6]">
               The Deploy step is where you configure the infrastructure for your service. We use{' '}
               <button onClick={() => Browser.OpenURL('https://developer.hashicorp.com/terraform')} className="text-brand hover:underline">
                 Terraform
               </button>{' '}
               to define our infrastructure as code, ensuring a consistent and repeatable deployment.
               Your service infrastructure is defined in the{' '}
-              <code className="font-mono text-[rgba(255,255,255,0.8)]">cloudrun.tf</code> file.
+              <code className="font-mono text-foreground/80">cloudrun.tf</code> file.
             </p>
             <CodeBlock code={deployTerraformCode} language="hcl" />
 
@@ -336,16 +336,16 @@ export function BuildKitCustomApisPage() {
             title="Try it Out: The Playground"
             subtitle="Confirm your deployed service works end-to-end"
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.6]">
               Your service is now deployed to Google Cloud Run! The final step is to confirm that your implemented
               logic works end-to-end. Navigate to the{' '}
-              <code className="font-mono text-[rgba(255,255,255,0.8)]">.playground</code> folder in your workspace.
+              <code className="font-mono text-foreground/80">.playground</code> folder in your workspace.
               Inside, the file{' '}
-              <code className="font-mono text-[rgba(255,255,255,0.8)]">main_test.go</code> contains boilerplate code to call the deployed service. Add the following:
+              <code className="font-mono text-foreground/80">main_test.go</code> contains boilerplate code to call the deployed service. Add the following:
             </p>
             <CodeBlock code={tryItOutCode} language="go" />
 
-            <div className="mt-[12px] text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.6]">
+            <div className="mt-[12px] text-[11px] text-foreground/55 leading-[1.6]">
               This test will:
               <ol className="ml-[16px] mt-[6px] flex flex-col gap-[3px] list-decimal">
                 <li>Connect to your live Cloud Run endpoint</li>
@@ -358,8 +358,8 @@ export function BuildKitCustomApisPage() {
               <div className="flex items-center gap-[8px]">
                 <Icon icon="solar:check-circle-linear" className="text-success text-[18px] shrink-0" />
                 <div>
-                  <p className="text-[11px] font-bold text-white font-mono">Congratulations!</p>
-                  <p className="text-[10px] text-[rgba(255,255,255,0.55)] mt-[1px]">
+                  <p className="text-[11px] font-bold text-foreground font-mono">Congratulations!</p>
+                  <p className="text-[10px] text-foreground/55 mt-[1px]">
                     Once you see a successful result, you've completed the full Define, Build, and Deploy workflow.
                   </p>
                 </div>

@@ -95,7 +95,7 @@ export function BuildKitSkillsPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The Skills service packages reusable Alis Build workflows as structured skills — discoverable by coding
             agents via MCP. Skills provide step-by-step guidance that agents follow to implement Alis Build patterns.
           </p>
@@ -114,18 +114,18 @@ export function BuildKitSkillsPage() {
                   <div className={`size-[16px] rounded-full border flex items-center justify-center shrink-0 ${
                     selectedStage === s.id ? 'bg-[rgba(248,129,169,0.2)] border-brand' : 'border-border'
                   }`}>
-                    <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-[rgba(255,255,255,0.4)]'}`}>{i + 1}</span>
+                    <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/40'}`}>{i + 1}</span>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase font-mono ${selectedStage === s.id ? 'text-brand' : 'text-[rgba(255,255,255,0.35)]'}`}>{s.eyebrow}</span>
+                  <span className={`text-[9px] font-bold uppercase font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/35'}`}>{s.eyebrow}</span>
                 </div>
-                <span className={`text-[11px] font-bold font-mono ${selectedStage === s.id ? 'text-white' : 'text-[rgba(255,255,255,0.6)]'}`}>{s.title}</span>
+                <span className={`text-[11px] font-bold font-mono ${selectedStage === s.id ? 'text-foreground' : 'text-foreground/60'}`}>{s.title}</span>
               </button>
             ))}
           </div>
 
           {selectedStage === 'overview' && (
             <StageCard title="Skill Registry" icon={<Icon icon="solar:layers-linear" className="text-brand" />}>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Skills are structured SKILL.md files stored in a Git repository. The Skills service syncs this
                 repository into a registry that coding agents can query via MCP to discover and load skills on demand.
               </p>
@@ -138,8 +138,8 @@ export function BuildKitSkillsPage() {
                   <div key={item.title} className="flex items-start gap-[10px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
                     <Icon icon={item.icon} className="text-brand text-[14px] shrink-0 mt-[1px]" />
                     <div>
-                      <p className="text-[11px] font-bold text-white">{item.title}</p>
-                      <p className="text-[10px] text-[rgba(255,255,255,0.5)] mt-[2px]">{item.desc}</p>
+                      <p className="text-[11px] font-bold text-foreground">{item.title}</p>
+                      <p className="text-[10px] text-foreground/50 mt-[2px]">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -159,7 +159,7 @@ export function BuildKitSkillsPage() {
 
           {selectedStage === 'prerequisites' && (
             <StageCard step={2} title="Prerequisites" subtitle="Confirm the product and service for your Skills deployment" icon={<Icon icon="solar:checklist-linear" className="text-brand" />}>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Before deploying a Skills service, confirm:
               </p>
               <div className="flex flex-col gap-[8px] mb-[14px]">
@@ -170,7 +170,7 @@ export function BuildKitSkillsPage() {
                 ].map((item) => (
                   <div key={item} className="flex items-start gap-[8px]">
                     <Icon icon="solar:point-on-map-linear" className="text-brand text-[12px] shrink-0 mt-[2px]" />
-                    <span className="text-[11px] text-[rgba(255,255,255,0.6)]">{item}</span>
+                    <span className="text-[11px] text-foreground/60">{item}</span>
                   </div>
                 ))}
               </div>
@@ -183,7 +183,7 @@ export function BuildKitSkillsPage() {
 
           {selectedStage === 'service' && (
             <StageCard step={3} title="Skills Service" subtitle="Install, define, build, and deploy the Skills codeblock" icon={<Icon icon="solar:book-2-linear" className="text-brand" />}>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Install the Skills codeblock into your service via the VS Code extension, then use the standard Alis
                 Build workflow to define, build, and deploy.
               </p>
@@ -198,8 +198,8 @@ export function BuildKitSkillsPage() {
                       <span className="text-[9px] font-bold text-brand font-mono">{item.n}</span>
                     </div>
                     <div>
-                      <p className="text-[11px] font-bold text-white">{item.label}</p>
-                      <p className="text-[10px] text-[rgba(255,255,255,0.5)]">{item.desc}</p>
+                      <p className="text-[11px] font-bold text-foreground">{item.label}</p>
+                      <p className="text-[10px] text-foreground/50">{item.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -219,7 +219,7 @@ export function BuildKitSkillsPage() {
 
           {selectedStage === 'next' && (
             <StageCard step={4} title="Next Steps" subtitle="Suggested agent prompts for using your Skills service" icon={<Icon icon="solar:lightbulb-linear" className="text-brand" />}>
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+              <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
                 Once deployed, use these prompts with your coding agent (Claude Code, Gemini CLI, etc.) to leverage the
                 Skills registry:
               </p>
@@ -227,16 +227,16 @@ export function BuildKitSkillsPage() {
                 {suggestedPrompts.map((p) => (
                   <div key={p.title} className="p-[12px] bg-muted border border-border rounded-[4px]">
                     <div className="flex items-center justify-between mb-[6px]">
-                      <p className="text-[11px] font-bold text-white font-mono">{p.title}</p>
+                      <p className="text-[11px] font-bold text-foreground font-mono">{p.title}</p>
                       <button
                         onClick={() => copyPrompt(p.title, p.prompt)}
-                        className="flex items-center gap-[4px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors px-[6px] py-[2px] rounded-[3px] hover:bg-[rgba(255,255,255,0.05)]"
+                        className="flex items-center gap-[4px] text-[10px] text-foreground/40 hover:text-foreground transition-colors px-[6px] py-[2px] rounded-[3px] hover:bg-foreground/5"
                       >
                         <Icon icon={copied === p.title ? 'solar:check-linear' : 'solar:copy-linear'} className="text-[11px]" />
                         {copied === p.title ? 'Copied' : 'Copy'}
                       </button>
                     </div>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{p.prompt}</p>
+                    <p className="text-[10px] text-foreground/55 leading-[1.5]">{p.prompt}</p>
                   </div>
                 ))}
               </div>

@@ -55,21 +55,21 @@ export function FilterSelect({
           isLg
             ? `px-[12px] py-[8px] rounded-[4px] text-[12px] ${
                 disabled
-                  ? 'bg-background border-border text-white/20 cursor-not-allowed'
+                  ? 'bg-background border-border text-foreground/20 cursor-not-allowed'
                   : open
-                  ? 'bg-card border-brand text-white'
-                  : 'bg-card border-border text-white hover:border-white/30'
+                  ? 'bg-card border-brand text-foreground'
+                  : 'bg-card border-border text-foreground hover:border-foreground/30'
               }`
             : `px-[8px] py-[3px] rounded-[3px] text-[9px] uppercase whitespace-nowrap ${
                 disabled
-                  ? 'bg-background border-border text-white/20 cursor-not-allowed'
+                  ? 'bg-background border-border text-foreground/20 cursor-not-allowed'
                   : open
-                  ? 'bg-card border-brand text-white'
-                  : 'bg-card border-border text-white/60 hover:border-white/30 hover:text-white'
+                  ? 'bg-card border-brand text-foreground'
+                  : 'bg-card border-border text-foreground/60 hover:border-foreground/30 hover:text-foreground'
               }`
         }`}
       >
-        <span className={isPlaceholder ? 'text-white/30' : ''}>{displayLabel || placeholder}</span>
+        <span className={isPlaceholder ? 'text-foreground/30' : ''}>{displayLabel || placeholder}</span>
         {loading ? (
           <Icon icon="solar:refresh-linear" className={`${isLg ? 'text-[11px]' : 'text-[8px]'} animate-spin opacity-50`} />
         ) : (
@@ -83,11 +83,11 @@ export function FilterSelect({
       {open && (
         <div className={`absolute top-full left-0 bg-background border border-border z-50 min-w-full shadow-[0_8px_24px_rgba(0,0,0,0.5)] max-h-[240px] overflow-y-auto ${isLg ? 'mt-[2px] rounded-[4px]' : 'mt-[3px] rounded-[3px]'}`}>
           {loading ? (
-            <div className={`px-[10px] py-[8px] text-white/30 font-mono ${isLg ? 'text-[12px]' : 'text-[9px] uppercase'}`}>
+            <div className={`px-[10px] py-[8px] text-foreground/30 font-mono ${isLg ? 'text-[12px]' : 'text-[9px] uppercase'}`}>
               Loading…
             </div>
           ) : options.length === 0 ? (
-            <div className={`px-[10px] py-[8px] text-white/30 font-mono ${isLg ? 'text-[12px]' : 'text-[9px] uppercase'}`}>
+            <div className={`px-[10px] py-[8px] text-foreground/30 font-mono ${isLg ? 'text-[12px]' : 'text-[9px] uppercase'}`}>
               {emptyLabel}
             </div>
           ) : (
@@ -100,7 +100,7 @@ export function FilterSelect({
                 } ${
                   opt.value === value
                     ? 'text-brand bg-[rgba(248,129,169,0.08)]'
-                    : 'text-white/55 hover:bg-brand hover:text-brand-foreground'
+                    : 'text-foreground/55 hover:bg-brand hover:text-brand-foreground'
                 }`}
               >
                 {opt.label}

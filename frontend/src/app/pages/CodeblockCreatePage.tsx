@@ -34,8 +34,8 @@ const TAB_LABEL: Record<Tab, string> = {
 
 const CATEGORY_LABEL: Record<string, string> = { build: 'Build', infra: 'Infra', proto: 'Proto' };
 
-const labelClass = 'text-[10px] font-bold uppercase text-white/40 mb-[2px]';
-const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-white text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors';
+const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[2px]';
+const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors';
 
 export function CodeblockCreatePage() {
   const navigate = useNavigate();
@@ -296,7 +296,7 @@ export function CodeblockCreatePage() {
         {/* Back */}
         <button
           onClick={handleCancel}
-          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-border transition-colors"
+          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-foreground/50 hover:text-foreground/80 border-b border-border transition-colors"
         >
           <Icon icon="solar:arrow-left-linear" />
           {isEditing ? 'Block Details' : 'All Blocks'}
@@ -319,8 +319,8 @@ export function CodeblockCreatePage() {
                         onClick={() => switchSourceMode(mode)}
                         className={`flex-1 py-[5px] rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors ${
                           sourceMode === mode
-                            ? 'bg-brand text-foreground'
-                            : 'text-white/50 hover:text-white/80'
+                            ? 'bg-brand text-brand-foreground'
+                            : 'text-foreground/50 hover:text-foreground/80'
                         }`}
                       >
                         {mode === 'scratch' ? 'Scratch' : 'From Neuron'}
@@ -379,12 +379,12 @@ export function CodeblockCreatePage() {
                       options={neurons.map(n => ({ value: n.name, label: n.displayName }))}
                     />
                     {selectedNeuron && !scanLoading && !scanError && (
-                      <p className="mt-[6px] text-[10px] font-mono text-white/30">{selectedNeuron.package}</p>
+                      <p className="mt-[6px] text-[10px] font-mono text-foreground/30">{selectedNeuron.package}</p>
                     )}
                     {scanLoading && (
                       <div className="flex items-center gap-[6px] mt-[6px]">
-                        <Icon icon="solar:spinner-linear" className="text-[10px] text-white/40 animate-spin" />
-                        <span className="text-[10px] text-white/40">Scanning files…</span>
+                        <Icon icon="solar:spinner-linear" className="text-[10px] text-foreground/40 animate-spin" />
+                        <span className="text-[10px] text-foreground/40">Scanning files…</span>
                       </div>
                     )}
                     {scanError && (
@@ -405,7 +405,7 @@ export function CodeblockCreatePage() {
                   style={isEditing ? { opacity: 0.4 } : undefined}
                 />
                 {!isEditing && (
-                  <p className="text-[10px] text-white/30 mt-[6px]">Lowercase letters and numbers only</p>
+                  <p className="text-[10px] text-foreground/30 mt-[6px]">Lowercase letters and numbers only</p>
                 )}
               </div>
 
@@ -463,7 +463,7 @@ export function CodeblockCreatePage() {
               key={t}
               onClick={() => setActiveTab(t)}
               className={`px-[24px] py-[12px] text-[11px] font-bold uppercase tracking-wider transition-all relative ${
-                activeTab === t ? 'text-brand' : 'text-white/40 hover:text-white/70'
+                activeTab === t ? 'text-brand' : 'text-foreground/40 hover:text-foreground/70'
               }`}
             >
               {TAB_LABEL[t]}
@@ -507,14 +507,14 @@ export function CodeblockCreatePage() {
                   <p className={labelClass}>Highlights</p>
                   <div className="border border-border rounded-[4px] p-[8px] flex flex-wrap gap-[6px] min-h-[42px] focus-within:border-brand transition-colors">
                     {highlights.map((h, i) => (
-                      <span key={i} className="flex items-center gap-[4px] bg-card text-white text-[11px] px-[8px] py-[3px] rounded-[3px]">
+                      <span key={i} className="flex items-center gap-[4px] bg-card text-foreground text-[11px] px-[8px] py-[3px] rounded-[3px]">
                         {h}
-                        <button onClick={() => setHighlights(prev => prev.filter((_, j) => j !== i))} className="text-white/40 hover:text-white ml-[2px]">×</button>
+                        <button onClick={() => setHighlights(prev => prev.filter((_, j) => j !== i))} className="text-foreground/40 hover:text-foreground ml-[2px]">×</button>
                       </span>
                     ))}
                     <input
                       ref={highlightInputRef}
-                      className="bg-transparent outline-none text-white text-[12px] font-mono flex-1 min-w-[140px]"
+                      className="bg-transparent outline-none text-foreground text-[12px] font-mono flex-1 min-w-[140px]"
                       placeholder={highlights.length === 0 ? 'Type and press Enter…' : ''}
                       value={highlightInput}
                       onChange={e => setHighlightInput(e.target.value)}
@@ -522,7 +522,7 @@ export function CodeblockCreatePage() {
                       onBlur={() => { if (highlightInput.trim()) addHighlight(highlightInput); }}
                     />
                   </div>
-                  <p className="text-[10px] text-white/30 mt-[6px]">Press Enter after each highlight</p>
+                  <p className="text-[10px] text-foreground/30 mt-[6px]">Press Enter after each highlight</p>
                 </div>
               </>
             )}
@@ -534,7 +534,7 @@ export function CodeblockCreatePage() {
                     {keyFeatures.length > 1 && (
                       <button
                         onClick={() => setKeyFeatures(prev => prev.filter((_, j) => j !== i))}
-                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-brand transition-colors"
+                        className="absolute top-[10px] right-[10px] text-foreground/30 hover:text-brand transition-colors"
                       >
                         <Icon icon="solar:trash-bin-trash-linear" className="text-sm" />
                       </button>
@@ -577,7 +577,7 @@ export function CodeblockCreatePage() {
                     {codeArchitecture.length > 1 && (
                       <button
                         onClick={() => setCodeArchitecture(prev => prev.filter((_, j) => j !== i))}
-                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-brand transition-colors"
+                        className="absolute top-[10px] right-[10px] text-foreground/30 hover:text-brand transition-colors"
                       >
                         <Icon icon="solar:trash-bin-trash-linear" className="text-sm" />
                       </button>
@@ -616,36 +616,36 @@ export function CodeblockCreatePage() {
             {activeTab === 'files' && (
               <div className="flex flex-col gap-[16px]">
                 {!selectedNeuron ? (
-                  <p className="text-[12px] text-white/40">Select a neuron in the sidebar to scan its local files.</p>
+                  <p className="text-[12px] text-foreground/40">Select a neuron in the sidebar to scan its local files.</p>
                 ) : scanLoading ? (
                   <div className="flex items-center gap-[10px] py-[20px]">
                     <Loader />
-                    <span className="text-[12px] text-white/40">Scanning neuron files…</span>
+                    <span className="text-[12px] text-foreground/40">Scanning neuron files…</span>
                   </div>
                 ) : scanError ? (
                   <div className="text-[12px] text-destructive bg-[rgba(255,107,107,0.06)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[12px]">
                     {scanError}
                   </div>
                 ) : scannedFiles.length === 0 ? (
-                  <p className="text-[12px] text-white/40">No files found in this neuron.</p>
+                  <p className="text-[12px] text-foreground/40">No files found in this neuron.</p>
                 ) : (
                   <>
                     {/* Select all controls */}
                     <div className="flex items-center gap-[12px]">
                       <button
                         onClick={() => selectAllFiles(true)}
-                        className="text-[10px] font-bold uppercase text-white/50 hover:text-white/80 tracking-wider transition-colors"
+                        className="text-[10px] font-bold uppercase text-foreground/50 hover:text-foreground/80 tracking-wider transition-colors"
                       >
                         Select All
                       </button>
-                      <span className="text-white/20">·</span>
+                      <span className="text-foreground/20">·</span>
                       <button
                         onClick={() => selectAllFiles(false)}
-                        className="text-[10px] font-bold uppercase text-white/50 hover:text-white/80 tracking-wider transition-colors"
+                        className="text-[10px] font-bold uppercase text-foreground/50 hover:text-foreground/80 tracking-wider transition-colors"
                       >
                         Deselect All
                       </button>
-                      <span className="ml-auto text-[10px] text-white/30">
+                      <span className="ml-auto text-[10px] text-foreground/30">
                         {selectedFileCount} / {scannedFiles.length} selected
                       </span>
                     </div>
@@ -658,14 +658,14 @@ export function CodeblockCreatePage() {
                       if (catFiles.length === 0) return null;
                       return (
                         <div key={cat}>
-                          <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px] tracking-wider">
+                          <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[8px] tracking-wider">
                             {CATEGORY_LABEL[cat]}
                           </p>
                           <div className="border border-border rounded-[4px] overflow-hidden">
                             {catFiles.map((file, i) => (
                               <label
                                 key={file.idx}
-                                className={`flex items-center gap-[10px] px-[12px] py-[8px] cursor-pointer hover:bg-white/[0.03] transition-colors ${
+                                className={`flex items-center gap-[10px] px-[12px] py-[8px] cursor-pointer hover:bg-foreground/[3%] transition-colors ${
                                   i > 0 ? 'border-t border-border' : ''
                                 }`}
                               >
@@ -675,9 +675,9 @@ export function CodeblockCreatePage() {
                                   onChange={() => toggleFile(file.idx)}
                                   className="accent-brand shrink-0"
                                 />
-                                <Icon icon="solar:file-code-linear" className="text-white/30 shrink-0 text-sm" />
+                                <Icon icon="solar:file-code-linear" className="text-foreground/30 shrink-0 text-sm" />
                                 <span className={`text-[11px] font-mono truncate ${
-                                  file.selected ? 'text-white/80' : 'text-white/30'
+                                  file.selected ? 'text-foreground/80' : 'text-foreground/30'
                                 }`}>
                                   {file.path}
                                 </span>

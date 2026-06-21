@@ -181,7 +181,7 @@ export function EnvironmentsPage() {
       header: 'VALUE',
       render: (item: EnvVar) => (
         <div className="group relative flex items-center gap-[6px] min-w-0">
-          <span className="font-mono text-[11px] text-[rgba(255,255,255,0.6)] break-all flex-1">
+          <span className="font-mono text-[11px] text-foreground/60 break-all flex-1">
             {item.value}
           </span>
           <div className="hidden group-hover:flex items-center gap-[4px] shrink-0 bg-background pl-[4px]">
@@ -228,7 +228,7 @@ export function EnvironmentsPage() {
                     Present
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="bg-card border border-border text-white font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                <TooltipContent className="bg-card border border-border text-foreground font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
                   Present in all environments
                 </TooltipContent>
               </Tooltip>
@@ -239,7 +239,7 @@ export function EnvironmentsPage() {
                     <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="bg-card border border-border text-white font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                <TooltipContent className="bg-card border border-border text-foreground font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
                   Missing in: {missingIn.map(e => e.displayName).join(', ')}
                 </TooltipContent>
               </Tooltip>
@@ -257,7 +257,7 @@ export function EnvironmentsPage() {
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page Title Header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between">
-        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
           VARIABLES
         </p>
         {saving && <Loader size={20} />}
@@ -267,7 +267,7 @@ export function EnvironmentsPage() {
       <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
         <div className="flex items-center h-[34px]">
           <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-white">/</p>
+            <p className="text-[12px] text-foreground">/</p>
           </div>
           <Input
             placeholder="Filter..."
@@ -302,7 +302,7 @@ export function EnvironmentsPage() {
           </div>
         ) : state.envsError || error ? (
           <div className="flex items-center justify-center h-full px-[20px]">
-            <p className="text-[12px] text-[rgba(255,255,255,0.4)] text-center">{state.envsError ?? error}</p>
+            <p className="text-[12px] text-foreground/40 text-center">{state.envsError ?? error}</p>
           </div>
         ) : (
           <Table
@@ -332,7 +332,7 @@ export function EnvironmentsPage() {
         title="Delete Variable"
         description={
           <>
-            Delete <span className="text-white font-mono">{deleteVar?.label}</span>?
+            Delete <span className="text-foreground font-mono">{deleteVar?.label}</span>?
             This cannot be undone.
           </>
         }
@@ -344,17 +344,17 @@ export function EnvironmentsPage() {
 
       {/* View value modal */}
       <Dialog open={Boolean(viewVar)} onOpenChange={(o) => { if (!o) setViewVar(null); }}>
-        <DialogContent className="bg-card border border-border text-white p-0 gap-0 sm:max-w-[560px]">
+        <DialogContent className="bg-card border border-border text-foreground p-0 gap-0 sm:max-w-[560px]">
           <DialogHeader className="px-[20px] py-[14px] border-b border-border">
             <div className="flex items-center gap-[10px]">
               <Icon icon="solar:eye-linear" className="text-brand text-xl" />
-              <DialogTitle className="text-white font-mono text-[13px] font-bold">
+              <DialogTitle className="text-foreground font-mono text-[13px] font-bold">
                 {viewVar?.label}
               </DialogTitle>
             </div>
           </DialogHeader>
           <div className="px-[20px] py-[16px] max-h-[400px] overflow-auto">
-            <pre className="font-mono text-[12px] text-[rgba(255,255,255,0.8)] whitespace-pre-wrap break-all">
+            <pre className="font-mono text-[12px] text-foreground/80 whitespace-pre-wrap break-all">
               {viewVar?.value}
             </pre>
           </div>

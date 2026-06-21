@@ -11,7 +11,7 @@ export function Input({ icon, className = '', containerClassName = '', ...props 
       <div className={`content-stretch flex gap-[10px] items-center px-[10px] py-[8px] relative bg-background border border-border border-solid rounded-[4px] h-full w-full ${className}`}>
         {icon && <div className="relative shrink-0 size-[15px] flex items-center justify-center">{icon}</div>}
         <input
-          className="bg-transparent font-mono leading-[normal] not-italic text-[12px] text-white outline-none placeholder:text-[rgba(255,255,255,0.5)] w-full"
+          className="bg-transparent font-mono leading-[normal] not-italic text-[12px] text-foreground outline-none placeholder:text-foreground/50 w-full"
           {...props}
         />
       </div>

@@ -141,15 +141,15 @@ export function TopNav() {
             className="opacity-70 hover:opacity-100 transition-opacity"
             title="All landing zones"
           >
-            <Icon icon="solar:home-2-linear" className="text-white text-[17px]" />
+            <Icon icon="solar:home-2-linear" className="text-foreground text-[17px]" />
           </button>
 
           {state.organisation && (
             <>
-              <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[11px] opacity-40" />
+              <Icon icon="solar:alt-arrow-right-linear" className="text-foreground text-[11px] opacity-40" />
               <button
                 onClick={handleOrgClick}
-                className="text-[12px] text-white font-mono opacity-70 hover:opacity-100 transition-opacity"
+                className="text-[12px] text-foreground font-mono opacity-70 hover:opacity-100 transition-opacity"
                 title="Change product"
               >
                 {state.organisation}
@@ -159,8 +159,8 @@ export function TopNav() {
 
           {state.product && (
             <>
-              <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[11px] opacity-40" />
-              <span className="text-[12px] text-white font-mono opacity-70 font-bold">
+              <Icon icon="solar:alt-arrow-right-linear" className="text-foreground text-[11px] opacity-40" />
+              <span className="text-[12px] text-foreground font-mono opacity-70 font-bold">
                 {state.product}
               </span>
             </>
@@ -189,18 +189,18 @@ export function TopNav() {
         <div className="content-stretch flex h-full items-center shrink-0">
           <button
             onClick={() => setEnvModalOpen(true)}
-            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-border"
+            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-foreground/5 transition-colors border-l border-border"
           >
-            <p className="font-mono leading-normal not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
+            <p className="font-mono leading-normal not-italic relative shrink-0 text-[11px] text-foreground whitespace-nowrap">
               {activeEnvDisplay}
             </p>
-            <Icon icon="solar:alt-arrow-down-linear" className="text-white text-xs opacity-50" />
+            <Icon icon="solar:alt-arrow-down-linear" className="text-foreground text-xs opacity-50" />
           </button>
           <button
             onClick={() => navigate('/environments')}
-            className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+            className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-foreground/5 transition-colors"
           >
-            <Icon icon="solar:settings-linear" className="text-white text-base opacity-70" />
+            <Icon icon="solar:settings-linear" className="text-foreground text-base opacity-70" />
           </button>
         </div>
 
@@ -225,7 +225,7 @@ export function TopNav() {
               </span>
             </div>
           ) : (
-            <Icon icon="solar:user-circle-linear" className="text-white text-[22px]" />
+            <Icon icon="solar:user-circle-linear" className="text-foreground text-[22px]" />
           )}
         </button>
       </div>
@@ -234,18 +234,18 @@ export function TopNav() {
 
       {/* Environment picker modal */}
       <Dialog open={envModalOpen} onOpenChange={setEnvModalOpen}>
-        <DialogContent className="bg-card border border-border text-white p-0 max-w-[360px] overflow-hidden">
+        <DialogContent className="bg-card border border-border text-foreground p-0 max-w-[360px] overflow-hidden">
           <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
             <Icon icon="solar:server-linear" className="text-brand text-lg" />
-            <span className="text-[13px] font-bold text-white font-mono">Environment</span>
+            <span className="text-[13px] font-bold text-foreground font-mono">Environment</span>
           </div>
           <div className="py-[6px]">
             {envsLoading ? (
-              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">Loading…</p>
+              <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">Loading…</p>
             ) : state.envsError ? (
               <p className="px-[16px] py-[12px] text-[11px] text-destructive font-mono">Session expired — sign in again via your profile.</p>
             ) : state.loadedEnvs.length === 0 ? (
-              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">No environments</p>
+              <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No environments</p>
             ) : (
               state.loadedEnvs.map((env) => {
                 const isActive = env.name === state.activeEnvName;
@@ -263,7 +263,7 @@ export function TopNav() {
                     className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
                       isActive
                         ? 'bg-[rgba(248,129,169,0.08)] text-brand'
-                        : 'text-white hover:bg-[rgba(255,255,255,0.04)]'
+                        : 'text-foreground hover:bg-foreground/[4%]'
                     }`}
                   >
                     <span className="text-[12px] font-mono">{env.displayName}</span>
@@ -276,7 +276,7 @@ export function TopNav() {
           <div className="border-t border-border px-[16px] py-[10px]">
             <button
               onClick={() => { setEnvModalOpen(false); navigate('/environments'); }}
-              className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono"
+              className="flex items-center gap-[6px] text-[11px] text-foreground/40 hover:text-foreground transition-colors font-mono"
             >
               <Icon icon="solar:settings-linear" className="text-sm" />
               Manage environments

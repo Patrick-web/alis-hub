@@ -71,7 +71,7 @@ export function StandaloneTopNav() {
           className="border-l border-border h-full px-[12px] flex items-center opacity-70 hover:opacity-100 transition-opacity"
           title="Back to hub"
         >
-          <Icon icon="solar:home-2-linear" className="text-white text-[17px]" />
+          <Icon icon="solar:home-2-linear" className="text-foreground text-[17px]" />
         </button>
       </div>
 
@@ -124,7 +124,7 @@ export function StandaloneTopNav() {
               </span>
             </div>
           ) : (
-            <Icon icon="solar:user-circle-linear" className="text-white text-[22px]" />
+            <Icon icon="solar:user-circle-linear" className="text-foreground text-[22px]" />
           )}
         </button>
       </div>

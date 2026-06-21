@@ -12,7 +12,7 @@ export const module5: LearningModule = {
       title: 'The full pipeline',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Now that you've seen each stage in isolation, here's how they connect. Every service you build
             on alis follows this exact pipeline — from a text file on your machine to a live, authenticated,
             auto-scaling API on Google Cloud.
@@ -30,10 +30,10 @@ export const module5: LearningModule = {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="text-[11px] font-bold text-white font-mono">{stage}</span>
-                    <code className="text-[9px] text-[rgba(255,255,255,0.35)] bg-background px-[6px] py-[1px] rounded">{cmd}</code>
+                    <span className="text-[11px] font-bold text-foreground font-mono">{stage}</span>
+                    <code className="text-[9px] text-foreground/35 bg-background px-[6px] py-[1px] rounded">{cmd}</code>
                   </div>
-                  <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{desc}</p>
+                  <p className="text-[11px] text-foreground/55 leading-[1.5]">{desc}</p>
                 </div>
               </div>
             ))}
@@ -47,7 +47,7 @@ export const module5: LearningModule = {
       title: 'A request\'s journey',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Once deployed, here's what happens when a client calls your service:
           </p>
           <div className="flex flex-col gap-[4px]">
@@ -81,13 +81,13 @@ export const module5: LearningModule = {
               <div key={n} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
                 <span className="text-[9px] font-bold text-brand font-mono shrink-0 w-[14px]">{n}</span>
                 <div>
-                  <span className="text-[11px] font-bold text-white font-mono">{title} </span>
-                  <span className="text-[11px] text-[rgba(255,255,255,0.5)]">— {detail}</span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">{title} </span>
+                  <span className="text-[11px] text-foreground/50">— {detail}</span>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.4)] leading-[1.5]">
+          <p className="text-[11px] text-foreground/40 leading-[1.5]">
             End-to-end latency overhead from the ESP layer is typically under 2 ms. The cost is authentication
             security and free transcoding, both worth the trade.
           </p>
@@ -99,7 +99,7 @@ export const module5: LearningModule = {
       title: 'Where to go from here',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             You've covered the core mental model. Here's how the rest of the hub maps to what you've learned:
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -131,16 +131,16 @@ export const module5: LearningModule = {
               },
             ].map(({ tab, desc }) => (
               <div key={tab} className="px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
-                <p className="text-[11px] font-bold text-white font-mono mb-[3px]">{tab}</p>
-                <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.4]">{desc}</p>
+                <p className="text-[11px] font-bold text-foreground font-mono mb-[3px]">{tab}</p>
+                <p className="text-[11px] text-foreground/50 leading-[1.4]">{desc}</p>
               </div>
             ))}
           </div>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
-            <p className="text-[11px] text-[rgba(255,255,255,0.7)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/70 leading-[1.5]">
               <span className="text-brand font-bold">You're ready. </span>
               Go define your first service — start with a simple{' '}
-              <code className="text-[rgba(255,255,255,0.8)] text-[10px]">GetX</code> method on a resource
+              <code className="text-foreground/80 text-[10px]">GetX</code> method on a resource
               you know well. The first deploy is the steepest part of the curve.
             </p>
           </div>

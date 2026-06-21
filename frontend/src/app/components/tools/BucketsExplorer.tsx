@@ -58,8 +58,8 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center h-full gap-[6px] px-[12px]">
-          <Icon icon="solar:file-broken-linear" className="text-2xl text-[rgba(255,255,255,0.15)]" />
-          <p className="text-[8px] text-[rgba(255,255,255,0.3)] font-mono text-center leading-tight">{error}</p>
+          <Icon icon="solar:file-broken-linear" className="text-2xl text-foreground/15" />
+          <p className="text-[8px] text-foreground/30 font-mono text-center leading-tight">{error}</p>
         </div>
       ) : kind === 'image' && content ? (
         <img src={dataURL} alt="" className="w-full h-full object-contain" />
@@ -74,23 +74,23 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
         <video src={dataURL} className="w-full h-full object-contain pointer-events-none" />
       ) : kind === 'audio' ? (
         <div className="flex items-center justify-center h-full">
-          <Icon icon="solar:music-note-2-linear" className="text-4xl text-[rgba(255,255,255,0.15)]" />
+          <Icon icon="solar:music-note-2-linear" className="text-4xl text-foreground/15" />
         </div>
       ) : kind === 'text' && content ? (
-        <pre className="absolute inset-0 p-[8px] text-[7px] text-[rgba(255,255,255,0.4)] font-mono leading-[1.4] overflow-hidden whitespace-pre-wrap break-all pointer-events-none">
+        <pre className="absolute inset-0 p-[8px] text-[7px] text-foreground/40 font-mono leading-[1.4] overflow-hidden whitespace-pre-wrap break-all pointer-events-none">
           {b64ToText(content).slice(0, 800)}
         </pre>
       ) : (
         <div className="flex items-center justify-center h-full">
-          <Icon icon={kindIcon(kind)} className="text-4xl text-[rgba(255,255,255,0.1)]" />
+          <Icon icon={kindIcon(kind)} className="text-4xl text-foreground/10" />
         </div>
       )}
 
       {/* Hover overlay */}
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-[5px] bg-black/70 rounded-[4px] px-[10px] py-[5px]">
-          <Icon icon="solar:maximize-square-2-linear" className="text-xs text-white" />
-          <span className="text-[9px] text-white font-mono">Expand</span>
+          <Icon icon="solar:maximize-square-2-linear" className="text-xs text-foreground" />
+          <span className="text-[9px] text-foreground font-mono">Expand</span>
         </div>
       </div>
     </div>
@@ -219,13 +219,13 @@ export function BucketsExplorer({ projectID }: Props) {
       {/* Bucket list */}
       <div className="w-[220px] shrink-0 border-r border-border flex flex-col">
         <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-border">
-          <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">Buckets</p>
+          <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">Buckets</p>
           <button
             onClick={() => {
               setBucketsLoading(true);
               GS.ListBuckets(projectID).then(setBuckets).catch((e: unknown) => setBucketsError(String(e))).finally(() => setBucketsLoading(false));
             }}
-            className="text-[rgba(255,255,255,0.4)] hover:text-white transition-colors"
+            className="text-foreground/40 hover:text-foreground transition-colors"
           >
             <Icon icon="solar:refresh-linear" className="text-sm" />
           </button>
@@ -238,7 +238,7 @@ export function BucketsExplorer({ projectID }: Props) {
               <p className="text-[10px] text-red-400 font-mono">{bucketsError}</p>
             </div>
           ) : buckets.length === 0 ? (
-            <p className="text-[10px] text-[rgba(255,255,255,0.3)] p-[12px]">No buckets found</p>
+            <p className="text-[10px] text-foreground/30 p-[12px]">No buckets found</p>
           ) : (
             buckets.map((b) => (
               <button
@@ -247,11 +247,11 @@ export function BucketsExplorer({ projectID }: Props) {
                 className={`w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left transition-colors ${
                   selectedBucket === b.name
                     ? 'bg-[rgba(248,129,169,0.1)] border-r-2 border-r-[#f881a9]'
-                    : 'hover:bg-[rgba(255,255,255,0.03)]'
+                    : 'hover:bg-foreground/[3%]'
                 }`}
               >
-                <Icon icon="solar:folder-bold" className={`text-base shrink-0 ${selectedBucket === b.name ? 'text-brand' : 'text-[rgba(255,255,255,0.4)]'}`} />
-                <span className={`text-[10px] font-mono truncate ${selectedBucket === b.name ? 'text-white' : 'text-[rgba(255,255,255,0.6)]'}`}>
+                <Icon icon="solar:folder-bold" className={`text-base shrink-0 ${selectedBucket === b.name ? 'text-brand' : 'text-foreground/40'}`} />
+                <span className={`text-[10px] font-mono truncate ${selectedBucket === b.name ? 'text-foreground' : 'text-foreground/60'}`}>
                   {b.name}
                 </span>
               </button>
@@ -268,7 +268,7 @@ export function BucketsExplorer({ projectID }: Props) {
             {selectedBucket ? (
               breadcrumbs().map((crumb, i) => (
                 <div key={i} className="flex items-center gap-[4px]">
-                  {i > 0 && <Icon icon="solar:alt-arrow-right-linear" className="text-xs text-[rgba(255,255,255,0.3)]" />}
+                  {i > 0 && <Icon icon="solar:alt-arrow-right-linear" className="text-xs text-foreground/30" />}
                   <button
                     onClick={() => {
                       if (i === 0) { setPrefix(''); setPrefixStack([]); }
@@ -279,8 +279,8 @@ export function BucketsExplorer({ projectID }: Props) {
                       }
                       setSelectedObject(null);
                     }}
-                    className={`text-[10px] font-mono hover:text-white transition-colors truncate max-w-[120px] ${
-                      i === breadcrumbs().length - 1 ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'
+                    className={`text-[10px] font-mono hover:text-foreground transition-colors truncate max-w-[120px] ${
+                      i === breadcrumbs().length - 1 ? 'text-foreground' : 'text-foreground/50'
                     }`}
                   >
                     {crumb.label}
@@ -288,7 +288,7 @@ export function BucketsExplorer({ projectID }: Props) {
                 </div>
               ))
             ) : (
-              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">Select a bucket</p>
+              <p className="text-[10px] text-foreground/30 font-mono">Select a bucket</p>
             )}
           </div>
           {selectedBucket && (
@@ -296,7 +296,7 @@ export function BucketsExplorer({ projectID }: Props) {
               variant="ghost"
               onClick={() => GS.OpenInConsole('storage', projectID, selectedBucket)}
               icon={<Icon icon="solar:export-linear" className="text-xs" />}
-              className="shrink-0 text-[rgba(255,255,255,0.5)] hover:text-white"
+              className="shrink-0 text-foreground/50 hover:text-foreground"
             >
               Open in Console
             </Button>
@@ -310,8 +310,8 @@ export function BucketsExplorer({ projectID }: Props) {
             {!selectedBucket ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <Icon icon="solar:cloud-storage-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[8px]" />
-                  <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-mono">Select a bucket to browse</p>
+                  <Icon icon="solar:cloud-storage-linear" className="text-4xl text-foreground/10 mb-[8px]" />
+                  <p className="text-[11px] text-foreground/30 font-mono">Select a bucket to browse</p>
                 </div>
               </div>
             ) : objectsLoading ? (
@@ -329,19 +329,19 @@ export function BucketsExplorer({ projectID }: Props) {
             ) : (
               <>
                 {prefix && (
-                  <button onClick={goUp} className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-border transition-colors">
-                    <Icon icon="solar:arrow-left-linear" className="text-sm text-[rgba(255,255,255,0.3)]" />
-                    <span className="text-[10px] text-[rgba(255,255,255,0.4)] font-mono">..</span>
+                  <button onClick={goUp} className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-foreground/[3%] border-b border-border transition-colors">
+                    <Icon icon="solar:arrow-left-linear" className="text-sm text-foreground/30" />
+                    <span className="text-[10px] text-foreground/40 font-mono">..</span>
                   </button>
                 )}
                 {prefixes.map((p) => (
                   <button
                     key={p}
                     onClick={() => enterFolder(p)}
-                    className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-border transition-colors"
+                    className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-foreground/[3%] border-b border-border transition-colors"
                   >
-                    <Icon icon="solar:folder-linear" className="text-sm text-[rgba(255,255,255,0.4)] shrink-0" />
-                    <span className="text-[10px] text-[rgba(255,255,255,0.7)] font-mono flex-1 text-left truncate">
+                    <Icon icon="solar:folder-linear" className="text-sm text-foreground/40 shrink-0" />
+                    <span className="text-[10px] text-foreground/70 font-mono flex-1 text-left truncate">
                       {folderLabel(p, prefix)}
                     </span>
                   </button>
@@ -354,24 +354,24 @@ export function BucketsExplorer({ projectID }: Props) {
                     className={`w-full flex items-center gap-[10px] px-[16px] py-[8px] border-b border-border transition-colors text-left ${
                       selectedObject?.name === obj.name
                         ? 'bg-[rgba(248,129,169,0.08)] border-r-2 border-r-[#f881a9]'
-                        : 'hover:bg-[rgba(255,255,255,0.03)]'
+                        : 'hover:bg-foreground/[3%]'
                     }`}
                   >
-                    <Icon icon="solar:file-linear" className={`text-sm shrink-0 ${selectedObject?.name === obj.name ? 'text-brand' : 'text-[rgba(255,255,255,0.3)]'}`} />
-                    <span className={`text-[10px] font-mono flex-1 truncate ${selectedObject?.name === obj.name ? 'text-white' : 'text-[rgba(255,255,255,0.7)]'}`}>
+                    <Icon icon="solar:file-linear" className={`text-sm shrink-0 ${selectedObject?.name === obj.name ? 'text-brand' : 'text-foreground/30'}`} />
+                    <span className={`text-[10px] font-mono flex-1 truncate ${selectedObject?.name === obj.name ? 'text-foreground' : 'text-foreground/70'}`}>
                       {shortName(obj.name, prefix)}
                     </span>
-                    <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono shrink-0">
+                    <span className="text-[9px] text-foreground/30 font-mono shrink-0">
                       {formatBytes(obj.size)}
                     </span>
-                    <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono shrink-0 hidden lg:block">
+                    <span className="text-[9px] text-foreground/20 font-mono shrink-0 hidden lg:block">
                       {obj.updated ? new Date(obj.updated).toLocaleDateString() : ''}
                     </span>
                   </button>
                 ))}
                 {prefixes.length === 0 && objects.length === 0 && (
                   <div className="flex items-center justify-center py-[48px]">
-                    <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">Empty folder</p>
+                    <p className="text-[10px] text-foreground/20 font-mono">Empty folder</p>
                   </div>
                 )}
               </>
@@ -383,18 +383,18 @@ export function BucketsExplorer({ projectID }: Props) {
             <div className="w-[260px] shrink-0 border-l border-border flex flex-col">
               {/* Panel header */}
               <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-border shrink-0">
-                <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">File Info</p>
+                <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">File Info</p>
                 <div className="flex items-center gap-[8px]">
                   <button
                     onClick={() => GS.OpenInConsole('storage-object', projectID, `${selectedBucket}/${selectedObject.name}`)}
-                    className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+                    className="text-foreground/30 hover:text-foreground transition-colors"
                     title="Open in Google Cloud Console"
                   >
                     <Icon icon="solar:export-linear" className="text-sm" />
                   </button>
                   <button
                     onClick={() => setSelectedObject(null)}
-                    className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+                    className="text-foreground/30 hover:text-foreground transition-colors"
                   >
                     <Icon icon="solar:close-square-linear" className="text-sm" />
                   </button>
@@ -463,9 +463,9 @@ interface MetaRowProps {
 function MetaRow({ label, value, mono, truncate }: MetaRowProps) {
   return (
     <div className="flex flex-col gap-[2px] px-[12px] py-[8px] border-b border-border">
-      <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-mono">{label}</p>
+      <p className="text-[8px] font-bold uppercase text-foreground/30 font-mono">{label}</p>
       <p
-        className={`text-[10px] text-[rgba(255,255,255,0.8)] break-all ${mono ? "font-mono" : ''} ${truncate ? 'line-clamp-2' : ''}`}
+        className={`text-[10px] text-foreground/80 break-all ${mono ? "font-mono" : ''} ${truncate ? 'line-clamp-2' : ''}`}
         title={value}
       >
         {value}

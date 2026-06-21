@@ -40,7 +40,7 @@ function StepCard({
               ? "bg-green-500/20 text-green-400"
               : status === "error"
                 ? "bg-red-500/20 text-red-400"
-                : "bg-[rgba(255,255,255,0.06)] text-[rgba(255,255,255,0.4)]"
+                : "bg-foreground/[6%] text-foreground/40"
           }`}
         >
           {status === "ok" ? (
@@ -52,10 +52,10 @@ function StepCard({
           )}
         </div>
         <div>
-          <p className="text-[11px] font-bold text-white font-mono">
+          <p className="text-[11px] font-bold text-foreground font-mono">
             {title}
           </p>
-          <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase">
+          <p className="text-[9px] text-foreground/40 uppercase">
             {subtitle}
           </p>
         </div>
@@ -198,13 +198,13 @@ export function GCloudSetup({ onReady }: Props) {
       <div className="flex-1 overflow-y-auto p-[24px]">
         <div className="max-w-[640px] mx-auto">
           <div className="mb-[24px]">
-            <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono mb-[4px]">
+            <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono mb-[4px]">
               Prerequisites
             </p>
-            <h2 className="text-[16px] font-bold text-white font-mono">
+            <h2 className="text-[16px] font-bold text-foreground font-mono">
               GCloud Tools Setup
             </h2>
-            <p className="text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px] leading-[1.6]">
+            <p className="text-[11px] text-foreground/50 mt-[4px] leading-[1.6]">
               Complete the steps below to enable Cloud Storage, Logging,
               Artifact Registry and Secret Manager tools.
             </p>
@@ -230,7 +230,7 @@ export function GCloudSetup({ onReady }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.6] mb-[12px]">
+                  <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
                     The Google Cloud SDK provides the{" "}
                     <code className="text-brand font-mono">
                       gcloud
@@ -242,9 +242,9 @@ export function GCloudSetup({ onReady }: Props) {
                   <div className="bg-background border border-border rounded-[4px] flex items-center gap-[8px] px-[12px] py-[8px] mb-[10px]">
                     <Icon
                       icon="solar:terminal-linear"
-                      className="text-sm text-[rgba(255,255,255,0.3)] shrink-0"
+                      className="text-sm text-foreground/30 shrink-0"
                     />
-                    <code className="text-[10px] text-[rgba(255,255,255,0.7)] font-mono flex-1 truncate">
+                    <code className="text-[10px] text-foreground/70 font-mono flex-1 truncate">
                       {INSTALL_COMMAND}
                     </code>
                   </div>
@@ -314,7 +314,7 @@ export function GCloudSetup({ onReady }: Props) {
                 </div>
               ) : (
                 <>
-                  <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.6] mb-[12px]">
+                  <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
                     Authenticate with your Google account. Your browser will
                     open to complete the login — the terminal below stays
                     interactive for any prompts.
@@ -323,9 +323,9 @@ export function GCloudSetup({ onReady }: Props) {
                   <div className="bg-background border border-border rounded-[4px] flex items-center gap-[8px] px-[12px] py-[8px] mb-[10px]">
                     <Icon
                       icon="solar:terminal-linear"
-                      className="text-sm text-[rgba(255,255,255,0.3)] shrink-0"
+                      className="text-sm text-foreground/30 shrink-0"
                     />
-                    <code className="text-[10px] text-[rgba(255,255,255,0.7)] font-mono">
+                    <code className="text-[10px] text-foreground/70 font-mono">
                       gcloud auth login
                     </code>
                   </div>
@@ -418,9 +418,9 @@ export function GCloudSetup({ onReady }: Props) {
             <div className="flex items-center gap-[8px]">
               <Icon
                 icon="solar:terminal-bold"
-                className="text-xs text-[rgba(255,255,255,0.4)]"
+                className="text-xs text-foreground/40"
               />
-              <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">
+              <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">
                 Setup Terminal
               </p>
               {sessionActive && (
@@ -433,7 +433,7 @@ export function GCloudSetup({ onReady }: Props) {
                 GS.StopSetupSession(SESSION_ID);
                 setSessionActive(false);
               }}
-              className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.3)] hover:text-white hover:bg-accent transition-colors"
+              className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-foreground/30 hover:text-foreground hover:bg-accent transition-colors"
             >
               <Icon icon="solar:close-circle-linear" className="text-xs" />
             </button>

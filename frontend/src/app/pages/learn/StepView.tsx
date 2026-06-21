@@ -19,15 +19,15 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
       {/* Step header */}
       <div className="border-b border-border px-[28px] py-[14px] shrink-0">
         <div className="flex items-center gap-[8px] mb-[4px]">
-          <span className="text-[10px] font-bold text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide">
+          <span className="text-[10px] font-bold text-foreground/30 font-mono uppercase tracking-wide">
             {module.title}
           </span>
-          <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] text-[10px]" />
-          <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)]">
+          <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/20 text-[10px]" />
+          <span className="text-[10px] font-mono text-foreground/30">
             Step {stepIndex + 1} of {totalSteps}
           </span>
         </div>
-        <h2 className="font-mono font-bold text-[15px] text-white leading-[1.3]">
+        <h2 className="font-mono font-bold text-[15px] text-foreground leading-[1.3]">
           {step.title}
         </h2>
       </div>
@@ -45,7 +45,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
             <div className="mb-[24px]">
               <div className="flex items-center gap-[8px] mb-[12px]">
                 <div className="h-px flex-1 bg-card" />
-                <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono uppercase tracking-widest">
+                <p className="text-[9px] text-foreground/20 font-mono uppercase tracking-widest">
                   Diagram
                 </p>
                 <div className="h-px flex-1 bg-card" />
@@ -81,7 +81,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
           {onPrev && (
             <button
               onClick={onPrev}
-              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] border border-border text-[rgba(255,255,255,0.6)] hover:text-white hover:border-[rgba(255,255,255,0.4)] transition-colors text-[11px] font-mono font-bold"
+              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] border border-border text-foreground/60 hover:text-foreground hover:border-foreground/40 transition-colors text-[11px] font-mono font-bold"
             >
               <Icon icon="solar:alt-arrow-left-linear" className="text-[13px]" />
               Previous

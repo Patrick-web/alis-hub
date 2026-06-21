@@ -17,8 +17,8 @@ export function Button({
   
   const variants = {
     primary: 'bg-brand text-brand-foreground px-[10px] py-[5px] hover:bg-[#ff94ba]',
-    secondary: 'bg-card border border-border text-white px-[10px] py-[5px] hover:bg-accent',
-    ghost: 'text-white px-[5px] py-[4px] hover:bg-[rgba(255,255,255,0.1)]',
+    secondary: 'bg-card border border-border text-foreground px-[10px] py-[5px] hover:bg-accent',
+    ghost: 'text-foreground px-[5px] py-[4px] hover:bg-foreground/10',
   };
 
   return (

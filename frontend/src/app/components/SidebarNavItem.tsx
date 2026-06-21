@@ -20,7 +20,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`relative shrink-0 w-full transition-colors ${
-        active ? 'bg-[rgba(248,129,169,0.12)]' : 'hover:bg-[rgba(255,255,255,0.05)]'
+        active ? 'bg-[rgba(248,129,169,0.12)]' : 'hover:bg-foreground/5'
       }`}
     >
       <div
@@ -35,7 +35,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
         <div className="content-stretch flex gap-[10px] items-center p-[10px] relative w-full">
           <div className="relative shrink-0 size-[20px]">{icon}</div>
           <p className={`font-mono leading-[normal] not-italic relative shrink-0 text-[12px] whitespace-nowrap flex-1 text-left ${
-            active ? 'text-brand' : 'text-white'
+            active ? 'text-brand' : 'text-foreground'
           }`}>
             {label}
           </p>
@@ -44,7 +44,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
               {onEdit && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                  className="p-[3px] rounded hover:bg-[rgba(255,255,255,0.1)] text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
+                  className="p-[3px] rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground transition-colors"
                 >
                   <Icon icon="solar:pen-linear" className="text-[14px]" />
                 </button>
@@ -52,7 +52,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
               {onDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  className="p-[3px] rounded hover:bg-[rgba(255,80,80,0.15)] text-[rgba(255,255,255,0.5)] hover:text-destructive transition-colors"
+                  className="p-[3px] rounded hover:bg-[rgba(255,80,80,0.15)] text-foreground/50 hover:text-destructive transition-colors"
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="text-[14px]" />
                 </button>

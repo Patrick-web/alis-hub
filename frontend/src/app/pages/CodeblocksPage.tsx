@@ -80,7 +80,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
       <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
         <div className="flex items-center h-[34px]">
           <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-white">/</p>
+            <p className="text-[12px] text-foreground">/</p>
           </div>
           <Input
             placeholder="Search blocks..."
@@ -99,7 +99,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
             key={level}
             onClick={() => setActiveFilter(level)}
             className={`px-[14px] py-[10px] text-[11px] font-bold uppercase transition-all relative ${
-              activeFilter === level ? 'text-brand' : 'text-white opacity-40 hover:opacity-70'
+              activeFilter === level ? 'text-brand' : 'text-foreground opacity-40 hover:opacity-70'
             }`}
           >
             {level}
@@ -139,32 +139,32 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
                     onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_BANNER; }}
                   />
                   <div className="absolute top-[10px] right-[10px]">
-                    <Icon icon="solar:info-circle-linear" className="text-white opacity-70 text-base" />
+                    <Icon icon="solar:info-circle-linear" className="text-foreground opacity-70 text-base" />
                   </div>
                 </div>
 
                 {/* Card body */}
                 <div className="p-[16px]">
                   <div className="flex items-start justify-between mb-[8px]">
-                    <h3 className="font-mono font-bold text-[13px] text-white uppercase tracking-wider leading-[1.2] flex-1 pr-2">
+                    <h3 className="font-mono font-bold text-[13px] text-foreground uppercase tracking-wider leading-[1.2] flex-1 pr-2">
                       {cb.displayName}
                     </h3>
                     {cb.releaseLevel > 0 && (
-                      <span className={`text-[8px] font-bold uppercase border rounded px-[6px] py-[2px] shrink-0 ${LEVEL_COLOR[cb.releaseLevel] ?? 'text-white/50 border-white/10 bg-white/5'}`}>
+                      <span className={`text-[8px] font-bold uppercase border rounded px-[6px] py-[2px] shrink-0 ${LEVEL_COLOR[cb.releaseLevel] ?? 'text-foreground/50 border-foreground/10 bg-foreground/5'}`}>
                         {LEVEL_LABEL[cb.releaseLevel] ?? 'Unknown'}
                       </span>
                     )}
                   </div>
-                  <p className="text-[12px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.4] h-[34px] overflow-hidden">
+                  <p className="text-[12px] text-foreground/60 mb-[12px] leading-[1.4] h-[34px] overflow-hidden">
                     {cb.headline || cb.description}
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-mono truncate">
+                    <p className="text-[10px] text-foreground/40 font-mono truncate">
                       {cb.publisher || 'Alis Exchange'}
                     </p>
                     <div className="flex items-center gap-[5px]">
-                      <Icon icon="solar:download-linear" className="text-white opacity-40 text-xs" />
-                      <p className="text-[10px] text-[rgba(255,255,255,0.6)] font-bold">{cb.installCount}</p>
+                      <Icon icon="solar:download-linear" className="text-foreground opacity-40 text-xs" />
+                      <p className="text-[10px] text-foreground/60 font-bold">{cb.installCount}</p>
                     </div>
                   </div>
                 </div>

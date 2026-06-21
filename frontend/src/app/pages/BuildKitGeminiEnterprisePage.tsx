@@ -60,7 +60,7 @@ export function BuildKitGeminiEnterprisePage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The Gemini Enterprise flow walks you through setting up Google Gemini Enterprise for your organisation.
             This includes creating an enterprise application, managing subscriptions, configuring identity federation,
             and connecting your data sources.
@@ -80,7 +80,7 @@ export function BuildKitGeminiEnterprisePage() {
                 </Button>
               }
             >
-              <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">{stage.description}</p>
+              <p className="text-[11px] text-foreground/60 leading-[1.5]">{stage.description}</p>
             </StageCard>
           ))}
         </div>

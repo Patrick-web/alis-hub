@@ -24,7 +24,7 @@ export function Table<T>({ columns, data, rowId, onRowClick, activeRowId }: Tabl
             {columns.map((column, index) => (
               <th
                 key={index}
-                className={`p-[10px] text-left font-mono font-bold text-[12px] text-white uppercase border-r border-border last:border-r-0 ${column.headerClassName || ''}`}
+                className={`p-[10px] text-left font-mono font-bold text-[12px] text-foreground uppercase border-r border-border last:border-r-0 ${column.headerClassName || ''}`}
               >
                 {column.header}
               </th>
@@ -39,12 +39,12 @@ export function Table<T>({ columns, data, rowId, onRowClick, activeRowId }: Tabl
               <tr
                 key={id}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
-                className={`border-b border-border transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${isActive ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
+                className={`border-b border-border transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${isActive ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-foreground/[2%]'}`}
               >
                 {columns.map((column, index) => (
                   <td
                     key={index}
-                    className={`p-[10px] font-mono text-[12px] text-white border-r border-border last:border-r-0 ${column.className || ''}`}
+                    className={`p-[10px] font-mono text-[12px] text-foreground border-r border-border last:border-r-0 ${column.className || ''}`}
                   >
                     {column.render(item)}
                   </td>

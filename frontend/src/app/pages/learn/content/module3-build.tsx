@@ -43,12 +43,12 @@ export const module3: LearningModule = {
       title: 'What alis build does',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             <code className="text-brand text-[11px]">alis build</code> is the command that turns your
             Go (or other language) implementation into a runnable Docker container image stored in
             Google Artifact Registry. You never need to run Docker locally — the build happens entirely in the cloud.
           </p>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Under the hood, the command:
           </p>
           <div className="flex flex-col gap-[6px]">
@@ -61,7 +61,7 @@ export const module3: LearningModule = {
             ].map((step, i) => (
               <div key={i} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
                 <span className="text-[10px] font-bold text-brand font-mono shrink-0 w-[16px] text-right">{i + 1}</span>
-                <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.4]">{step}</p>
+                <p className="text-[11px] text-foreground/60 leading-[1.4]">{step}</p>
               </div>
             ))}
           </div>
@@ -74,23 +74,23 @@ export const module3: LearningModule = {
       title: 'The Dockerfile',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            Each neuron has a <code className="text-[rgba(255,255,255,0.7)] text-[11px]">Dockerfile</code> at
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
+            Each neuron has a <code className="text-foreground/70 text-[11px]">Dockerfile</code> at
             its root. For Go services, alis scaffolds a standard multi-stage build: a builder image that compiles
             the binary, and a minimal Alpine image that ships it. This keeps the final image small (typically under 20 MB).
           </p>
           <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
             <div className="px-[0] pb-[8px] mb-[8px] border-b border-border">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
+              <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono">
                 Dockerfile
               </p>
             </div>
-            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-foreground/75 leading-[1.6] whitespace-pre overflow-x-auto">
               {dockerfileExample}
             </pre>
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.4)] leading-[1.5]">
-            The binary listens on port <code className="text-[rgba(255,255,255,0.6)] text-[10px]">8080</code> for
+          <p className="text-[11px] text-foreground/40 leading-[1.5]">
+            The binary listens on port <code className="text-foreground/60 text-[10px]">8080</code> for
             gRPC traffic. The HTTP/REST gateway shares the same port via gRPC-gateway transcoding.
           </p>
         </div>
@@ -101,29 +101,29 @@ export const module3: LearningModule = {
       title: 'Cloud Build and Artifact Registry',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Google Cloud Build is a serverless build runner. You submit a build job and GCP runs it on managed
             infrastructure — no build servers to maintain. alis generates the{' '}
-            <code className="text-[rgba(255,255,255,0.6)] text-[11px]">cloudbuild.yaml</code> that defines
+            <code className="text-foreground/60 text-[11px]">cloudbuild.yaml</code> that defines
             each build step.
           </p>
           <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
             <div className="pb-[8px] mb-[8px] border-b border-border">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
+              <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono">
                 cloudbuild.yaml (generated)
               </p>
             </div>
-            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-foreground/75 leading-[1.6] whitespace-pre overflow-x-auto">
               {cloudbuildYamlExample}
             </pre>
           </div>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            The resulting image is stored in <strong className="text-white">Artifact Registry</strong> under
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
+            The resulting image is stored in <strong className="text-foreground">Artifact Registry</strong> under
             a path that encodes the organisation, product, and neuron name. Every build produces a unique
             image tagged with the Git short SHA, so rollbacks are just a matter of deploying a previous tag.
           </p>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               <span className="text-brand font-bold">In the hub: </span>
               the Builds tab shows live Cloud Build logs so you can watch the build progress in real time
               without leaving the app.

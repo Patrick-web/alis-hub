@@ -31,33 +31,33 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="w-full max-w-[480px] flex flex-col gap-[20px]">
           <div className="flex items-center gap-[10px]">
             <Icon icon="solar:close-circle-bold" className="text-destructive text-[22px] shrink-0" />
-            <h1 className="text-[15px] font-bold text-white font-mono">
+            <h1 className="text-[15px] font-bold text-foreground font-mono">
               Something went wrong
             </h1>
           </div>
 
-          <p className="text-[12px] text-[rgba(255,255,255,0.45)] font-mono leading-relaxed">
+          <p className="text-[12px] text-foreground/45 font-mono leading-relaxed">
             {error.message || 'An unexpected error occurred.'}
           </p>
 
           <div className="flex items-center gap-[10px]">
             <button
               onClick={() => window.location.reload()}
-              className="flex items-center gap-[6px] px-[12px] py-[7px] rounded-[6px] bg-card border border-border text-white text-[11px] font-mono hover:border-border transition-colors"
+              className="flex items-center gap-[6px] px-[12px] py-[7px] rounded-[6px] bg-card border border-border text-foreground text-[11px] font-mono hover:border-border transition-colors"
             >
               <Icon icon="solar:refresh-linear" className="text-[13px]" />
               Reload app
             </button>
             <button
               onClick={() => this.setState(s => ({ showDetails: !s.showDetails }))}
-              className="text-[11px] text-[rgba(255,255,255,0.3)] hover:text-white font-mono transition-colors"
+              className="text-[11px] text-foreground/30 hover:text-foreground font-mono transition-colors"
             >
               {showDetails ? 'Hide' : 'Show'} details
             </button>
           </div>
 
           {showDetails && (
-            <pre className="bg-background border border-border rounded-[6px] p-[12px] text-[10px] text-[rgba(255,255,255,0.5)] font-mono overflow-auto max-h-[220px] whitespace-pre-wrap break-all">
+            <pre className="bg-background border border-border rounded-[6px] p-[12px] text-[10px] text-foreground/50 font-mono overflow-auto max-h-[220px] whitespace-pre-wrap break-all">
               {error.stack}
             </pre>
           )}

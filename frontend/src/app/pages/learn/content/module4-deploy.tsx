@@ -31,12 +31,12 @@ export const module4: LearningModule = {
       title: 'What alis deploy provisions',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             <code className="text-brand text-[11px]">alis deploy</code> is a declarative operation.
             You describe the desired state (which image version, which environment) and alis figures out which
             GCP resources need to be created, updated, or left alone.
           </p>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             A single deploy operation touches four categories of GCP resources:
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -66,7 +66,7 @@ export const module4: LearningModule = {
                 <p className="text-[11px] font-bold font-mono mb-[4px]" style={{ color: colour }}>
                   {name}
                 </p>
-                <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{desc}</p>
+                <p className="text-[11px] text-foreground/55 leading-[1.5]">{desc}</p>
               </div>
             ))}
           </div>
@@ -79,12 +79,12 @@ export const module4: LearningModule = {
       title: 'Cloud Run — the runtime',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            <strong className="text-white">Cloud Run</strong> is Google's serverless container runtime. Your Docker
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
+            <strong className="text-foreground">Cloud Run</strong> is Google's serverless container runtime. Your Docker
             image is deployed as a Cloud Run service — a managed HTTPS endpoint that scales automatically
             from zero instances (when there's no traffic) to hundreds (under load).
           </p>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Key properties of a Cloud Run service deployed by alis:
           </p>
           <div className="flex flex-col gap-[6px]">
@@ -96,8 +96,8 @@ export const module4: LearningModule = {
               { label: 'Identity', value: 'Runs as a dedicated service account with least-privilege IAM' },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
-                <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] w-[110px] shrink-0">{label}</span>
-                <span className="text-[10px] font-mono text-[rgba(255,255,255,0.7)]">{value}</span>
+                <span className="text-[10px] font-mono text-foreground/40 w-[110px] shrink-0">{label}</span>
+                <span className="text-[10px] font-mono text-foreground/70">{value}</span>
               </div>
             ))}
           </div>
@@ -109,12 +109,12 @@ export const module4: LearningModule = {
       title: 'Cloud Endpoints — the API gateway',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Every alis service sits behind{' '}
-            <strong className="text-white">Google Cloud Endpoints</strong> (specifically the ESP — Extensible Service Proxy).
+            <strong className="text-foreground">Google Cloud Endpoints</strong> (specifically the ESP — Extensible Service Proxy).
             The ESP is a sidecar container that runs alongside your Cloud Run service and intercepts every request.
           </p>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
             The ESP handles:
           </p>
           <div className="flex flex-col gap-[6px]">
@@ -127,19 +127,19 @@ export const module4: LearningModule = {
               <div key={task} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
                 <div className="size-[6px] rounded-full bg-brand mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-white font-mono">{task} </span>
-                  <span className="text-[11px] text-[rgba(255,255,255,0.5)]">— {detail}</span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">{task} </span>
+                  <span className="text-[11px] text-foreground/50">— {detail}</span>
                 </div>
               </div>
             ))}
           </div>
           <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
             <div className="pb-[6px] mb-[6px] border-b border-border">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
+              <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono">
                 Endpoints config (generated)
               </p>
             </div>
-            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-foreground/75 leading-[1.6] whitespace-pre overflow-x-auto">
               {endpointsConfigExample}
             </pre>
           </div>
@@ -151,19 +151,19 @@ export const module4: LearningModule = {
       title: 'IAM — who can call what',
       body: (
         <div className="flex flex-col gap-[12px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            <strong className="text-white">Identity and Access Management</strong> (IAM) is Google Cloud's
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
+            <strong className="text-foreground">Identity and Access Management</strong> (IAM) is Google Cloud's
             permission system. alis configures IAM so that each service can only access what it needs —
-            a principle called <em className="text-white">least privilege</em>.
+            a principle called <em className="text-foreground">least privilege</em>.
           </p>
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            Each neuron gets its own <strong className="text-white">service account</strong> — a Google-managed
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">
+            Each neuron gets its own <strong className="text-foreground">service account</strong> — a Google-managed
             identity used to authenticate service-to-service calls. When service A calls service B, it presents
             a short-lived JWT signed by its service account. Service B's Endpoints proxy validates the JWT
             against Google's key servers.
           </p>
           <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] text-[rgba(255,255,255,0.45)] uppercase font-bold font-mono tracking-wide">
+            <p className="text-[11px] text-foreground/45 uppercase font-bold font-mono tracking-wide">
               Common IAM roles alis assigns:
             </p>
             {[
@@ -174,7 +174,7 @@ export const module4: LearningModule = {
             ].map(({ role, desc }) => (
               <div key={role} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
                 <code className="text-[9px] font-mono text-brand shrink-0 w-[220px] leading-[1.4]">{role}</code>
-                <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.4]">{desc}</p>
+                <p className="text-[10px] text-foreground/50 leading-[1.4]">{desc}</p>
               </div>
             ))}
           </div>

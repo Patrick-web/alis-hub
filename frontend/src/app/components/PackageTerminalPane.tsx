@@ -63,13 +63,13 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
       <div className="flex flex-col h-full bg-background border-t border-border">
         {/* Pane header */}
         <div className="flex items-center justify-between px-[12px] border-b border-border shrink-0 h-[30px]">
-          <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
+          <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">
             Packages • {sessions.length} process
             {sessions.length !== 1 ? "es" : ""}
           </p>
           <button
             onClick={onClose}
-            className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.3)] hover:text-white hover:bg-accent transition-colors"
+            className="w-[20px] h-[20px] flex items-center justify-center rounded-[3px] text-foreground/30 hover:text-foreground hover:bg-accent transition-colors"
           >
             <Icon icon="solar:close-circle-linear" className="text-xs" />
           </button>
@@ -83,8 +83,8 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
               onClick={() => setActiveID(s.runID)}
               className={`flex items-center gap-[5px] px-[8px] h-[22px] rounded-[3px] text-[10px] font-mono shrink-0 transition-colors ${
                 effectiveActive === s.runID
-                  ? "bg-card text-white"
-                  : "text-[rgba(255,255,255,0.5)] hover:text-white hover:bg-muted"
+                  ? "bg-card text-foreground"
+                  : "text-foreground/50 hover:text-foreground hover:bg-muted"
               }`}
             >
               {statusIcon(s)}
@@ -94,7 +94,7 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
                   e.stopPropagation();
                   onCloseSession(s.runID);
                 }}
-                className="ml-[2px] text-[rgba(255,255,255,0.3)] hover:text-white transition-colors"
+                className="ml-[2px] text-foreground/30 hover:text-foreground transition-colors"
               >
                 <Icon icon="solar:close-circle-linear" className="text-[9px]" />
               </button>

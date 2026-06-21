@@ -25,7 +25,7 @@ export function BuildKitReportingPage() {
     >
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
-          <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6]">
+          <p className="text-[12px] text-foreground/70 leading-[1.6]">
             The Reporting Exchange flow streamlines the process of creating and managing reports. Use the tools below
             to initialise your reporting environment, generate templates, and leverage AI for advanced tasks.
           </p>
@@ -41,7 +41,7 @@ export function BuildKitReportingPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Set up the reporting foundation in your project. This step runs the custom initialisation logic for the
               reporting codeblock. Click Initialise to run the reporting initialisation.
             </p>
@@ -58,7 +58,7 @@ export function BuildKitReportingPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Create a new report template to structure your data. Click Generate Template to scaffold a new report
               template ready for customisation.
             </p>
@@ -76,7 +76,7 @@ export function BuildKitReportingPage() {
               </Button>
             }
           >
-            <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
+            <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
               Use the AI Assistant to perform advanced reporting tasks, including:
             </p>
             <div className="flex flex-col gap-[6px]">
@@ -87,7 +87,7 @@ export function BuildKitReportingPage() {
               ].map((item) => (
                 <div key={item} className="flex items-start gap-[8px]">
                   <Icon icon="solar:point-on-map-linear" className="text-brand text-[12px] shrink-0 mt-[2px]" />
-                  <span className="text-[11px] text-[rgba(255,255,255,0.6)]">{item}</span>
+                  <span className="text-[11px] text-foreground/60">{item}</span>
                 </div>
               ))}
             </div>
