@@ -132,10 +132,10 @@ export function BuildKitMcpServerPage() {
           </p>
 
           {/* Server URL */}
-          <div className="flex items-center gap-[10px] px-[14px] py-[10px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
-            <Icon icon="solar:server-linear" className="text-[#f881a9] text-[15px] shrink-0" />
-            <span className="text-[11px] text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">MCP Server URL</span>
-            <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] font-bold">{MCP_SERVER_URL}</span>
+          <div className="flex items-center gap-[10px] px-[14px] py-[10px] bg-card border border-border rounded-[4px]">
+            <Icon icon="solar:server-linear" className="text-brand text-[15px] shrink-0" />
+            <span className="text-[11px] text-[rgba(255,255,255,0.5)] font-mono">MCP Server URL</span>
+            <span className="text-[11px] text-white font-mono font-bold">{MCP_SERVER_URL}</span>
           </div>
 
           {/* Tool picker */}
@@ -144,10 +144,10 @@ export function BuildKitMcpServerPage() {
               <button
                 key={c.id}
                 onClick={() => setActiveClient(c.id)}
-                className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-['JetBrains_Mono',sans-serif] font-bold transition-all ${
+                className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                   activeClient === c.id
-                    ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-[#f881a9]'
-                    : 'bg-[#2c2c2c] border-[#464646] text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
+                    ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
+                    : 'bg-card border-border text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
                 <Icon icon={c.icon} className="text-[13px]" />
@@ -159,7 +159,7 @@ export function BuildKitMcpServerPage() {
           {/* Selected client config */}
           <StageCard
             title={selected.label}
-            icon={<Icon icon={selected.icon} className="text-[#f881a9]" />}
+            icon={<Icon icon={selected.icon} className="text-brand" />}
             action={
               selected.action ? (
                 selected.action.deeplink ? (
@@ -179,7 +179,7 @@ export function BuildKitMcpServerPage() {
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
               {selected.description}
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[6px]">
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
               {selected.configLabel}
             </p>
             <CodeBlock code={selected.config} language={selected.configLang} />

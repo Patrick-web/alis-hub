@@ -35,7 +35,7 @@ const TAB_LABEL: Record<Tab, string> = {
 const CATEGORY_LABEL: Record<string, string> = { build: 'Build', infra: 'Infra', proto: 'Proto' };
 
 const labelClass = 'text-[10px] font-bold uppercase text-white/40 mb-[2px]';
-const textareaClass = 'bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[10px] text-white text-[12px] font-[\'JetBrains_Mono\',sans-serif] outline-none focus:border-[#f881a9] resize-none w-full transition-colors';
+const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-white text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors';
 
 export function CodeblockCreatePage() {
   const navigate = useNavigate();
@@ -290,13 +290,13 @@ export function CodeblockCreatePage() {
     : 'solar:add-square-linear';
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-row bg-background">
       {/* Sidebar */}
-      <div className="w-[280px] shrink-0 flex flex-col border-r border-[#464646]">
+      <div className="w-[280px] shrink-0 flex flex-col border-r border-border">
         {/* Back */}
         <button
           onClick={handleCancel}
-          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-[#464646] transition-colors"
+          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-border transition-colors"
         >
           <Icon icon="solar:arrow-left-linear" />
           {isEditing ? 'Block Details' : 'All Blocks'}
@@ -312,14 +312,14 @@ export function CodeblockCreatePage() {
               {!isEditing && (
                 <div>
                   <p className={labelClass}>Source</p>
-                  <div className="flex gap-[4px] bg-[#2c2c2c] rounded-[6px] p-[3px]">
+                  <div className="flex gap-[4px] bg-card rounded-[6px] p-[3px]">
                     {(['scratch', 'from-neuron'] as SourceMode[]).map(mode => (
                       <button
                         key={mode}
                         onClick={() => switchSourceMode(mode)}
                         className={`flex-1 py-[5px] rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors ${
                           sourceMode === mode
-                            ? 'bg-[#f881a9] text-[#1e1e1e]'
+                            ? 'bg-brand text-foreground'
                             : 'text-white/50 hover:text-white/80'
                         }`}
                       >
@@ -347,7 +347,7 @@ export function CodeblockCreatePage() {
                     {orgsError && (
                       <button
                         onClick={() => setOrgsLoadAttempt(n => n + 1)}
-                        className="mt-[4px] text-[10px] text-[#ff6b6b] hover:underline"
+                        className="mt-[4px] text-[10px] text-destructive hover:underline"
                       >
                         Failed to load — retry
                       </button>
@@ -379,7 +379,7 @@ export function CodeblockCreatePage() {
                       options={neurons.map(n => ({ value: n.name, label: n.displayName }))}
                     />
                     {selectedNeuron && !scanLoading && !scanError && (
-                      <p className="mt-[6px] text-[10px] font-['JetBrains_Mono',sans-serif] text-white/30">{selectedNeuron.package}</p>
+                      <p className="mt-[6px] text-[10px] font-mono text-white/30">{selectedNeuron.package}</p>
                     )}
                     {scanLoading && (
                       <div className="flex items-center gap-[6px] mt-[6px]">
@@ -388,7 +388,7 @@ export function CodeblockCreatePage() {
                       </div>
                     )}
                     {scanError && (
-                      <p className="mt-[6px] text-[10px] text-[#ff6b6b]">{scanError}</p>
+                      <p className="mt-[6px] text-[10px] text-destructive">{scanError}</p>
                     )}
                   </div>
                 </div>
@@ -433,9 +433,9 @@ export function CodeblockCreatePage() {
         </div>
 
         {/* Footer */}
-        <div className="p-[10px] border-t border-[#464646] flex flex-col gap-[8px]">
+        <div className="p-[10px] border-t border-border flex flex-col gap-[8px]">
           {error && (
-            <div className="text-[11px] text-[#ff6b6b] bg-[rgba(255,107,107,0.08)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[10px]">
+            <div className="text-[11px] text-destructive bg-[rgba(255,107,107,0.08)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[10px]">
               {error}
             </div>
           )}
@@ -457,22 +457,22 @@ export function CodeblockCreatePage() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center border-b border-[#464646] shrink-0">
+        <div className="flex items-center border-b border-border shrink-0">
           {tabs.map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
               className={`px-[24px] py-[12px] text-[11px] font-bold uppercase tracking-wider transition-all relative ${
-                activeTab === t ? 'text-[#f881a9]' : 'text-white/40 hover:text-white/70'
+                activeTab === t ? 'text-brand' : 'text-white/40 hover:text-white/70'
               }`}
             >
               {TAB_LABEL[t]}
               {t === 'files' && selectedFileCount > 0 && (
-                <span className="ml-[6px] text-[9px] bg-[#f881a9]/20 text-[#f881a9] rounded-full px-[5px] py-[1px]">
+                <span className="ml-[6px] text-[9px] bg-brand/20 text-brand rounded-full px-[5px] py-[1px]">
                   {selectedFileCount}
                 </span>
               )}
-              {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />}
+              {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />}
             </button>
           ))}
         </div>
@@ -505,16 +505,16 @@ export function CodeblockCreatePage() {
 
                 <div>
                   <p className={labelClass}>Highlights</p>
-                  <div className="border border-[#464646] rounded-[4px] p-[8px] flex flex-wrap gap-[6px] min-h-[42px] focus-within:border-[#f881a9] transition-colors">
+                  <div className="border border-border rounded-[4px] p-[8px] flex flex-wrap gap-[6px] min-h-[42px] focus-within:border-brand transition-colors">
                     {highlights.map((h, i) => (
-                      <span key={i} className="flex items-center gap-[4px] bg-[#2c2c2c] text-white text-[11px] px-[8px] py-[3px] rounded-[3px]">
+                      <span key={i} className="flex items-center gap-[4px] bg-card text-white text-[11px] px-[8px] py-[3px] rounded-[3px]">
                         {h}
                         <button onClick={() => setHighlights(prev => prev.filter((_, j) => j !== i))} className="text-white/40 hover:text-white ml-[2px]">×</button>
                       </span>
                     ))}
                     <input
                       ref={highlightInputRef}
-                      className="bg-transparent outline-none text-white text-[12px] font-['JetBrains_Mono',sans-serif] flex-1 min-w-[140px]"
+                      className="bg-transparent outline-none text-white text-[12px] font-mono flex-1 min-w-[140px]"
                       placeholder={highlights.length === 0 ? 'Type and press Enter…' : ''}
                       value={highlightInput}
                       onChange={e => setHighlightInput(e.target.value)}
@@ -530,11 +530,11 @@ export function CodeblockCreatePage() {
             {activeTab === 'features' && (
               <>
                 {keyFeatures.map((feat, i) => (
-                  <div key={i} className="border border-[#464646] rounded-[4px] p-[12px] flex flex-col gap-[10px] relative">
+                  <div key={i} className="border border-border rounded-[4px] p-[12px] flex flex-col gap-[10px] relative">
                     {keyFeatures.length > 1 && (
                       <button
                         onClick={() => setKeyFeatures(prev => prev.filter((_, j) => j !== i))}
-                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-[#f881a9] transition-colors"
+                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-brand transition-colors"
                       >
                         <Icon icon="solar:trash-bin-trash-linear" className="text-sm" />
                       </button>
@@ -573,11 +573,11 @@ export function CodeblockCreatePage() {
             {activeTab === 'architecture' && (
               <>
                 {codeArchitecture.map((layer, i) => (
-                  <div key={i} className="border border-[#464646] rounded-[4px] p-[12px] flex flex-col gap-[10px] relative">
+                  <div key={i} className="border border-border rounded-[4px] p-[12px] flex flex-col gap-[10px] relative">
                     {codeArchitecture.length > 1 && (
                       <button
                         onClick={() => setCodeArchitecture(prev => prev.filter((_, j) => j !== i))}
-                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-[#f881a9] transition-colors"
+                        className="absolute top-[10px] right-[10px] text-white/30 hover:text-brand transition-colors"
                       >
                         <Icon icon="solar:trash-bin-trash-linear" className="text-sm" />
                       </button>
@@ -623,7 +623,7 @@ export function CodeblockCreatePage() {
                     <span className="text-[12px] text-white/40">Scanning neuron files…</span>
                   </div>
                 ) : scanError ? (
-                  <div className="text-[12px] text-[#ff6b6b] bg-[rgba(255,107,107,0.06)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[12px]">
+                  <div className="text-[12px] text-destructive bg-[rgba(255,107,107,0.06)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[12px]">
                     {scanError}
                   </div>
                 ) : scannedFiles.length === 0 ? (
@@ -661,22 +661,22 @@ export function CodeblockCreatePage() {
                           <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px] tracking-wider">
                             {CATEGORY_LABEL[cat]}
                           </p>
-                          <div className="border border-[#464646] rounded-[4px] overflow-hidden">
+                          <div className="border border-border rounded-[4px] overflow-hidden">
                             {catFiles.map((file, i) => (
                               <label
                                 key={file.idx}
                                 className={`flex items-center gap-[10px] px-[12px] py-[8px] cursor-pointer hover:bg-white/[0.03] transition-colors ${
-                                  i > 0 ? 'border-t border-[#464646]' : ''
+                                  i > 0 ? 'border-t border-border' : ''
                                 }`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={file.selected}
                                   onChange={() => toggleFile(file.idx)}
-                                  className="accent-[#f881a9] shrink-0"
+                                  className="accent-brand shrink-0"
                                 />
                                 <Icon icon="solar:file-code-linear" className="text-white/30 shrink-0 text-sm" />
-                                <span className={`text-[11px] font-['JetBrains_Mono',sans-serif] truncate ${
+                                <span className={`text-[11px] font-mono truncate ${
                                   file.selected ? 'text-white/80' : 'text-white/30'
                                 }`}>
                                   {file.path}

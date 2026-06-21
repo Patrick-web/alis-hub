@@ -94,7 +94,7 @@ export function ArtifactRegistry({ projectID, region }: Props) {
   if (!region) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
+        <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-mono">
           No GCP region configured for this product
         </p>
       </div>
@@ -104,8 +104,8 @@ export function ArtifactRegistry({ projectID, region }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-[#464646]">
-        <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">
+      <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-border">
+        <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">
           {region} · {repos.length} repositories
         </p>
         <Button
@@ -124,11 +124,11 @@ export function ArtifactRegistry({ projectID, region }: Props) {
           <div className="flex items-center justify-center py-[48px]"><Loader size={32} /></div>
         ) : error ? (
           <div className="m-[16px] p-[12px] bg-red-900/20 border border-red-800 rounded-[4px]">
-            <p className="text-[10px] text-red-400 font-['JetBrains_Mono',sans-serif]">{error}</p>
+            <p className="text-[10px] text-red-400 font-mono">{error}</p>
           </div>
         ) : repos.length === 0 ? (
           <div className="flex items-center justify-center py-[48px]">
-            <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">No repositories found</p>
+            <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">No repositories found</p>
           </div>
         ) : (
           repos.map((repo) => {
@@ -140,19 +140,19 @@ export function ArtifactRegistry({ projectID, region }: Props) {
             const repoLoading = packagesLoading[repo.name] ?? false;
 
             return (
-              <div key={repo.name} className="border-b border-[#2a2a2a]">
+              <div key={repo.name} className="border-b border-border">
                 <button
                   onClick={() => toggleRepo(repo.name)}
                   className="w-full flex items-center gap-[10px] px-[16px] py-[10px] hover:bg-[rgba(255,255,255,0.03)] transition-colors text-left"
                 >
                   <Icon icon={icon} className="text-base text-[rgba(255,255,255,0.4)] shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-white truncate">{repoShort}</p>
+                    <p className="text-[10px] font-mono text-white truncate">{repoShort}</p>
                     {repo.description && (
                       <p className="text-[9px] text-[rgba(255,255,255,0.3)] truncate">{repo.description}</p>
                     )}
                   </div>
-                  <span className="text-[8px] uppercase px-[5px] py-[1px] bg-[rgba(255,255,255,0.06)] rounded-[2px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] shrink-0">
+                  <span className="text-[8px] uppercase px-[5px] py-[1px] bg-[rgba(255,255,255,0.06)] rounded-[2px] text-[rgba(255,255,255,0.4)] font-mono shrink-0">
                     {formatLabel}
                   </span>
                   <Icon
@@ -162,11 +162,11 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                 </button>
 
                 {isExpanded && (
-                  <div className="bg-[#1e1e1e] border-t border-[#2a2a2a]">
+                  <div className="bg-background border-t border-border">
                     {repoLoading ? (
                       <div className="flex items-center justify-center py-[24px]"><Loader size={20} /></div>
                     ) : repoPackages.length === 0 ? (
-                      <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] px-[24px] py-[12px]">
+                      <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono px-[24px] py-[12px]">
                         No packages
                       </p>
                     ) : (
@@ -177,16 +177,16 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                         const pkgLoading = versionsLoading[pkg.name] ?? false;
 
                         return (
-                          <div key={pkg.name} className="border-b border-[#2a2a2a] last:border-0">
+                          <div key={pkg.name} className="border-b border-border last:border-0">
                             <button
                               onClick={() => togglePackage(pkg)}
                               className="w-full flex items-center gap-[10px] px-[24px] py-[8px] hover:bg-[rgba(255,255,255,0.02)] transition-colors text-left"
                             >
                               <Icon icon="solar:box-minimalistic-linear" className="text-sm text-[rgba(255,255,255,0.3)] shrink-0" />
-                              <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.7)] flex-1 truncate">
+                              <span className="text-[10px] font-mono text-[rgba(255,255,255,0.7)] flex-1 truncate">
                                 {pkgDisplay}
                               </span>
-                              <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] shrink-0">
+                              <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono shrink-0">
                                 {formatDate(pkg.updateTime)}
                               </span>
                               <Icon
@@ -196,24 +196,24 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                             </button>
 
                             {isPkgExpanded && (
-                              <div className="bg-[#161616] border-t border-[#2a2a2a]">
+                              <div className="bg-background border-t border-border">
                                 {pkgLoading ? (
                                   <div className="flex items-center justify-center py-[16px]"><Loader size={16} /></div>
                                 ) : pkgVersions.length === 0 ? (
-                                  <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] px-[32px] py-[8px]">
+                                  <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono px-[32px] py-[8px]">
                                     No versions
                                   </p>
                                 ) : (
                                   pkgVersions.map((v) => (
                                     <div
                                       key={v.name}
-                                      className="flex items-center gap-[10px] px-[32px] py-[6px] border-b border-[#1e1e1e] last:border-0"
+                                      className="flex items-center gap-[10px] px-[32px] py-[6px] border-b border-border last:border-0"
                                     >
                                       <Icon icon="solar:tag-linear" className="text-xs text-[rgba(255,255,255,0.2)] shrink-0" />
-                                      <span className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.6)] flex-1 truncate">
+                                      <span className="text-[9px] font-mono text-[rgba(255,255,255,0.6)] flex-1 truncate">
                                         {shortName(v.name)}
                                       </span>
-                                      <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] shrink-0">
+                                      <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono shrink-0">
                                         {formatDate(v.createTime)}
                                       </span>
                                     </div>

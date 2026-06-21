@@ -120,10 +120,10 @@ export function BuildKitPluginsPage() {
               <button
                 key={c.id}
                 onClick={() => setActiveClient(c.id)}
-                className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-['JetBrains_Mono',sans-serif] font-bold transition-all ${
+                className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                   activeClient === c.id
-                    ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-[#f881a9]'
-                    : 'bg-[#2c2c2c] border-[#464646] text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
+                    ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
+                    : 'bg-card border-border text-[rgba(255,255,255,0.6)] hover:border-[rgba(255,255,255,0.3)]'
                 }`}
               >
                 <Icon icon={c.icon} className="text-[13px]" />
@@ -135,7 +135,7 @@ export function BuildKitPluginsPage() {
           {/* Selected client card */}
           <StageCard
             title={selected.label}
-            icon={<Icon icon={selected.icon} className="text-[#f881a9]" />}
+            icon={<Icon icon={selected.icon} className="text-brand" />}
             action={
               selected.actionUrl ? (
                 <Button variant="secondary" onClick={() => Browser.OpenURL(selected.actionUrl!)}>
@@ -148,7 +148,7 @@ export function BuildKitPluginsPage() {
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
               {selected.description}
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[6px]">
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[6px]">
               {selected.installLabel}
             </p>
             <CodeBlock code={selected.installCode} language={selected.installLang} />
@@ -156,10 +156,10 @@ export function BuildKitPluginsPage() {
 
           {/* MCP connection note */}
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
-            <Icon icon="solar:info-circle-linear" className="text-[#f881a9] text-[15px] shrink-0 mt-[1px]" />
+            <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
               All plugins connect to the hosted{' '}
-              <span className="text-white font-['JetBrains_Mono',sans-serif]">https://mcp.alis.build</span> MCP server.
+              <span className="text-white font-mono">https://mcp.alis.build</span> MCP server.
               See the <strong>Alis Build MCP Server</strong> shortcut on the Build Kit home page for full connection details.
             </p>
           </div>

@@ -17,22 +17,22 @@ function DeployBadge({ state }: { state: number }) {
     case 1:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(52,199,89,0.12)] border border-[rgba(52,199,89,0.25)]">
-          <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">Running</span>
+          <Icon icon="solar:check-circle-linear" className="text-success text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-success">Running</span>
         </div>
       );
     case 2:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(10,132,255,0.12)] border border-[rgba(10,132,255,0.25)]">
-          <Icon icon="solar:cloud-upload-linear" className="text-[#0A84FF] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#0A84FF]">Deploying</span>
+          <Icon icon="solar:cloud-upload-linear" className="text-info text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-info">Deploying</span>
         </div>
       );
     case 3:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#FF5C5F]">Deploy failed</span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Deploy failed</span>
         </div>
       );
     case 4:
@@ -41,36 +41,36 @@ function DeployBadge({ state }: { state: number }) {
     case 9:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,214,10,0.12)] border border-[rgba(255,214,10,0.25)]">
-          <Icon icon="solar:refresh-linear" className="text-[#FFD60A] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#FFD60A]">Planning</span>
+          <Icon icon="solar:refresh-linear" className="text-warning text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-warning">Planning</span>
         </div>
       );
     case 6:
     case 8:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#FF5C5F]">Plan failed</span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Plan failed</span>
         </div>
       );
     case 10:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,159,10,0.12)] border border-[rgba(255,159,10,0.25)]">
-          <Icon icon="solar:trash-bin-2-linear" className="text-[#FF9F0A] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#FF9F0A]">Destroying</span>
+          <Icon icon="solar:trash-bin-2-linear" className="text-warning text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-warning">Destroying</span>
         </div>
       );
     case 11:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-[11px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#FF5C5F]">Destroy failed</span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Destroy failed</span>
         </div>
       );
     case 12:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)]">
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)]">Destroyed</span>
+          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">Destroyed</span>
         </div>
       );
     default:
@@ -92,11 +92,11 @@ function EnvCell({ neuronVersion, dep }: { neuronVersion: string; dep?: Deployme
   return (
     <div className="flex flex-col items-start gap-[5px]">
       <div className="flex items-center gap-[5px]">
-        <span className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.7)]">
+        <span className="text-[11px] font-mono text-[rgba(255,255,255,0.7)]">
           v{dep.version}
         </span>
         {isBehind && (
-          <span className="size-[6px] rounded-full bg-[#FF9F0A] shrink-0" title="Behind latest" />
+          <span className="size-[6px] rounded-full bg-warning shrink-0" title="Behind latest" />
         )}
       </div>
       <DeployBadge state={dep.state} />
@@ -137,23 +137,23 @@ export function ServicesPage() {
   }, [overview, filter]);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between shrink-0">
-        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+      <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between shrink-0">
+        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           Services
         </p>
         {overview && (
-          <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
+          <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">
             {overview.neurons.length} services · {overview.environments.length} environments
           </p>
         )}
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
+      <div className="border-b border-border px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
         <div className="flex items-center h-[34px]">
-          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
             <p className="text-[12px] text-white">/</p>
           </div>
           <Input
@@ -176,7 +176,7 @@ export function ServicesPage() {
         <div className="ml-auto">
           <button
             onClick={() => setNewServiceOpen(true)}
-            className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-[#F881A9] hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-['JetBrains_Mono',sans-serif] uppercase"
+            className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-brand hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-mono uppercase"
           >
             <Icon icon="solar:add-circle-linear" className="text-base" />
             New Service
@@ -202,7 +202,7 @@ export function ServicesPage() {
           <div className="flex items-center justify-center h-full">
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
-                <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
                 <p className="text-[12px] font-bold text-white">Failed to load</p>
               </div>
               <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
@@ -212,23 +212,23 @@ export function ServicesPage() {
 
         {!loading && !error && overview && (
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10 bg-[#1e1e1e]">
-              <tr className="border-b border-[#464646]">
+            <thead className="sticky top-0 z-10 bg-background">
+              <tr className="border-b border-border">
                 <th className="text-left px-[20px] py-[8px] w-[220px]">
-                  <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">
+                  <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">
                     Service
                   </span>
                 </th>
                 <th className="text-left px-[16px] py-[8px] w-[120px]">
-                  <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">
+                  <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">
                     Latest
                   </span>
                 </th>
                 {overview.environments.map(env => {
                   const isActive = env.name === state.activeEnvName;
                   return (
-                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-[#F881A9]' : ''}`}>
-                      <span className={`text-[10px] font-bold font-['JetBrains_Mono',sans-serif] uppercase ${isActive ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.4)]'}`}>
+                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-brand' : ''}`}>
+                      <span className={`text-[10px] font-bold font-mono uppercase ${isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.4)]'}`}>
                         {env.displayName}
                       </span>
                     </th>
@@ -240,15 +240,15 @@ export function ServicesPage() {
               {filtered.map(neuron => (
                 <tr
                   key={neuron.id}
-                  className="border-b border-[#2e2e2e] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+                  className="border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors"
                 >
                   <td className="px-[20px] py-[12px]">
-                    <span className="text-[12px] font-bold font-['JetBrains_Mono',sans-serif] text-white">
+                    <span className="text-[12px] font-bold font-mono text-white">
                       {neuron.id}
                     </span>
                   </td>
                   <td className="px-[16px] py-[12px]">
-                    <span className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)]">
+                    <span className="text-[11px] font-mono text-[rgba(255,255,255,0.5)]">
                       v{neuron.version}
                     </span>
                   </td>

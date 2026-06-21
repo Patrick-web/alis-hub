@@ -67,17 +67,17 @@ export function BuildKitGlassModePage() {
       <div className="px-[24px] py-[20px] max-w-[900px] mx-auto w-full">
         <div className="flex flex-col gap-[16px]">
           {/* Hero */}
-          <div className="p-[20px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
+          <div className="p-[20px] bg-card border border-border rounded-[4px]">
             <div className="flex items-center gap-[8px] mb-[8px]">
               <Icon
                 icon="solar:eye-linear"
-                className="text-[#f881a9] text-[16px]"
+                className="text-brand text-[16px]"
               />
-              <span className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif]">
+              <span className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono">
                 Glass Mode
               </span>
             </div>
-            <h2 className="text-[15px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[8px]">
+            <h2 className="text-[15px] font-bold text-white font-mono mb-[8px]">
               Understand what Alis Build just did
             </h2>
             <p className="text-[12px] text-[rgba(255,255,255,0.65)] leading-[1.6]">
@@ -92,7 +92,7 @@ export function BuildKitGlassModePage() {
           <StageCard
             title="Where to find it"
             icon={
-              <Icon icon="solar:eye-scan-linear" className="text-[#f881a9]" />
+              <Icon icon="solar:eye-scan-linear" className="text-brand" />
             }
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.5]">
@@ -105,9 +105,9 @@ export function BuildKitGlassModePage() {
               <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.4)] rounded-[4px]">
                 <Icon
                   icon="solar:eye-linear"
-                  className="text-[#f881a9] text-[13px]"
+                  className="text-brand text-[13px]"
                 />
-                <span className="text-[11px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">
+                <span className="text-[11px] font-bold text-brand font-mono">
                   Glass Mode
                 </span>
               </div>
@@ -123,23 +123,23 @@ export function BuildKitGlassModePage() {
 
           {/* Examples */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[10px]">
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
               Where Glass Mode appears
             </p>
             <div className="flex flex-col gap-[8px]">
               {examples.map((ex) => (
                 <div
                   key={ex.title}
-                  className="flex items-start gap-[12px] px-[14px] py-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]"
+                  className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]"
                 >
                   <div className="size-[28px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0 mt-[1px]">
                     <Icon
                       icon={ex.icon}
-                      className="text-[#f881a9] text-[14px]"
+                      className="text-brand text-[14px]"
                     />
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-[11px] font-bold text-white font-mono">
                       {ex.title}
                     </p>
                     <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5] mt-[2px]">
@@ -153,20 +153,20 @@ export function BuildKitGlassModePage() {
 
           {/* Principles */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[10px]">
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
               Design principles
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
               {principles.map((p) => (
                 <div
                   key={p.title}
-                  className="p-[14px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]"
+                  className="p-[14px] bg-card border border-border rounded-[4px]"
                 >
                   <Icon
                     icon={p.icon}
-                    className="text-[#f881a9] text-[18px] mb-[8px]"
+                    className="text-brand text-[18px] mb-[8px]"
                   />
-                  <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[4px]">
+                  <p className="text-[11px] font-bold text-white font-mono mb-[4px]">
                     {p.title}
                   </p>
                   <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">

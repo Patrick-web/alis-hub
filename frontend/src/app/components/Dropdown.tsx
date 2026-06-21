@@ -17,27 +17,27 @@ export function Dropdown({ label, options = [], onSelect, onSettingsClick, loadi
     <div className="content-stretch flex h-full items-center relative shrink-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-[#464646]"
+        className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-border"
       >
-        <p className="font-['JetBrains_Mono',sans-serif] leading-[normal] not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
+        <p className="font-mono leading-[normal] not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
           {label}
         </p>
         <Icon icon="solar:alt-arrow-down-linear" className="text-white text-xs opacity-50" />
       </button>
 
       {/* Settings icon as a separate block */}
-      <button onClick={onSettingsClick} className="h-full border-l border-[#464646] flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors">
+      <button onClick={onSettingsClick} className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors">
         <Icon icon="solar:settings-linear" className="text-white text-base opacity-70" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-0 bg-[#2c2c2c] border border-[#464646] z-50 min-w-[150px] shadow-xl">
+        <div className="absolute top-full right-0 mt-0 bg-card border border-border z-50 min-w-[150px] shadow-xl">
           {loading ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">Loading…</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">Loading…</div>
           ) : error ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-[#ff5c5f] font-['JetBrains_Mono',sans-serif] max-w-[260px] leading-[1.5]">Session expired — sign in again via your profile.</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-destructive font-mono max-w-[260px] leading-[1.5]">Session expired — sign in again via your profile.</div>
           ) : options.length === 0 ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">No environments</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">No environments</div>
           ) : (
             options.map((option, index) => (
               <button
@@ -46,7 +46,7 @@ export function Dropdown({ label, options = [], onSelect, onSettingsClick, loadi
                   setIsOpen(false);
                   onSelect?.(option);
                 }}
-                className="w-full px-[12px] py-[10px] text-left text-white hover:bg-[#f881a9] hover:text-[#6f0025] transition-colors font-['JetBrains_Mono',sans-serif] text-[11px] uppercase border-b border-[#464646] last:border-b-0"
+                className="w-full px-[12px] py-[10px] text-left text-white hover:bg-brand hover:text-brand-foreground transition-colors font-mono text-[11px] uppercase border-b border-border last:border-b-0"
               >
                 {option}
               </button>

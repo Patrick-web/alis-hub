@@ -72,7 +72,7 @@ export function BuildKitGeminiEnterprisePage() {
               step={stage.step}
               title={stage.title}
               subtitle={stage.subtitle}
-              icon={<Icon icon={stage.icon} className="text-[#f881a9]" />}
+              icon={<Icon icon={stage.icon} className="text-brand" />}
               action={
                 <Button variant="secondary" onClick={() => Browser.OpenURL(stage.actionUrl)}>
                   <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />

@@ -7,6 +7,7 @@ import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import { NotificationCenter } from './NotificationCenter';
+import { ThemeToggle } from './ThemeToggle';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 function WindowControls() {
@@ -14,17 +15,17 @@ function WindowControls() {
     <div className="flex items-center gap-[6px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <button
         onClick={() => Window.Close()}
-        className="w-[12px] h-[12px] rounded-full bg-[#FF5C5F] hover:bg-[#ff3b3e] transition-colors shrink-0 focus:outline-none"
+        className="w-[12px] h-[12px] rounded-full bg-destructive hover:bg-destructive transition-colors shrink-0 focus:outline-none"
         title="Close"
       />
       <button
         onClick={() => Window.Minimise()}
-        className="w-[12px] h-[12px] rounded-full bg-[#FAC800] hover:bg-[#e0b300] transition-colors shrink-0 focus:outline-none"
+        className="w-[12px] h-[12px] rounded-full bg-warning hover:bg-warning transition-colors shrink-0 focus:outline-none"
         title="Minimise"
       />
       <button
         onClick={() => Window.ToggleMaximise()}
-        className="w-[12px] h-[12px] rounded-full bg-[#34C759] hover:bg-[#2eaf4f] transition-colors shrink-0 focus:outline-none"
+        className="w-[12px] h-[12px] rounded-full bg-success hover:bg-success transition-colors shrink-0 focus:outline-none"
         title="Maximise"
       />
     </div>
@@ -125,7 +126,7 @@ export function TopNav() {
 
   return (
     <div
-      className="bg-[#2c2c2c] border-b border-[#464646] h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
+      className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       {/* Left: Window controls and breadcrumb */}
@@ -134,7 +135,7 @@ export function TopNav() {
           <WindowControls />
         </div>
 
-        <div className="flex items-center gap-[6px] ml-[5px] border-l border-r border-[#464646] h-full px-[10px]">
+        <div className="flex items-center gap-[6px] ml-[5px] border-l border-r border-border h-full px-[10px]">
           <button
             onClick={handleHomeClick}
             className="opacity-70 hover:opacity-100 transition-opacity"
@@ -148,7 +149,7 @@ export function TopNav() {
               <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[11px] opacity-40" />
               <button
                 onClick={handleOrgClick}
-                className="text-[12px] text-white font-['JetBrains_Mono',sans-serif] opacity-70 hover:opacity-100 transition-opacity"
+                className="text-[12px] text-white font-mono opacity-70 hover:opacity-100 transition-opacity"
                 title="Change product"
               >
                 {state.organisation}
@@ -159,7 +160,7 @@ export function TopNav() {
           {state.product && (
             <>
               <Icon icon="solar:alt-arrow-right-linear" className="text-white text-[11px] opacity-40" />
-              <span className="text-[12px] text-white font-['JetBrains_Mono',sans-serif] opacity-70 font-bold">
+              <span className="text-[12px] text-white font-mono opacity-70 font-bold">
                 {state.product}
               </span>
             </>
@@ -169,7 +170,7 @@ export function TopNav() {
 
       {/* Center: Tabs */}
       <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <div className="flex h-full border-r border-[#464646]">
+        <div className="flex h-full border-r border-border">
           {tabs.map((tab) => (
             <Tab
               key={tab.id}
@@ -188,21 +189,22 @@ export function TopNav() {
         <div className="content-stretch flex h-full items-center shrink-0">
           <button
             onClick={() => setEnvModalOpen(true)}
-            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-[#464646]"
+            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-[rgba(255,255,255,0.05)] transition-colors border-l border-border"
           >
-            <p className="font-['JetBrains_Mono',sans-serif] leading-normal not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
+            <p className="font-mono leading-normal not-italic relative shrink-0 text-[11px] text-white whitespace-nowrap">
               {activeEnvDisplay}
             </p>
             <Icon icon="solar:alt-arrow-down-linear" className="text-white text-xs opacity-50" />
           </button>
           <button
             onClick={() => navigate('/environments')}
-            className="h-full border-l border-[#464646] flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+            className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
           >
             <Icon icon="solar:settings-linear" className="text-white text-base opacity-70" />
           </button>
         </div>
 
+        <ThemeToggle />
         <NotificationCenter />
         <button
           onClick={openProfile}
@@ -218,7 +220,7 @@ export function TopNav() {
             />
           ) : avatarName ? (
             <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.4)] flex items-center justify-center">
-              <span className="text-[9px] font-bold text-[#F881A9] font-['JetBrains_Mono',sans-serif]">
+              <span className="text-[9px] font-bold text-brand font-mono">
                 {avatarName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
               </span>
             </div>
@@ -232,18 +234,18 @@ export function TopNav() {
 
       {/* Environment picker modal */}
       <Dialog open={envModalOpen} onOpenChange={setEnvModalOpen}>
-        <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 max-w-[360px] overflow-hidden">
-          <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-[#464646]">
-            <Icon icon="solar:server-linear" className="text-[#f881a9] text-lg" />
-            <span className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">Environment</span>
+        <DialogContent className="bg-card border border-border text-white p-0 max-w-[360px] overflow-hidden">
+          <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
+            <Icon icon="solar:server-linear" className="text-brand text-lg" />
+            <span className="text-[13px] font-bold text-white font-mono">Environment</span>
           </div>
           <div className="py-[6px]">
             {envsLoading ? (
-              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">Loading…</p>
+              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">Loading…</p>
             ) : state.envsError ? (
-              <p className="px-[16px] py-[12px] text-[11px] text-[#ff5c5f] font-['JetBrains_Mono',sans-serif]">Session expired — sign in again via your profile.</p>
+              <p className="px-[16px] py-[12px] text-[11px] text-destructive font-mono">Session expired — sign in again via your profile.</p>
             ) : state.loadedEnvs.length === 0 ? (
-              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">No environments</p>
+              <p className="px-[16px] py-[12px] text-[11px] text-[rgba(255,255,255,0.4)] font-mono">No environments</p>
             ) : (
               state.loadedEnvs.map((env) => {
                 const isActive = env.name === state.activeEnvName;
@@ -260,21 +262,21 @@ export function TopNav() {
                     }}
                     className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
                       isActive
-                        ? 'bg-[rgba(248,129,169,0.08)] text-[#f881a9]'
+                        ? 'bg-[rgba(248,129,169,0.08)] text-brand'
                         : 'text-white hover:bg-[rgba(255,255,255,0.04)]'
                     }`}
                   >
-                    <span className="text-[12px] font-['JetBrains_Mono',sans-serif]">{env.displayName}</span>
-                    {isActive && <Icon icon="solar:check-circle-bold" className="text-[#f881a9] text-base shrink-0" />}
+                    <span className="text-[12px] font-mono">{env.displayName}</span>
+                    {isActive && <Icon icon="solar:check-circle-bold" className="text-brand text-base shrink-0" />}
                   </button>
                 );
               })
             )}
           </div>
-          <div className="border-t border-[#464646] px-[16px] py-[10px]">
+          <div className="border-t border-border px-[16px] py-[10px]">
             <button
               onClick={() => { setEnvModalOpen(false); navigate('/environments'); }}
-              className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif]"
+              className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono"
             >
               <Icon icon="solar:settings-linear" className="text-sm" />
               Manage environments

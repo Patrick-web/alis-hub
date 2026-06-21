@@ -21,9 +21,9 @@ export function ModuleSidebar({
   onSelectStep,
 }: ModuleSidebarProps) {
   return (
-    <div className="bg-[#2c2c2c] w-[260px] shrink-0 h-full flex flex-col overflow-hidden border-r border-[#464646]">
-      <div className="px-[20px] py-[10px] border-b border-[#464646] shrink-0">
-        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-50">
+    <div className="bg-card w-[260px] shrink-0 h-full flex flex-col overflow-hidden border-r border-border">
+      <div className="px-[20px] py-[10px] border-b border-border shrink-0">
+        <p className="font-mono font-bold text-[11px] text-white uppercase opacity-50">
           Learning Path
         </p>
       </div>
@@ -47,18 +47,18 @@ export function ModuleSidebar({
               >
                 <div
                   className={`absolute inset-0 pointer-events-none border-t ${
-                    isActive ? 'border-[#f881a9]' : 'border-[#464646]'
+                    isActive ? 'border-brand' : 'border-border'
                   }`}
                   aria-hidden="true"
                 />
                 <div className="flex items-center gap-[10px] px-[16px] py-[10px]">
                   <div className="shrink-0 flex items-center justify-center size-[20px]">
                     {isDone ? (
-                      <Icon icon="solar:check-circle-bold" className="text-[#34C759] text-lg" />
+                      <Icon icon="solar:check-circle-bold" className="text-success text-lg" />
                     ) : (
                       <span
-                        className={`text-[11px] font-bold font-['JetBrains_Mono',sans-serif] ${
-                          isActive ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.35)]'
+                        className={`text-[11px] font-bold font-mono ${
+                          isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.35)]'
                         }`}
                       >
                         {mIdx + 1}
@@ -67,8 +67,8 @@ export function ModuleSidebar({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p
-                      className={`text-[12px] font-bold font-['JetBrains_Mono',sans-serif] leading-[1.2] truncate ${
-                        isActive ? 'text-[#f881a9]' : isDone ? 'text-[rgba(255,255,255,0.6)]' : 'text-white'
+                      className={`text-[12px] font-bold font-mono leading-[1.2] truncate ${
+                        isActive ? 'text-brand' : isDone ? 'text-[rgba(255,255,255,0.6)]' : 'text-white'
                       }`}
                     >
                       {module.title}
@@ -79,7 +79,7 @@ export function ModuleSidebar({
                   </div>
                   <Icon
                     icon={isActive ? 'solar:alt-arrow-down-linear' : 'solar:alt-arrow-right-linear'}
-                    className={`text-[12px] shrink-0 ${isActive ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.25)]'}`}
+                    className={`text-[12px] shrink-0 ${isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.25)]'}`}
                   />
                 </div>
               </button>
@@ -102,19 +102,19 @@ export function ModuleSidebar({
                       >
                         <div className="pl-[20px] shrink-0 flex items-center justify-center size-[16px]">
                           {done ? (
-                            <Icon icon="solar:check-circle-bold" className="text-[#34C759] text-[14px]" />
+                            <Icon icon="solar:check-circle-bold" className="text-success text-[14px]" />
                           ) : (
                             <div
                               className={`size-[6px] rounded-full ${
-                                isStepActive ? 'bg-[#f881a9]' : 'bg-[rgba(255,255,255,0.2)]'
+                                isStepActive ? 'bg-brand' : 'bg-[rgba(255,255,255,0.2)]'
                               }`}
                             />
                           )}
                         </div>
                         <p
-                          className={`text-[11px] font-['JetBrains_Mono',sans-serif] leading-[1.3] ${
+                          className={`text-[11px] font-mono leading-[1.3] ${
                             isStepActive
-                              ? 'text-[#f881a9]'
+                              ? 'text-brand'
                               : done
                               ? 'text-[rgba(255,255,255,0.4)]'
                               : 'text-[rgba(255,255,255,0.65)]'
@@ -133,7 +133,7 @@ export function ModuleSidebar({
       </div>
 
       {/* Progress bar */}
-      <div className="px-[16px] py-[12px] border-t border-[#464646] shrink-0">
+      <div className="px-[16px] py-[12px] border-t border-border shrink-0">
         {(() => {
           const total = modules.reduce((s, m) => s + m.steps.length, 0);
           const done = modules.reduce(
@@ -144,16 +144,16 @@ export function ModuleSidebar({
           return (
             <>
               <div className="flex items-center justify-between mb-[6px]">
-                <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif]">
+                <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
                   Overall progress
                 </p>
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">
+                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.5)] font-mono">
                   {pct}%
                 </p>
               </div>
-              <div className="h-[3px] bg-[#464646] rounded-full overflow-hidden">
+              <div className="h-[3px] bg-border rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#f881a9] rounded-full transition-all duration-300"
+                  className="h-full bg-brand rounded-full transition-all duration-300"
                   style={{ width: `${pct}%` }}
                 />
               </div>

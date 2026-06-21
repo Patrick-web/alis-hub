@@ -46,7 +46,7 @@ export function GitBranchBar({
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto rounded-md bg-[#1e1e1e] border border-white/10 shadow-xl py-1 text-xs"
+            className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto rounded-md bg-background border border-white/10 shadow-xl py-1 text-xs"
             sideOffset={4}
           >
             {localBranches.length > 0 && (

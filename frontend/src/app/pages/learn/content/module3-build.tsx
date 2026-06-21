@@ -44,7 +44,7 @@ export const module3: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            <code className="text-[#f881a9] text-[11px]">alis build</code> is the command that turns your
+            <code className="text-brand text-[11px]">alis build</code> is the command that turns your
             Go (or other language) implementation into a runnable Docker container image stored in
             Google Artifact Registry. You never need to run Docker locally — the build happens entirely in the cloud.
           </p>
@@ -59,8 +59,8 @@ export const module3: LearningModule = {
               'The tagged image is pushed to Artifact Registry',
               'alis records the new image digest so deploy knows exactly what to run',
             ].map((step, i) => (
-              <div key={i} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <span className="text-[10px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif] shrink-0 w-[16px] text-right">{i + 1}</span>
+              <div key={i} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
+                <span className="text-[10px] font-bold text-brand font-mono shrink-0 w-[16px] text-right">{i + 1}</span>
                 <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.4]">{step}</p>
               </div>
             ))}
@@ -79,13 +79,13 @@ export const module3: LearningModule = {
             its root. For Go services, alis scaffolds a standard multi-stage build: a builder image that compiles
             the binary, and a minimal Alpine image that ships it. This keeps the final image small (typically under 20 MB).
           </p>
-          <div className="px-[12px] py-[10px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-            <div className="px-[0] pb-[8px] mb-[8px] border-b border-[#464646]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+          <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
+            <div className="px-[0] pb-[8px] mb-[8px] border-b border-border">
+              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
                 Dockerfile
               </p>
             </div>
-            <pre className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
               {dockerfileExample}
             </pre>
           </div>
@@ -107,13 +107,13 @@ export const module3: LearningModule = {
             <code className="text-[rgba(255,255,255,0.6)] text-[11px]">cloudbuild.yaml</code> that defines
             each build step.
           </p>
-          <div className="px-[12px] py-[10px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-            <div className="pb-[8px] mb-[8px] border-b border-[#464646]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+          <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
+            <div className="pb-[8px] mb-[8px] border-b border-border">
+              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
                 cloudbuild.yaml (generated)
               </p>
             </div>
-            <pre className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
               {cloudbuildYamlExample}
             </pre>
           </div>
@@ -124,7 +124,7 @@ export const module3: LearningModule = {
           </p>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
-              <span className="text-[#f881a9] font-bold">In the hub: </span>
+              <span className="text-brand font-bold">In the hub: </span>
               the Builds tab shows live Cloud Build logs so you can watch the build progress in real time
               without leaving the app.
             </p>

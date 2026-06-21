@@ -104,12 +104,12 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-[#2c2c2c] border-l border-[#464646] text-white w-[380px] sm:max-w-[380px] flex flex-col p-0"
+        className="bg-card border-l border-border text-white w-[380px] sm:max-w-[380px] flex flex-col p-0"
       >
-        <SheetHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+        <SheetHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
-            <Icon icon="solar:server-square-cloud-linear" className="text-[#F881A9] text-xl" />
-            <SheetTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+            <Icon icon="solar:server-square-cloud-linear" className="text-brand text-xl" />
+            <SheetTitle className="text-white font-mono text-[13px] font-bold">
               {mode === 'create' ? 'New Environment' : 'Edit Environment'}
             </SheetTitle>
           </div>
@@ -118,7 +118,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
         <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1 overflow-y-auto">
           {/* Display Name */}
           <div className="flex flex-col gap-[6px]">
-            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Display Name
             </p>
             <Input
@@ -134,7 +134,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
             <>
               {/* Type */}
               <div className="flex flex-col gap-[6px]">
-                <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
                   Type
                 </p>
                 <div className="flex flex-col gap-[4px]">
@@ -145,15 +145,15 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       disabled={loading}
                       className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
                         envType === t.value
-                          ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)]'
-                          : 'border-[#464646] hover:bg-[rgba(255,255,255,0.04)]'
+                          ? 'border-brand bg-[rgba(248,129,169,0.08)]'
+                          : 'border-border hover:bg-[rgba(255,255,255,0.04)]'
                       }`}
                     >
                       <Icon
                         icon={t.icon}
-                        className={`text-xl ${envType === t.value ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.5)]'}`}
+                        className={`text-xl ${envType === t.value ? 'text-brand' : 'text-[rgba(255,255,255,0.5)]'}`}
                       />
-                      <span className={`font-['JetBrains_Mono',sans-serif] text-[12px] ${envType === t.value ? 'text-[#F881A9]' : 'text-white'}`}>
+                      <span className={`font-mono text-[12px] ${envType === t.value ? 'text-brand' : 'text-white'}`}>
                         {t.label}
                       </span>
                     </button>
@@ -163,7 +163,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
 
               {/* Region */}
               <div className="flex flex-col gap-[6px]">
-                <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+                <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
                   Region
                 </p>
                 <Input
@@ -171,9 +171,9 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                   value={regionFilter}
                   onChange={(e) => setRegionFilter(e.target.value)}
                   disabled={loading}
-                  className="font-['JetBrains_Mono',sans-serif] text-[12px]"
+                  className="font-mono text-[12px]"
                 />
-                <div className="flex flex-col gap-[2px] max-h-[180px] overflow-y-auto border border-[#464646] rounded-[4px]">
+                <div className="flex flex-col gap-[2px] max-h-[180px] overflow-y-auto border border-border rounded-[4px]">
                   {filteredRegions.map((r) => (
                     <button
                       key={r}
@@ -181,12 +181,12 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       disabled={loading}
                       className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
                         region === r
-                          ? 'bg-[rgba(248,129,169,0.12)] text-[#F881A9]'
+                          ? 'bg-[rgba(248,129,169,0.12)] text-brand'
                           : 'text-[rgba(255,255,255,0.7)] hover:bg-[rgba(255,255,255,0.04)]'
                       }`}
                     >
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[11px]">{r}</span>
-                      {region === r && <Icon icon="solar:check-circle-linear" className="text-[#F881A9] text-[14px] shrink-0" />}
+                      <span className="font-mono text-[11px]">{r}</span>
+                      {region === r && <Icon icon="solar:check-circle-linear" className="text-brand text-[14px] shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -195,13 +195,13 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
           )}
 
           {error && (
-            <p className="text-[11px] text-[#ff5050] font-['JetBrains_Mono',sans-serif] break-all">
+            <p className="text-[11px] text-destructive font-mono break-all">
               {error}
             </p>
           )}
         </div>
 
-        <SheetFooter className="px-[20px] py-[14px] border-t border-[#464646] flex-row gap-[8px]">
+        <SheetFooter className="px-[20px] py-[14px] border-t border-border flex-row gap-[8px]">
           <Button
             variant="secondary"
             className="flex-1 h-[34px] text-[11px] font-bold uppercase"

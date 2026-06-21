@@ -14,8 +14,8 @@ export function PageLayout({ title, subtitle, children, actions, parentRoute }: 
   const navigate = useNavigate();
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
-      <div className="border-b border-[#464646] px-[20px] py-[10px] flex items-center justify-between shrink-0 h-[51px]">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
+      <div className="border-b border-border px-[20px] py-[10px] flex items-center justify-between shrink-0 h-[51px]">
         <div className="flex items-center gap-[12px]">
           <button
             onClick={() => (parentRoute ? navigate(parentRoute) : navigate(-1))}
@@ -24,7 +24,7 @@ export function PageLayout({ title, subtitle, children, actions, parentRoute }: 
             <Icon icon="solar:alt-arrow-left-linear" className="text-xl" />
           </button>
           <div className="flex flex-col">
-            <h1 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase leading-[1.2]">
+            <h1 className="font-mono font-bold text-[13px] text-white uppercase leading-[1.2]">
               {title}
             </h1>
             {subtitle && (

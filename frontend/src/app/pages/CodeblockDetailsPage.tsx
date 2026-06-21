@@ -355,13 +355,13 @@ export function CodeblockDetailsPage() {
   const isOwner = Boolean(myAccountID && block?.publisher === myAccountID);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-row bg-background">
       {/* Sidebar */}
-      <div className="w-[280px] shrink-0 flex flex-col border-r border-[#464646]">
+      <div className="w-[280px] shrink-0 flex flex-col border-r border-border">
         {/* Back */}
         <button
           onClick={() => navigate("/codeblocks")}
-          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-[#464646] transition-colors"
+          className="flex items-center gap-[8px] px-[16px] py-[12px] text-[11px] text-white/50 hover:text-white/80 border-b border-border transition-colors"
         >
           <Icon icon="solar:arrow-left-linear" />
           All Blocks
@@ -376,7 +376,7 @@ export function CodeblockDetailsPage() {
             <>
               {/* Title + badge */}
               <div>
-                <h1 className="font-['JetBrains_Mono',sans-serif] font-bold text-[15px] text-white uppercase leading-[1.3] mb-[8px]">
+                <h1 className="font-mono font-bold text-[15px] text-white uppercase leading-[1.3] mb-[8px]">
                   {block.displayName}
                 </h1>
                 {block.releaseLevel > 0 && (
@@ -393,22 +393,22 @@ export function CodeblockDetailsPage() {
               </p>
 
               {/* Meta */}
-              <div className="bg-white/3 border border-[#464646] rounded-[4px] overflow-hidden text-[11px]">
+              <div className="bg-white/3 border border-border rounded-[4px] overflow-hidden text-[11px]">
                 {block.latestVersion && (
-                  <div className="px-[12px] py-[10px] border-b border-[#464646]">
+                  <div className="px-[12px] py-[10px] border-b border-border">
                     <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
                       Latest Version
                     </p>
-                    <p className="text-white font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-white font-mono">
                       {block.latestVersion}
                     </p>
                   </div>
                 )}
-                <div className="px-[12px] py-[10px] border-b border-[#464646]">
+                <div className="px-[12px] py-[10px] border-b border-border">
                   <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
                     Publisher
                   </p>
-                  <p className="text-white font-['JetBrains_Mono',sans-serif] truncate">
+                  <p className="text-white font-mono truncate">
                     {publisherLabel}
                   </p>
                 </div>
@@ -416,7 +416,7 @@ export function CodeblockDetailsPage() {
                   <p className="text-white/40 uppercase text-[9px] font-bold mb-[2px]">
                     Installs
                   </p>
-                  <p className="text-white font-['JetBrains_Mono',sans-serif]">
+                  <p className="text-white font-mono">
                     {block.installCount ?? 0}
                   </p>
                 </div>
@@ -435,7 +435,7 @@ export function CodeblockDetailsPage() {
                         src={m.photoUrl}
                         alt={m.displayName}
                         title={m.displayName}
-                        className="size-[32px] rounded-full border-2 border-[#1e1e1e] object-cover bg-[#2c2c2c]"
+                        className="size-[32px] rounded-full border-2 border-border object-cover bg-card"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = "none";
                         }}
@@ -449,7 +449,7 @@ export function CodeblockDetailsPage() {
         </div>
 
         {/* CTA */}
-        <div className="p-[10px] border-t border-[#464646] flex flex-col gap-[8px]">
+        <div className="p-[10px] border-t border-border flex flex-col gap-[8px]">
           {isOwner ? (
             <>
               <Button
@@ -506,20 +506,20 @@ export function CodeblockDetailsPage() {
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Tab bar */}
-        <div className="flex items-center border-b border-[#464646] shrink-0">
+        <div className="flex items-center border-b border-border shrink-0">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => go(t)}
               className={`px-[24px] py-[12px] text-[11px] font-bold uppercase tracking-wider transition-all relative ${
                 activeTab === t
-                  ? "text-[#f881a9]"
+                  ? "text-brand"
                   : "text-white/40 hover:text-white/70"
               }`}
             >
               {TAB_LABEL[t]}
               {activeTab === t && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
               )}
             </button>
           ))}
@@ -738,9 +738,7 @@ function InstallBlockWizard({
       blockVersion: selectedVersion,
     };
     (
-      ProductService.DoInstallBlock as (
-        p: typeof params,
-      ) => Promise<{
+      ProductService.DoInstallBlock as (p: typeof params) => Promise<{
         instanceName: string;
         branchName: string;
         repoPath: string;
@@ -922,12 +920,12 @@ function InstallBlockWizard({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
-        className={`bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl transition-all duration-200 ${isConflicts ? "w-[900px] max-h-[90vh]" : "w-[520px] max-h-[80vh]"}`}
+        className={`bg-background border border-border rounded-[8px] flex flex-col shadow-2xl transition-all duration-200 ${isConflicts ? "w-[900px] max-h-[90vh]" : "w-[520px] max-h-[80vh]"}`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#464646] shrink-0">
+        <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border shrink-0">
           <div>
-            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
               Install Block
             </h2>
             <p className="text-[11px] text-white/40 mt-[2px]">
@@ -946,7 +944,7 @@ function InstallBlockWizard({
         </div>
 
         {/* Step indicator */}
-        <div className="flex items-center px-[24px] py-[12px] border-b border-[#464646] shrink-0">
+        <div className="flex items-center px-[24px] py-[12px] border-b border-border shrink-0">
           {(["location", "plan", "configure", "merge"] as InstallStep[]).map(
             (s, i) => {
               const labels: Record<string, string> = {
@@ -974,11 +972,11 @@ function InstallBlockWizard({
                 <div key={s} className="flex items-center gap-[8px]">
                   {i > 0 && (
                     <div
-                      className={`w-[24px] h-[1px] ${done ? "bg-[#f881a9]" : "bg-white/20"}`}
+                      className={`w-[24px] h-[1px] ${done ? "bg-brand" : "bg-white/20"}`}
                     />
                   )}
                   <span
-                    className={`text-[10px] font-bold uppercase ${active ? "text-[#f881a9]" : done ? "text-white/60" : "text-white/25"}`}
+                    className={`text-[10px] font-bold uppercase ${active ? "text-brand" : done ? "text-white/60" : "text-white/25"}`}
                   >
                     {labels[s]}
                   </span>
@@ -1060,7 +1058,7 @@ function InstallBlockWizard({
                   }))}
                 />
                 {selectedNeuron && (
-                  <p className="mt-[6px] text-[10px] font-['JetBrains_Mono',sans-serif] text-white/30">
+                  <p className="mt-[6px] text-[10px] font-mono text-white/30">
                     {selectedNeuron.package}
                   </p>
                 )}
@@ -1086,14 +1084,14 @@ function InstallBlockWizard({
                     onClick={() => setSelectedPlan(plan)}
                     className={`w-full text-left p-[16px] border rounded-[4px] transition-all ${
                       selectedPlan?.name === plan.name
-                        ? "border-[#f881a9] bg-[#f881a9]/5"
-                        : "border-[#464646] bg-white/3 hover:border-white/30"
+                        ? "border-brand bg-brand/5"
+                        : "border-border bg-white/3 hover:border-white/30"
                     }`}
                   >
-                    <p className="font-['JetBrains_Mono',sans-serif] text-[12px] font-bold text-white">
+                    <p className="font-mono text-[12px] font-bold text-white">
                       {plan.displayName || plan.name.split("/").pop()}
                     </p>
-                    <p className="text-[10px] text-white/30 mt-[2px] font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-[10px] text-white/30 mt-[2px] font-mono">
                       {plan.name}
                     </p>
                   </button>
@@ -1116,7 +1114,7 @@ function InstallBlockWizard({
                   type="text"
                   value={buildFolder}
                   onChange={(e) => setBuildFolder(e.target.value)}
-                  className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-['JetBrains_Mono',sans-serif] focus:outline-none focus:border-[#f881a9] transition-colors"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-brand transition-colors"
                 />
               </div>
 
@@ -1140,25 +1138,25 @@ function InstallBlockWizard({
                 />
               </div>
 
-              <div className="p-[12px] bg-white/3 border border-[#464646] rounded-[4px] text-[11px] text-white/50">
+              <div className="p-[12px] bg-white/3 border border-border rounded-[4px] text-[11px] text-white/50">
                 <p className="font-bold text-white/30 uppercase text-[9px] mb-[6px]">
                   Summary
                 </p>
                 <p>
                   Block:{" "}
-                  <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">
+                  <span className="text-white/70 font-mono">
                     {blockId}
                   </span>
                 </p>
                 <p>
                   Package:{" "}
-                  <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">
+                  <span className="text-white/70 font-mono">
                     {selectedNeuron?.package}
                   </span>
                 </p>
                 <p>
                   Plan:{" "}
-                  <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">
+                  <span className="text-white/70 font-mono">
                     {selectedPlan?.displayName || selectedPlan?.name}
                   </span>
                 </p>
@@ -1207,7 +1205,7 @@ function InstallBlockWizard({
               </p>
               <p className="text-[12px] text-white/50 text-center">
                 The block has been installed and merged into{" "}
-                <span className="text-white/80 font-['JetBrains_Mono',sans-serif]">
+                <span className="text-white/80 font-mono">
                   {selectedNeuron?.package}
                 </span>
                 .
@@ -1217,7 +1215,7 @@ function InstallBlockWizard({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646] shrink-0">
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border shrink-0">
           {step === "location" && (
             <>
               <Button variant="secondary" onClick={onClose}>
@@ -1361,13 +1359,13 @@ function MergeStepContent({
           The installation created a branch in your local build repo. Merge it
           into master to complete the setup.
         </p>
-        <div className="p-[12px] bg-white/3 border border-[#464646] rounded-[4px] text-[11px] text-white/50 flex flex-col gap-[6px]">
+        <div className="p-[12px] bg-white/3 border border-border rounded-[4px] text-[11px] text-white/50 flex flex-col gap-[6px]">
           <div className="flex items-center gap-[8px]">
             <Icon
               icon="solar:git-branch-linear"
-              className="text-[#f881a9] text-sm shrink-0"
+              className="text-brand text-sm shrink-0"
             />
-            <span className="font-['JetBrains_Mono',sans-serif] text-white/80">
+            <span className="font-mono text-white/80">
               {branchName || "(branch name unknown)"}
             </span>
           </div>
@@ -1376,19 +1374,19 @@ function MergeStepContent({
               icon="solar:folder-linear"
               className="text-white/30 text-sm shrink-0"
             />
-            <span className="font-['JetBrains_Mono',sans-serif] text-white/40 text-[10px] break-all">
+            <span className="font-mono text-white/40 text-[10px] break-all">
               {repoPath || "(repo path unknown)"}
             </span>
           </div>
         </div>
         {mergeError && (
-          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap">
+          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-mono whitespace-pre-wrap">
             {mergeError}
           </div>
         )}
         <p className="text-[11px] text-white/30">
           This will run:{" "}
-          <span className="font-['JetBrains_Mono',sans-serif]">
+          <span className="font-mono">
             git fetch --all --prune → checkout master → pull → merge origin/
             {branchName || "…"}
           </span>
@@ -1401,7 +1399,7 @@ function MergeStepContent({
     return (
       <div className="flex flex-col gap-[10px] h-full">
         <div className="flex items-center gap-[8px]">
-          <span className="inline-block w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse" />
+          <span className="inline-block w-[6px] h-[6px] rounded-full bg-brand animate-pulse" />
           <p className="text-[11px] text-white/50">Running git operations…</p>
         </div>
         <div
@@ -1423,7 +1421,7 @@ function MergeStepContent({
         />
         <p className="text-[14px] font-bold text-white">Branch Merged</p>
         <p className="text-[12px] text-white/50 text-center">
-          <span className="font-['JetBrains_Mono',sans-serif] text-white/80">
+          <span className="font-mono text-white/80">
             {branchName}
           </span>{" "}
           has been merged into master.
@@ -1443,8 +1441,8 @@ function MergeStepContent({
   return (
     <div className="flex h-full overflow-hidden" style={{ minHeight: 420 }}>
       {/* Left panel — file list */}
-      <div className="w-[180px] shrink-0 border-r border-[#464646] flex flex-col overflow-hidden">
-        <div className="px-[12px] py-[10px] border-b border-[#464646] shrink-0">
+      <div className="w-[180px] shrink-0 border-r border-border flex flex-col overflow-hidden">
+        <div className="px-[12px] py-[10px] border-b border-border shrink-0">
           <p className="text-[9px] font-bold uppercase text-white/30 tracking-wider">
             Conflicts ({conflictFiles.length} files)
           </p>
@@ -1474,7 +1472,7 @@ function MergeStepContent({
                     {unresolvedCount > 0 ? unresolvedCount : "!"}
                   </span>
                 )}
-                <span className="text-[11px] font-['JetBrains_Mono',sans-serif] truncate">
+                <span className="text-[11px] font-mono truncate">
                   {fileName}
                 </span>
               </button>
@@ -1482,7 +1480,7 @@ function MergeStepContent({
           })}
         </div>
         {mergeError && (
-          <div className="p-[8px] border-t border-[#464646] text-[10px] text-red-400 font-['JetBrains_Mono',sans-serif]">
+          <div className="p-[8px] border-t border-border text-[10px] text-red-400 font-mono">
             {mergeError}
           </div>
         )}
@@ -1491,8 +1489,8 @@ function MergeStepContent({
       {/* Right panel — conflict editor */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-[#464646] shrink-0 gap-[8px]">
-          <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-white/40 truncate">
+        <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border shrink-0 gap-[8px]">
+          <span className="text-[10px] font-mono text-white/40 truncate">
             {selectedConflictFile}
           </span>
           <div className="flex items-center gap-[6px] shrink-0">
@@ -1511,7 +1509,7 @@ function MergeStepContent({
             {allHunksResolved && !isFileSaved && (
               <button
                 onClick={() => onSaveFile(selectedConflictFile)}
-                className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-[#f881a9]/20 text-[#f881a9] hover:bg-[#f881a9]/30 transition-colors border border-[#f881a9]/30"
+                className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-brand/20 text-brand hover:bg-brand/30 transition-colors border border-brand/30"
               >
                 Save File
               </button>
@@ -1526,7 +1524,7 @@ function MergeStepContent({
         </div>
 
         {/* File content */}
-        <div className="flex-1 overflow-auto font-['JetBrains_Mono',sans-serif] text-[11px]">
+        <div className="flex-1 overflow-auto font-mono text-[11px]">
           {!conflictContent ? (
             <div className="flex items-center justify-center h-full text-white/30">
               <Loader size={20} />
@@ -1616,7 +1614,7 @@ function ConflictEditor({
       parts.push(
         <div key={`hunk-${hunkIdx}`} className="my-[2px]">
           {/* Action bar */}
-          <div className="flex items-center gap-[6px] px-[12px] py-[5px] bg-[#1a1a1a] border-y border-[#464646]">
+          <div className="flex items-center gap-[6px] px-[12px] py-[5px] bg-muted border-y border-border">
             <button
               onClick={() => onResolve(hunkIdx, hunk.current)}
               className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-green-900/40 text-green-300 hover:bg-green-900/60 transition-colors border border-green-700/30"
@@ -1661,7 +1659,7 @@ function ConflictEditor({
           </div>
 
           {/* Divider */}
-          <div className="flex items-center px-[12px] py-[2px] bg-[#2a2a2a]">
+          <div className="flex items-center px-[12px] py-[2px] bg-muted">
             <div className="flex-1 h-[1px] bg-white/10" />
             <span className="px-[8px] text-[9px] text-white/20 uppercase tracking-widest">
               =======
@@ -1780,20 +1778,20 @@ function DocumentationTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Sub-tabs */}
-      <div className="flex items-center gap-[2px] px-[20px] pt-[12px] pb-0 border-b border-[#464646] shrink-0">
+      <div className="flex items-center gap-[2px] px-[20px] pt-[12px] pb-0 border-b border-border shrink-0">
         {(["user", "agent"] as const).map((a) => (
           <button
             key={a}
             onClick={() => onAudienceChange(a)}
             className={`px-[14px] py-[8px] text-[10px] font-bold uppercase relative transition-all ${
               audience === a
-                ? "text-[#f881a9]"
+                ? "text-brand"
                 : "text-white/40 hover:text-white/70"
             }`}
           >
             {a === "user" ? "User Facing" : "Agent Facing"}
             {audience === a && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
             )}
           </button>
         ))}
@@ -1835,21 +1833,21 @@ function DocumentationTab({
             ref={proseRef}
             className="prose prose-invert prose-sm max-w-none break-words
               text-[13px] leading-[1.7] text-[rgba(255,255,255,0.75)]
-              [&_h1]:font-['JetBrains_Mono',sans-serif] [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-white [&_h1]:mb-[12px]
-              [&_h2]:font-['JetBrains_Mono',sans-serif] [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-white [&_h2]:mb-[8px]
-              [&_h3]:font-['JetBrains_Mono',sans-serif] [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-white [&_h3]:mb-[6px]
+              [&_h1]:font-mono [&_h1]:text-[16px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-white [&_h1]:mb-[12px]
+              [&_h2]:font-mono [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-white [&_h2]:mb-[8px]
+              [&_h3]:font-mono [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-white [&_h3]:mb-[6px]
               [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-white [&_h4]:mb-[4px]
               [&_h5]:text-[11px] [&_h5]:font-semibold [&_h5]:text-white/80 [&_h5]:mb-[4px]
               [&_h6]:text-[11px] [&_h6]:font-medium [&_h6]:text-white/60 [&_h6]:mb-[4px]
               [&_p]:text-[rgba(255,255,255,0.7)] [&_p]:mb-[10px]
-              [&_code]:text-[#f881a9] [&_code]:bg-white/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
-              [&_pre]:bg-[#2c2c2c] [&_pre]:border [&_pre]:border-[#464646] [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
+              [&_code]:text-brand [&_code]:bg-white/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
+              [&_pre]:bg-card [&_pre]:border [&_pre]:border-border [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
               [&_pre_code]:bg-transparent [&_pre_code]:text-[rgba(255,255,255,0.8)] [&_pre_code]:p-0
-              [&_a]:text-[#f881a9] [&_a]:no-underline hover:[&_a]:underline
+              [&_a]:text-brand [&_a]:no-underline hover:[&_a]:underline
               [&_strong]:text-white
               [&_li]:text-[rgba(255,255,255,0.7)] [&_li]:mb-[4px]
               [&_ul]:mb-[10px] [&_ol]:mb-[10px]
-              [&_hr]:border-[#464646] [&_hr]:my-[20px]"
+              [&_hr]:border-border [&_hr]:my-[20px]"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : isGenerating ? (
@@ -1967,7 +1965,7 @@ function VersionsTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter bar */}
-      <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-[#464646] shrink-0 flex-wrap">
+      <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-border shrink-0 flex-wrap">
         <span className="text-[11px] text-white/40 mr-[4px]">Filters:</span>
         {VERSION_FILTERS.map((f) => (
           <button
@@ -1994,7 +1992,7 @@ function VersionsTab({
 
       <div className="flex flex-1 overflow-hidden">
         {/* Version list */}
-        <div className="w-[260px] shrink-0 border-r border-[#464646] overflow-auto">
+        <div className="w-[260px] shrink-0 border-r border-border overflow-auto">
           {filtered.length === 0 && (
             <p className="text-[12px] text-white/30 p-[16px]">
               No versions match this filter
@@ -2004,12 +2002,12 @@ function VersionsTab({
             <button
               key={v.name}
               onClick={() => onSelect(v)}
-              className={`w-full text-left px-[16px] py-[14px] border-b border-[#464646] transition-colors ${
+              className={`w-full text-left px-[16px] py-[14px] border-b border-border transition-colors ${
                 selected?.name === v.name ? "bg-white/5" : "hover:bg-white/3"
               }`}
             >
               <div className="flex items-center justify-between mb-[4px]">
-                <span className="font-['JetBrains_Mono',sans-serif] text-[12px] text-white font-bold">
+                <span className="font-mono text-[12px] text-white font-bold">
                   {v.versionTag}
                 </span>
                 <span
@@ -2045,7 +2043,7 @@ function VersionsTab({
               displayDetail && (
                 <div className="max-w-[700px] flex flex-col gap-[20px]">
                   <div>
-                    <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-white uppercase mb-[4px]">
+                    <h2 className="font-mono font-bold text-[16px] text-white uppercase mb-[4px]">
                       {displayDetail.versionTag}
                     </h2>
                     <div className="flex items-center gap-[12px] text-[11px] text-white/40">
@@ -2073,7 +2071,7 @@ function VersionsTab({
                     <p className="text-[10px] font-bold uppercase text-white/40 mb-[8px]">
                       Release Notes
                     </p>
-                    <div className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]">
+                    <div className="bg-card border border-border rounded-[4px] p-[16px]">
                       {displayDetail.releaseNotes ? (
                         <p className="text-[13px] text-white/80 leading-[1.6]">
                           {displayDetail.releaseNotes}
@@ -2097,11 +2095,11 @@ function VersionsTab({
                           return (
                             <div
                               key={folder.name}
-                              className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] overflow-hidden"
+                              className="bg-card border border-border rounded-[4px] overflow-hidden"
                             >
                               <button
                                 onClick={() => toggleFolder(folder.name)}
-                                className="w-full flex items-center gap-[8px] px-[12px] py-[10px] border-b border-[#464646] hover:bg-white/3 transition-colors text-left"
+                                className="w-full flex items-center gap-[8px] px-[12px] py-[10px] border-b border-border hover:bg-white/3 transition-colors text-left"
                               >
                                 <Icon
                                   icon={
@@ -2115,7 +2113,7 @@ function VersionsTab({
                                   icon="solar:folder-linear"
                                   className="text-white/50 text-sm shrink-0"
                                 />
-                                <span className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">
+                                <span className="text-[12px] text-white font-mono">
                                   {folder.name}
                                 </span>
                               </button>
@@ -2129,13 +2127,13 @@ function VersionsTab({
                                         content: f.content ?? "",
                                       })
                                     }
-                                    className="w-full flex items-center gap-[8px] px-[12px] py-[8px] pl-[36px] border-b border-[#464646] last:border-0 hover:bg-white/5 transition-colors text-left group"
+                                    className="w-full flex items-center gap-[8px] px-[12px] py-[8px] pl-[36px] border-b border-border last:border-0 hover:bg-white/5 transition-colors text-left group"
                                   >
                                     <Icon
                                       icon="solar:file-linear"
                                       className="text-white/30 text-xs shrink-0 group-hover:text-white/50"
                                     />
-                                    <span className="text-[11px] text-white/70 font-['JetBrains_Mono',sans-serif] group-hover:text-white/90">
+                                    <span className="text-[11px] text-white/70 font-mono group-hover:text-white/90">
                                       {f.name}
                                     </span>
                                     <Icon
@@ -2253,23 +2251,23 @@ function FileViewerModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-[#1a1a1a]/95 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-muted/95 backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-[20px] py-[12px] border-b border-[#464646] shrink-0">
+      <div className="flex items-center justify-between px-[20px] py-[12px] border-b border-border shrink-0">
         <div className="flex items-center gap-[10px]">
           <Icon
             icon="solar:file-code-linear"
             className="text-white/50 text-base"
           />
-          <span className="font-['JetBrains_Mono',sans-serif] text-[13px] text-white">
+          <span className="font-mono text-[13px] text-white">
             {shortName}
           </span>
           {shortName !== file.name && (
-            <span className="text-[11px] text-white/30 font-['JetBrains_Mono',sans-serif]">
+            <span className="text-[11px] text-white/30 font-mono">
               {file.name}
             </span>
           )}
@@ -2281,7 +2279,7 @@ function FileViewerModal({
           onClick={onClose}
           className="flex items-center gap-[6px] text-[11px] text-white/50 hover:text-white/80 transition-colors border border-white/15 hover:border-white/30 rounded px-[10px] py-[4px]"
         >
-          <Icon icon="solar:close-linear" className="text-xs" />
+          <Icon icon="solar:close-circle-linear" className="text-xs" />
           Close
         </button>
       </div>
@@ -2294,12 +2292,12 @@ function FileViewerModal({
           </div>
         ) : html ? (
           <div
-            className="shiki-container p-[24px] text-[12px] leading-[1.6] font-['JetBrains_Mono',sans-serif] min-h-full"
+            className="shiki-container p-[24px] text-[12px] leading-[1.6] font-mono min-h-full"
             dangerouslySetInnerHTML={{ __html: html }}
             style={{ "--shiki-dark-bg": "#1a1a1a" } as React.CSSProperties}
           />
         ) : (
-          <pre className="p-[24px] text-[12px] text-white/70 font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap leading-[1.6]">
+          <pre className="p-[24px] text-[12px] text-white/70 font-mono whitespace-pre-wrap leading-[1.6]">
             {file.content}
           </pre>
         )}
@@ -2352,12 +2350,12 @@ function InstancesTab({
           {instances.map((inst) => (
             <div
               key={inst.name}
-              className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px]"
+              className="bg-card border border-border rounded-[4px] p-[16px]"
             >
               <div className="flex items-start justify-between mb-[12px]">
                 <div>
                   <div className="flex items-center gap-[10px] mb-[4px]">
-                    <span className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white">
+                    <span className="font-mono font-bold text-[13px] text-white">
                       {inst.shortId}
                     </span>
                     {inst.state > 0 && (
@@ -2368,14 +2366,14 @@ function InstancesTab({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-white/50 font-['JetBrains_Mono',sans-serif]">
+                  <p className="text-[11px] text-white/50 font-mono">
                     {inst.package}
                   </p>
                 </div>
                 <div className="flex items-center gap-[8px]">
                   <button
                     onClick={() => setConfigureTarget(inst)}
-                    className="text-[10px] text-white/40 hover:text-white/70 border border-[#464646] rounded px-[10px] py-[4px] transition-colors"
+                    className="text-[10px] text-white/40 hover:text-white/70 border border-border rounded px-[10px] py-[4px] transition-colors"
                   >
                     Configure
                   </button>
@@ -2394,7 +2392,7 @@ function InstancesTab({
                     <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">
                       Version
                     </p>
-                    <p className="text-white/70 font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-white/70 font-mono">
                       {shortBlockId(inst.blockVersion)}
                     </p>
                   </div>
@@ -2414,7 +2412,7 @@ function InstancesTab({
                     <p className="text-white/30 uppercase text-[9px] font-bold mb-[2px]">
                       Entitlement
                     </p>
-                    <p className="text-white/50 font-['JetBrains_Mono',sans-serif] text-[10px] truncate">
+                    <p className="text-white/50 font-mono text-[10px] truncate">
                       {inst.entitlement}
                     </p>
                   </div>
@@ -2483,14 +2481,14 @@ function UninstallModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
-        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-[#464646]">
+      <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-border">
           <Icon
             icon="solar:trash-bin-minimalistic-linear"
             className="text-red-400 text-lg"
           />
           <div>
-            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
               Uninstall Instance
             </h2>
             <p className="text-[11px] text-white/40 mt-[2px]">
@@ -2506,7 +2504,7 @@ function UninstallModal({
             </div>
           )}
 
-          <div className="bg-white/3 border border-[#464646] rounded-[4px] text-[11px] overflow-hidden">
+          <div className="bg-white/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
             {[
               { label: "Instance", value: inst.name },
               {
@@ -2519,7 +2517,7 @@ function UninstallModal({
             ].map(({ label, value, color }) => (
               <div
                 key={label}
-                className="flex gap-[12px] px-[12px] py-[8px] border-b border-[#464646] last:border-0"
+                className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
                 <span className="text-white/30 w-[90px] shrink-0">{label}</span>
                 {color ? (
@@ -2529,7 +2527,7 @@ function UninstallModal({
                     {value}
                   </span>
                 ) : (
-                  <span className="text-white/70 font-['JetBrains_Mono',sans-serif] break-all">
+                  <span className="text-white/70 font-mono break-all">
                     {value}
                   </span>
                 )}
@@ -2540,7 +2538,7 @@ function UninstallModal({
           <div>
             <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
               Type{" "}
-              <span className="text-white/70 font-['JetBrains_Mono',sans-serif]">
+              <span className="text-white/70 font-mono">
                 {inst.shortId}
               </span>{" "}
               to confirm
@@ -2551,12 +2549,12 @@ function UninstallModal({
               onChange={(e) => setConfirm(e.target.value)}
               placeholder={inst.shortId}
               disabled={loading}
-              className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-['JetBrains_Mono',sans-serif] focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -2636,13 +2634,13 @@ function ConfigureModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
-        <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#464646]">
+      <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border">
           <div>
-            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
               Configure Installation
             </h2>
-            <p className="text-[11px] text-white/40 mt-[2px] font-['JetBrains_Mono',sans-serif]">
+            <p className="text-[11px] text-white/40 mt-[2px] font-mono">
               {inst.name}
             </p>
           </div>
@@ -2686,7 +2684,7 @@ function ConfigureModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -2717,7 +2715,7 @@ function HelpTab({ blockId }: { blockId: string }) {
     <div className="h-full overflow-auto p-[32px]">
       <div className="max-w-[600px] flex flex-col gap-[24px]">
         <div>
-          <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[14px] text-white uppercase mb-[8px]">
+          <h2 className="font-mono font-bold text-[14px] text-white uppercase mb-[8px]">
             Get Help
           </h2>
           <p className="text-[12px] text-white/60 leading-[1.6]">
@@ -2758,7 +2756,7 @@ function HelpLink({
   desc: string;
 }) {
   return (
-    <button className="flex items-center gap-[16px] bg-[#2c2c2c] border border-[#464646] rounded-[4px] p-[16px] text-left hover:border-white/30 transition-colors group w-full">
+    <button className="flex items-center gap-[16px] bg-card border border-border rounded-[4px] p-[16px] text-left hover:border-white/30 transition-colors group w-full">
       <Icon
         icon={icon}
         className="text-xl text-white/40 group-hover:text-white/70 shrink-0 transition-colors"
@@ -2822,11 +2820,11 @@ function SettingsTab({
               key={label}
               onClick={() => tab && onNavigate(tab)}
               disabled={!tab}
-              className="bg-[#2c2c2c] border border-[#464646] rounded-[8px] p-[20px] text-left hover:border-white/30 transition-colors disabled:cursor-default disabled:hover:border-[#464646] group"
+              className="bg-card border border-border rounded-[8px] p-[20px] text-left hover:border-white/30 transition-colors disabled:cursor-default disabled:hover:border-border group"
             >
               <p className="text-[11px] text-white/40 mb-[8px]">{label}</p>
               <div className="flex items-center justify-between">
-                <span className="text-[28px] font-bold text-white font-['JetBrains_Mono',sans-serif]">
+                <span className="text-[28px] font-bold text-white font-mono">
                   {count}
                 </span>
                 {tab && (
@@ -2856,7 +2854,7 @@ function SettingsTab({
             <span>Loading plans…</span>
           </div>
         ) : plans.length === 0 ? (
-          <div className="bg-[#2c2c2c] border border-dashed border-[#464646] rounded-[8px] p-[24px] text-center">
+          <div className="bg-card border border-dashed border-border rounded-[8px] p-[24px] text-center">
             <p className="text-[12px] text-white/30">No plans configured.</p>
           </div>
         ) : (
@@ -2864,12 +2862,12 @@ function SettingsTab({
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className="bg-[#2c2c2c] border border-[#464646] rounded-[8px] p-[20px]"
+                className="bg-card border border-border rounded-[8px] p-[20px]"
               >
                 <p className="text-[13px] font-bold text-white mb-[4px]">
                   {plan.displayName || plan.name}
                 </p>
-                <p className="text-[11px] text-white/40 font-['JetBrains_Mono',sans-serif] break-all">
+                <p className="text-[11px] text-white/40 font-mono break-all">
                   {plan.name}
                 </p>
               </div>
@@ -2883,7 +2881,7 @@ function SettingsTab({
         <h2 className="text-[11px] font-bold uppercase tracking-wider text-white/40 mb-[16px]">
           Manage
         </h2>
-        <div className="bg-[#2c2c2c] border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
+        <div className="bg-card border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
           <div>
             <p className="text-[12px] font-bold text-red-400 mb-[2px]">
               Delete Block
@@ -2949,14 +2947,14 @@ function DeleteBlockModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px]">
-        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-[#464646]">
+      <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
+        <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-border">
           <Icon
             icon="solar:trash-bin-minimalistic-linear"
             className="text-red-400 text-lg"
           />
           <div>
-            <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+            <h2 className="font-mono font-bold text-[13px] text-white uppercase">
               Delete Block
             </h2>
             <p className="text-[11px] text-white/40 mt-[2px]">
@@ -2972,7 +2970,7 @@ function DeleteBlockModal({
             </div>
           )}
 
-          <div className="bg-white/3 border border-[#464646] rounded-[4px] text-[11px] overflow-hidden">
+          <div className="bg-white/3 border border-border rounded-[4px] text-[11px] overflow-hidden">
             {[
               { label: "Block ID", value: blockId },
               { label: "Display Name", value: block?.displayName ?? "—" },
@@ -2980,10 +2978,10 @@ function DeleteBlockModal({
             ].map(({ label, value }) => (
               <div
                 key={label}
-                className="flex gap-[12px] px-[12px] py-[8px] border-b border-[#464646] last:border-0"
+                className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
                 <span className="text-white/30 w-[90px] shrink-0">{label}</span>
-                <span className="text-white/70 font-['JetBrains_Mono',sans-serif] break-all">
+                <span className="text-white/70 font-mono break-all">
                   {value}
                 </span>
               </div>
@@ -2993,7 +2991,7 @@ function DeleteBlockModal({
           <div>
             <label className="block text-[10px] font-bold uppercase text-white/40 mb-[6px]">
               Type{" "}
-              <span className="text-white/70 font-['JetBrains_Mono',sans-serif] normal-case">
+              <span className="text-white/70 font-mono normal-case">
                 {blockId}
               </span>{" "}
               to confirm
@@ -3004,12 +3002,12 @@ function DeleteBlockModal({
               onChange={(e) => setConfirm(e.target.value)}
               placeholder={blockId}
               disabled={loading}
-              className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-['JetBrains_Mono',sans-serif] focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
+              className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white font-mono focus:outline-none focus:border-red-400/50 transition-colors disabled:opacity-50"
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
+        <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             Cancel
           </Button>
@@ -3050,9 +3048,9 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(10,132,255,0.12)] border border-[rgba(10,132,255,0.25)]">
           <Icon
             icon="solar:shield-keyhole-linear"
-            className="text-[#0A84FF] text-[10px]"
+            className="text-info text-[10px]"
           />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#0A84FF]">
+          <span className="text-[10px] font-bold font-mono text-info">
             Admin
           </span>
         </span>
@@ -3062,9 +3060,9 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)]">
           <Icon
             icon="solar:code-linear"
-            className="text-[#F881A9] text-[10px]"
+            className="text-brand text-[10px]"
           />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#F881A9]">
+          <span className="text-[10px] font-bold font-mono text-brand">
             Developer
           </span>
         </span>
@@ -3076,7 +3074,7 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
             icon="solar:eye-linear"
             className="text-[rgba(255,255,255,0.4)] text-[10px]"
           />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)]">
+          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">
             Viewer
           </span>
         </span>
@@ -3088,7 +3086,7 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
             icon="solar:key-linear"
             className="text-[rgba(255,255,255,0.4)] text-[10px]"
           />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)]">
+          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">
             {roleLabel || "Unknown"}
           </span>
         </span>
@@ -3116,7 +3114,7 @@ function MemberAvatar({ name, photoUrl }: { name: string; photoUrl: string }) {
     .join("");
   return (
     <div className="size-[32px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0">
-      <span className="text-[11px] font-bold text-[#F881A9]">
+      <span className="text-[11px] font-bold text-brand">
         {initials || "?"}
       </span>
     </div>
@@ -3160,7 +3158,8 @@ function AccessTab({
   const [addError, setAddError] = useState("");
 
   // Role change for existing members
-  const [changingRoleMember, setChangingRoleMember] = useState<BlockAccessMember | null>(null);
+  const [changingRoleMember, setChangingRoleMember] =
+    useState<BlockAccessMember | null>(null);
   const [changeRole, setChangeRole] = useState("");
   const [changeRoleLoading, setChangeRoleLoading] = useState(false);
   const [changeRoleError, setChangeRoleError] = useState("");
@@ -3168,11 +3167,14 @@ function AccessTab({
   function fetchRoles(onError?: (e: string) => void) {
     if (blockRoles.length > 0) return;
     setRolesLoading(true);
-    (ProductService.ListBlockRoles as (blockId: string) => Promise<BlockRole[]>)(blockId)
+    (
+      ProductService.ListBlockRoles as (blockId: string) => Promise<BlockRole[]>
+    )(blockId)
       .then((list) => {
         const roles = list ?? [];
         setBlockRoles(roles);
-        if (roles.length > 0 && !addRole) setAddRole(roles[roles.length - 1].name);
+        if (roles.length > 0 && !addRole)
+          setAddRole(roles[roles.length - 1].name);
       })
       .catch((e) => (onError ?? setAddError)(String(e)))
       .finally(() => setRolesLoading(false));
@@ -3201,20 +3203,42 @@ function AccessTab({
   }
 
   function doChangeRole() {
-    if (!changingRoleMember || !changeRole || changeRole === changingRoleMember.role) return;
+    if (
+      !changingRoleMember ||
+      !changeRole ||
+      changeRole === changingRoleMember.role
+    )
+      return;
     setChangeRoleLoading(true);
     setChangeRoleError("");
     // Remove from old role then add to new role
-    (ProductService.UpdateBlockAccess as (blockId: string, role: string, member: string, grant: boolean) => Promise<void>)(
-      blockId, changingRoleMember.role, changingRoleMember.member, false
-    )
+    (
+      ProductService.UpdateBlockAccess as (
+        blockId: string,
+        role: string,
+        member: string,
+        grant: boolean,
+      ) => Promise<void>
+    )(blockId, changingRoleMember.role, changingRoleMember.member, false)
       .then(() =>
-        (ProductService.UpdateBlockAccess as (blockId: string, role: string, member: string, grant: boolean) => Promise<void>)(
-          blockId, changeRole, changingRoleMember.member, true
-        )
+        (
+          ProductService.UpdateBlockAccess as (
+            blockId: string,
+            role: string,
+            member: string,
+            grant: boolean,
+          ) => Promise<void>
+        )(blockId, changeRole, changingRoleMember.member, true),
       )
-      .then(() => { setChangingRoleMember(null); setChangeRoleLoading(false); onRefresh(); })
-      .catch((e) => { setChangeRoleError(String(e)); setChangeRoleLoading(false); });
+      .then(() => {
+        setChangingRoleMember(null);
+        setChangeRoleLoading(false);
+        onRefresh();
+      })
+      .catch((e) => {
+        setChangeRoleError(String(e));
+        setChangeRoleLoading(false);
+      });
   }
 
   function removeMember(member: BlockAccessMember) {
@@ -3287,7 +3311,7 @@ function AccessTab({
           <p className="text-[11px] text-white/60">{error}</p>
           <button
             onClick={onRefresh}
-            className="mt-[10px] text-[10px] text-[#F881A9] hover:underline"
+            className="mt-[10px] text-[10px] text-brand hover:underline"
           >
             Try again
           </button>
@@ -3301,16 +3325,16 @@ function AccessTab({
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-[20px] py-[10px] border-b border-[#464646] shrink-0">
+      <div className="flex items-center justify-between px-[20px] py-[10px] border-b border-border shrink-0">
         <div className="flex items-center gap-[8px]">
           <button
             onClick={onRefresh}
-            className="flex items-center gap-[4px] px-[8px] h-[28px] text-white/40 hover:text-white/70 transition-colors text-[10px] rounded border border-transparent hover:border-[#464646]"
+            className="flex items-center gap-[4px] px-[8px] h-[28px] text-white/40 hover:text-white/70 transition-colors text-[10px] rounded border border-transparent hover:border-border"
             title="Refresh"
           >
             <Icon icon="solar:refresh-linear" className="text-sm" />
           </button>
-          <span className="text-[10px] text-white/30 font-['JetBrains_Mono',sans-serif]">
+          <span className="text-[10px] text-white/30 font-mono">
             {members.length} {members.length === 1 ? "member" : "members"}
           </span>
         </div>
@@ -3348,7 +3372,7 @@ function AccessTab({
             {members.map((m, i) => (
               <div
                 key={`${m.member}-${i}`}
-                className="flex items-center gap-[12px] px-[16px] py-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px] hover:border-white/20 transition-colors group"
+                className="flex items-center gap-[12px] px-[16px] py-[12px] bg-card border border-border rounded-[4px] hover:border-white/20 transition-colors group"
               >
                 <MemberAvatar name={m.displayName} photoUrl={m.photoUrl} />
                 <div className="flex-1 min-w-0">
@@ -3356,12 +3380,12 @@ function AccessTab({
                     {m.displayName || m.member}
                   </p>
                   {m.email && (
-                    <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-white/40 truncate">
+                    <p className="text-[10px] font-mono text-white/40 truncate">
                       {m.email}
                     </p>
                   )}
                   {!m.email && m.displayName !== m.member && (
-                    <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-white/30 truncate">
+                    <p className="text-[10px] font-mono text-white/30 truncate">
                       {m.member}
                     </p>
                   )}
@@ -3403,10 +3427,10 @@ function AccessTab({
       {/* Add Member Modal */}
       {addOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[480px] max-h-[80vh]">
-            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#464646] shrink-0">
+          <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px] max-h-[80vh]">
+            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border shrink-0">
               <div>
-                <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+                <h2 className="font-mono font-bold text-[13px] text-white uppercase">
                   Add Member
                 </h2>
                 <p className="text-[11px] text-white/40 mt-[2px]">
@@ -3439,9 +3463,9 @@ function AccessTab({
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search by name or email…"
                   disabled={addLoading}
-                  className="w-full bg-[#2c2c2c] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-[12px] text-white focus:outline-none focus:border-[#f881a9] transition-colors disabled:opacity-50 placeholder:text-white/20 mb-[6px]"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-white focus:outline-none focus:border-brand transition-colors disabled:opacity-50 placeholder:text-white/20 mb-[6px]"
                 />
-                <div className="border border-[#464646] rounded-[4px] overflow-hidden max-h-[200px] overflow-y-auto">
+                <div className="border border-border rounded-[4px] overflow-hidden max-h-[200px] overflow-y-auto">
                   {usersLoading ? (
                     <div className="flex items-center justify-center py-[20px]">
                       <Loader size={16} />
@@ -3455,7 +3479,9 @@ function AccessTab({
                       );
                     }).length === 0 ? (
                     <div className="py-[12px] px-[12px] text-[11px] text-white/30 text-center">
-                      {accountUsers.length === 0 ? "No users found" : "No matches"}
+                      {accountUsers.length === 0
+                        ? "No users found"
+                        : "No matches"}
                     </div>
                   ) : (
                     accountUsers
@@ -3472,25 +3498,28 @@ function AccessTab({
                           key={u.name}
                           onClick={() => setSelectedUser(u)}
                           disabled={addLoading}
-                          className={`w-full flex items-center gap-[10px] px-[12px] py-[10px] border-b border-[#464646] last:border-0 text-left transition-colors ${
+                          className={`w-full flex items-center gap-[10px] px-[12px] py-[10px] border-b border-border last:border-0 text-left transition-colors ${
                             selectedUser?.name === u.name
                               ? "bg-[rgba(248,129,169,0.08)]"
                               : "hover:bg-white/[0.03]"
                           }`}
                         >
-                          <MemberAvatar name={u.displayName} photoUrl={u.photoUrl} />
+                          <MemberAvatar
+                            name={u.displayName}
+                            photoUrl={u.photoUrl}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] text-white font-semibold truncate">
                               {u.displayName}
                             </p>
-                            <p className="text-[10px] text-white/40 font-['JetBrains_Mono',sans-serif] truncate">
+                            <p className="text-[10px] text-white/40 font-mono truncate">
                               {u.email}
                             </p>
                           </div>
                           {selectedUser?.name === u.name && (
                             <Icon
                               icon="solar:check-circle-bold"
-                              className="text-[#f881a9] text-base shrink-0"
+                              className="text-brand text-base shrink-0"
                             />
                           )}
                         </button>
@@ -3517,17 +3546,19 @@ function AccessTab({
                         disabled={addLoading}
                         className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                           addRole === r.name
-                            ? "border-[#f881a9] bg-[rgba(248,129,169,0.06)]"
-                            : "border-[#464646] bg-white/2 hover:border-white/30"
+                            ? "border-brand bg-[rgba(248,129,169,0.06)]"
+                            : "border-border bg-white/2 hover:border-white/30"
                         }`}
                       >
                         <div
                           className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            addRole === r.name ? "border-[#f881a9]" : "border-white/30"
+                            addRole === r.name
+                              ? "border-brand"
+                              : "border-white/30"
                           }`}
                         >
                           {addRole === r.name && (
-                            <div className="w-[6px] h-[6px] rounded-full bg-[#f881a9]" />
+                            <div className="w-[6px] h-[6px] rounded-full bg-brand" />
                           )}
                         </div>
                         <AccessRoleBadge roleLabel={r.title} />
@@ -3538,7 +3569,7 @@ function AccessTab({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646] shrink-0">
+            <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border shrink-0">
               <Button
                 variant="secondary"
                 onClick={() => setAddOpen(false)}
@@ -3568,10 +3599,10 @@ function AccessTab({
       {/* Change Role Modal */}
       {changingRoleMember && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1e1e1e] border border-[#464646] rounded-[8px] flex flex-col shadow-2xl w-[400px]">
-            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-[#464646]">
+          <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[400px]">
+            <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border">
               <div>
-                <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase">
+                <h2 className="font-mono font-bold text-[13px] text-white uppercase">
                   Change Role
                 </h2>
                 <p className="text-[11px] text-white/40 mt-[2px]">
@@ -3605,17 +3636,19 @@ function AccessTab({
                       disabled={changeRoleLoading}
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                         changeRole === r.name
-                          ? "border-[#f881a9] bg-[rgba(248,129,169,0.06)]"
-                          : "border-[#464646] bg-white/2 hover:border-white/30"
+                          ? "border-brand bg-[rgba(248,129,169,0.06)]"
+                          : "border-border bg-white/2 hover:border-white/30"
                       }`}
                     >
                       <div
                         className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
-                          changeRole === r.name ? "border-[#f881a9]" : "border-white/30"
+                          changeRole === r.name
+                            ? "border-brand"
+                            : "border-white/30"
                         }`}
                       >
                         {changeRole === r.name && (
-                          <div className="w-[6px] h-[6px] rounded-full bg-[#f881a9]" />
+                          <div className="w-[6px] h-[6px] rounded-full bg-brand" />
                         )}
                       </div>
                       <AccessRoleBadge roleLabel={r.title} />
@@ -3625,14 +3658,22 @@ function AccessTab({
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-[#464646]">
-              <Button variant="secondary" onClick={() => setChangingRoleMember(null)} disabled={changeRoleLoading}>
+            <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border">
+              <Button
+                variant="secondary"
+                onClick={() => setChangingRoleMember(null)}
+                disabled={changeRoleLoading}
+              >
                 Cancel
               </Button>
               <Button
                 variant="primary"
                 onClick={doChangeRole}
-                disabled={!changeRole || changeRole === changingRoleMember.role || changeRoleLoading}
+                disabled={
+                  !changeRole ||
+                  changeRole === changingRoleMember.role ||
+                  changeRoleLoading
+                }
               >
                 {changeRoleLoading ? (
                   <>

@@ -23,15 +23,15 @@ function StateIndicator({ state }: { state: number }) {
   if (state === 1) {
     return (
       <span className="flex items-center gap-[4px]">
-        <span className="size-[6px] rounded-full bg-[#34C759] shrink-0" />
-        <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[#34C759]">Active</span>
+        <span className="size-[6px] rounded-full bg-success shrink-0" />
+        <span className="text-[10px] font-mono text-success">Active</span>
       </span>
     );
   }
   return (
     <span className="flex items-center gap-[4px]">
       <span className="size-[6px] rounded-full bg-[rgba(255,255,255,0.3)] shrink-0" />
-      <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)]">Inactive</span>
+      <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)]">Inactive</span>
     </span>
   );
 }
@@ -146,7 +146,7 @@ export function ProductPickerPage() {
   };
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Back + header */}
       <div className="px-[24px] pt-[24px] pb-[16px] shrink-0">
         <button
@@ -167,14 +167,14 @@ export function ProductPickerPage() {
             />
           ) : (
             <div className="size-[40px] rounded-[10px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
-              <span className="text-[16px] font-bold text-[#F881A9]">
+              <span className="text-[16px] font-bold text-brand">
                 {org.displayName[0]?.toUpperCase() ?? '?'}
               </span>
             </div>
           )}
           <div>
             <h1 className="text-[20px] font-bold text-white">{org.displayName}</h1>
-            <p className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)]">{orgId}</p>
+            <p className="text-[11px] font-mono text-[rgba(255,255,255,0.3)]">{orgId}</p>
           </div>
         </div>
 
@@ -185,7 +185,7 @@ export function ProductPickerPage() {
 
       {/* Search */}
       <div className="px-[24px] pb-[14px] shrink-0 flex items-center gap-[10px]">
-        <div className="flex-1 flex items-center gap-[8px] bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] px-[12px] h-[34px]">
+        <div className="flex-1 flex items-center gap-[8px] bg-card border border-border rounded-[8px] px-[12px] h-[34px]">
           <Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
           <input
             type="text"
@@ -219,11 +219,11 @@ export function ProductPickerPage() {
           <div className="flex items-center justify-center h-full">
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
-                <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
                 <p className="text-[12px] font-bold text-white">Failed to load</p>
               </div>
               <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
-              <button onClick={load} className="mt-[10px] text-[10px] text-[#F881A9] hover:underline">Try again</button>
+              <button onClick={load} className="mt-[10px] text-[10px] text-brand hover:underline">Try again</button>
             </div>
           </div>
         )}
@@ -241,43 +241,43 @@ export function ProductPickerPage() {
                 <div
                   key={p.name}
                   className={`rounded-[8px] border transition-colors overflow-hidden ${
-                    isExpanded ? 'border-[#F881A9]' : 'border-[#3a3a3a]'
+                    isExpanded ? 'border-brand' : 'border-border'
                   }`}
                 >
                   {/* Card header row */}
                   <button
                     onClick={() => handleCardClick(p)}
                     disabled={isDisabled}
-                    className={`w-full flex items-center gap-[14px] px-[14px] py-[12px] bg-[#2c2c2c] text-left group transition-colors
-                      ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-[#333]'}
+                    className={`w-full flex items-center gap-[14px] px-[14px] py-[12px] bg-card text-left group transition-colors
+                      ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted'}
                     `}
                   >
                     <div className="size-[32px] rounded-[7px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.15)] flex items-center justify-center shrink-0">
-                      <Icon icon="solar:box-linear" className="text-[#F881A9] text-base" />
+                      <Icon icon="solar:box-linear" className="text-brand text-base" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[13px] font-semibold transition-colors truncate ${isExpanded ? 'text-[#F881A9]' : 'text-white group-hover:text-[#F881A9]'}`}>
+                      <p className={`text-[13px] font-semibold transition-colors truncate ${isExpanded ? 'text-brand' : 'text-white group-hover:text-brand'}`}>
                         {p.displayName}
                       </p>
-                      <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] mt-[1px]">
+                      <p className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] mt-[1px]">
                         {isSyncing ? 'Syncing repositories…' : productId}
                       </p>
                     </div>
                     <div className="flex items-center gap-[8px] shrink-0">
                       {isCloned && (
                         <span className="flex items-center gap-[3px] px-[6px] py-[2px] rounded-[4px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)]">
-                          <Icon icon="solar:check-circle-bold" className="text-[#34C759] text-[9px]" />
-                          <span className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[#34C759] font-medium">Cloned</span>
+                          <Icon icon="solar:check-circle-bold" className="text-success text-[9px]" />
+                          <span className="text-[9px] font-mono text-success font-medium">Cloned</span>
                         </span>
                       )}
                       <StateIndicator state={p.state} />
                       {isSyncing
                         ? <Loader size={16} />
                         : isCloned
-                          ? <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base transition-colors" />
+                          ? <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-brand text-base transition-colors" />
                           : <Icon
                               icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                              className={`text-base transition-colors ${isExpanded ? 'text-[#F881A9]' : 'text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9]'}`}
+                              className={`text-base transition-colors ${isExpanded ? 'text-brand' : 'text-[rgba(255,255,255,0.2)] group-hover:text-brand'}`}
                             />
                       }
                     </div>
@@ -285,7 +285,7 @@ export function ProductPickerPage() {
 
                   {/* Expanded section */}
                   {isExpanded && (
-                    <div className="border-t border-[#3a3a3a] bg-[#1a1a1a]">
+                    <div className="border-t border-border bg-muted">
                       {syncState === 'idle' && (
                         <div className="px-[16px] py-[14px] flex items-center justify-between gap-[12px]">
                           <p className="text-[12px] text-[rgba(255,255,255,0.5)]">
@@ -300,7 +300,7 @@ export function ProductPickerPage() {
                             </button>
                             <button
                               onClick={() => handleClone(p)}
-                              className="px-[10px] py-[5px] rounded-[5px] bg-[#F881A9] text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#f96bb0] transition-colors"
+                              className="px-[10px] py-[5px] rounded-[5px] bg-brand text-[11px] font-semibold text-foreground hover:bg-[#f96bb0] transition-colors"
                             >
                               Clone &amp; open
                             </button>
@@ -310,9 +310,9 @@ export function ProductPickerPage() {
 
                       {syncState === 'syncing' && isSyncing && (
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-[8px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
-                            <span className="w-[6px] h-[6px] rounded-full bg-[#f881a9] animate-pulse shrink-0" />
-                            <p className="text-[9px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] tracking-wider">
+                          <div className="flex items-center gap-[8px] px-[14px] py-[10px] border-b border-border">
+                            <span className="w-[6px] h-[6px] rounded-full bg-brand animate-pulse shrink-0" />
+                            <p className="text-[9px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono tracking-wider">
                               Syncing repos…
                             </p>
                           </div>
@@ -328,7 +328,7 @@ export function ProductPickerPage() {
                           <div className="flex items-center gap-[10px]">
                             <button
                               onClick={() => { setSyncState('idle'); setSyncError(null); }}
-                              className="text-[11px] text-[#F881A9] hover:underline"
+                              className="text-[11px] text-brand hover:underline"
                             >
                               Try again
                             </button>

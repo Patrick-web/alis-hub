@@ -1,0 +1,115 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { Icon } from '@iconify/react';
+import { useNotifications } from '../stores/notifications';
+import type { TaskType } from '../stores/notifications';
+
+const TASK_ICON: Record<TaskType, string> = {
+  define: 'solar:magic-stick-linear',
+  build: 'solar:box-linear',
+  deploy: 'solar:cloud-upload-linear',
+  packages: 'solar:folder-with-files-linear',
+};
+
+const TASK_LABEL: Record<TaskType, string> = {
+  define: 'Define',
+  build: 'Build',
+  deploy: 'Deploy',
+  packages: 'Packages',
+};
+
+function formatElapsed(startedAt: number): string {
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  if (s < 60) return `0:${String(s).padStart(2, '0')}`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  if (m < 60) return `${m}:${String(rem).padStart(2, '0')}`;
+  const h = Math.floor(m / 60);
+  return `${h}:${String(m % 60).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+}
+
+export function StatusStrip() {
+  const { state, dismiss, setFocusTaskId } = useNotifications();
+  const navigate = useNavigate();
+  const [tick, setTick] = useState(0);
+
+  const taskNotifs = state.notifications.filter(n => n.task);
+  const hasRunning = taskNotifs.some(n => n.task?.status === 'running');
+
+  useEffect(() => {
+    if (!hasRunning) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [hasRunning]);
+
+  function handleChipClick(notifId: string) {
+    setFocusTaskId(notifId);
+    navigate('/develop');
+  }
+
+  return (
+    <div
+      className="shrink-0 flex items-center border-t border-border bg-background"
+      style={{ height: taskNotifs.length > 0 ? '36px' : '22px' }}
+    >
+      {/* Task chips */}
+      <div className="flex items-center gap-[4px] px-[8px] flex-1 min-w-0 overflow-x-auto">
+        {taskNotifs.map(n => {
+          const task = n.task!;
+          const isRunning = task.status === 'running';
+          const isDone = task.status === 'done';
+          return (
+            <div
+              key={n.id}
+              className="flex items-center gap-[5px] pl-[7px] pr-[4px] h-[22px] rounded-[3px] border border-border bg-muted shrink-0 group/chip"
+            >
+              {/* Status indicator */}
+              {isRunning ? (
+                <span className="w-[5px] h-[5px] rounded-full bg-brand animate-pulse shrink-0" />
+              ) : isDone ? (
+                <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400 shrink-0" />
+              ) : (
+                <Icon icon="solar:close-circle-bold" className="text-[10px] text-red-400 shrink-0" />
+              )}
+
+              {/* Clickable label area */}
+              <button
+                onClick={() => handleChipClick(n.id)}
+                className="flex items-center gap-[4px] focus:outline-none"
+              >
+                <Icon
+                  icon={TASK_ICON[task.type]}
+                  className="text-[10px] text-[rgba(255,255,255,0.4)] shrink-0"
+                />
+                <span className="text-[9px] font-mono text-[rgba(255,255,255,0.7)] truncate max-w-[120px]">
+                  {n.body || TASK_LABEL[task.type]}
+                </span>
+                {isRunning && (
+                  <span className="text-[9px] font-mono text-[rgba(255,255,255,0.3)] shrink-0">
+                    {/* tick is used to re-render elapsed time */}
+                    {formatElapsed(task.startedAt)}
+                    {tick > -1 ? '' : ''}
+                  </span>
+                )}
+              </button>
+
+              {/* Dismiss */}
+              <button
+                onClick={() => dismiss(n.id)}
+                className="w-[14px] h-[14px] flex items-center justify-center rounded-[2px] text-[rgba(255,255,255,0.2)] hover:text-white hover:bg-accent transition-colors shrink-0 opacity-0 group-hover/chip:opacity-100"
+                title="Dismiss"
+              >
+                <Icon icon="solar:close-circle-linear" className="text-[9px]" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Right section — reserved for future status indicators */}
+      <div className="shrink-0 px-[8px] flex items-center gap-[6px]">
+        {/* placeholder */}
+      </div>
+    </div>
+  );
+}

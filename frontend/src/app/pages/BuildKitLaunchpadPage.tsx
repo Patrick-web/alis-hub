@@ -27,7 +27,7 @@ export function BuildKitLaunchpadPage() {
           {/* Initialise Launchpad */}
           <StageCard
             title="Don't have a launchpad?"
-            icon={<Icon icon="solar:rocket-launch-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:rocket-launch-linear" className="text-brand" />}
             action={
               <Button variant="secondary" onClick={() => navigate('/agents')}>
                 Initialise
@@ -44,13 +44,13 @@ export function BuildKitLaunchpadPage() {
           {/* Agent Registry */}
           <StageCard
             title="Agent Registry"
-            icon={<Icon icon="solar:users-group-two-rounded-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:users-group-two-rounded-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[16px] leading-[1.5]">
               Register your agents to make them discoverable and usable by the rest of your team. Highlight their
               unique tools and capabilities.
             </p>
-            <div className="flex items-center justify-between py-[10px] border-t border-[#464646]">
+            <div className="flex items-center justify-between py-[10px] border-t border-border">
               <div className="flex items-center gap-[10px]">
                 <Icon icon="solar:robot-linear" className="text-[rgba(255,255,255,0.4)] text-[16px]" />
                 <div>
@@ -67,12 +67,12 @@ export function BuildKitLaunchpadPage() {
           {/* MCP Registry */}
           <StageCard
             title="MCP Registry"
-            icon={<Icon icon="solar:server-square-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:server-square-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[16px] leading-[1.5]">
               Register Model Context Protocol (MCP) servers to extend the capabilities of your agents.
             </p>
-            <div className="flex items-center justify-between py-[10px] border-t border-[#464646]">
+            <div className="flex items-center justify-between py-[10px] border-t border-border">
               <div className="flex items-center gap-[10px]">
                 <Icon icon="solar:server-minimalistic-linear" className="text-[rgba(255,255,255,0.4)] text-[16px]" />
                 <div>
@@ -89,12 +89,12 @@ export function BuildKitLaunchpadPage() {
           {/* Client Interfaces */}
           <StageCard
             title="Client Interfaces"
-            icon={<Icon icon="solar:monitor-smartphone-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:monitor-smartphone-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[16px] leading-[1.5]">
               Register custom client interfaces that allow users to interact with multiple agents seamlessly.
             </p>
-            <div className="flex items-center justify-between py-[10px] border-t border-[#464646]">
+            <div className="flex items-center justify-between py-[10px] border-t border-border">
               <div className="flex items-center gap-[10px]">
                 <Icon icon="solar:monitor-linear" className="text-[rgba(255,255,255,0.4)] text-[16px]" />
                 <div>

@@ -68,9 +68,9 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
   return (
     <button onClick={onChange} className="flex items-center gap-[8px] text-left py-[4px] group">
       <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#555] group-hover:border-[#888]'
+        checked ? 'bg-brand border-brand' : 'border-border group-hover:border-border'
       }`}>
-        {checked && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[10px]" />}
+        {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[10px]" />}
       </div>
       <span className="text-[11px] text-[rgba(255,255,255,0.7)] leading-[1.4]">{label}</span>
     </button>
@@ -81,9 +81,9 @@ function ActionAlert({ icon, title, description, action }: { icon: string; title
   return (
     <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px] mt-[16px]">
       <div className="flex items-center gap-[12px]">
-        <Icon icon={icon} className="text-[#f881a9] text-[18px] shrink-0" />
+        <Icon icon={icon} className="text-brand text-[18px] shrink-0" />
         <div>
-          <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{title}</p>
+          <p className="text-[11px] font-bold text-white font-mono">{title}</p>
           <p className="text-[10px] text-[rgba(255,255,255,0.55)] mt-[1px]">{description}</p>
         </div>
       </div>
@@ -103,14 +103,14 @@ function AddToolDiagram() {
     <div className="flex items-center gap-0 my-[8px]">
       {stages.map((s, i) => (
         <div key={s.label} className="flex items-center">
-          <div className="flex flex-col items-center gap-[6px] px-[14px] py-[10px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
+          <div className="flex flex-col items-center gap-[6px] px-[14px] py-[10px] bg-card border border-border rounded-[4px]">
             <div className="flex items-center gap-[6px]">
-              <div className="size-[18px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0">
-                <span className="text-[8px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">{s.n}</span>
+              <div className="size-[18px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0">
+                <span className="text-[8px] font-bold text-brand font-mono">{s.n}</span>
               </div>
-              <Icon icon={s.icon} className="text-[#f881a9] text-[14px]" />
+              <Icon icon={s.icon} className="text-brand text-[14px]" />
             </div>
-            <span className="text-[9px] font-bold text-white font-['JetBrains_Mono',sans-serif] uppercase">{s.label}</span>
+            <span className="text-[9px] font-bold text-white font-mono uppercase">{s.label}</span>
           </div>
           {i < stages.length - 1 && (
             <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] text-[16px] mx-[6px]" />
@@ -157,14 +157,14 @@ export function BuildKitAgentToolPage() {
           </p>
 
           <div>
-            <p className="text-[11px] font-bold text-white uppercase font-['JetBrains_Mono',sans-serif] mb-[8px]">The 4-Stage Process</p>
+            <p className="text-[11px] font-bold text-white uppercase font-mono mb-[8px]">The 4-Stage Process</p>
             <AddToolDiagram />
           </div>
 
           {/* Prerequisites */}
           <StageCard
             title="Prerequisites"
-            icon={<Icon icon="solar:checklist-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:checklist-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
               Note that a Tool is <strong>not built within the Agent service</strong>, but rather built in its own
@@ -172,8 +172,8 @@ export function BuildKitAgentToolPage() {
             </p>
             <div className="flex flex-col gap-[8px] mb-[16px]">
               <div className="flex gap-[10px]">
-                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0 mt-[1px]">
-                  <span className="text-[9px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">1</span>
+                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                  <span className="text-[9px] font-bold text-brand font-mono">1</span>
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-white">Confirm/Configure the Host Service</p>
@@ -181,8 +181,8 @@ export function BuildKitAgentToolPage() {
                 </div>
               </div>
               <div className="flex gap-[10px]">
-                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0 mt-[1px]">
-                  <span className="text-[9px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">2</span>
+                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                  <span className="text-[9px] font-bold text-brand font-mono">2</span>
                 </div>
                 <div>
                   <p className="text-[11px] font-bold text-white">Prepare your Workspace</p>
@@ -214,7 +214,7 @@ export function BuildKitAgentToolPage() {
               structure of the information it will return (outputs). Embed rich, descriptive comments — these are vital
               instructions that explain the tool's purpose to the Agent.
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">Example</p>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">Example</p>
             <CodeBlock code={defineProtoCode} language="protobuf" />
 
             <div className="flex flex-col gap-[4px] mt-[16px]">
@@ -243,7 +243,7 @@ export function BuildKitAgentToolPage() {
               With the tool's interface defined, the next step is to write the actual code that performs its designated
               task. This involves developing the backend logic in your chosen server-side language (e.g., Go).
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">Example</p>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">Example</p>
             <CodeBlock code={buildGoCode} language="go" />
 
             <div className="flex flex-col gap-[4px] mt-[16px]">
@@ -273,7 +273,7 @@ export function BuildKitAgentToolPage() {
               your code as a service and deploying it to your chosen cloud environment, ensuring your tool is always
               available and scalable.
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">Example</p>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">Example</p>
             <CodeBlock code={deployTfCode} language="hcl" />
 
             <ActionAlert
@@ -300,9 +300,9 @@ export function BuildKitAgentToolPage() {
               existence, understand its purpose (from your .proto documentation), and intelligently determine when and
               how to invoke it.
             </p>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">In your tools.go file:</p>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">In your tools.go file:</p>
             <CodeBlock code={registerToolsCode} language="go" className="mb-[12px]" />
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">In your agent.go file:</p>
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">In your agent.go file:</p>
             <CodeBlock code={registerAgentCode} language="go" />
 
             <div className="flex flex-col gap-[4px] mt-[16px]">

@@ -119,15 +119,15 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 gap-0 sm:max-w-[600px]">
-          <DialogHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+        <DialogContent className="bg-card border border-border text-white p-0 gap-0 sm:max-w-[600px]">
+          <DialogHeader className="px-[20px] py-[14px] border-b border-border">
             <div className="flex items-center gap-[10px]">
-              <Icon icon="solar:danger-triangle-linear" className="text-[#F881A9] text-xl" />
-              <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+              <Icon icon="solar:danger-triangle-linear" className="text-brand text-xl" />
+              <DialogTitle className="text-white font-mono text-[13px] font-bold">
                 Check Missing Variables
               </DialogTitle>
             </div>
-            <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px]">
+            <p className="font-mono text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px]">
               Variables that exist in some environments but not others
             </p>
           </DialogHeader>
@@ -138,13 +138,13 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                 <Loader />
               </div>
             ) : error ? (
-              <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[#ff5050] text-center py-[20px]">
+              <p className="font-mono text-[11px] text-destructive text-center py-[20px]">
                 {error}
               </p>
             ) : gaps.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-[40px] gap-[10px]">
-                <Icon icon="solar:check-circle-linear" className="text-[#4CAF50] text-[32px]" />
-                <p className="font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.5)]">
+                <Icon icon="solar:check-circle-linear" className="text-success text-[32px]" />
+                <p className="font-mono text-[12px] text-[rgba(255,255,255,0.5)]">
                   All environments are in sync
                 </p>
               </div>
@@ -152,14 +152,14 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
               gaps.map(gap => (
                 <div
                   key={gap.label}
-                  className="flex items-start gap-[12px] p-[12px] rounded-[4px] border border-[#464646] bg-[rgba(255,255,255,0.02)]"
+                  className="flex items-start gap-[12px] p-[12px] rounded-[4px] border border-border bg-[rgba(255,255,255,0.02)]"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-['JetBrains_Mono',sans-serif] text-[12px] text-white font-bold truncate">
+                    <p className="font-mono text-[12px] text-white font-bold truncate">
                       {gap.label}
                     </p>
                     <div className="flex items-center gap-[6px] mt-[4px] flex-wrap">
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[rgba(255,255,255,0.4)]">
+                      <span className="font-mono text-[10px] text-[rgba(255,255,255,0.4)]">
                         Present in:
                       </span>
                       {loadedEnvs
@@ -167,7 +167,7 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                         .map(e => (
                           <span
                             key={e.name}
-                            className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[rgba(255,255,255,0.7)] border border-[#464646] px-[5px] py-[1px] rounded-[3px]"
+                            className="font-mono text-[9px] text-[rgba(255,255,255,0.7)] border border-border px-[5px] py-[1px] rounded-[3px]"
                           >
                             {e.displayName}
                           </span>
@@ -175,13 +175,13 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                       }
                     </div>
                     <div className="flex items-center gap-[6px] mt-[3px] flex-wrap">
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[#ff5050]">
+                      <span className="font-mono text-[10px] text-destructive">
                         Missing in:
                       </span>
                       {gap.missingEnvs.map(e => (
                         <span
                           key={e.name}
-                          className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[#ff5050] border border-[rgba(255,80,80,0.4)] px-[5px] py-[1px] rounded-[3px]"
+                          className="font-mono text-[9px] text-destructive border border-[rgba(255,80,80,0.4)] px-[5px] py-[1px] rounded-[3px]"
                         >
                           {e.displayName}
                         </span>
@@ -205,7 +205,7 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
             )}
           </div>
 
-          <div className="px-[20px] py-[14px] border-t border-[#464646] flex justify-end">
+          <div className="px-[20px] py-[14px] border-t border-border flex justify-end">
             <Button
               variant="secondary"
               className="h-[34px] px-[20px] text-[11px] font-bold uppercase"

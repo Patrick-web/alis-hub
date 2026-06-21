@@ -26,16 +26,16 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
       <div
         className={`absolute ${
           active
-            ? 'border-[#f881a9] border-b border-solid border-t'
-            : 'border-[#464646] border-solid border-t'
+            ? 'border-brand border-b border-solid border-t'
+            : 'border-border border-solid border-t'
         } inset-0 pointer-events-none`}
         aria-hidden="true"
       />
       <div className="flex flex-row items-center size-full">
         <div className="content-stretch flex gap-[10px] items-center p-[10px] relative w-full">
           <div className="relative shrink-0 size-[20px]">{icon}</div>
-          <p className={`font-['JetBrains_Mono',sans-serif] leading-[normal] not-italic relative shrink-0 text-[12px] whitespace-nowrap flex-1 text-left ${
-            active ? 'text-[#f881a9]' : 'text-white'
+          <p className={`font-mono leading-[normal] not-italic relative shrink-0 text-[12px] whitespace-nowrap flex-1 text-left ${
+            active ? 'text-brand' : 'text-white'
           }`}>
             {label}
           </p>
@@ -52,7 +52,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
               {onDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(); }}
-                  className="p-[3px] rounded hover:bg-[rgba(255,80,80,0.15)] text-[rgba(255,255,255,0.5)] hover:text-[#ff5050] transition-colors"
+                  className="p-[3px] rounded hover:bg-[rgba(255,80,80,0.15)] text-[rgba(255,255,255,0.5)] hover:text-destructive transition-colors"
                 >
                   <Icon icon="solar:trash-bin-trash-linear" className="text-[14px]" />
                 </button>
