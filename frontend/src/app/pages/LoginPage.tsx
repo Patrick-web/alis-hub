@@ -23,21 +23,21 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[#1e1e1e] gap-[32px]">
+    <div className="flex-1 flex flex-col items-center justify-center bg-background gap-[32px]">
       {/* Logo / wordmark */}
       <div className="flex flex-col items-center gap-[8px]">
         <div className="size-[56px] rounded-[14px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)] flex items-center justify-center">
-          <Icon icon="solar:cloud-bold" className="text-[#F881A9] text-[28px]" />
+          <Icon icon="solar:cloud-bold" className="text-brand text-[28px]" />
         </div>
         <p className="text-[22px] font-bold text-white tracking-tight">AlisHub</p>
         <p className="text-[13px] text-[rgba(255,255,255,0.4)]">Sign in to access your landing zones</p>
       </div>
 
       {/* Sign-in card */}
-      <div className="w-[320px] bg-[#2c2c2c] border border-[#3a3a3a] rounded-[12px] p-[24px] flex flex-col gap-[16px]">
+      <div className="w-[320px] bg-card border border-border rounded-[12px] p-[24px] flex flex-col gap-[16px]">
         {error && (
           <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
-            <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+            <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
             <p className="text-[11px] text-[rgba(255,255,255,0.7)] leading-relaxed">{error}</p>
           </div>
         )}
@@ -45,7 +45,7 @@ export function LoginPage() {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="flex items-center justify-center gap-[10px] h-[42px] rounded-[8px] bg-[#F881A9] hover:bg-[#f96fb9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[13px] font-bold text-white"
+          className="flex items-center justify-center gap-[10px] h-[42px] rounded-[8px] bg-brand hover:bg-[#f96fb9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[13px] font-bold text-white"
         >
           {loading ? (
             <>

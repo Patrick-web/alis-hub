@@ -44,9 +44,9 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
   return (
     <button onClick={onChange} className="flex items-center gap-[8px] text-left py-[4px] group">
       <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#555] group-hover:border-[#888]'
+        checked ? 'bg-brand border-brand' : 'border-border group-hover:border-border'
       }`}>
-        {checked && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[10px]" />}
+        {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[10px]" />}
       </div>
       <span className="text-[11px] text-[rgba(255,255,255,0.7)] leading-[1.4]">{label}</span>
     </button>
@@ -57,9 +57,9 @@ function ActionAlert({ icon, title, description, action }: { icon: string; title
   return (
     <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px] mt-[16px]">
       <div className="flex items-center gap-[12px]">
-        <Icon icon={icon} className="text-[#f881a9] text-[18px] shrink-0" />
+        <Icon icon={icon} className="text-brand text-[18px] shrink-0" />
         <div>
-          <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{title}</p>
+          <p className="text-[11px] font-bold text-white font-mono">{title}</p>
           <p className="text-[10px] text-[rgba(255,255,255,0.55)] mt-[1px]">{description}</p>
         </div>
       </div>
@@ -91,7 +91,7 @@ export function BuildKitAgentPage() {
           {/* Section 1: Initialise Agent */}
           <div>
             <h2 className="text-[16px] font-bold text-white mb-[12px]">Don't have an agent?</h2>
-            <div className="border-b border-[#464646] mb-[16px]" />
+            <div className="border-b border-border mb-[16px]" />
 
             <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.6] mb-[16px]">
               Begin your journey by creating a new Agent within the Alis Build ecosystem. This process is designed to be
@@ -102,19 +102,19 @@ export function BuildKitAgentPage() {
 
             <StageCard
               title="Establish your Agent's Identity"
-              icon={<Icon icon="solar:user-id-linear" className="text-[#f881a9]" />}
+              icon={<Icon icon="solar:user-id-linear" className="text-brand" />}
             >
               <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[10px]">You will be prompted to provide:</p>
               <div className="flex flex-col gap-[8px]">
                 <div className="flex gap-[10px]">
-                  <Icon icon="solar:user-circle-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                  <Icon icon="solar:user-circle-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                   <div>
                     <p className="text-[11px] font-bold text-white">Name</p>
-                    <p className="text-[10px] text-[rgba(255,255,255,0.5)]">A unique identifier for your agent (e.g., <code className="font-['JetBrains_Mono',sans-serif]">joe</code>).</p>
+                    <p className="text-[10px] text-[rgba(255,255,255,0.5)]">A unique identifier for your agent (e.g., <code className="font-mono">joe</code>).</p>
                   </div>
                 </div>
                 <div className="flex gap-[10px]">
-                  <Icon icon="solar:tag-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                  <Icon icon="solar:tag-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                   <div>
                     <p className="text-[11px] font-bold text-white">Tagline</p>
                     <p className="text-[10px] text-[rgba(255,255,255,0.5)]">A tagline outlining your agent's capabilities and purpose.</p>
@@ -126,18 +126,18 @@ export function BuildKitAgentPage() {
             <div className="mt-[12px]">
               <StageCard
                 title="Infrastructure & Visibility"
-                icon={<Icon icon="solar:eye-linear" className="text-[#f881a9]" />}
+                icon={<Icon icon="solar:eye-linear" className="text-brand" />}
               >
                 <div className="flex flex-col gap-[8px]">
                   <div className="flex gap-[10px]">
-                    <Icon icon="solar:eye-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                    <Icon icon="solar:eye-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                     <div>
                       <p className="text-[11px] font-bold text-white">Total Control</p>
                       <p className="text-[10px] text-[rgba(255,255,255,0.5)]">All generated files are visible in your file explorer. You own the code.</p>
                     </div>
                   </div>
                   <div className="flex gap-[10px]">
-                    <Icon icon="solar:code-square-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                    <Icon icon="solar:code-square-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                     <div>
                       <p className="text-[11px] font-bold text-white">No Black Boxes</p>
                       <p className="text-[10px] text-[rgba(255,255,255,0.5)]">Glass Box development — you can inspect, modify, and extend every part of the generated setup.</p>
@@ -150,18 +150,18 @@ export function BuildKitAgentPage() {
             <div className="mt-[12px]">
               <StageCard
                 title="Automated Build & Deploy"
-                icon={<Icon icon="solar:rocket-launch-linear" className="text-[#f881a9]" />}
+                icon={<Icon icon="solar:rocket-launch-linear" className="text-brand" />}
               >
                 <div className="flex flex-col gap-[8px]">
                   <div className="flex gap-[10px]">
-                    <Icon icon="solar:box-minimalistic-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                    <Icon icon="solar:box-minimalistic-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                     <div>
                       <p className="text-[11px] font-bold text-white">Artifact Build</p>
                       <p className="text-[10px] text-[rgba(255,255,255,0.5)]">We automatically compile and prepare the deployment artifacts.</p>
                     </div>
                   </div>
                   <div className="flex gap-[10px]">
-                    <Icon icon="solar:rocket-launch-linear" className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                    <Icon icon="solar:rocket-launch-linear" className="text-brand text-[16px] shrink-0 mt-[1px]" />
                     <div>
                       <p className="text-[11px] font-bold text-white">Deployment</p>
                       <p className="text-[10px] text-[rgba(255,255,255,0.5)]">Your agent is immediately deployed to the development environment, making it live and testable.</p>
@@ -186,11 +186,11 @@ export function BuildKitAgentPage() {
           {/* Section 2: Add Tool to Agent */}
           <div>
             <h2 className="text-[16px] font-bold text-white mb-[12px] mt-[16px]">Add your Tool to your Agent</h2>
-            <div className="border-b border-[#464646] mb-[16px]" />
+            <div className="border-b border-border mb-[16px]" />
 
             <StageCard
               title="Weave the Capability"
-              icon={<Icon icon="solar:link-linear" className="text-[#f881a9]" />}
+              icon={<Icon icon="solar:link-linear" className="text-brand" />}
             >
               <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
                 This step connects your new, deployed tool directly to your Agent. You register this new capability
@@ -199,12 +199,12 @@ export function BuildKitAgentPage() {
                 and how to invoke it.
               </p>
 
-              <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
                 In your agent's tools.go file:
               </p>
               <CodeBlock code={registerToolsCode} language="go" className="mb-[12px]" />
 
-              <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
                 In your agent's agent.go file:
               </p>
               <CodeBlock code={registerAgentCode} language="go" />
@@ -242,11 +242,11 @@ export function BuildKitAgentPage() {
           {/* Publish to Gemini Enterprise */}
           <div>
             <h2 className="text-[16px] font-bold text-white mb-[12px] mt-[16px]">Publish to Gemini Enterprise</h2>
-            <div className="border-b border-[#464646] mb-[16px]" />
+            <div className="border-b border-border mb-[16px]" />
 
             <StageCard
               title="Deploy, Scale, and Integrate"
-              icon={<Icon icon="solar:stars-linear" className="text-[#f881a9]" />}
+              icon={<Icon icon="solar:stars-linear" className="text-brand" />}
             >
               <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[12px] leading-[1.6]">
                 Once your agent is initialized, built, and thoroughly tested, the final step is to make it
@@ -259,7 +259,7 @@ export function BuildKitAgentPage() {
                   { icon: 'solar:buildings-linear', title: 'Enterprise Registration', desc: 'Your agent is registered within the Gemini Enterprise platform for secure invocation.' },
                 ].map(({ icon, title, desc }) => (
                   <div key={title} className="flex gap-[10px]">
-                    <Icon icon={icon} className="text-[#f881a9] text-[16px] shrink-0 mt-[1px]" />
+                    <Icon icon={icon} className="text-brand text-[16px] shrink-0 mt-[1px]" />
                     <div>
                       <p className="text-[11px] font-bold text-white">{title}</p>
                       <p className="text-[10px] text-[rgba(255,255,255,0.5)]">{desc}</p>

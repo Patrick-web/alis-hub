@@ -5,6 +5,7 @@ import {
   useMemo,
   useReducer,
   useEffect,
+  useState,
   type ReactNode,
 } from 'react';
 
@@ -13,9 +14,24 @@ export type NotificationSource =
   | 'system'
   | 'build'
   | 'deploy'
+  | 'define'
+  | 'packages'
   | 'git'
   | 'update'
   | 'general';
+
+export type TaskType = 'define' | 'build' | 'deploy' | 'packages';
+export type TaskStatus = 'running' | 'done' | 'error';
+
+export interface TaskProgress {
+  type: TaskType;
+  status: TaskStatus;
+  neuronId: string;
+  step: string;
+  startedAt: number;
+  logBuffer: string[];
+  meta: Record<string, unknown>;
+}
 
 export interface NotificationAction {
   label: string;
@@ -33,6 +49,7 @@ export interface AppNotification {
   read: boolean;
   persistent: boolean;
   actions?: NotificationAction[];
+  task?: TaskProgress;
 }
 
 export interface WailsNotificationPayload {
@@ -52,8 +69,13 @@ interface NotificationState {
   notifications: AppNotification[];
 }
 
+type NotificationPatch = Partial<Omit<AppNotification, 'id' | 'task'>> & {
+  task?: Partial<TaskProgress>;
+};
+
 type StoreAction =
   | { type: 'ADD'; payload: AppNotification }
+  | { type: 'UPDATE'; payload: { id: string; patch: NotificationPatch } }
   | { type: 'MARK_READ'; payload: string }
   | { type: 'MARK_ALL_READ' }
   | { type: 'DISMISS'; payload: string }
@@ -61,12 +83,15 @@ type StoreAction =
 
 interface NotificationContextValue {
   state: NotificationState;
-  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
+  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => string;
+  updateNotification: (id: string, patch: Partial<Omit<AppNotification, 'id' | 'task'>> & { task?: Partial<TaskProgress> }) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   dismiss: (id: string) => void;
   clearAll: () => void;
   unreadCount: number;
+  focusTaskId: string | null;
+  setFocusTaskId: (id: string | null) => void;
 }
 
 const STORAGE_KEY = 'alis:notifications';
@@ -84,10 +109,12 @@ function loadFromStorage(): AppNotification[] {
 
 function saveToStorage(notifications: AppNotification[]) {
   try {
-    // Strip action closures — they can't be serialised
     const serialisable = notifications
-      .filter(n => n.persistent)
-      .map(({ actions: _actions, ...n }) => n);
+      .filter(n => n.persistent && n.task?.status !== 'running')
+      .map(({ actions: _actions, task, ...n }) => ({
+        ...n,
+        ...(task ? { task: { ...task, logBuffer: [] } } : {}),
+      }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serialisable));
   } catch {}
 }
@@ -96,6 +123,18 @@ function reducer(state: NotificationState, action: StoreAction): NotificationSta
   switch (action.type) {
     case 'ADD':
       return { notifications: [action.payload, ...state.notifications] };
+    case 'UPDATE':
+      return {
+        notifications: state.notifications.map(n => {
+          if (n.id !== action.payload.id) return n;
+          const { task: taskPatch, ...rest } = action.payload.patch;
+          return {
+            ...n,
+            ...rest,
+            task: taskPatch ? { ...(n.task ?? {} as TaskProgress), ...taskPatch } : n.task,
+          };
+        }),
+      };
     case 'MARK_READ':
       return {
         notifications: state.notifications.map(n =>
@@ -119,17 +158,27 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
     notifications: loadFromStorage(),
   }));
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     saveToStorage(state.notifications);
   }, [state.notifications]);
 
   const addNotification = useCallback(
-    (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => {
+    (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>): string => {
+      const id = crypto.randomUUID();
       dispatch({
         type: 'ADD',
-        payload: { ...n, id: crypto.randomUUID(), timestamp: Date.now(), read: false },
+        payload: { ...n, id, timestamp: Date.now(), read: false },
       });
+      return id;
+    },
+    []
+  );
+
+  const updateNotification = useCallback(
+    (id: string, patch: NotificationPatch) => {
+      dispatch({ type: 'UPDATE', payload: { id, patch } });
     },
     []
   );
@@ -152,7 +201,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   return (
     <NotificationContext.Provider
-      value={{ state, addNotification, markRead, markAllRead, dismiss, clearAll, unreadCount }}
+      value={{
+        state,
+        addNotification,
+        updateNotification,
+        markRead,
+        markAllRead,
+        dismiss,
+        clearAll,
+        unreadCount,
+        focusTaskId,
+        setFocusTaskId,
+      }}
     >
       {children}
     </NotificationContext.Provider>

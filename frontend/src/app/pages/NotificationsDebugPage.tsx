@@ -10,9 +10,9 @@ import type { NotificationSeverity, NotificationSource } from '../stores/notific
 function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-[12px]">
-      <div className="flex items-center gap-[8px] pb-[8px] border-b border-[#3a3a3a]">
-        <Icon icon={icon} className="text-[#f881a9] text-[15px]" />
-        <span className="text-[11px] font-bold text-white uppercase tracking-widest font-['JetBrains_Mono',sans-serif]">
+      <div className="flex items-center gap-[8px] pb-[8px] border-b border-border">
+        <Icon icon={icon} className="text-brand text-[15px]" />
+        <span className="text-[11px] font-bold text-white uppercase tracking-widest font-mono">
           {title}
         </span>
       </div>
@@ -39,19 +39,19 @@ function Btn({
   disabled?: boolean;
 }) {
   const colors: Record<string, string> = {
-    default:  'bg-[#3a3a3a] text-white hover:bg-[#464646]',
-    success:  'bg-[rgba(52,199,89,0.15)] text-[#34C759] border border-[rgba(52,199,89,0.3)] hover:bg-[rgba(52,199,89,0.25)]',
-    error:    'bg-[rgba(212,24,61,0.15)] text-[#ff5c5f] border border-[rgba(212,24,61,0.3)] hover:bg-[rgba(212,24,61,0.25)]',
-    warning:  'bg-[rgba(250,200,0,0.12)] text-[#FAC800] border border-[rgba(250,200,0,0.3)] hover:bg-[rgba(250,200,0,0.22)]',
-    info:     'bg-[rgba(59,130,246,0.15)] text-[#60a5fa] border border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.25)]',
-    ghost:    'bg-transparent text-[rgba(255,255,255,0.4)] border border-[#3a3a3a] hover:text-white hover:border-[#646464]',
-    danger:   'bg-[rgba(255,92,95,0.1)] text-[#ff5c5f] hover:bg-[rgba(255,92,95,0.2)]',
+    default:  'bg-accent text-white hover:bg-border',
+    success:  'bg-[rgba(52,199,89,0.15)] text-success border border-[rgba(52,199,89,0.3)] hover:bg-[rgba(52,199,89,0.25)]',
+    error:    'bg-[rgba(212,24,61,0.15)] text-destructive border border-[rgba(212,24,61,0.3)] hover:bg-[rgba(212,24,61,0.25)]',
+    warning:  'bg-[rgba(250,200,0,0.12)] text-warning border border-[rgba(250,200,0,0.3)] hover:bg-[rgba(250,200,0,0.22)]',
+    info:     'bg-[rgba(59,130,246,0.15)] text-info border border-[rgba(59,130,246,0.3)] hover:bg-[rgba(59,130,246,0.25)]',
+    ghost:    'bg-transparent text-[rgba(255,255,255,0.4)] border border-border hover:text-white hover:border-border',
+    danger:   'bg-[rgba(255,92,95,0.1)] text-destructive hover:bg-[rgba(255,92,95,0.2)]',
   };
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex items-center gap-[6px] px-[10px] py-[5px] rounded-[5px] text-[11px] font-['JetBrains_Mono',sans-serif] transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${colors[variant]}`}
+      className={`flex items-center gap-[6px] px-[10px] py-[5px] rounded-[5px] text-[11px] font-mono transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${colors[variant]}`}
     >
       {icon && <Icon icon={icon} className="text-[13px] shrink-0" />}
       {label}
@@ -61,7 +61,7 @@ function Btn({
 
 function Tag({ label, value }: { label: string; value: string | number | boolean }) {
   return (
-    <div className="flex items-center gap-[6px] text-[10px] font-['JetBrains_Mono',sans-serif]">
+    <div className="flex items-center gap-[6px] text-[10px] font-mono">
       <span className="text-[rgba(255,255,255,0.3)] uppercase tracking-wide">{label}</span>
       <span className="text-white font-bold">{String(value)}</span>
     </div>
@@ -168,12 +168,12 @@ export function NotificationsDebugPage() {
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-[4px]">
           <div className="flex items-center gap-[10px]">
-            <Icon icon="solar:bell-bing-bold" className="text-[#f881a9] text-[22px]" />
-            <h1 className="text-[16px] font-bold text-white font-['JetBrains_Mono',sans-serif]">
+            <Icon icon="solar:bell-bing-bold" className="text-brand text-[22px]" />
+            <h1 className="text-[16px] font-bold text-white font-mono">
               Notifications Debug
             </h1>
           </div>
-          <p className="text-[11px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] ml-[32px]">
+          <p className="text-[11px] text-[rgba(255,255,255,0.35)] font-mono ml-[32px]">
             Test all three notification layers
           </p>
         </div>
@@ -208,19 +208,19 @@ export function NotificationsDebugPage() {
       <Section title="Notification Center" icon="solar:bell-linear">
 
         {/* Controls */}
-        <div className="bg-[#242424] rounded-[8px] border border-[#3a3a3a] p-[14px] flex flex-col gap-[12px]">
+        <div className="bg-muted rounded-[8px] border border-border p-[14px] flex flex-col gap-[12px]">
           {/* Severity */}
           <div className="flex items-center gap-[10px]">
-            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-wide w-[70px] shrink-0">Severity</span>
+            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide w-[70px] shrink-0">Severity</span>
             <div className="flex gap-[6px]">
               {SEVERITIES.map(s => (
                 <button
                   key={s}
                   onClick={() => setSeverity(s)}
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-['JetBrains_Mono',sans-serif] transition-colors ${
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     severity === s
-                      ? 'bg-[#f881a9] text-black font-bold'
-                      : 'bg-[#3a3a3a] text-[rgba(255,255,255,0.5)] hover:text-white'
+                      ? 'bg-brand text-black font-bold'
+                      : 'bg-accent text-[rgba(255,255,255,0.5)] hover:text-white'
                   }`}
                 >
                   {s}
@@ -231,16 +231,16 @@ export function NotificationsDebugPage() {
 
           {/* Source */}
           <div className="flex items-center gap-[10px]">
-            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-wide w-[70px] shrink-0">Source</span>
+            <span className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide w-[70px] shrink-0">Source</span>
             <div className="flex flex-wrap gap-[6px]">
               {SOURCES.map(s => (
                 <button
                   key={s}
                   onClick={() => setSource(s)}
-                  className={`px-[8px] py-[3px] rounded text-[10px] font-['JetBrains_Mono',sans-serif] transition-colors ${
+                  className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     source === s
-                      ? 'bg-[#f881a9] text-black font-bold'
-                      : 'bg-[#3a3a3a] text-[rgba(255,255,255,0.5)] hover:text-white'
+                      ? 'bg-brand text-black font-bold'
+                      : 'bg-accent text-[rgba(255,255,255,0.5)] hover:text-white'
                   }`}
                 >
                   {s}
@@ -259,9 +259,9 @@ export function NotificationsDebugPage() {
               <button
                 key={label}
                 onClick={() => set(!val)}
-                className="flex items-center gap-[7px] text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
+                className="flex items-center gap-[7px] text-[10px] font-mono text-[rgba(255,255,255,0.5)] hover:text-white transition-colors"
               >
-                <span className={`relative w-[28px] h-[16px] rounded-full transition-colors ${val ? 'bg-[#f881a9]' : 'bg-[#3a3a3a]'}`}>
+                <span className={`relative w-[28px] h-[16px] rounded-full transition-colors ${val ? 'bg-brand' : 'bg-accent'}`}>
                   <span className={`absolute top-[2px] w-[12px] h-[12px] rounded-full bg-white shadow transition-all ${val ? 'left-[14px]' : 'left-[2px]'}`} />
                 </span>
                 {label}
@@ -284,10 +284,10 @@ export function NotificationsDebugPage() {
 
         {/* Live store preview */}
         {state.notifications.length > 0 && (
-          <div className="bg-[#1a1a1a] rounded-[8px] border border-[#3a3a3a] overflow-hidden">
-            <div className="px-[12px] py-[8px] border-b border-[#3a3a3a] flex items-center gap-[6px]">
-              <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-widest">Store state</span>
-              <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-[#f881a9] px-[5px] py-[1px] rounded-full font-['JetBrains_Mono',sans-serif] font-bold">
+          <div className="bg-muted rounded-[8px] border border-border overflow-hidden">
+            <div className="px-[12px] py-[8px] border-b border-border flex items-center gap-[6px]">
+              <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-widest">Store state</span>
+              <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
                 {state.notifications.length}
               </span>
             </div>
@@ -295,12 +295,12 @@ export function NotificationsDebugPage() {
               {state.notifications.map(n => (
                 <div
                   key={n.id}
-                  className={`flex items-start gap-[10px] px-[12px] py-[8px] border-b border-[#2a2a2a] last:border-0 text-[10px] font-['JetBrains_Mono',sans-serif] ${n.read ? 'opacity-40' : ''}`}
+                  className={`flex items-start gap-[10px] px-[12px] py-[8px] border-b border-border last:border-0 text-[10px] font-mono ${n.read ? 'opacity-40' : ''}`}
                 >
                   <span className={`shrink-0 mt-[1px] w-[6px] h-[6px] rounded-full ${
-                    n.severity === 'success' ? 'bg-[#34C759]' :
-                    n.severity === 'warning' ? 'bg-[#FAC800]' :
-                    n.severity === 'error'   ? 'bg-[#d4183d]' : 'bg-[#3b82f6]'
+                    n.severity === 'success' ? 'bg-success' :
+                    n.severity === 'warning' ? 'bg-warning' :
+                    n.severity === 'error'   ? 'bg-destructive' : 'bg-info'
                   }`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-[8px]">
@@ -319,17 +319,17 @@ export function NotificationsDebugPage() {
 
       {/* ── 3. System (OS) Notifications ─────────────────────────────── */}
       <Section title="System Notifications (macOS)" icon="solar:monitor-linear">
-        <div className="bg-[#242424] rounded-[8px] border border-[#3a3a3a] p-[14px] flex flex-col gap-[12px]">
+        <div className="bg-muted rounded-[8px] border border-border p-[14px] flex flex-col gap-[12px]">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[11px] text-white font-['JetBrains_Mono',sans-serif]">macOS notification center</p>
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] mt-[2px]">
+              <p className="text-[11px] text-white font-mono">macOS notification center</p>
+              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono mt-[2px]">
                 Fires a native notification via UserNotifications. Also togglable in Profile → System notifications.
               </p>
             </div>
             <button
               onClick={toggleSysNotif}
-              className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysEnabled ? 'bg-[#34C759]' : 'bg-[#3a3a3a]'}`}
+              className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysEnabled ? 'bg-success' : 'bg-accent'}`}
               title={sysEnabled ? 'Disable' : 'Enable'}
             >
               <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
@@ -337,7 +337,7 @@ export function NotificationsDebugPage() {
           </div>
 
           {!sysEnabled && (
-            <p className="text-[10px] text-[#FAC800] font-['JetBrains_Mono',sans-serif]">
+            <p className="text-[10px] text-warning font-mono">
               Toggle on above (or in Profile settings) to allow test fires.
             </p>
           )}

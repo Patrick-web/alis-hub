@@ -54,12 +54,12 @@ export const module1: LearningModule = {
                 example: 'users-v1',
               },
             ].map(({ term, def, example }) => (
-              <div key={term} className="px-[14px] py-[12px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <p className="text-[11px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <div key={term} className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
+                <p className="text-[11px] font-bold text-brand font-mono mb-[4px]">
                   {term}
                 </p>
                 <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5] mb-[6px]">{def}</p>
-                <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.35)] bg-[#1e1e1e] px-[6px] py-[2px] rounded">
+                <span className="text-[10px] font-mono text-[rgba(255,255,255,0.35)] bg-background px-[6px] py-[2px] rounded">
                   e.g. {example}
                 </span>
               </div>
@@ -84,10 +84,10 @@ export const module1: LearningModule = {
               { name: 'staging', colour: '#FAC800', desc: 'Pre-production testing. Mirrors production config but isolated data.' },
               { name: 'development', colour: '#5AC8FA', desc: 'Local iteration. Can scale to zero. Used for alis build + quick iteration loops.' },
             ].map(({ name, colour, desc }) => (
-              <div key={name} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-[#252525] border border-[#464646] rounded-[4px]">
+              <div key={name} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
                 <div className="size-[8px] rounded-full mt-[4px] shrink-0" style={{ backgroundColor: colour }} />
                 <div>
-                  <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[2px]">{name}</p>
+                  <p className="text-[11px] font-bold text-white font-mono mb-[2px]">{name}</p>
                   <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.4]">{desc}</p>
                 </div>
               </div>
@@ -115,8 +115,8 @@ export const module1: LearningModule = {
               { cmd: 'alis build', desc: 'Compiles your implementation and pushes a Docker image to Artifact Registry via Cloud Build.' },
               { cmd: 'alis deploy', desc: 'Provisions or updates GCP resources (Cloud Run, Endpoints, IAM) for the built image.' },
             ].map(({ cmd, desc }) => (
-              <div key={cmd} className="px-[12px] py-[10px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-                <p className="text-[12px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif] mb-[4px]">{cmd}</p>
+              <div key={cmd} className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
+                <p className="text-[12px] font-bold text-brand font-mono mb-[4px]">{cmd}</p>
                 <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.4]">{desc}</p>
               </div>
             ))}

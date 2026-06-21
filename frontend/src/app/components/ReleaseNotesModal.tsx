@@ -38,23 +38,23 @@ export function ReleaseNotesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white max-w-[600px] max-h-[80vh] flex flex-col">
+      <DialogContent className="bg-card border border-border text-white max-w-[600px] max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+          <DialogTitle className="text-white font-mono text-[13px] font-bold">
             Release Notes
           </DialogTitle>
-          <p className="text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif] text-[11px]">
+          <p className="text-[rgba(255,255,255,0.5)] font-mono text-[11px]">
             v{currentVersion} → v{latestVersion}
           </p>
         </DialogHeader>
         <div
-          className="flex-1 overflow-y-auto prose prose-invert prose-sm max-w-none font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] [&_h1]:text-[14px] [&_h2]:text-[13px] [&_h3]:text-[12px] [&_code]:bg-[#1e1e1e] [&_code]:px-1 [&_code]:rounded [&_ul]:pl-4 [&_li]:my-0.5 [&_img]:w-full [&_img]:rounded-lg [&_img]:mb-4"
+          className="flex-1 overflow-y-auto prose prose-invert prose-sm max-w-none font-mono text-[12px] text-[rgba(255,255,255,0.8)] [&_h1]:text-[14px] [&_h2]:text-[13px] [&_h3]:text-[12px] [&_code]:bg-background [&_code]:px-1 [&_code]:rounded [&_ul]:pl-4 [&_li]:my-0.5 [&_img]:w-full [&_img]:rounded-lg [&_img]:mb-4"
           dangerouslySetInnerHTML={{ __html: html }}
         />
-        <div className="pt-3 border-t border-[#464646]">
+        <div className="pt-3 border-t border-border">
           <button
             onClick={() => Browser.OpenURL(releaseUrl)}
-            className="text-[11px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)] hover:text-white transition-colors uppercase tracking-wide"
+            className="text-[11px] font-mono text-[rgba(255,255,255,0.5)] hover:text-white transition-colors uppercase tracking-wide"
           >
             Open on GitHub →
           </button>

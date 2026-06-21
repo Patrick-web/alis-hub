@@ -47,8 +47,8 @@ export function BuildKitIdentityPage() {
                 { label: 'IDENTITY_SERVICE_URL', desc: 'Public URL of the deployed Identity service (e.g. https://users-v1-{project}.{region}.run.app).' },
                 { label: 'COOKIE_DOMAIN', desc: 'Base domain for session cookies (e.g. .{your-launchpad-domain}).' },
               ].map((env) => (
-                <div key={env.label} className="px-[12px] py-[10px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                  <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[2px]">{env.label}</p>
+                <div key={env.label} className="px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
+                  <p className="text-[11px] font-bold text-white font-mono mb-[2px]">{env.label}</p>
                   <p className="text-[10px] text-[rgba(255,255,255,0.5)]">{env.desc}</p>
                 </div>
               ))}
@@ -80,9 +80,9 @@ export function BuildKitIdentityPage() {
                 'https://{identity-service-url}/callback/google',
                 'http://localhost:8080/callback/google',
               ].map((uri) => (
-                <div key={uri} className="flex items-center gap-[8px] px-[10px] py-[6px] bg-[#252525] border border-[#464646] rounded-[4px]">
+                <div key={uri} className="flex items-center gap-[8px] px-[10px] py-[6px] bg-muted border border-border rounded-[4px]">
                   <Icon icon="solar:link-linear" className="text-[rgba(255,255,255,0.35)] text-[12px] shrink-0" />
-                  <span className="text-[10px] text-white font-['JetBrains_Mono',sans-serif]">{uri}</span>
+                  <span className="text-[10px] text-white font-mono">{uri}</span>
                 </div>
               ))}
             </div>
@@ -110,16 +110,16 @@ export function BuildKitIdentityPage() {
                 { label: 'Redirect URI', value: 'https://{identity-service-url}/callback/microsoft' },
                 { label: 'Local redirect URI', value: 'http://localhost:8080/callback/microsoft' },
               ].map((item) => (
-                <div key={item.label} className="flex items-start gap-[10px] px-[12px] py-[8px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                  <span className="text-[10px] text-[rgba(255,255,255,0.45)] font-['JetBrains_Mono',sans-serif] w-[160px] shrink-0">{item.label}</span>
-                  <span className="text-[10px] text-white font-['JetBrains_Mono',sans-serif]">{item.value}</span>
+                <div key={item.label} className="flex items-start gap-[10px] px-[12px] py-[8px] bg-muted border border-border rounded-[4px]">
+                  <span className="text-[10px] text-[rgba(255,255,255,0.45)] font-mono w-[160px] shrink-0">{item.label}</span>
+                  <span className="text-[10px] text-white font-mono">{item.value}</span>
                 </div>
               ))}
             </div>
           </StageCard>
 
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
-            <Icon icon="solar:info-circle-linear" className="text-[#f881a9] text-[15px] shrink-0 mt-[1px]" />
+            <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
               Full Identity setup with automated service selection is available in the VS Code extension.
               Use the Alis Build extension for the complete interactive workflow.

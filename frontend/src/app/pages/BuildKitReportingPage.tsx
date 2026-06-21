@@ -86,7 +86,7 @@ export function BuildKitReportingPage() {
                 'Generating a template .proto definition from a PDF',
               ].map((item) => (
                 <div key={item} className="flex items-start gap-[8px]">
-                  <Icon icon="solar:point-on-map-linear" className="text-[#f881a9] text-[12px] shrink-0 mt-[2px]" />
+                  <Icon icon="solar:point-on-map-linear" className="text-brand text-[12px] shrink-0 mt-[2px]" />
                   <span className="text-[11px] text-[rgba(255,255,255,0.6)]">{item}</span>
                 </div>
               ))}

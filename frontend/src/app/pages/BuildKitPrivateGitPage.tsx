@@ -46,19 +46,19 @@ export function BuildKitPrivateGitPage() {
           {/* Managed private git card */}
           <StageCard
             title="Managed Private Git"
-            icon={<Icon icon="solar:shield-check-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:shield-check-linear" className="text-brand" />}
           >
             <div className="flex items-start gap-[12px]">
               <div className="size-[32px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
-                <Icon icon="solar:code-square-linear" className="text-[#f881a9] text-[16px]" />
+                <Icon icon="solar:code-square-linear" className="text-brand text-[16px]" />
               </div>
               <div>
-                <p className="text-[12px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[4px]">
+                <p className="text-[12px] font-bold text-white font-mono mb-[4px]">
                   Private Git for your organisation
                 </p>
                 <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
                   Your Forgejo instance lives at{' '}
-                  <span className="text-white font-['JetBrains_Mono',sans-serif]">git.{org}.alis.build</span>.
+                  <span className="text-white font-mono">git.{org}.alis.build</span>.
                   Access it through your browser to create repositories, manage teams, and review pull requests.
                 </p>
               </div>
@@ -68,14 +68,14 @@ export function BuildKitPrivateGitPage() {
           {/* Workspace repos */}
           <StageCard
             title="Workspace Repositories"
-            icon={<Icon icon="solar:folder-path-connect-linear" className="text-[#f881a9]" />}
+            icon={<Icon icon="solar:folder-path-connect-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] mb-[14px] leading-[1.5]">
               Your local Alis Build workspace syncs two key repositories for the active product.
             </p>
             <div className="flex flex-col gap-[10px]">
-              <div className="px-[14px] py-[12px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <div className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
+                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
                   Define repo
                 </p>
                 <p className="text-[10px] text-[rgba(255,255,255,0.5)] mb-[6px]">
@@ -83,11 +83,11 @@ export function BuildKitPrivateGitPage() {
                 </p>
                 <div className="flex items-center gap-[8px]">
                   <Icon icon="solar:folder-linear" className="text-[rgba(255,255,255,0.35)] text-[13px] shrink-0" />
-                  <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif]">{defineRepo}</span>
+                  <span className="text-[11px] text-white font-mono">{defineRepo}</span>
                 </div>
               </div>
-              <div className="px-[14px] py-[12px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <div className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
+                <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[4px]">
                   Product repo
                 </p>
                 <p className="text-[10px] text-[rgba(255,255,255,0.5)] mb-[6px]">
@@ -95,7 +95,7 @@ export function BuildKitPrivateGitPage() {
                 </p>
                 <div className="flex items-center gap-[8px]">
                   <Icon icon="solar:folder-linear" className="text-[rgba(255,255,255,0.35)] text-[13px] shrink-0" />
-                  <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif]">{buildRepo}</span>
+                  <span className="text-[11px] text-white font-mono">{buildRepo}</span>
                 </div>
               </div>
             </div>
@@ -103,19 +103,19 @@ export function BuildKitPrivateGitPage() {
 
           {/* Getting started */}
           <div>
-            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-['JetBrains_Mono',sans-serif] mb-[10px]">
+            <p className="text-[10px] font-bold text-[rgba(255,255,255,0.4)] uppercase font-mono mb-[10px]">
               Getting started
             </p>
             <div className="flex flex-col gap-[8px]">
               {steps.map((step, i) => (
-                <div key={step.title} className="flex items-start gap-[12px] px-[14px] py-[12px] bg-[#2c2c2c] border border-[#464646] rounded-[4px]">
-                  <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0 mt-[1px]">
-                    <span className="text-[9px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">{i + 1}</span>
+                <div key={step.title} className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]">
+                  <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                    <span className="text-[9px] font-bold text-brand font-mono">{i + 1}</span>
                   </div>
                   <div>
                     <div className="flex items-center gap-[8px] mb-[2px]">
-                      <Icon icon={step.icon} className="text-[#f881a9] text-[13px]" />
-                      <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{step.title}</p>
+                      <Icon icon={step.icon} className="text-brand text-[13px]" />
+                      <p className="text-[11px] font-bold text-white font-mono">{step.title}</p>
                     </div>
                     <p className="text-[10px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{step.description}</p>
                   </div>

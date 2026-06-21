@@ -12,9 +12,9 @@ function TileLink({ icon, label, onClick }: { icon: string; label: string; onCli
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-[10px] w-[150px] h-[90px] bg-[#2c2c2c] border border-[#3a3a3a] hover:border-[rgba(248,129,169,0.35)] hover:bg-[rgba(248,129,169,0.04)] transition-all"
+      className="flex flex-col items-center justify-center gap-[10px] w-[150px] h-[90px] bg-card border border-border hover:border-[rgba(248,129,169,0.35)] hover:bg-[rgba(248,129,169,0.04)] transition-all"
     >
-      <Icon icon={icon} className="text-[#f881a9] text-[22px]" />
+      <Icon icon={icon} className="text-brand text-[22px]" />
       <span className="text-[10px] text-[rgba(255,255,255,0.65)] font-['Fira_Code',sans-serif] text-center leading-tight px-[10px]">{label}</span>
     </button>
   );
@@ -24,13 +24,13 @@ interface InfoRow { label: string; value: string; onCopy: () => void }
 
 function InfoCard({ rows }: { rows: InfoRow[] }) {
   return (
-    <div className="border border-[#3a3a3a] bg-[#2c2c2c] w-full">
+    <div className="border border-border bg-card w-full">
       {rows.map((row, i) => (
-        <div key={i} className="flex items-center gap-[12px] px-[16px] py-[10px] border-b border-[#3a3a3a] last:border-b-0 group hover:bg-[rgba(255,255,255,0.02)] transition-colors">
-          <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-[0.1em] shrink-0 w-[130px]">
+        <div key={i} className="flex items-center gap-[12px] px-[16px] py-[10px] border-b border-border last:border-b-0 group hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+          <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-[0.1em] shrink-0 w-[130px]">
             {row.label}
           </span>
-          <span className="text-[11px] text-[rgba(255,255,255,0.8)] font-['JetBrains_Mono',sans-serif] flex-1 truncate min-w-0">
+          <span className="text-[11px] text-[rgba(255,255,255,0.8)] font-mono flex-1 truncate min-w-0">
             {row.value || '—'}
           </span>
           <button
@@ -47,7 +47,7 @@ function InfoCard({ rows }: { rows: InfoRow[] }) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <span className="text-[9px] text-[rgba(255,255,255,0.25)] font-['JetBrains_Mono',sans-serif] uppercase tracking-[0.12em]">
+    <span className="text-[9px] text-[rgba(255,255,255,0.25)] font-mono uppercase tracking-[0.12em]">
       {children}
     </span>
   );
@@ -130,7 +130,7 @@ export function AboutPage() {
           <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.6]">
             Your browser will open to complete authentication with identity.alisx.com.
           </p>
-          {error && <p className="text-[11px] text-[#ff5c5f]">{error}</p>}
+          {error && <p className="text-[11px] text-destructive">{error}</p>}
           <Button variant="primary" onClick={handleLogin} className="w-full">Sign In</Button>
         </div>
       </div>
@@ -140,25 +140,25 @@ export function AboutPage() {
   return (
     <div className="flex-1 overflow-auto flex flex-col">
       {/* Product Identity Header */}
-      <div className="bg-[#2c2c2c] border-b border-[#464646] px-[20px] py-[16px] flex items-center justify-between shrink-0">
+      <div className="bg-card border-b border-border px-[20px] py-[16px] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-[12px]">
           <div className="size-[38px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.18)] flex items-center justify-center shrink-0">
-            <Icon icon="solar:box-minimalistic-linear" className="text-[#f881a9] text-lg" />
+            <Icon icon="solar:box-minimalistic-linear" className="text-brand text-lg" />
           </div>
           <div>
             <p className="font-['Fira_Code',sans-serif] font-medium text-[17px] text-white leading-tight">{productName}</p>
-            <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] mt-[2px]">{orgName}</p>
+            <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono mt-[2px]">{orgName}</p>
           </div>
         </div>
         <div className="flex items-center gap-[14px]">
           {!loading && gp?.region && (
-            <div className="px-[8px] py-[3px] bg-[rgba(255,255,255,0.05)] border border-[#3a3a3a]">
-              <span className="text-[10px] text-[rgba(255,255,255,0.45)] font-['JetBrains_Mono',sans-serif]">{gp.region}</span>
+            <div className="px-[8px] py-[3px] bg-[rgba(255,255,255,0.05)] border border-border">
+              <span className="text-[10px] text-[rgba(255,255,255,0.45)] font-mono">{gp.region}</span>
             </div>
           )}
           {!loading && gp?.id && (
             <div className="flex items-center gap-[6px]">
-              <span className="text-[11px] text-[rgba(255,255,255,0.55)] font-['JetBrains_Mono',sans-serif]">{gp.id}</span>
+              <span className="text-[11px] text-[rgba(255,255,255,0.55)] font-mono">{gp.id}</span>
               <button onClick={() => copy(gp.id)} className="text-[rgba(255,255,255,0.3)] hover:text-white transition-colors">
                 <Icon icon="solar:copy-linear" className="text-sm" />
               </button>
@@ -171,7 +171,7 @@ export function AboutPage() {
       <div className="flex-1 overflow-auto flex items-start justify-center p-[40px]">
         <div className="flex flex-col gap-[36px] w-full max-w-[720px]">
         {error && (
-          <div className="px-[12px] py-[8px] bg-[rgba(255,92,95,0.08)] border border-[rgba(255,92,95,0.3)] text-[#ff5c5f] text-[11px] font-['JetBrains_Mono',sans-serif]">
+          <div className="px-[12px] py-[8px] bg-[rgba(255,92,95,0.08)] border border-[rgba(255,92,95,0.3)] text-destructive text-[11px] font-mono">
             {error}
           </div>
         )}
@@ -261,10 +261,10 @@ export function AboutPage() {
         };
         return (
           <Dialog open={ideModalOpen} onOpenChange={setIdeModalOpen}>
-            <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 max-w-[400px] overflow-hidden">
-              <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-[#464646]">
-                <Icon icon="solar:code-2-linear" className="text-[#f881a9] text-lg" />
-                <span className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">Open in IDE</span>
+            <DialogContent className="bg-card border border-border text-white p-0 max-w-[400px] overflow-hidden">
+              <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
+                <Icon icon="solar:code-2-linear" className="text-brand text-lg" />
+                <span className="text-[13px] font-bold text-white font-mono">Open in IDE</span>
               </div>
               <div className="py-[6px]">
                 {/* Web workstation */}
@@ -273,11 +273,11 @@ export function AboutPage() {
                   disabled={!workstationUri}
                   className="w-full flex items-center gap-[12px] px-[16px] py-[12px] text-left transition-colors hover:bg-[rgba(255,255,255,0.04)] disabled:opacity-40 disabled:cursor-not-allowed group"
                 >
-                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-[#3a3a3a] flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
+                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-border flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
                     <Icon icon="solar:global-linear" className="text-[rgba(255,255,255,0.7)] text-base" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-[12px] text-white font-mono">
                       Open in Web
                       {workstationLoading && <span className="ml-[6px] text-[10px] text-[rgba(255,255,255,0.4)]">loading…</span>}
                     </p>
@@ -291,11 +291,11 @@ export function AboutPage() {
                   onClick={() => open('vscode')}
                   className="w-full flex items-center gap-[12px] px-[16px] py-[12px] text-left transition-colors hover:bg-[rgba(255,255,255,0.04)] group"
                 >
-                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-[#3a3a3a] flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
+                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-border flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
                     <Icon icon="solar:code-square-linear" className="text-[rgba(255,255,255,0.7)] text-base" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">Open in VS Code</p>
+                    <p className="text-[12px] text-white font-mono">Open in VS Code</p>
                     <p className="text-[10px] text-[rgba(255,255,255,0.4)] mt-[2px]">Opens locally via the Alis Build extension</p>
                   </div>
                 </button>
@@ -304,11 +304,11 @@ export function AboutPage() {
                   onClick={() => open('cursor')}
                   className="w-full flex items-center gap-[12px] px-[16px] py-[12px] text-left transition-colors hover:bg-[rgba(255,255,255,0.04)] group"
                 >
-                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-[#3a3a3a] flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
+                  <div className="size-[32px] bg-[rgba(255,255,255,0.06)] border border-border flex items-center justify-center shrink-0 group-hover:border-[rgba(255,255,255,0.12)] transition-colors">
                     <Icon icon="solar:cursor-linear" className="text-[rgba(255,255,255,0.7)] text-base" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] text-white font-['JetBrains_Mono',sans-serif]">Open in Cursor</p>
+                    <p className="text-[12px] text-white font-mono">Open in Cursor</p>
                     <p className="text-[10px] text-[rgba(255,255,255,0.4)] mt-[2px]">Opens locally via the Alis Build extension</p>
                   </div>
                 </button>

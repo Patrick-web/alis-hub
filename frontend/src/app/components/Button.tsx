@@ -13,11 +13,11 @@ export function Button({
   className = '',
   ...props 
 }: ButtonProps) {
-  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-['JetBrains_Mono',sans-serif] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
+  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
   
   const variants = {
-    primary: 'bg-[#f881a9] text-[#6f0025] px-[10px] py-[5px] hover:bg-[#ff94ba]',
-    secondary: 'bg-[#2c2c2c] border border-[#464646] text-white px-[10px] py-[5px] hover:bg-[#3a3a3a]',
+    primary: 'bg-brand text-brand-foreground px-[10px] py-[5px] hover:bg-[#ff94ba]',
+    secondary: 'bg-card border border-border text-white px-[10px] py-[5px] hover:bg-accent',
     ghost: 'text-white px-[5px] py-[4px] hover:bg-[rgba(255,255,255,0.1)]',
   };
 

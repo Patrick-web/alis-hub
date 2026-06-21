@@ -32,7 +32,7 @@ export const module4: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            <code className="text-[#f881a9] text-[11px]">alis deploy</code> is a declarative operation.
+            <code className="text-brand text-[11px]">alis deploy</code> is a declarative operation.
             You describe the desired state (which image version, which environment) and alis figures out which
             GCP resources need to be created, updated, or left alone.
           </p>
@@ -62,8 +62,8 @@ export const module4: LearningModule = {
                 desc: 'Enables required GCP APIs (Cloud Run, Cloud Build, Artifact Registry, etc.) if they are not already active in the project.',
               },
             ].map(({ name, colour, desc }) => (
-              <div key={name} className="px-[14px] py-[12px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <p className="text-[11px] font-bold font-['JetBrains_Mono',sans-serif] mb-[4px]" style={{ color: colour }}>
+              <div key={name} className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
+                <p className="text-[11px] font-bold font-mono mb-[4px]" style={{ color: colour }}>
                   {name}
                 </p>
                 <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{desc}</p>
@@ -95,9 +95,9 @@ export const module4: LearningModule = {
               { label: 'Region', value: 'Matches the environment region — set at product creation time' },
               { label: 'Identity', value: 'Runs as a dedicated service account with least-privilege IAM' },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-                <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] w-[110px] shrink-0">{label}</span>
-                <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.7)]">{value}</span>
+              <div key={label} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
+                <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] w-[110px] shrink-0">{label}</span>
+                <span className="text-[10px] font-mono text-[rgba(255,255,255,0.7)]">{value}</span>
               </div>
             ))}
           </div>
@@ -124,22 +124,22 @@ export const module4: LearningModule = {
               { task: 'API metrics', detail: 'Reports latency, error rates, and quota usage to Cloud Monitoring.' },
               { task: 'Rate limiting', detail: 'Can enforce per-consumer quotas defined in your Endpoints config.' },
             ].map(({ task, detail }) => (
-              <div key={task} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <div className="size-[6px] rounded-full bg-[#f881a9] mt-[5px] shrink-0" />
+              <div key={task} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
+                <div className="size-[6px] rounded-full bg-brand mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{task} </span>
+                  <span className="text-[11px] font-bold text-white font-mono">{task} </span>
                   <span className="text-[11px] text-[rgba(255,255,255,0.5)]">— {detail}</span>
                 </div>
               </div>
             ))}
           </div>
-          <div className="px-[12px] py-[10px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-            <div className="pb-[6px] mb-[6px] border-b border-[#464646]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+          <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
+            <div className="pb-[6px] mb-[6px] border-b border-border">
+              <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono">
                 Endpoints config (generated)
               </p>
             </div>
-            <pre className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
               {endpointsConfigExample}
             </pre>
           </div>
@@ -163,7 +163,7 @@ export const module4: LearningModule = {
             against Google's key servers.
           </p>
           <div className="flex flex-col gap-[8px]">
-            <p className="text-[11px] text-[rgba(255,255,255,0.45)] uppercase font-bold font-['JetBrains_Mono',sans-serif] tracking-wide">
+            <p className="text-[11px] text-[rgba(255,255,255,0.45)] uppercase font-bold font-mono tracking-wide">
               Common IAM roles alis assigns:
             </p>
             {[
@@ -172,8 +172,8 @@ export const module4: LearningModule = {
               { role: 'roles/logging.logWriter', desc: 'Allows the service to write structured logs to Cloud Logging.' },
               { role: 'roles/cloudtrace.agent', desc: 'Allows the service to emit distributed traces to Cloud Trace.' },
             ].map(({ role, desc }) => (
-              <div key={role} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-                <code className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[#f881a9] shrink-0 w-[220px] leading-[1.4]">{role}</code>
+              <div key={role} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
+                <code className="text-[9px] font-mono text-brand shrink-0 w-[220px] leading-[1.4]">{role}</code>
                 <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-[1.4]">{desc}</p>
               </div>
             ))}

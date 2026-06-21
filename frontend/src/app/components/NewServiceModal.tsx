@@ -71,11 +71,11 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!loading) onOpenChange(o); }}>
-      <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 gap-0 max-w-[420px]">
-        <DialogHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+      <DialogContent className="bg-card border border-border text-white p-0 gap-0 max-w-[420px]">
+        <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
-            <Icon icon="solar:layers-minimalistic-linear" className="text-[#F881A9] text-xl" />
-            <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+            <Icon icon="solar:layers-minimalistic-linear" className="text-brand text-xl" />
+            <DialogTitle className="text-white font-mono text-[13px] font-bold">
               New Service
             </DialogTitle>
           </div>
@@ -83,7 +83,7 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
 
         <div className="flex flex-col gap-[16px] px-[20px] py-[20px]">
           <div className="flex flex-col gap-[6px]">
-            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Service ID
             </p>
             <Input
@@ -97,35 +97,35 @@ export function NewServiceModal({ open, onOpenChange, onSubmit }: NewServiceModa
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               disabled={loading}
               autoFocus
-              className="font-['JetBrains_Mono',sans-serif]"
+              className="font-mono"
             />
 
             {touched && validationError && (
-              <p className="text-[11px] text-[#ff5050] font-['JetBrains_Mono',sans-serif]">
+              <p className="text-[11px] text-destructive font-mono">
                 {validationError}
               </p>
             )}
 
             <div className="flex flex-col gap-[4px] mt-[4px]">
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif]">
+              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
                 Format: <span className="text-[rgba(255,255,255,0.55)]">{'{name}-v{N}'}</span> — e.g.{' '}
                 <span className="text-[rgba(255,255,255,0.55)]">bookings-v1</span>,{' '}
                 <span className="text-[rgba(255,255,255,0.55)]">payments-v2</span>
               </p>
-              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif]">
+              <p className="text-[10px] text-[rgba(255,255,255,0.35)] font-mono">
                 Lowercase letters, digits, and hyphens only · Max {MAX_LEN} chars
               </p>
             </div>
           </div>
 
           {error && (
-            <p className="text-[11px] text-[#ff5050] font-['JetBrains_Mono',sans-serif] break-all">
+            <p className="text-[11px] text-destructive font-mono break-all">
               {error}
             </p>
           )}
         </div>
 
-        <DialogFooter className="px-[20px] py-[14px] border-t border-[#464646] flex-row gap-[8px]">
+        <DialogFooter className="px-[20px] py-[14px] border-t border-border flex-row gap-[8px]">
           <Button
             variant="secondary"
             className="flex-1 h-[34px] text-[11px] font-bold uppercase"

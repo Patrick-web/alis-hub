@@ -20,7 +20,7 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-left bg-[#2c2c2c] border border-[#3a3a3a] rounded-[10px] p-[16px] hover:border-[#F881A9] hover:bg-[#333] transition-all cursor-pointer group"
+      className="text-left bg-card border border-border rounded-[10px] p-[16px] hover:border-brand hover:bg-muted transition-all cursor-pointer group"
     >
       <div className="flex items-start gap-[12px]">
         {org.logo ? (
@@ -32,23 +32,23 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
           />
         ) : (
           <div className="size-[36px] rounded-[8px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
-            <span className="text-[14px] font-bold text-[#F881A9]">
+            <span className="text-[14px] font-bold text-brand">
               {org.displayName[0]?.toUpperCase() ?? '?'}
             </span>
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-semibold text-white group-hover:text-[#F881A9] transition-colors truncate">
+          <p className="text-[13px] font-semibold text-white group-hover:text-brand transition-colors truncate">
             {org.displayName}
           </p>
           {org.description && (
             <p className="text-[11px] text-[rgba(255,255,255,0.4)] mt-[2px] truncate">{org.description}</p>
           )}
-          <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.25)] mt-[6px]">
+          <p className="text-[10px] font-mono text-[rgba(255,255,255,0.25)] mt-[6px]">
             {orgId}
           </p>
         </div>
-        <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-[#F881A9] text-base shrink-0 mt-[2px] transition-colors" />
+        <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] group-hover:text-brand text-base shrink-0 mt-[2px] transition-colors" />
       </div>
     </button>
   );
@@ -90,12 +90,12 @@ export function LandingZonesPage() {
   const total = (data?.own.length ?? 0) + (data?.shared.length ?? 0);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
       <div className="px-[24px] pt-[28px] pb-[20px] shrink-0">
         <button
           onClick={() => setPhase('hub')}
-          className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] font-['JetBrains_Mono',sans-serif]"
+          className="flex items-center gap-[6px] text-[11px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors mb-[16px] font-mono"
         >
           <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
           Back
@@ -108,7 +108,7 @@ export function LandingZonesPage() {
 
       {/* Search + count */}
       <div className="px-[24px] pb-[16px] shrink-0 flex items-center gap-[10px]">
-        <div className="flex-1 flex items-center gap-[8px] bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] px-[12px] h-[34px]">
+        <div className="flex-1 flex items-center gap-[8px] bg-card border border-border rounded-[8px] px-[12px] h-[34px]">
           <Icon icon="solar:magnifer-linear" className="text-[rgba(255,255,255,0.3)] text-sm shrink-0" />
           <input
             type="text"
@@ -124,7 +124,7 @@ export function LandingZonesPage() {
           )}
         </div>
         {!loading && data && (
-          <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] shrink-0">
+          <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] shrink-0">
             {total} zone{total !== 1 ? 's' : ''}
           </span>
         )}
@@ -151,11 +151,11 @@ export function LandingZonesPage() {
           <div className="flex items-center justify-center h-full">
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[8px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
-                <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
                 <p className="text-[12px] font-bold text-white">Failed to load</p>
               </div>
               <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
-              <button onClick={load} className="mt-[10px] text-[10px] text-[#F881A9] hover:underline">
+              <button onClick={load} className="mt-[10px] text-[10px] text-brand hover:underline">
                 Try again
               </button>
             </div>
@@ -177,14 +177,14 @@ export function LandingZonesPage() {
             {filteredShared.length > 0 && (
               <div>
                 <div className="flex items-center gap-[12px] mb-[14px]">
-                  <div className="h-px flex-1 bg-[#2e2e2e]" />
+                  <div className="h-px flex-1 bg-accent" />
                   <div className="flex items-center gap-[6px]">
                     <Icon icon="solar:users-group-two-rounded-linear" className="text-[rgba(255,255,255,0.25)] text-sm" />
-                    <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] uppercase tracking-wide">
+                    <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)] uppercase tracking-wide">
                       Shared from other Accounts
                     </span>
                   </div>
-                  <div className="h-px flex-1 bg-[#2e2e2e]" />
+                  <div className="h-px flex-1 bg-accent" />
                 </div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-[10px]">
                   {filteredShared.map(org => (

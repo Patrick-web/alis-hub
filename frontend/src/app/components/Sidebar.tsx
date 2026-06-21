@@ -22,7 +22,7 @@ const envNavItems = [
   {
     id: "production",
     label: "Production",
-    icon: <Icon icon="solar:earth-linear" className="text-[#F881A9] text-xl" />,
+    icon: <Icon icon="solar:earth-linear" className="text-brand text-xl" />,
   },
   {
     id: "staging",
@@ -41,7 +41,7 @@ const codeblockNavItems = [
     id: "all",
     label: "All Codeblocks",
     route: "/codeblocks",
-    icon: <Icon icon="solar:box-linear" className="text-[#F881A9] text-xl" />,
+    icon: <Icon icon="solar:box-linear" className="text-brand text-xl" />,
   },
   {
     id: "mine",
@@ -87,7 +87,7 @@ export function Sidebar() {
     icon: (
       <Icon
         icon="solar:server-square-cloud-linear"
-        className="text-[#F881A9] text-xl"
+        className="text-brand text-xl"
       />
     ),
   }));
@@ -248,16 +248,16 @@ export function Sidebar() {
 
   return (
     <>
-      <div className="bg-[#2c2c2c] h-full relative shrink-0 w-[300px]">
+      <div className="bg-card h-full relative shrink-0 w-[300px]">
         <div className="content-stretch flex flex-col items-center justify-between overflow-clip relative rounded-[inherit] size-full">
           <div className="content-stretch flex flex-col items-start relative shrink-0 w-full">
-            <div className="px-[20px] py-[10px] w-full border-b border-[#464646]">
-              <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-50">
+            <div className="px-[20px] py-[10px] w-full border-b border-border">
+              <p className="font-mono font-bold text-[11px] text-white uppercase opacity-50">
                 {header}
               </p>
             </div>
             {isBuilds && (
-              <div className="px-[10px] py-[8px] border-b border-[#464646] w-full">
+              <div className="px-[10px] py-[8px] border-b border-border w-full">
                 <Input
                   placeholder="Filter services..."
                   value={neuronFilter}
@@ -334,7 +334,7 @@ export function Sidebar() {
         </div>
         <div
           aria-hidden="true"
-          className="absolute border-[#626262] border-r border-solid inset-0 pointer-events-none"
+          className="absolute border-border border-r border-solid inset-0 pointer-events-none"
         />
       </div>
 

@@ -173,7 +173,7 @@ export function EnvironmentsPage() {
     {
       header: 'LABEL',
       render: (item: EnvVar) => (
-        <span className="font-['JetBrains_Mono',sans-serif] text-[11px]">{item.label}</span>
+        <span className="font-mono text-[11px]">{item.label}</span>
       ),
       className: 'w-[220px]',
     },
@@ -181,10 +181,10 @@ export function EnvironmentsPage() {
       header: 'VALUE',
       render: (item: EnvVar) => (
         <div className="group relative flex items-center gap-[6px] min-w-0">
-          <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.6)] break-all flex-1">
+          <span className="font-mono text-[11px] text-[rgba(255,255,255,0.6)] break-all flex-1">
             {item.value}
           </span>
-          <div className="hidden group-hover:flex items-center gap-[4px] shrink-0 bg-[#1e1e1e] pl-[4px]">
+          <div className="hidden group-hover:flex items-center gap-[4px] shrink-0 bg-background pl-[4px]">
             <ActionButton
               onClick={(e) => {
                 e.stopPropagation();
@@ -224,11 +224,11 @@ export function EnvironmentsPage() {
             {others.length > 0 && (existsInAll ? (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <span className="font-['JetBrains_Mono',sans-serif] text-[9px] font-bold uppercase text-[#4CAF50] border border-[#4CAF50] px-[6px] py-[2px] rounded-[3px] cursor-default select-none opacity-70">
+                  <span className="font-mono text-[9px] font-bold uppercase text-success border border-success px-[6px] py-[2px] rounded-[3px] cursor-default select-none opacity-70">
                     Present
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="bg-[#2c2c2c] border border-[#464646] text-white font-['JetBrains_Mono',sans-serif] text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                <TooltipContent className="bg-card border border-border text-white font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
                   Present in all environments
                 </TooltipContent>
               </Tooltip>
@@ -239,7 +239,7 @@ export function EnvironmentsPage() {
                     <ActionButton onClick={() => setDuplicateVar(item)}>Duplicate</ActionButton>
                   </span>
                 </TooltipTrigger>
-                <TooltipContent className="bg-[#2c2c2c] border border-[#464646] text-white font-['JetBrains_Mono',sans-serif] text-[10px] rounded-[4px] px-[10px] py-[6px]">
+                <TooltipContent className="bg-card border border-border text-white font-mono text-[10px] rounded-[4px] px-[10px] py-[6px]">
                   Missing in: {missingIn.map(e => e.displayName).join(', ')}
                 </TooltipContent>
               </Tooltip>
@@ -254,19 +254,19 @@ export function EnvironmentsPage() {
   ];
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page Title Header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between">
-        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+      <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between">
+        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           VARIABLES
         </p>
         {saving && <Loader size={20} />}
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center justify-between">
+      <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
         <div className="flex items-center h-[34px]">
-          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
             <p className="text-[12px] text-white">/</p>
           </div>
           <Input
@@ -332,7 +332,7 @@ export function EnvironmentsPage() {
         title="Delete Variable"
         description={
           <>
-            Delete <span className="text-white font-['JetBrains_Mono',sans-serif]">{deleteVar?.label}</span>?
+            Delete <span className="text-white font-mono">{deleteVar?.label}</span>?
             This cannot be undone.
           </>
         }
@@ -344,21 +344,21 @@ export function EnvironmentsPage() {
 
       {/* View value modal */}
       <Dialog open={Boolean(viewVar)} onOpenChange={(o) => { if (!o) setViewVar(null); }}>
-        <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 gap-0 sm:max-w-[560px]">
-          <DialogHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+        <DialogContent className="bg-card border border-border text-white p-0 gap-0 sm:max-w-[560px]">
+          <DialogHeader className="px-[20px] py-[14px] border-b border-border">
             <div className="flex items-center gap-[10px]">
-              <Icon icon="solar:eye-linear" className="text-[#F881A9] text-xl" />
-              <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+              <Icon icon="solar:eye-linear" className="text-brand text-xl" />
+              <DialogTitle className="text-white font-mono text-[13px] font-bold">
                 {viewVar?.label}
               </DialogTitle>
             </div>
           </DialogHeader>
           <div className="px-[20px] py-[16px] max-h-[400px] overflow-auto">
-            <pre className="font-['JetBrains_Mono',sans-serif] text-[12px] text-[rgba(255,255,255,0.8)] whitespace-pre-wrap break-all">
+            <pre className="font-mono text-[12px] text-[rgba(255,255,255,0.8)] whitespace-pre-wrap break-all">
               {viewVar?.value}
             </pre>
           </div>
-          <div className="px-[20px] py-[14px] border-t border-[#464646] flex justify-end gap-[8px]">
+          <div className="px-[20px] py-[14px] border-t border-border flex justify-end gap-[8px]">
             <Button
               variant="secondary"
               className="h-[34px] px-[16px] text-[11px] font-bold uppercase"

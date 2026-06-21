@@ -134,15 +134,15 @@ export function DuplicateVarModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!submitting) onOpenChange(o); }}>
-      <DialogContent className="bg-[#2c2c2c] border border-[#464646] text-white p-0 gap-0 sm:max-w-[500px]">
-        <DialogHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+      <DialogContent className="bg-card border border-border text-white p-0 gap-0 sm:max-w-[500px]">
+        <DialogHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
-            <Icon icon="solar:copy-linear" className="text-[#F881A9] text-xl" />
-            <DialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+            <Icon icon="solar:copy-linear" className="text-brand text-xl" />
+            <DialogTitle className="text-white font-mono text-[13px] font-bold">
               Duplicate Variable
             </DialogTitle>
           </div>
-          <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px]">
+          <p className="font-mono text-[11px] text-[rgba(255,255,255,0.5)] mt-[4px]">
             Copy <span className="text-white">{varLabel}</span> to other environments
           </p>
         </DialogHeader>
@@ -153,7 +153,7 @@ export function DuplicateVarModal({
               <Loader size={20} />
             </div>
           ) : targets.length === 0 ? (
-            <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.4)] text-center py-[20px]">
+            <p className="font-mono text-[11px] text-[rgba(255,255,255,0.4)] text-center py-[20px]">
               No other environments available.
             </p>
           ) : (
@@ -161,29 +161,29 @@ export function DuplicateVarModal({
               <div
                 key={target.env.name}
                 className={`flex items-start gap-[10px] p-[12px] rounded-[4px] border transition-colors cursor-pointer ${
-                  target.checked ? 'border-[#F881A9] bg-[rgba(248,129,169,0.06)]' : 'border-[#464646] hover:bg-[rgba(255,255,255,0.03)]'
+                  target.checked ? 'border-brand bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-[rgba(255,255,255,0.03)]'
                 }`}
                 onClick={() => !target.loading && toggle(target.env.name)}
               >
                 <div className={`w-[16px] h-[16px] mt-[1px] rounded-[3px] border shrink-0 flex items-center justify-center transition-colors ${
-                  target.checked ? 'border-[#F881A9] bg-[#F881A9]' : 'border-[#464646]'
+                  target.checked ? 'border-brand bg-brand' : 'border-border'
                 }`}>
-                  {target.checked && <Icon icon="solar:check-linear" className="text-[#1e1e1e] text-[10px]" />}
+                  {target.checked && <Icon icon="solar:check-linear" className="text-foreground text-[10px]" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-[8px]">
-                    <span className="font-['JetBrains_Mono',sans-serif] text-[12px] text-white">
+                    <span className="font-mono text-[12px] text-white">
                       {target.env.displayName}
                     </span>
                     {target.env.envType === 3 && (
-                      <span className="font-['JetBrains_Mono',sans-serif] text-[9px] uppercase text-[#F881A9] border border-[#F881A9] px-[4px] py-[1px] rounded-[3px]">
+                      <span className="font-mono text-[9px] uppercase text-brand border border-brand px-[4px] py-[1px] rounded-[3px]">
                         prod
                       </span>
                     )}
                     {target.loading && <Loader size={14} />}
                   </div>
                   {target.error && (
-                    <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[#ff5050] mt-[2px]">
+                    <p className="font-mono text-[10px] text-destructive mt-[2px]">
                       {target.error}
                     </p>
                   )}
@@ -191,9 +191,9 @@ export function DuplicateVarModal({
                     <div className="flex items-center gap-[5px] mt-[4px]">
                       <Icon
                         icon="solar:danger-triangle-linear"
-                        className={`text-[13px] ${target.env.envType === 3 ? 'text-[#F5A623]' : 'text-[rgba(255,255,255,0.4)]'}`}
+                        className={`text-[13px] ${target.env.envType === 3 ? 'text-warning' : 'text-[rgba(255,255,255,0.4)]'}`}
                       />
-                      <span className={`font-['JetBrains_Mono',sans-serif] text-[10px] ${target.env.envType === 3 ? 'text-[#F5A623]' : 'text-[rgba(255,255,255,0.4)]'}`}>
+                      <span className={`font-mono text-[10px] ${target.env.envType === 3 ? 'text-warning' : 'text-[rgba(255,255,255,0.4)]'}`}>
                         Already exists — will override
                       </span>
                     </div>
@@ -205,18 +205,18 @@ export function DuplicateVarModal({
         </div>
 
         {needsProdConfirm && !prodConfirmed && selectedTargets.some(t => t.hasConflict && t.env.envType === 3) && (
-          <div className="mx-[20px] mb-[4px] p-[12px] rounded-[4px] bg-[rgba(245,166,35,0.08)] border border-[#F5A623] flex items-start gap-[10px]">
-            <Icon icon="solar:danger-triangle-bold" className="text-[#F5A623] text-[16px] shrink-0 mt-[1px]" />
+          <div className="mx-[20px] mb-[4px] p-[12px] rounded-[4px] bg-[rgba(245,166,35,0.08)] border border-warning flex items-start gap-[10px]">
+            <Icon icon="solar:danger-triangle-bold" className="text-warning text-[16px] shrink-0 mt-[1px]" />
             <div className="flex-1 min-w-0">
-              <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[#F5A623] font-bold">
+              <p className="font-mono text-[11px] text-warning font-bold">
                 Production override warning
               </p>
-              <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[rgba(245,166,35,0.8)] mt-[2px]">
+              <p className="font-mono text-[10px] text-[rgba(245,166,35,0.8)] mt-[2px]">
                 You are about to override a variable in a PRODUCTION environment. This action cannot be undone.
               </p>
               <button
                 onClick={() => setProdConfirmed(true)}
-                className="mt-[8px] font-['JetBrains_Mono',sans-serif] text-[10px] font-bold uppercase text-[#F5A623] border border-[#F5A623] px-[8px] py-[3px] rounded-[3px] hover:bg-[rgba(245,166,35,0.12)] transition-colors"
+                className="mt-[8px] font-mono text-[10px] font-bold uppercase text-warning border border-warning px-[8px] py-[3px] rounded-[3px] hover:bg-[rgba(245,166,35,0.12)] transition-colors"
               >
                 I understand, continue
               </button>
@@ -225,12 +225,12 @@ export function DuplicateVarModal({
         )}
 
         {globalError && (
-          <p className="mx-[20px] mb-[4px] font-['JetBrains_Mono',sans-serif] text-[11px] text-[#ff5050] break-all">
+          <p className="mx-[20px] mb-[4px] font-mono text-[11px] text-destructive break-all">
             {globalError}
           </p>
         )}
 
-        <DialogFooter className="px-[20px] py-[14px] border-t border-[#464646] flex-row gap-[8px]">
+        <DialogFooter className="px-[20px] py-[14px] border-t border-border flex-row gap-[8px]">
           <Button
             variant="secondary"
             className="flex-1 h-[34px] text-[11px] font-bold uppercase"

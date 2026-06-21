@@ -24,14 +24,14 @@ export const module5: LearningModule = {
               { stage: 'Build', cmd: 'alis build', desc: 'Cloud Build compiles and containerises your service. The image lands in Artifact Registry.' },
               { stage: 'Deploy', cmd: 'alis deploy', desc: 'Cloud Run, Endpoints, and IAM are provisioned. Your service gets a live HTTPS endpoint.' },
             ].map(({ stage, cmd, desc }, i) => (
-              <div key={stage} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0 mt-[1px]">
-                  <span className="text-[10px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">{i + 1}</span>
+              <div key={stage} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
+                <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                  <span className="text-[10px] font-bold text-brand font-mono">{i + 1}</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{stage}</span>
-                    <code className="text-[9px] text-[rgba(255,255,255,0.35)] bg-[#1e1e1e] px-[6px] py-[1px] rounded">{cmd}</code>
+                    <span className="text-[11px] font-bold text-white font-mono">{stage}</span>
+                    <code className="text-[9px] text-[rgba(255,255,255,0.35)] bg-background px-[6px] py-[1px] rounded">{cmd}</code>
                   </div>
                   <p className="text-[11px] text-[rgba(255,255,255,0.55)] leading-[1.5]">{desc}</p>
                 </div>
@@ -78,10 +78,10 @@ export const module5: LearningModule = {
                 detail: 'Your handler returns a proto message. ESP serialises it (to JSON for REST, to protobuf for gRPC) and sends it back to the client.',
               },
             ].map(({ n, title, detail }) => (
-              <div key={n} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <span className="text-[9px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif] shrink-0 w-[14px]">{n}</span>
+              <div key={n} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
+                <span className="text-[9px] font-bold text-brand font-mono shrink-0 w-[14px]">{n}</span>
                 <div>
-                  <span className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{title} </span>
+                  <span className="text-[11px] font-bold text-white font-mono">{title} </span>
                   <span className="text-[11px] text-[rgba(255,255,255,0.5)]">— {detail}</span>
                 </div>
               </div>
@@ -130,15 +130,15 @@ export const module5: LearningModule = {
                 desc: 'Advanced capabilities: Identity (OAuth), MCP servers, AI Launchpad, custom APIs, and more.',
               },
             ].map(({ tab, desc }) => (
-              <div key={tab} className="px-[12px] py-[10px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <p className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[3px]">{tab}</p>
+              <div key={tab} className="px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
+                <p className="text-[11px] font-bold text-white font-mono mb-[3px]">{tab}</p>
                 <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.4]">{desc}</p>
               </div>
             ))}
           </div>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <p className="text-[11px] text-[rgba(255,255,255,0.7)] leading-[1.5]">
-              <span className="text-[#f881a9] font-bold">You're ready. </span>
+              <span className="text-brand font-bold">You're ready. </span>
               Go define your first service — start with a simple{' '}
               <code className="text-[rgba(255,255,255,0.8)] text-[10px]">GetX</code> method on a resource
               you know well. The first deploy is the steepest part of the curve.

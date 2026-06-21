@@ -453,9 +453,9 @@ export function BuildsPage() {
     deployedEnvsMap.get(`${activeNeuron}::${version}`) ?? [];
 
   function versionStateBadge(state: number) {
-    if (state === 2) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(56,189,248,0.1)] border border-[rgba(56,189,248,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#38bdf8] uppercase">RETAGGED</span>;
-    if (state === 3) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(251,191,36,0.1)] border border-[rgba(251,191,36,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#fbbf24] uppercase">BUILDING</span>;
-    if (state === 4) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#ef4444] uppercase">FAILED</span>;
+    if (state === 2) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(56,189,248,0.1)] border border-[rgba(56,189,248,0.3)] rounded-[2px] text-[8px] font-bold font-mono text-info uppercase">RETAGGED</span>;
+    if (state === 3) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(251,191,36,0.1)] border border-[rgba(251,191,36,0.3)] rounded-[2px] text-[8px] font-bold font-mono text-warning uppercase">BUILDING</span>;
+    if (state === 4) return <span className="ml-[6px] px-[4px] py-[1px] bg-[rgba(239,68,68,0.1)] border border-[rgba(239,68,68,0.3)] rounded-[2px] text-[8px] font-bold font-mono text-destructive uppercase">FAILED</span>;
     return null;
   }
 
@@ -464,7 +464,7 @@ export function BuildsPage() {
       header: 'VERSION',
       render: (item: VersionEntry) => (
         <span className="flex items-center">
-          <span className={`font-['JetBrains_Mono',sans-serif] font-bold text-[12px] ${activeVersionId === item.version ? 'text-[#F881A9]' : 'text-white'}`}>
+          <span className={`font-mono font-bold text-[12px] ${activeVersionId === item.version ? 'text-brand' : 'text-white'}`}>
             {item.version}
           </span>
           {versionStateBadge(item.state)}
@@ -475,7 +475,7 @@ export function BuildsPage() {
     {
       header: 'COMMIT',
       render: (item: VersionEntry) => (
-        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.45)]">
+        <span className="font-mono text-[11px] text-[rgba(255,255,255,0.45)]">
           {item.buildCommit ? item.buildCommit.substring(0, 7) : '—'}
         </span>
       ),
@@ -495,7 +495,7 @@ export function BuildsPage() {
         return envs.length > 0 ? (
           <div className="flex flex-wrap gap-[3px]">
             {envs.map(name => (
-              <span key={name} className="px-[4px] py-[1px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.2)] rounded-[2px] text-[8px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759] uppercase">
+              <span key={name} className="px-[4px] py-[1px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.2)] rounded-[2px] text-[8px] font-bold font-mono text-success uppercase">
                 {name.split(' ')[0]}
               </span>
             ))}
@@ -509,7 +509,7 @@ export function BuildsPage() {
       render: (item: VersionEntry) => (
         <span className="text-[9px] text-[rgba(255,255,255,0.3)]">
           {item.createTime > 0 ? formatRelativeTime(item.createTime) : ''}
-          {isLatest(item) && <span className="ml-[6px] text-[#F881A9]">LATEST</span>}
+          {isLatest(item) && <span className="ml-[6px] text-brand">LATEST</span>}
         </span>
       ),
       className: 'w-[110px] text-right',
@@ -523,13 +523,13 @@ export function BuildsPage() {
   const canDeploy = Boolean(activeVersionId) && (selectedVersion?.state === 1 || selectedVersion?.state === 2);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-row bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-row bg-background">
       {/* Left Section: Toolbar and Table */}
-      <div className="flex-1 flex flex-col border-r border-[#464646] overflow-hidden">
+      <div className="flex-1 flex flex-col border-r border-border overflow-hidden">
         {/* Toolbar */}
-        <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center justify-between">
+        <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
           <div className="flex items-center h-[34px]">
-            <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+            <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
               <p className="text-[12px] text-white">/</p>
             </div>
             <Input
@@ -617,7 +617,7 @@ export function BuildsPage() {
             <button
               onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
               title="Open logs in browser"
-              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[#3c3c3c] transition-colors"
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-accent transition-colors"
             >
               <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
             </button>
@@ -644,7 +644,7 @@ export function BuildsPage() {
                 <div className="flex gap-[8px]">
                   <button
                     onClick={() => Browser.OpenURL(commitUrl)}
-                    className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
+                    className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-border hover:border-border rounded-[4px] transition-colors"
                   >
                     <Icon icon="solar:code-square-linear" className="text-sm" />
                     View commit
@@ -653,7 +653,7 @@ export function BuildsPage() {
                   {compareUrl && (
                     <button
                       onClick={() => Browser.OpenURL(compareUrl!)}
-                      className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-[#3a3a3a] hover:border-[#555] rounded-[4px] transition-colors"
+                      className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white border border-border hover:border-border rounded-[4px] transition-colors"
                     >
                       <Icon icon="solar:graph-new-up-linear" className="text-sm" />
                       View changes
@@ -673,7 +673,7 @@ export function BuildsPage() {
             {selectedVersion ? (
               <>
                 {/* Tab bar */}
-                <div className="flex h-[36px] border-b border-[#464646] shrink-0">
+                <div className="flex h-[36px] border-b border-border shrink-0">
                   <Tab
                     label="Details"
                     icon={<Icon icon="solar:info-circle-linear" className="text-sm" />}
@@ -699,33 +699,33 @@ export function BuildsPage() {
                   <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
                     <div className="flex flex-col gap-[14px]">
                       <div>
-                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Version</p>
-                        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white">{selectedVersion.version}</p>
+                        <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Version</p>
+                        <p className="font-mono font-bold text-[13px] text-white">{selectedVersion.version}</p>
                       </div>
                       {selectedVersion.createTime > 0 && (
                         <div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Built</p>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Built</p>
                           <p className="text-[11px] text-[rgba(255,255,255,0.5)]">{formatDate(selectedVersion.createTime)} · {formatRelativeTime(selectedVersion.createTime)}</p>
                         </div>
                       )}
                       {selectedVersion.buildCommit && (
                         <div>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit</p>
-                          <p className="font-['JetBrains_Mono',sans-serif] text-[11px] text-[rgba(255,255,255,0.5)]">{selectedVersion.buildCommit.substring(0, 12)}</p>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit</p>
+                          <p className="font-mono text-[11px] text-[rgba(255,255,255,0.5)]">{selectedVersion.buildCommit.substring(0, 12)}</p>
                         </div>
                       )}
                       {selectedVersion.buildCommit && (() => {
                         const msg = changelogCommits.find(c => c.sha === selectedVersion.buildCommit)?.message;
                         if (changelogLoading) return (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit Message</p>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit Message</p>
                             <p className="text-[11px] text-[rgba(255,255,255,0.25)] italic">Loading...</p>
                           </div>
                         );
                         if (!msg) return null;
                         return (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[3px]">Commit Message</p>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[3px]">Commit Message</p>
                             <p className="text-[11px] text-[rgba(255,255,255,0.5)] leading-[1.5]">{msg}</p>
                           </div>
                         );
@@ -734,10 +734,10 @@ export function BuildsPage() {
                         const envNames = deployedEnvsForVersion(selectedVersion.version);
                         return envNames.length > 0 ? (
                           <div>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[6px]">Deployed In</p>
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] uppercase font-bold font-mono mb-[6px]">Deployed In</p>
                             <div className="flex flex-wrap gap-[4px]">
                               {envNames.map(name => (
-                                <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759]">
+                                <span key={name} className="px-[6px] py-[2px] bg-[rgba(52,199,89,0.1)] border border-[rgba(52,199,89,0.25)] rounded-[3px] text-[9px] font-bold font-mono text-success">
                                   {name}
                                 </span>
                               ))}
@@ -765,7 +765,7 @@ export function BuildsPage() {
                     ) : logsError ? (
                       <p className="text-[10px] text-[rgba(255,92,95,0.8)] px-[16px] py-[20px]">{logsError}</p>
                     ) : logsContent !== null ? (
-                      <pre className="p-[12px] text-[10px] leading-[1.6] text-[rgba(255,255,255,0.75)] font-['JetBrains_Mono',sans-serif] whitespace-pre-wrap break-words">
+                      <pre className="p-[12px] text-[10px] leading-[1.6] text-[rgba(255,255,255,0.75)] font-mono whitespace-pre-wrap break-words">
                         {logsContent || '(no log output)'}
                       </pre>
                     ) : (
@@ -792,12 +792,12 @@ export function BuildsPage() {
                       </div>
                     ) : (
                       <div className="flex flex-col">
-                        <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                        <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-bold font-mono">
                           {changelogCommits.length} commit{changelogCommits.length !== 1 ? 's' : ''} since {versions[versions.findIndex(v => v.version === activeVersionId) + 1]?.version ?? 'start'}
                         </p>
                         {changelogCommits.map(c => (
-                          <div key={c.sha} className="flex items-start gap-[8px] px-[16px] py-[8px] border-b border-[#2c2c2c] last:border-b-0 hover:bg-[#252525]">
-                            <span className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[#f881a9] shrink-0 mt-[1px]">
+                          <div key={c.sha} className="flex items-start gap-[8px] px-[16px] py-[8px] border-b border-border last:border-b-0 hover:bg-muted">
+                            <span className="font-mono text-[10px] font-bold text-brand shrink-0 mt-[1px]">
                               {c.sha.substring(0, 7)}
                             </span>
                             <div className="min-w-0 flex-1">
@@ -828,16 +828,16 @@ export function BuildsPage() {
         {buildStep === 'commits' && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Branch selector */}
-            <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-[#2c2c2c]">
+            <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
               <Icon icon="solar:branch-linear" className="text-[rgba(255,255,255,0.35)] text-sm shrink-0" />
               <div className="relative flex-1 min-w-0">
                 <select
                   value={buildBranch}
                   onChange={(e) => handleBranchChange(e.target.value)}
-                  className="w-full appearance-none bg-transparent text-[10px] text-white font-['JetBrains_Mono',sans-serif] outline-none cursor-pointer pr-[16px]"
+                  className="w-full appearance-none bg-transparent text-[10px] text-white font-mono outline-none cursor-pointer pr-[16px]"
                 >
                   {buildBranches.map(b => (
-                    <option key={b} value={b} className="bg-[#1e1e1e] text-white">{b}</option>
+                    <option key={b} value={b} className="bg-background text-white">{b}</option>
                   ))}
                 </select>
                 <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.35)] text-xs pointer-events-none" />
@@ -861,10 +861,10 @@ export function BuildsPage() {
                     <button
                       key={c.sha}
                       onClick={() => { setSelectedCommit(c); setBuildStep('confirm'); }}
-                      className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors"
+                      className="text-left px-[16px] py-[12px] border-b border-border hover:bg-card transition-colors"
                     >
                       <div className="flex items-center gap-[8px] mb-[3px]">
-                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                        <span className="text-[10px] font-bold font-mono text-brand">
                           {c.sha.substring(0, 7)}
                         </span>
                         <span className="text-[10px] text-white leading-tight truncate">{c.message}</span>
@@ -891,8 +891,8 @@ export function BuildsPage() {
               Back to commits
             </button>
 
-            <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[14px] mb-[20px]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+            <div className="bg-card border border-border rounded-[8px] p-[14px] mb-[20px]">
+              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
                 {buildBranch} · {selectedCommit.sha.substring(0, 7)}
               </p>
               <p className="text-[11px] text-white leading-[1.5] mb-[8px]">{selectedCommit.message}</p>
@@ -915,13 +915,13 @@ export function BuildsPage() {
         {deployStep === 'select-env' && (
           <div className="flex-1 overflow-y-auto">
             <div className="px-[16px] py-[16px]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[4px]">
+              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[4px]">
                 Version
               </p>
-              <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[16px] text-[#F881A9] mb-[20px]">
+              <p className="font-mono font-bold text-[16px] text-brand mb-[20px]">
                 {activeVersionId}
               </p>
-              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+              <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
                 Environments
               </p>
               {state.loadedEnvs.length === 0 ? (
@@ -939,17 +939,17 @@ export function BuildsPage() {
                         className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border text-left transition-colors ${
                           selected
                             ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.4)]'
-                            : 'bg-[#2c2c2c] border-[#3a3a3a] hover:border-[#555]'
+                            : 'bg-card border-border hover:border-border'
                         }`}
                       >
                         <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 ${
-                          selected ? 'bg-[#F881A9] border-[#F881A9]' : 'border-[#555]'
+                          selected ? 'bg-brand border-brand' : 'border-border'
                         }`}>
                           {selected && <Icon icon="solar:check-linear" className="text-black text-[10px]" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold text-white truncate">{env.displayName}</p>
-                          <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate">{env.name.split('/').pop()}</p>
+                          <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate">{env.name.split('/').pop()}</p>
                         </div>
                       </button>
                     );
@@ -972,7 +972,7 @@ export function BuildsPage() {
         {(deployStep === 'running' || deployStep === 'result') && (
           <div className="flex-1 flex flex-col min-h-0">
             {deployStep === 'running' && (
-              <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+              <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                 <Loader size={20} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold text-white leading-tight">Deploying · {activeVersionId}</p>
@@ -981,21 +981,21 @@ export function BuildsPage() {
               </div>
             )}
             {deployStep === 'result' && (
-              <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+              <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
                 deployResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
               }`}>
                 {deployResult?.error ? (
                   <div className="flex items-start gap-[8px]">
-                    <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                    <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                     <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{deployResult.error}</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-[8px]">
-                    <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                    <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] font-bold text-white leading-tight">Deploy Complete</p>
                       {deployResult?.version && (
-                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
                           {deployResult.version}
                         </p>
                       )}
@@ -1003,7 +1003,7 @@ export function BuildsPage() {
                     {deployResult?.deployments?.[0]?.logsUrl && (
                       <button
                         onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
-                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
                         title="Open in browser"
                       >
                         <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1015,7 +1015,7 @@ export function BuildsPage() {
             )}
             <BuildTerminal ref={deployTermRef} className="flex-1 min-h-0" />
             {deployStep === 'result' && (
-              <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+              <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                 <button
                   onClick={openDeployFlow}
                   className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
@@ -1033,14 +1033,14 @@ export function BuildsPage() {
           <div className="flex-1 flex flex-col min-h-0">
             {/* Running header */}
             {buildStep === 'running' && (
-              <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+              <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                 <Loader size={20} />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold text-white leading-tight">Running Build · {activeNeuron}</p>
                   <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
                 </div>
                 {buildResult?.version && (
-                  <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.35)] shrink-0">
+                  <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.35)] shrink-0">
                     {buildResult.version}
                   </span>
                 )}
@@ -1049,21 +1049,21 @@ export function BuildsPage() {
 
             {/* Result header */}
             {buildStep === 'result' && (
-              <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+              <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
                 buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
               }`}>
                 {buildResult?.error ? (
                   <div className="flex items-start gap-[8px]">
-                    <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                    <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                     <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
                   </div>
                 ) : (
                   <div className="flex items-center gap-[8px]">
-                    <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                    <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[11px] font-bold text-white leading-tight">Build Complete</p>
                       {(buildResult?.neuronVersion || buildResult?.version) && (
-                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                        <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
                           {buildResult.neuronVersion || buildResult.version}
                         </p>
                       )}
@@ -1071,7 +1071,7 @@ export function BuildsPage() {
                     {buildResult?.logsUrl && (
                       <button
                         onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                        className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
                         title="Open in browser"
                       >
                         <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1087,7 +1087,7 @@ export function BuildsPage() {
 
             {/* Footer: build again */}
             {buildStep === 'result' && (
-              <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+              <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                 <button
                   onClick={openBuildFlow}
                   className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"

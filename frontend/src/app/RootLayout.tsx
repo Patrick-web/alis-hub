@@ -3,11 +3,14 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
+import { StatusStrip } from './components/StatusStrip';
+import { PackageTerminalPane } from './components/PackageTerminalPane';
 import { LoginPage } from './pages/LoginPage';
 import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { useWorkspace, type AppPhase } from './stores/workspace';
+import { usePackageSessions } from './stores/packageSessions';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
 import { Loader } from './components/Loader';
 
@@ -15,6 +18,8 @@ export function RootLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { state, setPhase } = useWorkspace();
+  const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
+  const isOnDevelop = location.pathname === '/develop';
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -40,7 +45,7 @@ export function RootLayout() {
   // Pre-workspace phases render fullscreen without nav chrome
   if (state.phase === 'init') {
     return (
-      <div className="bg-[#1e1e1e] flex items-center justify-center h-screen w-full">
+      <div className="bg-background flex items-center justify-center h-screen w-full">
         <Loader />
       </div>
     );
@@ -48,7 +53,7 @@ export function RootLayout() {
 
   if (state.phase === 'login') {
     return (
-      <div className="bg-[#1e1e1e] flex flex-col h-screen w-full">
+      <div className="bg-background flex flex-col h-screen w-full">
         <LoginPage />
       </div>
     );
@@ -60,7 +65,7 @@ export function RootLayout() {
 
   if (state.phase === 'picking-org') {
     return (
-      <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
+      <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <LandingZonesPage />
       </div>
     );
@@ -68,7 +73,7 @@ export function RootLayout() {
 
   if (state.phase === 'picking-product') {
     return (
-      <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
+      <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <ProductPickerPage />
       </div>
     );
@@ -81,12 +86,13 @@ export function RootLayout() {
   // Standalone phase — slim 4-shortcut nav, no product required
   if (state.phase === 'standalone') {
     return (
-      <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
+      <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <StandaloneTopNav />
         <div className="flex flex-1 overflow-hidden">
           {showSidebar && <Sidebar />}
           <Outlet />
         </div>
+        <StatusStrip />
       </div>
     );
   }
@@ -98,12 +104,30 @@ export function RootLayout() {
     showSidebar;
 
   return (
-    <div className="bg-[#1e1e1e] flex flex-col h-screen w-full overflow-hidden">
+    <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
       <TopNav />
-      <div className="flex flex-1 overflow-hidden">
-        {workspaceSidebar && <Sidebar />}
-        <Outlet key={`${state.organisation}/${state.product}`} />
+      <div className="flex flex-1 overflow-hidden flex-col">
+        <div className="flex flex-1 overflow-hidden">
+          {workspaceSidebar && <Sidebar />}
+          <Outlet key={`${state.organisation}/${state.product}`} />
+        </div>
+        {/* Package terminal pane — kept mounted here to preserve PTY across navigation */}
+        {sessions.length > 0 && (
+          <div
+            style={{ display: isOnDevelop ? undefined : 'none', height: '280px', flexShrink: 0 }}
+          >
+            <PackageTerminalPane
+              ref={paneRef}
+              sessions={sessions}
+              onCloseSession={onCloseSession}
+              onClose={clearSessions}
+              onInput={onInput}
+              onResize={onResize}
+            />
+          </div>
+        )}
       </div>
+      <StatusStrip />
     </div>
   );
 }

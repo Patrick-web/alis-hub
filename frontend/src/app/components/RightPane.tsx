@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react';
-import { Icon } from '@iconify/react';
+import { type ReactNode } from "react";
+import { Icon } from "@iconify/react";
 
 interface RightPaneProps {
   label: string;
@@ -11,20 +11,32 @@ interface RightPaneProps {
   width?: string;
 }
 
-export function RightPane({ label, title, onClose, actions, footer, children, width = 'w-[380px]' }: RightPaneProps) {
+export function RightPane({
+  label,
+  title,
+  onClose,
+  actions,
+  footer,
+  children,
+  width = "w-[380px]",
+}: RightPaneProps) {
   return (
-    <div className={`${width} border-l border-[#464646] flex flex-col overflow-hidden shrink-0`}>
+    <div
+      className={`${width} border-l border-border flex flex-col overflow-hidden shrink-0`}
+    >
       {/* Header */}
-      <div className="px-[16px] py-[12px] border-b border-[#464646] flex items-center justify-between shrink-0">
+      <div className="px-[16px] py-[12px] border-b border-border flex items-center justify-between shrink-0">
         {title ? (
           <div>
-            <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+            <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
               {label}
             </p>
-            <p className="text-[13px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{title}</p>
+            <p className="text-[13px] font-bold text-white font-mono">
+              {title}
+            </p>
           </div>
         ) : (
-          <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[11px] text-white uppercase opacity-70">
+          <p className="font-mono font-bold text-[11px] text-white uppercase opacity-70">
             {label}
           </p>
         )}
@@ -33,9 +45,9 @@ export function RightPane({ label, title, onClose, actions, footer, children, wi
           {onClose && (
             <button
               onClick={onClose}
-              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-[#3c3c3c] transition-colors"
+              className="w-[24px] h-[24px] flex items-center justify-center rounded-[3px] text-[rgba(255,255,255,0.4)] hover:text-white hover:bg-accent transition-colors"
             >
-              <Icon icon="solar:close-linear" className="text-sm" />
+              <Icon icon="solar:close-circle-linear" className="text-sm" />
             </button>
           )}
         </div>
@@ -46,7 +58,7 @@ export function RightPane({ label, title, onClose, actions, footer, children, wi
       </div>
       {/* Footer */}
       {footer && (
-        <div className="shrink-0 border-t border-[#464646] px-[16px] py-[12px]">
+        <div className="shrink-0 border-t border-border px-[16px] py-[12px]">
           {footer}
         </div>
       )}

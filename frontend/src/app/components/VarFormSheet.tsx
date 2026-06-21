@@ -137,12 +137,12 @@ export function VarFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="bg-[#2c2c2c] border-l border-[#464646] text-white w-[380px] sm:max-w-[380px] flex flex-col p-0"
+        className="bg-card border-l border-border text-white w-[380px] sm:max-w-[380px] flex flex-col p-0"
       >
-        <SheetHeader className="px-[20px] py-[14px] border-b border-[#464646]">
+        <SheetHeader className="px-[20px] py-[14px] border-b border-border">
           <div className="flex items-center gap-[10px]">
-            <Icon icon="solar:code-square-linear" className="text-[#F881A9] text-xl" />
-            <SheetTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[13px] font-bold">
+            <Icon icon="solar:code-square-linear" className="text-brand text-xl" />
+            <SheetTitle className="text-white font-mono text-[13px] font-bold">
               {mode === 'create' ? 'New Variable' : 'Edit Variable'}
             </SheetTitle>
           </div>
@@ -150,7 +150,7 @@ export function VarFormSheet({
 
         <div className="flex flex-col gap-[16px] px-[20px] py-[20px] flex-1 overflow-y-auto">
           <div className="flex flex-col gap-[6px]">
-            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Label
             </p>
             <Input
@@ -158,17 +158,17 @@ export function VarFormSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               disabled={loading || mode === 'edit'}
-              className={`font-['JetBrains_Mono',sans-serif] text-[12px] ${mode === 'create' && label && !LABEL_REGEX.test(label.trim()) ? 'border-[#ff5050] focus:border-[#ff5050]' : ''}`}
+              className={`font-mono text-[12px] ${mode === 'create' && label && !LABEL_REGEX.test(label.trim()) ? 'border-destructive focus:border-destructive' : ''}`}
             />
             {mode === 'create' && label && !LABEL_REGEX.test(label.trim()) && (
-              <p className="font-['JetBrains_Mono',sans-serif] text-[10px] text-[#ff5050]">
+              <p className="font-mono text-[10px] text-destructive">
                 Must start with a letter; letters, digits, <span className="opacity-70">-</span> and <span className="opacity-70">_</span> only; 3–101 chars total.
               </p>
             )}
           </div>
 
           <div className="flex flex-col gap-[6px]">
-            <p className="font-['JetBrains_Mono',sans-serif] text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
+            <p className="font-mono text-[10px] font-bold text-[rgba(255,255,255,0.5)] uppercase">
               Value
             </p>
             <textarea
@@ -177,12 +177,12 @@ export function VarFormSheet({
               onChange={(e) => setValue(e.target.value)}
               disabled={loading}
               rows={6}
-              className="w-full bg-[#1e1e1e] border border-[#464646] rounded-[4px] px-[12px] py-[8px] text-white font-['JetBrains_Mono',sans-serif] text-[12px] resize-none focus:outline-none focus:border-[#F881A9] disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
+              className="w-full bg-background border border-border rounded-[4px] px-[12px] py-[8px] text-white font-mono text-[12px] resize-none focus:outline-none focus:border-brand disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
             />
           </div>
 
           {mode === 'create' && otherEnvs.length > 0 && (
-            <div className="flex flex-col gap-0 border border-[#464646] rounded-[4px] overflow-hidden">
+            <div className="flex flex-col gap-0 border border-border rounded-[4px] overflow-hidden">
               <button
                 onClick={() => setPropagateOpen(v => !v)}
                 disabled={loading}
@@ -190,11 +190,11 @@ export function VarFormSheet({
               >
                 <div className="flex items-center gap-[8px]">
                   <Icon icon="solar:copy-linear" className="text-[rgba(255,255,255,0.5)] text-[15px]" />
-                  <span className="font-['JetBrains_Mono',sans-serif] text-[11px] font-bold text-[rgba(255,255,255,0.6)] uppercase">
+                  <span className="font-mono text-[11px] font-bold text-[rgba(255,255,255,0.6)] uppercase">
                     Propagate to other environments
                   </span>
                   {checkedCount > 0 && (
-                    <span className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[#F881A9] border border-[#F881A9] px-[5px] py-[1px] rounded-[3px]">
+                    <span className="font-mono text-[9px] text-brand border border-brand px-[5px] py-[1px] rounded-[3px]">
                       {checkedCount}
                     </span>
                   )}
@@ -206,23 +206,23 @@ export function VarFormSheet({
               </button>
 
               {propagateOpen && (
-                <div className="border-t border-[#464646] flex flex-col gap-0">
+                <div className="border-t border-border flex flex-col gap-0">
                   {propagations.map(p => (
-                    <div key={p.envName} className="flex flex-col border-b border-[#464646] last:border-b-0">
+                    <div key={p.envName} className="flex flex-col border-b border-border last:border-b-0">
                       <div
                         className="flex items-center gap-[10px] px-[12px] py-[10px] cursor-pointer hover:bg-[rgba(255,255,255,0.02)] transition-colors"
                         onClick={() => !loading && toggleEnv(p.envName)}
                       >
                         <div className={`w-[15px] h-[15px] rounded-[3px] border shrink-0 flex items-center justify-center transition-colors ${
-                          p.checked ? 'border-[#F881A9] bg-[#F881A9]' : 'border-[#464646]'
+                          p.checked ? 'border-brand bg-brand' : 'border-border'
                         }`}>
-                          {p.checked && <Icon icon="solar:check-linear" className="text-[#1e1e1e] text-[9px]" />}
+                          {p.checked && <Icon icon="solar:check-linear" className="text-foreground text-[9px]" />}
                         </div>
-                        <span className="font-['JetBrains_Mono',sans-serif] text-[11px] text-white flex-1">
+                        <span className="font-mono text-[11px] text-white flex-1">
                           {p.displayName}
                         </span>
                         {p.envType === 3 && (
-                          <span className="font-['JetBrains_Mono',sans-serif] text-[9px] text-[#F881A9] border border-[#F881A9] px-[4px] py-[1px] rounded-[3px]">
+                          <span className="font-mono text-[9px] text-brand border border-brand px-[4px] py-[1px] rounded-[3px]">
                             prod
                           </span>
                         )}
@@ -233,20 +233,20 @@ export function VarFormSheet({
                           <div className="flex gap-[6px]">
                             <button
                               onClick={() => !loading && p.useCustom && toggleCustom(p.envName)}
-                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-['JetBrains_Mono',sans-serif] text-[10px] font-bold uppercase transition-colors ${
+                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 !p.useCustom
-                                  ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)] text-[#F881A9]'
-                                  : 'border-[#464646] text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
+                                  ? 'border-brand bg-[rgba(248,129,169,0.08)] text-brand'
+                                  : 'border-border text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
                               }`}
                             >
                               Same value
                             </button>
                             <button
                               onClick={() => !loading && !p.useCustom && toggleCustom(p.envName)}
-                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-['JetBrains_Mono',sans-serif] text-[10px] font-bold uppercase transition-colors ${
+                              className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 p.useCustom
-                                  ? 'border-[#F881A9] bg-[rgba(248,129,169,0.08)] text-[#F881A9]'
-                                  : 'border-[#464646] text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
+                                  ? 'border-brand bg-[rgba(248,129,169,0.08)] text-brand'
+                                  : 'border-border text-[rgba(255,255,255,0.4)] hover:bg-[rgba(255,255,255,0.03)]'
                               }`}
                             >
                               Custom value
@@ -259,7 +259,7 @@ export function VarFormSheet({
                               onChange={(e) => setCustomValue(p.envName, e.target.value)}
                               disabled={loading}
                               rows={3}
-                              className="w-full bg-[#1e1e1e] border border-[#464646] rounded-[4px] px-[10px] py-[6px] text-white font-['JetBrains_Mono',sans-serif] text-[11px] resize-none focus:outline-none focus:border-[#F881A9] disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
+                              className="w-full bg-background border border-border rounded-[4px] px-[10px] py-[6px] text-white font-mono text-[11px] resize-none focus:outline-none focus:border-brand disabled:opacity-50 placeholder-[rgba(255,255,255,0.3)]"
                             />
                           )}
                         </div>
@@ -272,13 +272,13 @@ export function VarFormSheet({
           )}
 
           {error && (
-            <p className="text-[11px] text-[#ff5050] font-['JetBrains_Mono',sans-serif] break-all">
+            <p className="text-[11px] text-destructive font-mono break-all">
               {error}
             </p>
           )}
         </div>
 
-        <SheetFooter className="px-[20px] py-[14px] border-t border-[#464646] flex-row gap-[8px]">
+        <SheetFooter className="px-[20px] py-[14px] border-t border-border flex-row gap-[8px]">
           <Button
             variant="secondary"
             className="flex-1 h-[34px] text-[11px] font-bold uppercase"

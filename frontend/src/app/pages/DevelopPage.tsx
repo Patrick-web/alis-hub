@@ -806,18 +806,18 @@ export function DevelopPage() {
   };
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between">
-        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+      <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between">
+        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           SERVICES
         </p>
       </div>
 
       {/* Filter toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
+      <div className="border-b border-border px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
         <div className="flex items-center h-[34px]">
-          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
             <p className="text-[12px] text-white">/</p>
           </div>
           <Input
@@ -832,7 +832,7 @@ export function DevelopPage() {
           {selectedNeurons.size > 0 && (
             <button
               onClick={() => { openPackagesPane(Array.from(selectedNeurons)); setSelectedNeurons(new Set()); }}
-              className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-[#F881A9] hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-['JetBrains_Mono',sans-serif] uppercase"
+              className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-brand hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-mono uppercase"
             >
               <Icon icon="solar:box-linear" className="text-base" />
               Packages · {selectedNeurons.size}
@@ -851,31 +851,31 @@ export function DevelopPage() {
                 </div>
               ) : (
                 <table className="w-full border-collapse">
-                  <thead className="sticky top-0 z-10 bg-[#1e1e1e]">
-                    <tr className="border-b border-[#464646]">
+                  <thead className="sticky top-0 z-10 bg-background">
+                    <tr className="border-b border-border">
                       <th className="px-[16px] py-[8px] w-[40px]">
                         <button
                           onClick={toggleAllVisible}
                           className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
                             allVisibleSelected
-                              ? 'bg-[#f881a9] border-[#f881a9]'
+                              ? 'bg-brand border-brand'
                               : someVisibleSelected
-                                ? 'border-[#f881a9] bg-[rgba(248,129,169,0.15)]'
-                                : 'border-[#464646] hover:border-[rgba(248,129,169,0.5)]'
+                                ? 'border-brand bg-[rgba(248,129,169,0.15)]'
+                                : 'border-border hover:border-[rgba(248,129,169,0.5)]'
                           }`}
                         >
                           {allVisibleSelected && <Icon icon="solar:check-linear" className="text-black text-[8px]" />}
-                          {someVisibleSelected && !allVisibleSelected && <span className="block w-[6px] h-[2px] bg-[#f881a9] rounded-full" />}
+                          {someVisibleSelected && !allVisibleSelected && <span className="block w-[6px] h-[2px] bg-brand rounded-full" />}
                         </button>
                       </th>
                       <th className="text-left px-[20px] py-[8px]">
-                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Service</span>
+                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Service</span>
                       </th>
                       <th className="text-left px-[16px] py-[8px] w-[100px]">
-                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Version</span>
+                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Version</span>
                       </th>
                       <th className="text-left px-[16px] py-[8px] w-[260px]">
-                        <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] uppercase">Actions</span>
+                        <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)] uppercase">Actions</span>
                       </th>
                     </tr>
                   </thead>
@@ -886,15 +886,15 @@ export function DevelopPage() {
                       return (
                         <tr
                           key={name}
-                          className={`border-b border-[#2e2e2e] transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
+                          className={`border-b border-border transition-colors ${isSelected ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'}`}
                         >
                           <td className="px-[16px] py-[10px]">
                             <button
                               onClick={() => toggleNeuron(name)}
                               className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
                                 isSelected
-                                  ? 'bg-[#f881a9] border-[#f881a9]'
-                                  : 'border-[#464646] hover:border-[rgba(248,129,169,0.5)]'
+                                  ? 'bg-brand border-brand'
+                                  : 'border-border hover:border-[rgba(248,129,169,0.5)]'
                               }`}
                             >
                               {isSelected && <Icon icon="solar:check-linear" className="text-black text-[8px]" />}
@@ -902,13 +902,13 @@ export function DevelopPage() {
                           </td>
                           <td className="px-[20px] py-[10px]">
                             <div className="flex items-center gap-[8px]">
-                              <div className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? 'bg-[#34C759]' : neuron.state === 4 ? 'bg-[#FAC800]' : 'bg-[#FF5C5F]'}`} />
-                              <span className="text-[12px] font-bold font-['JetBrains_Mono',sans-serif] text-white">{name}</span>
+                              <div className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? 'bg-success' : neuron.state === 4 ? 'bg-warning' : 'bg-destructive'}`} />
+                              <span className="text-[12px] font-bold font-mono text-white">{name}</span>
                             </div>
                           </td>
                           <td className="px-[16px] py-[10px]">
                             {neuron.latestBuild ? (
-                              <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] bg-[#2c2c2c] border border-[#464646] px-[6px] py-[2px]">
+                              <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] bg-card border border-border px-[6px] py-[2px]">
                                 {neuron.latestBuild}
                               </span>
                             ) : (
@@ -981,10 +981,10 @@ export function DevelopPage() {
                       <button
                         key={c.sha}
                         onClick={() => { setSelectedCommit(c); setDefineStep('confirm'); }}
-                        className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors group"
+                        className="text-left px-[16px] py-[12px] border-b border-border hover:bg-card transition-colors group"
                       >
                         <div className="flex items-center gap-[8px] mb-[3px]">
-                          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                          <span className="text-[10px] font-bold font-mono text-brand">
                             {c.sha.substring(0, 7)}
                           </span>
                           <span className="text-[10px] text-white leading-tight">{c.message}</span>
@@ -1010,13 +1010,13 @@ export function DevelopPage() {
                   Back to commits
                 </button>
 
-                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[16px] mb-[20px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                <div className="bg-card border border-border rounded-[8px] p-[16px] mb-[20px]">
+                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
                     Selected Commit
                   </p>
                   <p className="text-[11px] text-white leading-[1.5] mb-[10px]">{selectedCommit.message}</p>
                   <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                    <span className="text-[10px] font-bold font-mono text-brand">
                       {selectedCommit.sha.substring(0, 12)}
                     </span>
                   </div>
@@ -1049,8 +1049,8 @@ export function DevelopPage() {
                     </p>
                   </div>
                   {defineResult?.version && (
-                    <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[6px] px-[12px] py-[6px]">
-                      <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.5)]">
+                    <div className="bg-card border border-border rounded-[6px] px-[12px] py-[6px]">
+                      <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.5)]">
                         v{defineResult.version}
                       </span>
                     </div>
@@ -1064,9 +1064,9 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto">
                 {/* Error state */}
                 {defineResult?.error && (
-                  <div className="px-[16px] py-[16px] border-b border-[#2c2c2c]">
+                  <div className="px-[16px] py-[16px] border-b border-border">
                     <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
-                      <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                      <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                       <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{defineResult.error}</p>
                     </div>
                   </div>
@@ -1074,13 +1074,13 @@ export function DevelopPage() {
 
                 {/* Success header */}
                 {!defineResult?.error && (
-                  <div className="px-[16px] py-[14px] border-b border-[#2c2c2c] bg-[rgba(52,199,89,0.05)]">
+                  <div className="px-[16px] py-[14px] border-b border-border bg-[rgba(52,199,89,0.05)]">
                     <div className="flex items-center gap-[8px] mb-[4px]">
-                      <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-base" />
+                      <Icon icon="solar:check-circle-linear" className="text-success text-base" />
                       <p className="text-[11px] font-bold text-white">Define Complete</p>
                     </div>
                     {defineResult?.version && (
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono">
                         {defineResult.definition} · v{defineResult.version}
                       </p>
                     )}
@@ -1109,12 +1109,12 @@ export function DevelopPage() {
                     {(glassResult.definition?.version || glassResult.definition?.releaseType) && (
                       <div className="flex gap-[6px] mb-[16px]">
                         {glassResult.definition.version && (
-                          <span className="text-[9px] uppercase font-bold font-['JetBrains_Mono',sans-serif] px-[6px] py-[2px] rounded bg-[#2c2c2c] border border-[#464646] text-[rgba(255,255,255,0.5)]">
+                          <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-card border border-border text-[rgba(255,255,255,0.5)]">
                             {glassResult.definition.version}
                           </span>
                         )}
                         {glassResult.definition.releaseType && (
-                          <span className="text-[9px] uppercase font-bold font-['JetBrains_Mono',sans-serif] px-[6px] py-[2px] rounded bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] text-[#f881a9]">
+                          <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] text-brand">
                             {glassResult.definition.releaseType}
                           </span>
                         )}
@@ -1124,14 +1124,14 @@ export function DevelopPage() {
                     {/* Artifacts vertical list */}
                     {glassResult.artifacts && glassResult.artifacts.length > 0 && (
                       <div>
-                        <p className="text-[9px] uppercase font-bold text-[rgba(255,255,255,0.3)] mb-[10px] font-['JetBrains_Mono',sans-serif]">
+                        <p className="text-[9px] uppercase font-bold text-[rgba(255,255,255,0.3)] mb-[10px] font-mono">
                           Artifacts ({glassResult.artifacts.length})
                         </p>
                         <div className="flex flex-col gap-[2px]">
                           {glassResult.artifacts.map((a, i) => (
                             <div
                               key={i}
-                              className="flex items-center gap-[10px] px-[10px] py-[9px] rounded-[6px] bg-[#232323] border border-[#2c2c2c] group"
+                              className="flex items-center gap-[10px] px-[10px] py-[9px] rounded-[6px] bg-background border border-border group"
                             >
                               {/* State dot */}
                               <span
@@ -1145,7 +1145,7 @@ export function DevelopPage() {
                                 }}
                               />
                               {/* Artifact type */}
-                              <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-white flex-1 min-w-0 truncate">
+                              <span className="text-[10px] font-bold font-mono text-white flex-1 min-w-0 truncate">
                                 {a.type}
                               </span>
                               {/* Extra (package name/import path) */}
@@ -1158,7 +1158,7 @@ export function DevelopPage() {
                               {a.locationUri && (
                                 <button
                                   onClick={() => Browser.OpenURL(a.locationUri)}
-                                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[rgba(255,255,255,0.4)] hover:text-[#f881a9]"
+                                  className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-[rgba(255,255,255,0.4)] hover:text-brand"
                                   title={a.locationUri}
                                 >
                                   <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1185,7 +1185,7 @@ export function DevelopPage() {
                 )}
 
                 {/* Start over */}
-                <div className="px-[16px] py-[12px] border-t border-[#2c2c2c] mt-[8px]">
+                <div className="px-[16px] py-[12px] border-t border-border mt-[8px]">
                   <button
                     onClick={() => openDefinePane(defineNeuron!)}
                     className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
@@ -1218,9 +1218,9 @@ export function DevelopPage() {
                 <div className="flex-1 overflow-y-auto">
 
                   {/* Version section */}
-                  <div className="border-b border-[#2c2c2c]">
+                  <div className="border-b border-border">
                     <div className="px-[16px] pt-[14px] pb-[8px]">
-                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                      <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
                         Build Version
                       </p>
                     </div>
@@ -1239,16 +1239,16 @@ export function DevelopPage() {
                             <button
                               key={v.version}
                               onClick={() => setDeployVersion(v.version)}
-                              className={`w-full text-left px-[16px] py-[9px] border-b border-[#1e1e1e] flex items-center gap-[10px] transition-colors ${
+                              className={`w-full text-left px-[16px] py-[9px] border-b border-border flex items-center gap-[10px] transition-colors ${
                                 selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
                               }`}
                             >
                               <span className={`size-[14px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${
-                                selected ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                                selected ? 'bg-brand border-brand' : 'border-border'
                               }`}>
-                                {selected && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                                {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                               </span>
-                              <span className={`text-[12px] font-bold font-['JetBrains_Mono',sans-serif] ${selected ? 'text-[#f881a9]' : 'text-white'}`}>
+                              <span className={`text-[12px] font-bold font-mono ${selected ? 'text-brand' : 'text-white'}`}>
                                 {v.version}
                               </span>
                               {ago && (
@@ -1263,7 +1263,7 @@ export function DevelopPage() {
 
                   {/* Environments section */}
                   <div className="px-[16px] pt-[12px] pb-[4px]">
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
                       Target Environments
                     </p>
                   </div>
@@ -1283,15 +1283,15 @@ export function DevelopPage() {
                             onClick={() => setSelectedDeployEnvs(prev =>
                               selected ? prev.filter(e => e !== env.name) : [...prev, env.name]
                             )}
-                            className={`text-left px-[16px] py-[11px] border-b border-[#232323] transition-colors flex items-center gap-[10px] ${
+                            className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${
                               selected ? 'bg-[rgba(248,129,169,0.05)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
                             }`}
                           >
                             {/* Checkbox */}
                             <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-                              selected ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                              selected ? 'bg-brand border-brand' : 'border-border'
                             }`}>
-                              {selected && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                              {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                             </span>
 
                             {/* Env name */}
@@ -1304,16 +1304,16 @@ export function DevelopPage() {
                             {/* Current deployment status */}
                             {hasDeployment ? (
                               isCurrent ? (
-                                <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#34C759] shrink-0">
+                                <span className="text-[9px] font-bold font-mono text-success shrink-0">
                                   {env.currentVersion} ✓
                                 </span>
                               ) : (
                                 <div className="flex items-center gap-[4px] shrink-0">
-                                  <span className="text-[9px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)] line-through">
+                                  <span className="text-[9px] font-mono text-[rgba(255,255,255,0.3)] line-through">
                                     {env.currentVersion}
                                   </span>
                                   <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.25)] text-[10px]" />
-                                  <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                                  <span className="text-[9px] font-bold font-mono text-brand">
                                     {deployVersion || '?'}
                                   </span>
                                 </div>
@@ -1328,8 +1328,8 @@ export function DevelopPage() {
                   )}
 
                   {/* Options */}
-                  <div className="px-[16px] pt-[14px] pb-[16px] border-t border-[#2c2c2c] mt-[4px]">
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                  <div className="px-[16px] pt-[14px] pb-[16px] border-t border-border mt-[4px]">
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
                       Options
                     </p>
                     <div className="flex flex-col gap-[8px]">
@@ -1338,7 +1338,7 @@ export function DevelopPage() {
                           type="checkbox"
                           checked={deployPlanOnly}
                           onChange={(e) => setDeployPlanOnly(e.target.checked)}
-                          className="accent-[#f881a9]"
+                          className="accent-brand"
                         />
                         <div>
                           <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Plan only</span>
@@ -1350,7 +1350,7 @@ export function DevelopPage() {
                           type="checkbox"
                           checked={deployBeta}
                           onChange={(e) => setDeployBeta(e.target.checked)}
-                          className="accent-[#f881a9]"
+                          className="accent-brand"
                         />
                         <div>
                           <span className="text-[10px] text-[rgba(255,255,255,0.7)]">Beta</span>
@@ -1362,7 +1362,7 @@ export function DevelopPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="shrink-0 px-[14px] py-[10px] border-t border-[#464646]">
+                <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                   <Button
                     variant="primary"
                     className="w-full justify-center py-[10px]"
@@ -1381,7 +1381,7 @@ export function DevelopPage() {
 
                 {/* Running header */}
                 {deployStep === 'running' && (
-                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                     <Loader size={20} />
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold text-white leading-tight">
@@ -1394,23 +1394,23 @@ export function DevelopPage() {
 
                 {/* Result header */}
                 {deployStep === 'result' && (
-                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
                     deployResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
                   }`}>
                     {deployResult?.error ? (
                       <div className="flex items-start gap-[8px]">
-                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                        <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                         <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{deployResult.error}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-[8px]">
-                        <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                        <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold text-white leading-tight">
                             {deployPlanOnly ? 'Plan Complete' : 'Deploy Complete'}
                           </p>
                           {(deployResult?.version || deployVersion) && (
-                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
                               {deployResult?.version || deployVersion}
                             </p>
                           )}
@@ -1418,7 +1418,7 @@ export function DevelopPage() {
                         {deployResult?.deployments?.[0]?.logsUrl && (
                           <button
                             onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
-                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
                             title="Open in browser"
                           >
                             <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1434,7 +1434,7 @@ export function DevelopPage() {
 
                 {/* Footer: run again */}
                 {deployStep === 'result' && (
-                  <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+                  <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                     <button
                       onClick={() => openDeployPane(deployNeuron!)}
                       className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
@@ -1457,16 +1457,16 @@ export function DevelopPage() {
             {buildStep === 'commits' && (
               <div className="flex-1 flex flex-col min-h-0">
                 {/* Branch selector */}
-                <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-[#2c2c2c]">
+                <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
                   <Icon icon="solar:branch-linear" className="text-[rgba(255,255,255,0.35)] text-sm shrink-0" />
                   <div className="relative flex-1 min-w-0">
                     <select
                       value={buildBranch}
                       onChange={(e) => handleBranchChange(e.target.value)}
-                      className="w-full appearance-none bg-transparent text-[10px] text-white font-['JetBrains_Mono',sans-serif] outline-none cursor-pointer pr-[16px]"
+                      className="w-full appearance-none bg-transparent text-[10px] text-white font-mono outline-none cursor-pointer pr-[16px]"
                     >
                       {buildBranches.map((b) => (
-                        <option key={b} value={b} className="bg-[#1e1e1e] text-white">{b}</option>
+                        <option key={b} value={b} className="bg-background text-white">{b}</option>
                       ))}
                     </select>
                     <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.35)] text-xs pointer-events-none" />
@@ -1490,10 +1490,10 @@ export function DevelopPage() {
                         <button
                           key={c.sha}
                           onClick={() => { setSelectedBuildCommit(c); setBuildStep('confirm'); }}
-                          className="text-left px-[16px] py-[12px] border-b border-[#2c2c2c] hover:bg-[#2c2c2c] transition-colors"
+                          className="text-left px-[16px] py-[12px] border-b border-border hover:bg-card transition-colors"
                         >
                           <div className="flex items-center gap-[8px] mb-[3px]">
-                            <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#f881a9]">
+                            <span className="text-[10px] font-bold font-mono text-brand">
                               {c.sha.substring(0, 7)}
                             </span>
                             <span className="text-[10px] text-white leading-tight truncate">{c.message}</span>
@@ -1521,8 +1521,8 @@ export function DevelopPage() {
                 </button>
 
                 {/* Selected commit */}
-                <div className="bg-[#2c2c2c] border border-[#3a3a3a] rounded-[8px] p-[14px] mb-[20px]">
-                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                <div className="bg-card border border-border rounded-[8px] p-[14px] mb-[20px]">
+                  <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
                     {buildBranch} · {selectedBuildCommit.sha.substring(0, 7)}
                   </p>
                   <p className="text-[11px] text-white leading-[1.5] mb-[8px]">{selectedBuildCommit.message}</p>
@@ -1532,7 +1532,7 @@ export function DevelopPage() {
                 </div>
 
                 {/* Build mode selector */}
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[8px]">
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[8px]">
                   Action
                 </p>
                 <div className="flex flex-col gap-[2px] mb-[20px]">
@@ -1547,14 +1547,14 @@ export function DevelopPage() {
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                         buildMode === mode
                           ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
-                          : 'bg-[#1e1e1e] border-[#2c2c2c] text-[rgba(255,255,255,0.5)] hover:border-[#3a3a3a] hover:text-[rgba(255,255,255,0.7)]'
+                          : 'bg-background border-border text-[rgba(255,255,255,0.5)] hover:border-border hover:text-[rgba(255,255,255,0.7)]'
                       }`}
                     >
-                      <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-[#f881a9]' : 'bg-[#3a3a3a]'}`} />
+                      <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-brand' : 'bg-accent'}`} />
                       <Icon icon={icon} className="text-sm shrink-0" />
                       <span className="text-[11px] font-medium flex-1">{label}</span>
                       {soon && (
-                        <span className="text-[8px] font-bold uppercase font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.25)] border border-[#2c2c2c] rounded px-[4px] py-[1px]">
+                        <span className="text-[8px] font-bold uppercase font-mono text-[rgba(255,255,255,0.25)] border border-border rounded px-[4px] py-[1px]">
                           soon
                         </span>
                       )}
@@ -1578,14 +1578,14 @@ export function DevelopPage() {
 
                 {/* Running header */}
                 {buildStep === 'running' && (
-                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-[#2c2c2c]">
+                  <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
                     <Loader size={20} />
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-bold text-white leading-tight">Running Build</p>
                       <p className="text-[9px] text-[rgba(255,255,255,0.4)] truncate leading-tight mt-[1px]">{buildProgressMsg}</p>
                     </div>
                     {buildResult?.version && (
-                      <span className="text-[9px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.35)] shrink-0">
+                      <span className="text-[9px] font-bold font-mono text-[rgba(255,255,255,0.35)] shrink-0">
                         {buildResult.version}
                       </span>
                     )}
@@ -1594,30 +1594,30 @@ export function DevelopPage() {
 
                 {/* Result header */}
                 {buildStep === 'result' && (
-                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-[#2c2c2c] ${
+                  <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
                     buildResult?.stub ? 'bg-[rgba(255,159,10,0.05)]'
                     : buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]'
                     : 'bg-[rgba(52,199,89,0.05)]'
                   }`}>
                     {buildResult?.stub ? (
                       <div className="flex items-center gap-[8px]">
-                        <Icon icon="solar:clock-circle-linear" className="text-[#ff9f0a] text-sm shrink-0" />
+                        <Icon icon="solar:clock-circle-linear" className="text-warning text-sm shrink-0" />
                         <p className="text-[10px] font-bold text-[rgba(255,255,255,0.7)] leading-tight">
                           Build and Deploy — Coming Soon
                         </p>
                       </div>
                     ) : buildResult?.error ? (
                       <div className="flex items-start gap-[8px]">
-                        <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                        <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                         <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{buildResult.error}</p>
                       </div>
                     ) : (
                       <div className="flex items-center gap-[8px]">
-                        <Icon icon="solar:check-circle-linear" className="text-[#34C759] text-sm shrink-0" />
+                        <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
                         <div className="min-w-0">
                           <p className="text-[11px] font-bold text-white leading-tight">Build Complete</p>
                           {(buildResult?.neuronVersion || buildResult?.version) && (
-                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate leading-tight mt-[1px]">
+                            <p className="text-[9px] text-[rgba(255,255,255,0.4)] font-mono truncate leading-tight mt-[1px]">
                               {buildResult.neuronVersion || buildResult.version}
                             </p>
                           )}
@@ -1625,7 +1625,7 @@ export function DevelopPage() {
                         {buildResult?.logsUrl && (
                           <button
                             onClick={() => Browser.OpenURL(buildResult!.logsUrl)}
-                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-[#f881a9] transition-colors"
+                            className="ml-auto shrink-0 text-[rgba(255,255,255,0.3)] hover:text-brand transition-colors"
                             title="Open in browser"
                           >
                             <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
@@ -1641,7 +1641,7 @@ export function DevelopPage() {
 
                 {/* Footer: run again */}
                 {buildStep === 'result' && (
-                  <div className="shrink-0 px-[14px] py-[10px] border-t border-[#2c2c2c]">
+                  <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                     <button
                       onClick={() => openBuildPane(buildNeuron!)}
                       className="text-[10px] text-[rgba(255,255,255,0.35)] hover:text-white transition-colors flex items-center gap-[6px]"
@@ -1674,11 +1674,11 @@ export function DevelopPage() {
               <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
                 {packagesError && (
                   <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] mb-[16px]">
-                    <Icon icon="solar:danger-triangle-linear" className="text-[#FF5C5F] text-sm shrink-0 mt-[1px]" />
+                    <Icon icon="solar:danger-triangle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                     <p className="text-[10px] text-[rgba(255,255,255,0.7)] leading-relaxed">{packagesError}</p>
                   </div>
                 )}
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[10px]">
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[10px]">
                   Action
                 </p>
                 <div className="flex flex-col gap-[2px] mb-[20px]">
@@ -1694,10 +1694,10 @@ export function DevelopPage() {
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                         packagesAction === value
                           ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-white'
-                          : 'bg-[#1e1e1e] border-[#2c2c2c] text-[rgba(255,255,255,0.5)] hover:border-[#3a3a3a] hover:text-[rgba(255,255,255,0.7)]'
+                          : 'bg-background border-border text-[rgba(255,255,255,0.5)] hover:border-border hover:text-[rgba(255,255,255,0.7)]'
                       }`}
                     >
-                      <span className={`size-[6px] rounded-full shrink-0 ${packagesAction === value ? 'bg-[#f881a9]' : 'bg-[#3a3a3a]'}`} />
+                      <span className={`size-[6px] rounded-full shrink-0 ${packagesAction === value ? 'bg-brand' : 'bg-accent'}`} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-medium">{label}</p>
                         <p className="text-[9px] text-[rgba(255,255,255,0.35)] leading-snug mt-[1px]">{desc}</p>
@@ -1731,7 +1731,7 @@ export function DevelopPage() {
                       <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
                       Back
                     </button>
-                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+                    <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono">
                       Select Folders
                     </p>
                   </div>
@@ -1747,20 +1747,20 @@ export function DevelopPage() {
                             else next.add(s.workDir);
                             return next;
                           })}
-                          className={`text-left px-[16px] py-[10px] border-b border-[#232323] flex items-center gap-[10px] transition-colors ${
+                          className={`text-left px-[16px] py-[10px] border-b border-border flex items-center gap-[10px] transition-colors ${
                             checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-[rgba(255,255,255,0.02)]'
                           }`}
                         >
                           <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-                            checked ? 'bg-[#f881a9] border-[#f881a9]' : 'border-[#464646]'
+                            checked ? 'bg-brand border-brand' : 'border-border'
                           }`}>
-                            {checked && <Icon icon="solar:check-linear" className="text-[#6f0025] text-[9px]" />}
+                            {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                           </span>
                           <div className="flex-1 min-w-0">
                             <p className="text-[11px] font-medium text-white truncate">
                               {s.name || s.workDir.split('/').slice(-2).join('/')}
                             </p>
-                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] font-['JetBrains_Mono',sans-serif] uppercase leading-snug mt-[1px]">
+                            <p className="text-[9px] text-[rgba(255,255,255,0.35)] font-mono uppercase leading-snug mt-[1px]">
                               {s.lang}
                             </p>
                           </div>
@@ -1769,7 +1769,7 @@ export function DevelopPage() {
                     })}
                   </div>
                 </div>
-                <div className="shrink-0 px-[14px] py-[10px] border-t border-[#464646]">
+                <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
                   <Button
                     variant="primary"
                     className="w-full justify-center py-[10px]"
@@ -1786,11 +1786,11 @@ export function DevelopPage() {
             {packagesStep === 'venv-setup' && (
               <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-[16px] py-[16px]">
                 <div className="flex items-start gap-[10px] p-[12px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.25)] rounded-[6px] mb-[20px]">
-                  <Icon icon="solar:info-circle-linear" className="text-[#f881a9] text-base shrink-0 mt-[1px]" />
+                  <Icon icon="solar:info-circle-linear" className="text-brand text-base shrink-0 mt-[1px]" />
                   <div>
                     <p className="text-[11px] font-medium text-white leading-snug">Python virtual environment not found</p>
                     <p className="text-[10px] text-[rgba(255,255,255,0.5)] leading-relaxed mt-[4px]">
-                      A <code className="font-['JetBrains_Mono',sans-serif] text-[#f881a9]">.venv</code> is required at the product build root before running Python package scripts.
+                      A <code className="font-mono text-brand">.venv</code> is required at the product build root before running Python package scripts.
                     </p>
                   </div>
                 </div>
@@ -1804,13 +1804,13 @@ export function DevelopPage() {
                   </Button>
                   <button
                     onClick={() => doRunScripts(false)}
-                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif] uppercase"
+                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.4)] hover:text-white transition-colors font-mono uppercase"
                   >
                     Skip &amp; Run Anyway
                   </button>
                   <button
                     onClick={() => setPackagesStep('select-folders')}
-                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.3)] hover:text-white transition-colors font-['JetBrains_Mono',sans-serif]"
+                    className="w-full py-[9px] text-[10px] text-[rgba(255,255,255,0.3)] hover:text-white transition-colors font-mono"
                   >
                     ← Back
                   </button>
@@ -1831,20 +1831,20 @@ export function DevelopPage() {
             {/* Step: running */}
             {packagesStep === 'running' && (
               <div className="flex-1 overflow-y-auto px-[16px] py-[16px]">
-                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-['JetBrains_Mono',sans-serif] mb-[12px]">
+                <p className="text-[9px] text-[rgba(255,255,255,0.4)] uppercase font-bold font-mono mb-[12px]">
                   Running · {packageSessions.filter(s => !s.done).length} active
                 </p>
                 <div className="flex flex-col gap-[6px] mb-[16px]">
                   {packageSessions.map(s => (
-                    <div key={s.runID} className="flex items-center gap-[8px] px-[10px] py-[8px] bg-[#232323] border border-[#2c2c2c] rounded-[6px]">
+                    <div key={s.runID} className="flex items-center gap-[8px] px-[10px] py-[8px] bg-background border border-border rounded-[6px]">
                       {s.error ? (
                         <Icon icon="solar:close-circle-bold" className="text-red-400 text-sm shrink-0" />
                       ) : s.done ? (
                         <Icon icon="solar:check-circle-bold" className="text-green-400 text-sm shrink-0" />
                       ) : (
-                        <span className="w-[8px] h-[8px] rounded-full bg-[#f881a9] animate-pulse shrink-0" />
+                        <span className="w-[8px] h-[8px] rounded-full bg-brand animate-pulse shrink-0" />
                       )}
-                      <span className="text-[10px] text-white font-['JetBrains_Mono',sans-serif] flex-1 truncate min-w-0">
+                      <span className="text-[10px] text-white font-mono flex-1 truncate min-w-0">
                         {s.title}
                       </span>
                       <span className="text-[9px] text-[rgba(255,255,255,0.3)] shrink-0 uppercase">{s.lang}</span>

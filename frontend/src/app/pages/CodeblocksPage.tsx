@@ -75,11 +75,11 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
   });
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center justify-between">
+      <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
         <div className="flex items-center h-[34px]">
-          <div className="bg-[#2c2c2c] border border-[#464646] px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
+          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
             <p className="text-[12px] text-white">/</p>
           </div>
           <Input
@@ -93,18 +93,18 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
       </div>
 
       {/* Filter tabs */}
-      <div className="border-b border-[#464646] flex items-center px-[20px] gap-[4px]">
+      <div className="border-b border-border flex items-center px-[20px] gap-[4px]">
         {RELEASE_LEVELS.map(level => (
           <button
             key={level}
             onClick={() => setActiveFilter(level)}
             className={`px-[14px] py-[10px] text-[11px] font-bold uppercase transition-all relative ${
-              activeFilter === level ? 'text-[#f881a9]' : 'text-white opacity-40 hover:opacity-70'
+              activeFilter === level ? 'text-brand' : 'text-white opacity-40 hover:opacity-70'
             }`}
           >
             {level}
             {activeFilter === level && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#f881a9]" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
             )}
           </button>
         ))}
@@ -128,7 +128,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
               <div
                 key={cb.name}
                 onClick={() => navigate(`/codeblocks/${blockId(cb.name)}`)}
-                className="bg-[#2c2c2c] border border-[#464646] rounded-[4px] cursor-pointer hover:border-[#f881a9] transition-all group overflow-hidden"
+                className="bg-card border border-border rounded-[4px] cursor-pointer hover:border-brand transition-all group overflow-hidden"
               >
                 {/* Banner */}
                 <div className="h-[140px] overflow-hidden relative">
@@ -146,7 +146,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
                 {/* Card body */}
                 <div className="p-[16px]">
                   <div className="flex items-start justify-between mb-[8px]">
-                    <h3 className="font-['JetBrains_Mono',sans-serif] font-bold text-[13px] text-white uppercase tracking-wider leading-[1.2] flex-1 pr-2">
+                    <h3 className="font-mono font-bold text-[13px] text-white uppercase tracking-wider leading-[1.2] flex-1 pr-2">
                       {cb.displayName}
                     </h3>
                     {cb.releaseLevel > 0 && (
@@ -159,7 +159,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
                     {cb.headline || cb.description}
                   </p>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] truncate">
+                    <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-mono truncate">
                       {cb.publisher || 'Alis Exchange'}
                     </p>
                     <div className="flex items-center gap-[5px]">

@@ -49,7 +49,7 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
 
   return (
     <div
-      className="relative h-[160px] bg-[#111111] cursor-pointer group overflow-hidden border-b border-[#464646]"
+      className="relative h-[160px] bg-background cursor-pointer group overflow-hidden border-b border-border"
       onClick={onExpand}
     >
       {loading ? (
@@ -59,7 +59,7 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
       ) : error ? (
         <div className="flex flex-col items-center justify-center h-full gap-[6px] px-[12px]">
           <Icon icon="solar:file-broken-linear" className="text-2xl text-[rgba(255,255,255,0.15)]" />
-          <p className="text-[8px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] text-center leading-tight">{error}</p>
+          <p className="text-[8px] text-[rgba(255,255,255,0.3)] font-mono text-center leading-tight">{error}</p>
         </div>
       ) : kind === 'image' && content ? (
         <img src={dataURL} alt="" className="w-full h-full object-contain" />
@@ -77,7 +77,7 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
           <Icon icon="solar:music-note-2-linear" className="text-4xl text-[rgba(255,255,255,0.15)]" />
         </div>
       ) : kind === 'text' && content ? (
-        <pre className="absolute inset-0 p-[8px] text-[7px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif] leading-[1.4] overflow-hidden whitespace-pre-wrap break-all pointer-events-none">
+        <pre className="absolute inset-0 p-[8px] text-[7px] text-[rgba(255,255,255,0.4)] font-mono leading-[1.4] overflow-hidden whitespace-pre-wrap break-all pointer-events-none">
           {b64ToText(content).slice(0, 800)}
         </pre>
       ) : (
@@ -90,7 +90,7 @@ function MiniPreview({ contentType, content, loading, error, onExpand }: MiniPre
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-[5px] bg-black/70 rounded-[4px] px-[10px] py-[5px]">
           <Icon icon="solar:maximize-square-2-linear" className="text-xs text-white" />
-          <span className="text-[9px] text-white font-['JetBrains_Mono',sans-serif]">Expand</span>
+          <span className="text-[9px] text-white font-mono">Expand</span>
         </div>
       </div>
     </div>
@@ -217,9 +217,9 @@ export function BucketsExplorer({ projectID }: Props) {
   return (
     <div className="flex h-full">
       {/* Bucket list */}
-      <div className="w-[220px] shrink-0 border-r border-[#464646] flex flex-col">
-        <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-[#464646]">
-          <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">Buckets</p>
+      <div className="w-[220px] shrink-0 border-r border-border flex flex-col">
+        <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-border">
+          <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">Buckets</p>
           <button
             onClick={() => {
               setBucketsLoading(true);
@@ -235,7 +235,7 @@ export function BucketsExplorer({ projectID }: Props) {
             <div className="flex items-center justify-center py-8"><Loader size={24} /></div>
           ) : bucketsError ? (
             <div className="p-[12px]">
-              <p className="text-[10px] text-red-400 font-['JetBrains_Mono',sans-serif]">{bucketsError}</p>
+              <p className="text-[10px] text-red-400 font-mono">{bucketsError}</p>
             </div>
           ) : buckets.length === 0 ? (
             <p className="text-[10px] text-[rgba(255,255,255,0.3)] p-[12px]">No buckets found</p>
@@ -250,8 +250,8 @@ export function BucketsExplorer({ projectID }: Props) {
                     : 'hover:bg-[rgba(255,255,255,0.03)]'
                 }`}
               >
-                <Icon icon="solar:folder-bold" className={`text-base shrink-0 ${selectedBucket === b.name ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.4)]'}`} />
-                <span className={`text-[10px] font-['JetBrains_Mono',sans-serif] truncate ${selectedBucket === b.name ? 'text-white' : 'text-[rgba(255,255,255,0.6)]'}`}>
+                <Icon icon="solar:folder-bold" className={`text-base shrink-0 ${selectedBucket === b.name ? 'text-brand' : 'text-[rgba(255,255,255,0.4)]'}`} />
+                <span className={`text-[10px] font-mono truncate ${selectedBucket === b.name ? 'text-white' : 'text-[rgba(255,255,255,0.6)]'}`}>
                   {b.name}
                 </span>
               </button>
@@ -263,7 +263,7 @@ export function BucketsExplorer({ projectID }: Props) {
       {/* Object browser */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-[#464646] gap-[8px] shrink-0">
+        <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-border gap-[8px] shrink-0">
           <div className="flex items-center gap-[4px] flex-1 min-w-0">
             {selectedBucket ? (
               breadcrumbs().map((crumb, i) => (
@@ -279,7 +279,7 @@ export function BucketsExplorer({ projectID }: Props) {
                       }
                       setSelectedObject(null);
                     }}
-                    className={`text-[10px] font-['JetBrains_Mono',sans-serif] hover:text-white transition-colors truncate max-w-[120px] ${
+                    className={`text-[10px] font-mono hover:text-white transition-colors truncate max-w-[120px] ${
                       i === breadcrumbs().length - 1 ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'
                     }`}
                   >
@@ -288,7 +288,7 @@ export function BucketsExplorer({ projectID }: Props) {
                 </div>
               ))
             ) : (
-              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">Select a bucket</p>
+              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">Select a bucket</p>
             )}
           </div>
           {selectedBucket && (
@@ -311,7 +311,7 @@ export function BucketsExplorer({ projectID }: Props) {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <Icon icon="solar:cloud-storage-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[8px]" />
-                  <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">Select a bucket to browse</p>
+                  <p className="text-[11px] text-[rgba(255,255,255,0.3)] font-mono">Select a bucket to browse</p>
                 </div>
               </div>
             ) : objectsLoading ? (
@@ -319,7 +319,7 @@ export function BucketsExplorer({ projectID }: Props) {
             ) : objectsError ? (
               <div className="flex items-center justify-center p-[24px]">
                 <div className="text-center">
-                  <p className="text-[11px] text-red-400 font-['JetBrains_Mono',sans-serif] mb-[8px]">{objectsError}</p>
+                  <p className="text-[11px] text-red-400 font-mono mb-[8px]">{objectsError}</p>
                   <Button variant="secondary" onClick={() => {
                     setObjectsLoading(true);
                     GS.ListObjects(selectedBucket, prefix, '').then((res) => { setObjects(res.items ?? []); setPrefixes(res.prefixes ?? []); }).catch((e: unknown) => setObjectsError(String(e))).finally(() => setObjectsLoading(false));
@@ -329,19 +329,19 @@ export function BucketsExplorer({ projectID }: Props) {
             ) : (
               <>
                 {prefix && (
-                  <button onClick={goUp} className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-[#2a2a2a] transition-colors">
+                  <button onClick={goUp} className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-border transition-colors">
                     <Icon icon="solar:arrow-left-linear" className="text-sm text-[rgba(255,255,255,0.3)]" />
-                    <span className="text-[10px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">..</span>
+                    <span className="text-[10px] text-[rgba(255,255,255,0.4)] font-mono">..</span>
                   </button>
                 )}
                 {prefixes.map((p) => (
                   <button
                     key={p}
                     onClick={() => enterFolder(p)}
-                    className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-[#2a2a2a] transition-colors"
+                    className="w-full flex items-center gap-[10px] px-[16px] py-[8px] hover:bg-[rgba(255,255,255,0.03)] border-b border-border transition-colors"
                   >
                     <Icon icon="solar:folder-linear" className="text-sm text-[rgba(255,255,255,0.4)] shrink-0" />
-                    <span className="text-[10px] text-[rgba(255,255,255,0.7)] font-['JetBrains_Mono',sans-serif] flex-1 text-left truncate">
+                    <span className="text-[10px] text-[rgba(255,255,255,0.7)] font-mono flex-1 text-left truncate">
                       {folderLabel(p, prefix)}
                     </span>
                   </button>
@@ -351,27 +351,27 @@ export function BucketsExplorer({ projectID }: Props) {
                     key={obj.name}
                     onClick={() => setSelectedObject((prev) => prev?.name === obj.name ? null : obj)}
                     onDoubleClick={() => { setSelectedObject(obj); setShowPreview(true); }}
-                    className={`w-full flex items-center gap-[10px] px-[16px] py-[8px] border-b border-[#2a2a2a] transition-colors text-left ${
+                    className={`w-full flex items-center gap-[10px] px-[16px] py-[8px] border-b border-border transition-colors text-left ${
                       selectedObject?.name === obj.name
                         ? 'bg-[rgba(248,129,169,0.08)] border-r-2 border-r-[#f881a9]'
                         : 'hover:bg-[rgba(255,255,255,0.03)]'
                     }`}
                   >
-                    <Icon icon="solar:file-linear" className={`text-sm shrink-0 ${selectedObject?.name === obj.name ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.3)]'}`} />
-                    <span className={`text-[10px] font-['JetBrains_Mono',sans-serif] flex-1 truncate ${selectedObject?.name === obj.name ? 'text-white' : 'text-[rgba(255,255,255,0.7)]'}`}>
+                    <Icon icon="solar:file-linear" className={`text-sm shrink-0 ${selectedObject?.name === obj.name ? 'text-brand' : 'text-[rgba(255,255,255,0.3)]'}`} />
+                    <span className={`text-[10px] font-mono flex-1 truncate ${selectedObject?.name === obj.name ? 'text-white' : 'text-[rgba(255,255,255,0.7)]'}`}>
                       {shortName(obj.name, prefix)}
                     </span>
-                    <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] shrink-0">
+                    <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono shrink-0">
                       {formatBytes(obj.size)}
                     </span>
-                    <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] shrink-0 hidden lg:block">
+                    <span className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono shrink-0 hidden lg:block">
                       {obj.updated ? new Date(obj.updated).toLocaleDateString() : ''}
                     </span>
                   </button>
                 ))}
                 {prefixes.length === 0 && objects.length === 0 && (
                   <div className="flex items-center justify-center py-[48px]">
-                    <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif]">Empty folder</p>
+                    <p className="text-[10px] text-[rgba(255,255,255,0.2)] font-mono">Empty folder</p>
                   </div>
                 )}
               </>
@@ -380,10 +380,10 @@ export function BucketsExplorer({ projectID }: Props) {
 
           {/* File info panel */}
           {selectedObject && (
-            <div className="w-[260px] shrink-0 border-l border-[#464646] flex flex-col">
+            <div className="w-[260px] shrink-0 border-l border-border flex flex-col">
               {/* Panel header */}
-              <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-[#464646] shrink-0">
-                <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">File Info</p>
+              <div className="flex items-center justify-between px-[12px] py-[10px] border-b border-border shrink-0">
+                <p className="text-[9px] font-bold uppercase text-[rgba(255,255,255,0.4)] font-mono">File Info</p>
                 <div className="flex items-center gap-[8px]">
                   <button
                     onClick={() => GS.OpenInConsole('storage-object', projectID, `${selectedBucket}/${selectedObject.name}`)}
@@ -415,7 +415,7 @@ export function BucketsExplorer({ projectID }: Props) {
                 {metaLoading ? (
                   <div className="flex items-center justify-center py-8"><Loader size={20} /></div>
                 ) : metaError ? (
-                  <p className="text-[10px] text-red-400 font-['JetBrains_Mono',sans-serif] p-[12px]">{metaError}</p>
+                  <p className="text-[10px] text-red-400 font-mono p-[12px]">{metaError}</p>
                 ) : objectMeta ? (
                   <div className="flex flex-col">
                     <MetaRow label="Name" value={shortName(objectMeta.name, prefix)} mono />
@@ -462,10 +462,10 @@ interface MetaRowProps {
 
 function MetaRow({ label, value, mono, truncate }: MetaRowProps) {
   return (
-    <div className="flex flex-col gap-[2px] px-[12px] py-[8px] border-b border-[#2a2a2a]">
-      <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">{label}</p>
+    <div className="flex flex-col gap-[2px] px-[12px] py-[8px] border-b border-border">
+      <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-mono">{label}</p>
       <p
-        className={`text-[10px] text-[rgba(255,255,255,0.8)] break-all ${mono ? "font-['JetBrains_Mono',sans-serif]" : ''} ${truncate ? 'line-clamp-2' : ''}`}
+        className={`text-[10px] text-[rgba(255,255,255,0.8)] break-all ${mono ? "font-mono" : ''} ${truncate ? 'line-clamp-2' : ''}`}
         title={value}
       >
         {value}

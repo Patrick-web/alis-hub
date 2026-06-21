@@ -174,7 +174,7 @@ export function LogsExplorer({ projectID }: Props) {
   return (
     <div className="flex flex-col h-full">
       {/* Filter bar */}
-      <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-[#464646] flex-wrap">
+      <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-border flex-wrap">
         <FilterSelect
           value={cloudRunService}
           options={crServices}
@@ -191,13 +191,13 @@ export function LogsExplorer({ projectID }: Props) {
           disabled={!!cloudRunService}
         />
 
-        <div className="w-px h-[20px] bg-[#464646]" />
+        <div className="w-px h-[20px] bg-border" />
 
         <FilterSelect value={logName} options={LOG_NAME_OPTIONS} onChange={setLogName} />
         <FilterSelect value={severity} options={SEVERITY_OPTIONS} onChange={setSeverity} />
         <FilterSelect value={timeRange} options={TIME_OPTIONS} onChange={setTimeRange} />
 
-        <div className="w-px h-[20px] bg-[#464646]" />
+        <div className="w-px h-[20px] bg-border" />
 
         <input
           type="text"
@@ -205,7 +205,7 @@ export function LogsExplorer({ projectID }: Props) {
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load()}
           placeholder="Search logs..."
-          className="bg-[#2c2c2c] border border-[#464646] rounded-[3px] px-[8px] py-[3px] text-[10px] text-white placeholder-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] outline-none focus:border-[#f881a9] w-[180px]"
+          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-white placeholder-[rgba(255,255,255,0.3)] font-mono outline-none focus:border-brand w-[180px]"
         />
 
         <Button
@@ -230,7 +230,7 @@ export function LogsExplorer({ projectID }: Props) {
       </div>
 
       {/* Log list */}
-      <div ref={parentRef} className="flex-1 overflow-y-auto relative font-['JetBrains_Mono',sans-serif]">
+      <div ref={parentRef} className="flex-1 overflow-y-auto relative font-mono">
         {entries.length === 0 && !error && (
           <>
             {!hasLoaded && !loading && (
@@ -289,7 +289,7 @@ export function LogsExplorer({ projectID }: Props) {
                 >
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : id)}
-                    className="w-full flex items-start gap-[10px] px-[16px] py-[6px] border-b border-[#2a2a2a] hover:bg-[rgba(255,255,255,0.02)] transition-colors text-left"
+                    className="w-full flex items-start gap-[10px] px-[16px] py-[6px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors text-left"
                   >
                     <span className="text-[9px] text-[rgba(255,255,255,0.3)] shrink-0 mt-[1px] w-[70px]">{ts}</span>
                     <span className={`text-[8px] uppercase px-[5px] py-[1px] rounded-[2px] shrink-0 ${SEVERITY_STYLES[sev] ?? SEVERITY_STYLES['DEFAULT']}`}>
@@ -302,7 +302,7 @@ export function LogsExplorer({ projectID }: Props) {
                     />
                   </button>
                   {isExpanded && (
-                    <div className="bg-[#1a1a1a] border-b border-[#464646] px-[16px] py-[12px]">
+                    <div className="bg-muted border-b border-border px-[16px] py-[12px]">
                       <pre className="text-[9px] text-[rgba(255,255,255,0.6)] whitespace-pre-wrap break-all leading-[1.6]">
                         {JSON.stringify(entry, null, 2)}
                       </pre>

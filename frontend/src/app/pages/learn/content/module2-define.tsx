@@ -75,7 +75,7 @@ export const module2: LearningModule = {
           <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
             <span className="text-white font-bold">Protocol Buffers</span> (protobuf) are a{' '}
             <span className="text-white">machine-readable</span> contract. You describe your service — its methods, request
-            types, and response types — in a <code className="text-[#f881a9] text-[11px]">.proto</code> file.
+            types, and response types — in a <code className="text-brand text-[11px]">.proto</code> file.
             That file becomes the source of truth for every consumer and every implementation.
           </p>
           <div className="flex flex-col gap-[8px]">
@@ -85,10 +85,10 @@ export const module2: LearningModule = {
               { label: 'Versioned', desc: 'Service versions (v1, v2) are explicit in the package name. Breaking changes are intentional.' },
               { label: 'Language agnostic', desc: 'The same .proto generates Go, TypeScript, Python, Java, and more from one definition.' },
             ].map(({ label, desc }) => (
-              <div key={label} className="flex items-start gap-[10px] px-[12px] py-[8px] bg-[#252525] border border-[#464646] rounded-[4px]">
-                <div className="size-[6px] rounded-full bg-[#f881a9] mt-[5px] shrink-0" />
+              <div key={label} className="flex items-start gap-[10px] px-[12px] py-[8px] bg-muted border border-border rounded-[4px]">
+                <div className="size-[6px] rounded-full bg-brand mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-white font-['JetBrains_Mono',sans-serif]">{label} </span>
+                  <span className="text-[11px] font-bold text-white font-mono">{label} </span>
                   <span className="text-[11px] text-[rgba(255,255,255,0.5)]">— {desc}</span>
                 </div>
               </div>
@@ -110,20 +110,20 @@ export const module2: LearningModule = {
           <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
             alis follows{' '}
             <span className="text-white">Google's API Design Guide</span> — resources have
-            a <code className="text-[#f881a9] text-[11px]">name</code> field, methods use standard verbs
+            a <code className="text-brand text-[11px]">name</code> field, methods use standard verbs
             (Create, Get, List, Update, Delete), and HTTP bindings follow REST resource patterns.
           </p>
           <p className="text-[11px] text-[rgba(255,255,255,0.4)] leading-[1.5]">
             Here's a real example — a PaymentsService with two methods:
           </p>
-          <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] overflow-hidden">
-            <div className="px-[12px] py-[6px] border-b border-[#464646] bg-[#2c2c2c]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+          <div className="bg-background border border-border rounded-[4px] overflow-hidden">
+            <div className="px-[12px] py-[6px] border-b border-border bg-card">
+              <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-mono">
                 payments.proto
               </p>
             </div>
             <pre className="p-[12px] overflow-x-auto">
-              <code className="text-[10px] leading-[1.6] text-[rgba(255,255,255,0.85)] font-['JetBrains_Mono',sans-serif] whitespace-pre">
+              <code className="text-[10px] leading-[1.6] text-[rgba(255,255,255,0.85)] font-mono whitespace-pre">
                 {protoExample}
               </code>
             </pre>
@@ -138,7 +138,7 @@ export const module2: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.7]">
-            Running <code className="text-[#f881a9] text-[11px]">alis generate</code> (or triggering it
+            Running <code className="text-brand text-[11px]">alis generate</code> (or triggering it
             via the VS Code extension) compiles your <code className="text-[11px] text-[rgba(255,255,255,0.6)]">.proto</code> files
             through <code className="text-[11px] text-[rgba(255,255,255,0.6)]">protoc</code> and produces:
           </p>
@@ -149,20 +149,20 @@ export const module2: LearningModule = {
               { file: 'pb.gw.go', desc: 'HTTP→gRPC transcoding gateway (serves REST calls alongside gRPC).' },
               { file: 'openapi.json', desc: 'OpenAPI v3 spec, auto-generated from the proto HTTP bindings.' },
             ].map(({ file, desc }) => (
-              <div key={file} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-                <code className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[#f881a9] shrink-0 w-[140px]">*_{file}</code>
+              <div key={file} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
+                <code className="text-[10px] font-mono text-brand shrink-0 w-[140px]">*_{file}</code>
                 <p className="text-[11px] text-[rgba(255,255,255,0.5)]">{desc}</p>
               </div>
             ))}
           </div>
-          <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] overflow-hidden">
-            <div className="px-[12px] py-[6px] border-b border-[#464646] bg-[#2c2c2c]">
-              <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
+          <div className="bg-background border border-border rounded-[4px] overflow-hidden">
+            <div className="px-[12px] py-[6px] border-b border-border bg-card">
+              <p className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-mono">
                 payments_grpc.pb.go (generated)
               </p>
             </div>
             <pre className="p-[12px] overflow-x-auto">
-              <code className="text-[10px] leading-[1.6] text-[rgba(255,255,255,0.85)] font-['JetBrains_Mono',sans-serif] whitespace-pre">
+              <code className="text-[10px] leading-[1.6] text-[rgba(255,255,255,0.85)] font-mono whitespace-pre">
                 {generatedGoExample}
               </code>
             </pre>
@@ -188,8 +188,8 @@ export const module2: LearningModule = {
           <p className="text-[11px] text-[rgba(255,255,255,0.4)] leading-[1.5]">
             A typical implementation file looks like this:
           </p>
-          <div className="px-[12px] py-[10px] bg-[#1e1e1e] border border-[#464646] rounded-[4px]">
-            <pre className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
+          <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
+            <pre className="text-[10px] font-mono text-[rgba(255,255,255,0.75)] leading-[1.6] whitespace-pre overflow-x-auto">
 {`type server struct {
   db *sql.DB
 }
@@ -206,7 +206,7 @@ func (s *server) CreatePayment(
           </div>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
-              <span className="text-[#f881a9] font-bold">Key insight: </span>
+              <span className="text-brand font-bold">Key insight: </span>
               the generated interface is the only coupling between your business logic and the transport layer.
               Your code never touches HTTP verbs, JSON parsing, or header handling — gRPC handles all of that.
             </p>

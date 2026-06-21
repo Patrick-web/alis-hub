@@ -112,19 +112,19 @@ export function ToolsPage() {
     >
       <div className="flex h-full">
         {gcloudReady && (
-          <div className="w-[200px] border-r border-[#464646] shrink-0 flex flex-col">
+          <div className="w-[200px] border-r border-border shrink-0 flex flex-col">
             {/* Project context selector */}
-            <div className="px-[12px] py-[10px] border-b border-[#464646]">
-              <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] mb-[6px]">Project</p>
+            <div className="px-[12px] py-[10px] border-b border-border">
+              <p className="text-[8px] font-bold uppercase text-[rgba(255,255,255,0.3)] font-mono mb-[6px]">Project</p>
               {contextsLoading ? (
                 <div className="flex items-center gap-[6px]">
                   <Loader size={12} />
-                  <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">Loading...</span>
+                  <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono">Loading...</span>
                 </div>
               ) : contextsError ? (
-                <p className="text-[9px] text-red-400 font-['JetBrains_Mono',sans-serif]">{contextsError}</p>
+                <p className="text-[9px] text-red-400 font-mono">{contextsError}</p>
               ) : contexts.length === 0 ? (
-                <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">No projects found</p>
+                <p className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono">No projects found</p>
               ) : (
                 <div className="flex flex-col gap-[2px]">
                   {contexts.map((ctx) => {
@@ -140,15 +140,15 @@ export function ToolsPage() {
                         onClick={() => setSelectedCtx(ctx)}
                         className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[3px] text-left transition-all ${
                           isActive
-                            ? 'bg-[rgba(248,129,169,0.12)] border border-[#f881a9]'
+                            ? 'bg-[rgba(248,129,169,0.12)] border border-brand'
                             : 'hover:bg-[rgba(255,255,255,0.04)] border border-transparent'
                         }`}
                       >
                         <Icon
                           icon={icon}
-                          className={`text-xs shrink-0 ${isActive ? 'text-[#f881a9]' : 'text-[rgba(255,255,255,0.3)]'}`}
+                          className={`text-xs shrink-0 ${isActive ? 'text-brand' : 'text-[rgba(255,255,255,0.3)]'}`}
                         />
-                        <span className={`text-[10px] font-['JetBrains_Mono',sans-serif] truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
+                        <span className={`text-[10px] font-mono truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
                           {ctx.label}
                         </span>
                       </button>
@@ -168,16 +168,16 @@ export function ToolsPage() {
                     onClick={() => setActiveTab(tool.id)}
                     className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
                       isActive
-                        ? 'bg-[rgba(248,129,169,0.1)] border border-[#f881a9]'
+                        ? 'bg-[rgba(248,129,169,0.1)] border border-brand'
                         : 'hover:bg-[rgba(255,255,255,0.03)] border border-transparent'
                     }`}
                   >
                     <Icon
                       icon={tool.icon}
-                      className={`text-lg shrink-0 ${isActive ? 'text-[#f881a9]' : 'text-white opacity-50'}`}
+                      className={`text-lg shrink-0 ${isActive ? 'text-brand' : 'text-white opacity-50'}`}
                     />
                     <div className="flex flex-col min-w-0">
-                      <p className={`text-[10px] font-bold uppercase font-['JetBrains_Mono',sans-serif] truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
+                      <p className={`text-[10px] font-bold uppercase font-mono truncate ${isActive ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
                         {tool.label}
                       </p>
                       <p className="text-[8px] text-[rgba(255,255,255,0.3)] uppercase">{tool.subtitle}</p>
@@ -194,7 +194,7 @@ export function ToolsPage() {
                 className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left hover:bg-[rgba(255,255,255,0.03)] border border-transparent transition-all w-full"
               >
                 <Icon icon="solar:settings-linear" className="text-sm text-[rgba(255,255,255,0.2)]" />
-                <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-['JetBrains_Mono',sans-serif]">Setup</span>
+                <span className="text-[9px] text-[rgba(255,255,255,0.3)] uppercase font-mono">Setup</span>
               </button>
             </div>
           </div>
@@ -212,7 +212,7 @@ export function ToolsPage() {
             <div className="flex-1 flex items-center justify-center p-[24px]">
               <div className="text-center max-w-[320px]">
                 <Icon icon="solar:cloud-cross-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[8px]" />
-                <p className="text-[11px] text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif]">{contextsError}</p>
+                <p className="text-[11px] text-[rgba(255,255,255,0.5)] font-mono">{contextsError}</p>
               </div>
             </div>
           ) : !projectID ? (

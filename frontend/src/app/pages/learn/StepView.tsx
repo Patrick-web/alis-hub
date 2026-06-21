@@ -15,19 +15,19 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
   const totalSteps = module.steps.length;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Step header */}
-      <div className="border-b border-[#464646] px-[28px] py-[14px] shrink-0">
+      <div className="border-b border-border px-[28px] py-[14px] shrink-0">
         <div className="flex items-center gap-[8px] mb-[4px]">
-          <span className="text-[10px] font-bold text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] uppercase tracking-wide">
+          <span className="text-[10px] font-bold text-[rgba(255,255,255,0.3)] font-mono uppercase tracking-wide">
             {module.title}
           </span>
           <Icon icon="solar:alt-arrow-right-linear" className="text-[rgba(255,255,255,0.2)] text-[10px]" />
-          <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.3)]">
+          <span className="text-[10px] font-mono text-[rgba(255,255,255,0.3)]">
             Step {stepIndex + 1} of {totalSteps}
           </span>
         </div>
-        <h2 className="font-['JetBrains_Mono',sans-serif] font-bold text-[15px] text-white leading-[1.3]">
+        <h2 className="font-mono font-bold text-[15px] text-white leading-[1.3]">
           {step.title}
         </h2>
       </div>
@@ -44,13 +44,13 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
           {step.diagram && (
             <div className="mb-[24px]">
               <div className="flex items-center gap-[8px] mb-[12px]">
-                <div className="h-px flex-1 bg-[#2c2c2c]" />
-                <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-['JetBrains_Mono',sans-serif] uppercase tracking-widest">
+                <div className="h-px flex-1 bg-card" />
+                <p className="text-[9px] text-[rgba(255,255,255,0.2)] font-mono uppercase tracking-widest">
                   Diagram
                 </p>
-                <div className="h-px flex-1 bg-[#2c2c2c]" />
+                <div className="h-px flex-1 bg-card" />
               </div>
-              <div className="bg-[#252525] border border-[#464646] rounded-[4px] p-[20px] flex justify-center">
+              <div className="bg-muted border border-border rounded-[4px] p-[20px] flex justify-center">
                 {step.diagram}
               </div>
             </div>
@@ -59,7 +59,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
       </div>
 
       {/* Navigation footer */}
-      <div className="border-t border-[#464646] px-[28px] py-[14px] flex items-center justify-between shrink-0">
+      <div className="border-t border-border px-[28px] py-[14px] flex items-center justify-between shrink-0">
         {/* Step dots */}
         <div className="flex items-center gap-[6px]">
           {module.steps.map((_, i) => (
@@ -67,10 +67,10 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
               key={i}
               className={`rounded-full transition-all ${
                 i === stepIndex
-                  ? 'size-[8px] bg-[#f881a9]'
+                  ? 'size-[8px] bg-brand'
                   : i < stepIndex
                   ? 'size-[6px] bg-[rgba(248,129,169,0.4)]'
-                  : 'size-[6px] bg-[#464646]'
+                  : 'size-[6px] bg-border'
               }`}
             />
           ))}
@@ -81,7 +81,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
           {onPrev && (
             <button
               onClick={onPrev}
-              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] border border-[#464646] text-[rgba(255,255,255,0.6)] hover:text-white hover:border-[rgba(255,255,255,0.4)] transition-colors text-[11px] font-['JetBrains_Mono',sans-serif] font-bold"
+              className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] border border-border text-[rgba(255,255,255,0.6)] hover:text-white hover:border-[rgba(255,255,255,0.4)] transition-colors text-[11px] font-mono font-bold"
             >
               <Icon icon="solar:alt-arrow-left-linear" className="text-[13px]" />
               Previous
@@ -90,7 +90,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
 
           <button
             onClick={onNext}
-            className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] bg-[#f881a9] text-black hover:bg-[#fa96b8] active:bg-[#e66e9a] transition-colors text-[11px] font-['JetBrains_Mono',sans-serif] font-bold"
+            className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] bg-brand text-black hover:bg-[#fa96b8] active:bg-[#e66e9a] transition-colors text-[11px] font-mono font-bold"
           >
             {isLastStep && isLastModule ? (
               <>

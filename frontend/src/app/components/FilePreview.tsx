@@ -87,13 +87,13 @@ export function FilePreview({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="relative flex flex-col bg-[#1a1a1a] border border-[#464646] rounded-[6px] shadow-2xl w-[90vw] max-w-[1100px] h-[85vh]">
+      <div className="relative flex flex-col bg-muted border border-border rounded-[6px] shadow-2xl w-[90vw] max-w-[1100px] h-[85vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-[#464646] shrink-0">
+        <div className="flex items-center justify-between px-[16px] py-[12px] border-b border-border shrink-0">
           <div className="flex items-center gap-[10px] min-w-0">
             <Icon icon={kindIcon(kind)} className="text-base text-[rgba(255,255,255,0.4)] shrink-0" />
-            <span className="text-[11px] text-white font-['JetBrains_Mono',sans-serif] truncate">{filename}</span>
-            <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif] shrink-0">{contentType}</span>
+            <span className="text-[11px] text-white font-mono truncate">{filename}</span>
+            <span className="text-[9px] text-[rgba(255,255,255,0.3)] font-mono shrink-0">{contentType}</span>
           </div>
           <button
             onClick={onClose}
@@ -108,17 +108,17 @@ export function FilePreview({
           {loading ? (
             <div className="flex flex-col items-center gap-[12px]">
               <Loader size={32} />
-              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">Loading preview…</p>
+              <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">Loading preview…</p>
             </div>
           ) : error ? (
             <div className="text-center max-w-[360px]">
               <Icon icon="solar:cloud-cross-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[12px]" />
-              <p className="text-[11px] text-red-400 font-['JetBrains_Mono',sans-serif]">{error}</p>
+              <p className="text-[11px] text-red-400 font-mono">{error}</p>
             </div>
           ) : kind === 'unsupported' ? (
             <div className="text-center">
               <Icon icon="solar:file-linear" className="text-4xl text-[rgba(255,255,255,0.1)] mb-[12px]" />
-              <p className="text-[11px] text-[rgba(255,255,255,0.4)] font-['JetBrains_Mono',sans-serif]">No preview available for {contentType}</p>
+              <p className="text-[11px] text-[rgba(255,255,255,0.4)] font-mono">No preview available for {contentType}</p>
             </div>
           ) : kind === 'image' ? (
             <img src={dataURL} alt={filename} className="max-w-full max-h-full object-contain rounded-[3px]" />
@@ -131,7 +131,7 @@ export function FilePreview({
             // eslint-disable-next-line jsx-a11y/media-has-caption
             <audio src={dataURL} controls className="w-full max-w-[480px]" />
           ) : kind === 'text' && content ? (
-            <pre className="w-full h-full overflow-auto text-[11px] text-[rgba(255,255,255,0.8)] font-['JetBrains_Mono',sans-serif] leading-relaxed whitespace-pre-wrap break-all">
+            <pre className="w-full h-full overflow-auto text-[11px] text-[rgba(255,255,255,0.8)] font-mono leading-relaxed whitespace-pre-wrap break-all">
               {b64ToText(content)}
             </pre>
           ) : null}

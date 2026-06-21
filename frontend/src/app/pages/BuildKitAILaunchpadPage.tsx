@@ -70,7 +70,7 @@ export function BuildKitAILaunchpadPage() {
               step={stage.step}
               title={stage.title}
               subtitle={stage.subtitle}
-              icon={<Icon icon={stage.icon} className="text-[#f881a9]" />}
+              icon={<Icon icon={stage.icon} className="text-brand" />}
               action={
                 stage.actionRoute ? (
                   <Button variant="primary" onClick={() => navigate(stage.actionRoute!)}>
@@ -89,7 +89,7 @@ export function BuildKitAILaunchpadPage() {
           ))}
 
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
-            <Icon icon="solar:info-circle-linear" className="text-[#f881a9] text-[15px] shrink-0 mt-[1px]" />
+            <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-[rgba(255,255,255,0.6)] leading-[1.5]">
               Full AI Launchpad setup is guided step-by-step in the VS Code extension. Use the Alis Build extension in
               VS Code for the complete interactive workflow including service selection and automated configuration.

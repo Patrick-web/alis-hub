@@ -13,7 +13,7 @@ export function ListItem({ label, icon, onClick }: ListItemProps) {
       onClick={onClick}
       className="relative shrink-0 w-full hover:bg-[rgba(255,255,255,0.05)] transition-colors"
     >
-      <div aria-hidden="true" className="absolute border-[#464646] border-b border-solid inset-0 pointer-events-none" />
+      <div aria-hidden="true" className="absolute border-border border-b border-solid inset-0 pointer-events-none" />
       <div className="flex flex-row items-center justify-between size-full">
         <div className="content-stretch flex gap-[10px] items-center p-[10px] relative">
           <div className="relative shrink-0 size-[15px] flex items-center justify-center">{icon}</div>

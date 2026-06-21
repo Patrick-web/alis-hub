@@ -32,7 +32,7 @@ function Avatar({ name, photoUrl, isGroup }: { name: string; photoUrl: string; i
   if (isGroup) {
     return (
       <div className="size-[28px] rounded-full bg-[rgba(10,132,255,0.15)] border border-[rgba(10,132,255,0.3)] flex items-center justify-center shrink-0">
-        <Icon icon="solar:users-group-rounded-linear" className="text-[#0A84FF] text-[13px]" />
+        <Icon icon="solar:users-group-rounded-linear" className="text-info text-[13px]" />
       </div>
     );
   }
@@ -53,7 +53,7 @@ function Avatar({ name, photoUrl, isGroup }: { name: string; photoUrl: string; i
     .join('');
   return (
     <div className="size-[28px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0">
-      <span className="text-[10px] font-bold text-[#F881A9]">{initials || '?'}</span>
+      <span className="text-[10px] font-bold text-brand">{initials || '?'}</span>
     </div>
   );
 }
@@ -76,39 +76,39 @@ function RoleBadge({ role }: { role: string }) {
     case 'Admin':
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(10,132,255,0.12)] border border-[rgba(10,132,255,0.25)]">
-          <Icon icon="solar:shield-keyhole-linear" className="text-[#0A84FF] text-[10px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#0A84FF]">Admin</span>
+          <Icon icon="solar:shield-keyhole-linear" className="text-info text-[10px]" />
+          <span className="text-[10px] font-bold font-mono text-info">Admin</span>
         </span>
       );
     case 'Builder':
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)]">
-          <Icon icon="solar:hammer-linear" className="text-[#F881A9] text-[10px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[#F881A9]">Builder</span>
+          <Icon icon="solar:hammer-linear" className="text-brand text-[10px]" />
+          <span className="text-[10px] font-bold font-mono text-brand">Builder</span>
         </span>
       );
     case 'Viewer':
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.1)]">
           <Icon icon="solar:eye-linear" className="text-[rgba(255,255,255,0.4)] text-[10px]" />
-          <span className="text-[10px] font-bold font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)]">Viewer</span>
+          <span className="text-[10px] font-bold font-mono text-[rgba(255,255,255,0.4)]">Viewer</span>
         </span>
       );
     default:
       return (
-        <span className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)]">{role}</span>
+        <span className="text-[10px] font-mono text-[rgba(255,255,255,0.4)]">{role}</span>
       );
   }
 }
 
 function SectionHeader({ title, tooltip }: { title: string; tooltip?: string }) {
   return (
-    <div className="flex items-center gap-[6px] px-[20px] py-[10px] border-b border-[#2e2e2e]">
+    <div className="flex items-center gap-[6px] px-[20px] py-[10px] border-b border-border">
       <span className="text-[11px] font-bold text-white">{title}</span>
       {tooltip && (
         <div className="relative group">
           <Icon icon="solar:info-circle-linear" className="text-[rgba(255,255,255,0.3)] text-[12px] cursor-help" />
-          <div className="absolute left-0 bottom-[calc(100%+4px)] hidden group-hover:block z-50 bg-[#2a2a2a] border border-[#464646] rounded-[6px] p-[8px] w-[200px] shadow-lg">
+          <div className="absolute left-0 bottom-[calc(100%+4px)] hidden group-hover:block z-50 bg-muted border border-border rounded-[6px] p-[8px] w-[200px] shadow-lg">
             <p className="text-[10px] text-[rgba(255,255,255,0.6)] leading-[1.4]">{tooltip}</p>
           </div>
         </div>
@@ -123,12 +123,12 @@ function PersonRow({ person }: { person: SharePerson }) {
     : (person.displayName || person.email || person.member);
 
   return (
-    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-[#2a2a2a] hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors">
       <Avatar name={person.displayName} photoUrl={person.photoUrl} isGroup={person.isGroup} />
       <div className="flex-1 min-w-0">
         <p className="text-[12px] font-semibold text-white leading-tight truncate">{label}</p>
         {!person.isGroup && person.email && (
-          <p className="text-[10px] font-['JetBrains_Mono',sans-serif] text-[rgba(255,255,255,0.4)] truncate">
+          <p className="text-[10px] font-mono text-[rgba(255,255,255,0.4)] truncate">
             {person.email}
           </p>
         )}
@@ -143,7 +143,7 @@ function AccountRow({ account }: { account: ShareAccount }) {
     ? `All users that are part of ${account.displayName}`
     : 'Everyone in the associated account';
   return (
-    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-[#2a2a2a] hover:bg-[rgba(255,255,255,0.02)] transition-colors">
+    <div className="flex items-center gap-[12px] px-[20px] py-[10px] border-b border-border hover:bg-[rgba(255,255,255,0.02)] transition-colors">
       <AccountAvatar name={account.displayName} />
       <div className="flex-1 min-w-0">
         <p className="text-[12px] font-semibold text-white leading-tight truncate">{account.displayName}</p>
@@ -179,21 +179,21 @@ export function SharePage() {
   const peopleCount = (data?.people?.length ?? 0) + (data?.accounts?.length ?? 0) + (data?.externalAccounts?.length ?? 0);
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-[#1e1e1e]">
+    <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Header */}
-      <div className="px-[20px] py-[6px] border-b border-[#464646] flex items-center justify-between shrink-0">
-        <p className="font-['JetBrains_Mono',sans-serif] font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
+      <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between shrink-0">
+        <p className="font-mono font-bold text-[10px] text-[rgba(255,255,255,0.5)] uppercase">
           Sharing
         </p>
         {data && (
-          <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-['JetBrains_Mono',sans-serif]">
+          <p className="text-[10px] text-[rgba(255,255,255,0.3)] font-mono">
             {peopleCount} {peopleCount === 1 ? 'member' : 'members'}
           </p>
         )}
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-[#464646] px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
+      <div className="border-b border-border px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
         {!loading && !error && (
           <button
             onClick={load}
@@ -217,13 +217,13 @@ export function SharePage() {
           <div className="flex items-center justify-center h-full">
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
-                <Icon icon="solar:close-circle-linear" className="text-[#FF5C5F] text-lg" />
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
                 <p className="text-[12px] font-bold text-white">Failed to load</p>
               </div>
               <p className="text-[11px] text-[rgba(255,255,255,0.6)]">{error}</p>
               <button
                 onClick={load}
-                className="mt-[10px] text-[10px] text-[#F881A9] hover:underline"
+                className="mt-[10px] text-[10px] text-brand hover:underline"
               >
                 Try again
               </button>
