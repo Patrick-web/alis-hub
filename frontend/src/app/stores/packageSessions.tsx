@@ -10,6 +10,8 @@ import {
 } from 'react';
 import type { TerminalSession, PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
 import { useNotifications } from './notifications';
+import { useLabs } from './labs';
+import { useSuggestions } from './suggestions';
 import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
 
 interface PackageSessionsContextValue {
@@ -33,6 +35,8 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
   const pkgOffsetRefs = useRef<Record<string, number>>({});
   const taskIdRef = useRef<string | null>(null);
   const { updateNotification } = useNotifications();
+  const { isSuggestionEnabled } = useLabs();
+  const { addSuggestion } = useSuggestions();
 
   // Polling loop — stays alive regardless of which page is mounted
   useEffect(() => {
@@ -110,8 +114,26 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
       title: hasErrors ? 'Packages failed' : 'Packages complete',
       task: { status: hasErrors ? 'error' : 'done' },
     });
+    if (!hasErrors && isSuggestionEnabled('build-success-deploy')) {
+      addSuggestion({
+        definitionId: 'build-success-deploy',
+        category: 'Build & Deploy',
+        title: 'Ready to deploy?',
+        body: 'All packages built successfully.',
+        priority: 'passive',
+      });
+    }
+    if (hasErrors && isSuggestionEnabled('build-failure-verbose')) {
+      addSuggestion({
+        definitionId: 'build-failure-verbose',
+        category: 'Build & Deploy',
+        title: 'Build failed',
+        body: 'Re-run with verbose output to see more detail.',
+        priority: 'passive',
+      });
+    }
     taskIdRef.current = null;
-  }, [sessions, updateNotification]);
+  }, [sessions, updateNotification, isSuggestionEnabled, addSuggestion]);
 
   return (
     <PackageSessionsContext.Provider

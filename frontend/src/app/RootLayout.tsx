@@ -4,6 +4,7 @@ import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
 import { StatusStrip } from './components/StatusStrip';
+import { SuggestionsBubble } from './components/SuggestionsBubble';
 import { PackageTerminalPane } from './components/PackageTerminalPane';
 import { LoginPage } from './pages/LoginPage';
 import { HubPage } from './pages/HubPage';
@@ -92,6 +93,7 @@ export function RootLayout() {
           {showSidebar && <Sidebar />}
           <Outlet />
         </div>
+        <SuggestionsBubble />
         <StatusStrip />
       </div>
     );
@@ -127,6 +129,7 @@ export function RootLayout() {
           </div>
         )}
       </div>
+      <SuggestionsBubble />
       <StatusStrip />
     </div>
   );
