@@ -53,9 +53,14 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 export function AboutPage() {
   const navigate = useNavigate();
-  const { state } = useWorkspace();
+  const { state, setPhase } = useWorkspace();
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,6 +77,7 @@ export function AboutPage() {
       const ov = await PS.GetProductOverview(state.organisation, state.product);
       setOverview(ov);
     } catch (e) {
+      if (isAuthError(e)) { setPhase('login'); return; }
       setError(String(e));
     } finally {
       setLoading(false);
