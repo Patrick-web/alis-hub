@@ -6,7 +6,7 @@ import { useWorkspace } from '../stores/workspace';
 import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
-import { useNotifications } from '../stores/notifications';
+import { NotificationCenter } from './NotificationCenter';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 function WindowControls() {
@@ -46,7 +46,6 @@ export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
-  const { unreadCount } = useNotifications();
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState('');
   const [avatarName, setAvatarName] = useState('');
@@ -204,18 +203,7 @@ export function TopNav() {
           </button>
         </div>
 
-        <button
-          onClick={() => navigate('/notifications')}
-          className="relative h-full flex items-center px-[10px] border-l border-[#464646] hover:bg-[rgba(255,255,255,0.05)] transition-colors focus:outline-none"
-          title="Notifications"
-        >
-          <Icon icon="solar:bell-linear" className="text-white text-[17px]" />
-          {unreadCount > 0 && (
-            <span className="absolute top-[6px] right-[5px] min-w-[14px] h-[14px] rounded-full bg-[#d4183d] text-white text-[8px] font-bold flex items-center justify-center px-[3px] font-['JetBrains_Mono',sans-serif]">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
+        <NotificationCenter />
         <button
           onClick={openProfile}
           className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
