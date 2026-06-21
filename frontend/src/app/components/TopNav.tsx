@@ -7,7 +7,6 @@ import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import { NotificationCenter } from './NotificationCenter';
-import { ThemeToggle } from './ThemeToggle';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 
 function WindowControls() {
@@ -39,7 +38,6 @@ const tabs = [
   { id: 'deployments', label: 'Deployments', icon: <Icon icon="solar:cloud-upload-linear" className="text-lg" /> },
   { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
-  { id: 'agents', label: 'Agents', icon: <Icon icon="solar:users-group-two-rounded-linear" className="text-lg" /> },
   { id: 'git', label: 'Source Control', icon: <Icon icon="solar:code-scan-linear" className="text-lg" /> },
 ];
 
@@ -196,15 +194,8 @@ export function TopNav() {
             </p>
             <Icon icon="solar:alt-arrow-down-linear" className="text-foreground text-xs opacity-50" />
           </button>
-          <button
-            onClick={() => navigate('/environments')}
-            className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-foreground/5 transition-colors"
-          >
-            <Icon icon="solar:settings-linear" className="text-foreground text-base opacity-70" />
-          </button>
         </div>
 
-        <ThemeToggle />
         <NotificationCenter />
         <button
           onClick={openProfile}
