@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { useNotifications } from '../stores/notifications';
 import type { TaskType } from '../stores/notifications';
+import { NotificationCenter } from './NotificationCenter';
 
 const TASK_ICON: Record<TaskType, string> = {
   define: 'solar:magic-stick-linear',
@@ -106,9 +107,9 @@ export function StatusStrip() {
         })}
       </div>
 
-      {/* Right section — reserved for future status indicators */}
-      <div className="shrink-0 px-[8px] flex items-center gap-[6px]">
-        {/* placeholder */}
+      {/* Right section */}
+      <div className="shrink-0 flex items-center h-full">
+        <NotificationCenter />
       </div>
     </div>
   );

@@ -1,34 +1,15 @@
-import { Icon } from "@iconify/react";
 import { Loader } from "./Loader";
 import type {
   AppNotification,
   NotificationSeverity,
-  NotificationSource,
 } from "../stores/notifications";
+import { Icon } from "@iconify/react";
 
 const SEVERITY_COLOR: Record<NotificationSeverity, string> = {
   info: "#3b82f6",
-  success: "#34C759",
-  warning: "#FAC800",
+  success: "#34c759",
+  warning: "#fac800",
   error: "#d4183d",
-};
-
-const SEVERITY_ICON: Record<NotificationSeverity, string> = {
-  info: "solar:info-circle-linear",
-  success: "solar:check-circle-linear",
-  warning: "solar:danger-triangle-linear",
-  error: "solar:close-circle-linear",
-};
-
-const SOURCE_ICON: Record<NotificationSource, string> = {
-  build: "solar:box-linear",
-  deploy: "solar:cloud-upload-linear",
-  define: "solar:magic-stick-linear",
-  packages: "solar:folder-with-files-linear",
-  git: "solar:code-square-linear",
-  update: "solar:refresh-linear",
-  system: "solar:monitor-linear",
-  general: "solar:bell-linear",
 };
 
 function formatRelativeTime(timestamp: number): string {
@@ -59,6 +40,7 @@ export function NotificationItem({
   onDismiss,
 }: NotificationItemProps) {
   const color = SEVERITY_COLOR[notification.severity];
+  const isRunning = notification.task?.status === "running";
 
   function handleClick() {
     if (!notification.read) onMarkRead(notification.id);
@@ -71,67 +53,51 @@ export function NotificationItem({
 
   return (
     <div
-      className={`relative flex gap-[10px] py-[10px] pr-[12px] border-b border-border cursor-pointer transition-colors ${
-        notification.read
-          ? "opacity-50 hover:opacity-70"
-          : "hover:bg-foreground/[3%]"
-      }`}
-      style={{
-        paddingLeft: "12px",
-        borderLeft: `3px solid ${notification.read ? "transparent" : color}`,
-      }}
+      className="group flex gap-[9px] px-[11px] py-[8px] cursor-pointer transition-colors border-b border-foreground/[0.035] last:border-b-0 relative hover:bg-foreground/[3%]"
       onClick={handleClick}
     >
-      {/* Unread dot */}
-      {!notification.read && (
-        <span className="absolute top-[12px] right-[10px] w-[6px] h-[6px] rounded-full bg-destructive shrink-0" />
-      )}
-
-      {/* Severity icon — spinner for in-progress tasks */}
-      {notification.task?.status === 'running' ? (
-        <div className="shrink-0 mt-[1px]">
-          <Loader size={14} />
+      {/* Severity bar — spinner when task is running */}
+      {isRunning ? (
+        <div className="shrink-0 flex items-start pt-[4px]">
+          <Loader size={10} />
         </div>
       ) : (
-        <Icon
-          icon={SEVERITY_ICON[notification.severity]}
-          className="text-[16px] shrink-0 mt-[1px]"
-          style={{ color }}
+        <div
+          className="w-[2.5px] rounded-[2px] self-stretch shrink-0 min-h-[14px]"
+          style={{
+            background: notification.read
+              ? "rgba(255,255,255,0.08)"
+              : color,
+          }}
         />
       )}
 
-      <div className="flex-1 min-w-0 pr-[14px]">
-        {/* Title + timestamp */}
-        <div className="flex items-start justify-between gap-[6px]">
-          <p className="text-[12px] font-semibold text-foreground leading-snug line-clamp-2 font-mono">
+      {/* Content */}
+      <div className="flex-1 min-w-0 pr-[16px]">
+        <div className="flex items-baseline gap-[6px]">
+          <p
+            className={`flex-1 text-[11.5px] leading-snug min-w-0 truncate tracking-[-0.1px] ${
+              notification.read
+                ? "text-foreground/40 font-normal"
+                : "text-foreground font-semibold"
+            }`}
+          >
             {notification.title}
           </p>
-          <span className="text-[10px] text-foreground/35 shrink-0 font-mono mt-[1px]">
+          <span className="text-[9.5px] text-foreground/25 shrink-0 font-mono">
             {formatRelativeTime(notification.timestamp)}
           </span>
         </div>
 
-        {/* Body */}
         {notification.body && (
-          <p className="text-[11px] text-foreground/50 mt-[3px] line-clamp-2 leading-relaxed">
+          <p className="text-[10.5px] text-foreground/40 mt-[2px] line-clamp-1 leading-relaxed">
             {notification.body}
           </p>
         )}
 
-        {/* Source badge */}
-        <div className="flex items-center gap-[4px] mt-[5px]">
-          <Icon
-            icon={SOURCE_ICON[notification.source]}
-            className="text-[10px] text-foreground/30"
-          />
-          <span className="text-[10px] text-foreground/30 font-mono capitalize">
-            {notification.source}
-          </span>
-        </div>
-
         {/* Action buttons */}
         {notification.actions && notification.actions.length > 0 && (
-          <div className="flex flex-wrap gap-[6px] mt-[8px]">
+          <div className="flex flex-wrap gap-[4px] mt-[6px]">
             {notification.actions.map((action, i) => (
               <button
                 key={i}
@@ -139,12 +105,12 @@ export function NotificationItem({
                   e.stopPropagation();
                   action.onClick();
                 }}
-                className={`text-[10px] px-[8px] py-[3px] rounded font-mono font-bold transition-colors ${
+                className={`text-[10.5px] font-semibold px-[10px] py-[4px] rounded-[7px] border transition-colors ${
                   action.variant === "destructive"
-                    ? "bg-[rgba(212,24,61,0.2)] text-destructive hover:bg-[rgba(212,24,61,0.35)]"
+                    ? "border-destructive/20 text-destructive bg-transparent hover:bg-destructive/5"
                     : action.variant === "ghost"
-                      ? "bg-transparent text-foreground/50 hover:text-foreground hover:bg-foreground/[8%]"
-                      : "bg-[rgba(248,129,169,0.15)] text-brand hover:bg-[rgba(248,129,169,0.25)]"
+                      ? "border-foreground/10 text-foreground/50 bg-transparent hover:bg-foreground/[7%] hover:text-foreground/70"
+                      : "border-brand/25 text-brand bg-transparent hover:bg-brand/10"
                 }`}
               >
                 {action.label}
@@ -154,15 +120,15 @@ export function NotificationItem({
         )}
       </div>
 
-      {/* Dismiss button */}
+      {/* Dismiss on hover */}
       <button
         onClick={handleDismiss}
-        className="absolute top-[10px] right-[28px] opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity shrink-0"
+        className="absolute top-[8px] right-[8px] opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"
         title="Dismiss"
       >
         <Icon
           icon="solar:close-circle-linear"
-          className="text-[12px] text-foreground"
+          className="text-[11px] text-foreground"
         />
       </button>
     </div>
