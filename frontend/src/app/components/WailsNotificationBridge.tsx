@@ -16,7 +16,7 @@ interface UpdateInfo {
   releaseNotes: string;
 }
 
-interface DownloadProgress {
+export interface DownloadProgress {
   downloaded: number;
   total: number;
   done: boolean;
@@ -29,17 +29,17 @@ export function WailsNotificationBridge() {
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
   const [updateDismissed, setUpdateDismissed] = useState(false);
 
-  // Stable ref so closures inside useEffect always see the latest addNotification
   const addRef = useRef(addNotification);
   addRef.current = addNotification;
   const setNotesOpenRef = useRef(setNotesOpen);
   setNotesOpenRef.current = setNotesOpen;
+  // Guard so the auto-start only fires once per detected update
+  const downloadingRef = useRef(false);
 
   useEffect(() => {
-    // If the user previously enabled system notifications, re-validate authorization
-    // on startup. If macOS hasn't granted permission yet, request it now.
     if (isSystemNotificationsEnabled()) {
       requestNotificationAuthorization().then(granted => {
         if (!granted) setSystemNotificationsEnabled(false);
@@ -70,6 +70,9 @@ export function WailsNotificationBridge() {
       const info = ev.data as UpdateInfo;
       setUpdateInfo(info);
       setUpdateDismissed(false);
+      setDownloadProgress(null);
+      setInstallError(null);
+      downloadingRef.current = false;
       addRef.current({
         severity: 'info',
         source: 'update',
@@ -77,17 +80,14 @@ export function WailsNotificationBridge() {
         persistent: true,
         actions: [
           {
-            label: 'Download',
-            variant: 'primary',
-            onClick: () => handleDownload(info),
-          },
-          {
-            label: 'Release notes',
+            label: 'Release Notes',
             variant: 'ghost',
             onClick: () => setNotesOpenRef.current(true),
           },
         ],
       });
+      // Auto-start download — card is the single place to monitor progress
+      startDownload(info);
     });
 
     return () => {
@@ -96,24 +96,30 @@ export function WailsNotificationBridge() {
     };
   }, []);
 
-  async function handleDownload(info: UpdateInfo) {
+  async function startDownload(info: UpdateInfo) {
+    if (downloadingRef.current) return;
+
     if (navigator.userAgent.includes('Windows')) {
       Browser.OpenURL(info.releaseUrl);
       return;
     }
 
+    downloadingRef.current = true;
     setDownloadProgress({ downloaded: 0, total: 0, done: false });
 
     const offProgress = Events.On('update:progress', (ev) => {
       const p = ev.data as DownloadProgress;
       if (p.error) {
         setDownloadProgress(null);
+        downloadingRef.current = false;
         notify.error(`Download failed: ${p.error}`);
         offProgress();
         return;
       }
-      if (p.done && p.path) {
+      if (p.done) {
         offProgress();
+        downloadingRef.current = false;
+        setDownloadProgress({ downloaded: p.downloaded, total: p.total, done: true });
         applyUpdate();
         return;
       }
@@ -123,17 +129,19 @@ export function WailsNotificationBridge() {
     try {
       await UpdaterService.DownloadUpdate();
     } catch {
-      // error is surfaced via the update:progress event
+      // errors are surfaced via the update:progress event
     }
   }
 
   async function applyUpdate() {
+    setInstallError(null);
     try {
       await UpdaterService.ApplyUpdate();
-      notify.success('Restarting…');
+      // Go will quit the app after ~300ms
     } catch (err) {
-      notify.error(`Failed to apply update: ${String(err)}`);
-      setDownloadProgress(null);
+      const msg = String(err);
+      setInstallError(msg);
+      notify.error(`Failed to install update: ${msg}`);
     }
   }
 
@@ -143,7 +151,9 @@ export function WailsNotificationBridge() {
         <UpdateNotification
           info={updateInfo}
           progress={downloadProgress}
-          onDownload={() => handleDownload(updateInfo)}
+          installError={installError}
+          onInstall={applyUpdate}
+          onRetryDownload={() => startDownload(updateInfo)}
           onViewNotes={() => setNotesOpen(true)}
           onDismiss={() => setUpdateDismissed(true)}
         />
