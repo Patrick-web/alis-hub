@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import type { DownloadProgress } from './WailsNotificationBridge';
 
 interface UpdateInfo {
   currentVersion: string;
@@ -7,37 +7,26 @@ interface UpdateInfo {
   releaseNotes: string;
 }
 
-interface DownloadProgress {
-  downloaded: number;
-  total: number;
-  done: boolean;
-  error?: string;
-}
-
 interface Props {
   info: UpdateInfo;
   progress: DownloadProgress | null;
-  onDownload: () => void;
+  installError: string | null;
+  onInstall: () => void;
+  onRetryDownload: () => void;
   onViewNotes: () => void;
   onDismiss: () => void;
 }
 
-export function UpdateNotification({ info, progress, onDownload, onViewNotes, onDismiss }: Props) {
-  const [dismissed, setDismissed] = useState(false);
-
-  if (dismissed) return null;
-
+export function UpdateNotification({ info, progress, installError, onInstall, onRetryDownload, onViewNotes, onDismiss }: Props) {
+  const isPreparing = progress === null;
   const isDownloading = progress !== null && !progress.done;
+  const isDone = progress?.done === true;
+
   const pct = progress && progress.total > 0
     ? Math.round((progress.downloaded / progress.total) * 100)
     : 0;
   const downloadedMB = progress ? (progress.downloaded / 1024 / 1024).toFixed(1) : '0';
   const totalMB = progress ? (progress.total / 1024 / 1024).toFixed(1) : '0';
-
-  function dismiss() {
-    setDismissed(true);
-    onDismiss();
-  }
 
   return (
     <div
@@ -81,9 +70,9 @@ export function UpdateNotification({ info, progress, onDownload, onViewNotes, on
         <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', flex: 1, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           AlisHub
         </span>
-        {!isDownloading && (
+        {!isDownloading && !isDone && (
           <button
-            onClick={dismiss}
+            onClick={onDismiss}
             style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 14, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
           >
             ✕
@@ -92,55 +81,79 @@ export function UpdateNotification({ info, progress, onDownload, onViewNotes, on
       </div>
 
       {/* Body */}
-      {!isDownloading ? (
-        <div style={{ padding: '8px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
-              v{info.latestVersion} is available
+      <div style={{ padding: '8px 14px 0' }}>
+        {/* Preparing */}
+        {isPreparing && (
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
+                v{info.latestVersion} is available
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                Preparing download…
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-              You're on v{info.currentVersion}. New features and bug fixes ready to install.
-            </div>
-          </div>
-          <div style={{
-            width: 44, height: 44, borderRadius: 10, background: '#111',
-            border: '1px solid #333', flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <svg viewBox="0 0 32 32" fill="#e8192c" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="19" cy="4" r="3"/>
-              <circle cx="28" cy="4" r="3"/>
-              <circle cx="19" cy="13" r="3"/>
-              <circle cx="28" cy="13" r="3"/>
-              <circle cx="4" cy="20" r="3"/>
-              <circle cx="13" cy="20" r="3"/>
-              <circle cx="22" cy="20" r="3"/>
-              <circle cx="4" cy="29" r="3"/>
-              <circle cx="13" cy="29" r="3"/>
-            </svg>
-          </div>
-        </div>
-      ) : (
-        <div style={{ padding: '10px 14px 0' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
-            Downloading v{info.latestVersion}…
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>
-            {downloadedMB} MB of {totalMB} MB
-          </div>
-          <div style={{ height: 4, background: 'rgba(255,255,255,0.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
             <div style={{
-              height: '100%', width: `${pct}%`,
-              background: 'linear-gradient(90deg, #e8192c, #ff5566)',
-              borderRadius: 3, transition: 'width 0.3s ease',
-            }} />
+              width: 44, height: 44, borderRadius: 10, background: '#111',
+              border: '1px solid #333', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg viewBox="0 0 32 32" fill="#e8192c" width="22" height="22" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="19" cy="4" r="3"/>
+                <circle cx="28" cy="4" r="3"/>
+                <circle cx="19" cy="13" r="3"/>
+                <circle cx="28" cy="13" r="3"/>
+                <circle cx="4" cy="20" r="3"/>
+                <circle cx="13" cy="20" r="3"/>
+                <circle cx="22" cy="20" r="3"/>
+                <circle cx="4" cy="29" r="3"/>
+                <circle cx="13" cy="29" r="3"/>
+              </svg>
+            </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>
-            <span>{pct}% complete</span>
-            <span>Will restart automatically</span>
-          </div>
-        </div>
-      )}
+        )}
+
+        {/* Downloading */}
+        {isDownloading && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
+              Downloading v{info.latestVersion}…
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>
+              {downloadedMB} MB of {totalMB} MB
+            </div>
+            <div style={{ height: 4, background: 'rgba(255,255,255,0.12)', borderRadius: 3, overflow: 'hidden', marginBottom: 5 }}>
+              <div style={{
+                height: '100%', width: `${pct}%`,
+                background: 'linear-gradient(90deg, #e8192c, #ff5566)',
+                borderRadius: 3, transition: 'width 0.3s ease',
+              }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>
+              <span>{pct}%</span>
+              <span>Will restart automatically</span>
+            </div>
+          </>
+        )}
+
+        {/* Done — installing / error */}
+        {isDone && (
+          <>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
+              {installError ? 'Install failed' : 'Restarting…'}
+            </div>
+            {installError ? (
+              <div style={{ fontSize: 11, color: 'rgba(255,92,95,0.9)', lineHeight: 1.5 }}>
+                {installError}
+              </div>
+            ) : (
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+                v{info.latestVersion} downloaded. Applying update…
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Actions */}
       <div style={{
@@ -150,16 +163,26 @@ export function UpdateNotification({ info, progress, onDownload, onViewNotes, on
         borderTop: '1px solid rgba(255,255,255,0.07)',
         marginTop: 10,
       }}>
-        {!isDownloading ? (
-          <>
-            <button onClick={dismiss} style={ghostBtn}>Later</button>
-            <button onClick={onViewNotes} style={ghostBtn}>Release Notes</button>
-            <button onClick={onDownload} style={primaryBtn}>Download</button>
-          </>
-        ) : (
+        {isDownloading ? (
           <div style={{ ...ghostBtn, flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.35)', cursor: 'default' }}>
             Downloading…
           </div>
+        ) : isDone ? (
+          installError ? (
+            <>
+              <button onClick={onRetryDownload} style={ghostBtn}>Retry Download</button>
+              <button onClick={onInstall} style={primaryBtn}>Install &amp; Restart</button>
+            </>
+          ) : (
+            <div style={{ ...ghostBtn, flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.35)', cursor: 'default' }}>
+              Restarting…
+            </div>
+          )
+        ) : (
+          <>
+            <button onClick={onDismiss} style={ghostBtn}>Later</button>
+            <button onClick={onViewNotes} style={ghostBtn}>Release Notes</button>
+          </>
         )}
       </div>
     </div>
