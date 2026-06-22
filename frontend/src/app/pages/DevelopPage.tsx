@@ -94,8 +94,13 @@ function formatRelativeTime(unixSeconds: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+}
+
 export function DevelopPage() {
-  const { state, setNeurons } = useWorkspace();
+  const { state, setNeurons, setPhase } = useWorkspace();
   const { addNotification, updateNotification, focusTaskId, setFocusTaskId, state: notifState } = useNotifications();
   const { sessions: packageSessions, addSessions, setTaskId: setPackagesTaskId } = usePackageSessions();
 
@@ -138,6 +143,7 @@ export function DevelopPage() {
   // Deploy pane state
   const [deployNeuron, setDeployNeuron] = useState<string | null>(null);
   const [deployStep, setDeployStep] = useState<DeployStep>('loading');
+  const [deployError, setDeployError] = useState<string | null>(null);
   const [deployEnvs, setDeployEnvs] = useState<DeployEnv[]>([]);
   const [selectedDeployEnvs, setSelectedDeployEnvs] = useState<string[]>([]);
   const [deployVersions, setDeployVersions] = useState<{ version: string; createTime: number }[]>([]);
@@ -364,8 +370,10 @@ export function DevelopPage() {
   const openDeployPane = useCallback(async (neuronName: string) => {
     setDefineNeuron(null);
     setBuildNeuron(null);
+    setPackagesNeuron(null);
     setDeployNeuron(neuronName);
     setDeployStep('loading');
+    setDeployError(null);
     setDeployEnvs([]);
     setDeployVersions([]);
     setSelectedDeployEnvs([]);
@@ -397,8 +405,9 @@ export function DevelopPage() {
         const active = envs.find(e => e.name === state.activeEnvName);
         if (active) setSelectedDeployEnvs([active.name]);
       }
-    } catch {
-      setDeployEnvs([]);
+    } catch (e: unknown) {
+      if (isAuthError(e)) { setPhase('login'); return; }
+      setDeployError(e instanceof Error ? e.message : String(e));
     } finally {
       setDeployStep('confirm');
     }
@@ -424,6 +433,7 @@ export function DevelopPage() {
         task: { meta: { operationName: (result as any).operationName, version: (result as any).version, logsUrl: (result as any).deployments?.[0]?.logsUrl || '' } },
       });
     } catch (e: any) {
+      if (isAuthError(e)) { setPhase('login'); return; }
       setDeployProgressMsg(`Failed: ${e?.message || e}`);
       setDeployStep('result');
       setDeployResult({ operationName: '', version: '', deployments: [], notes: '', done: true, error: e?.message || 'Deploy failed' });
@@ -1216,6 +1226,17 @@ export function DevelopPage() {
             {deployStep === 'confirm' && (
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 overflow-y-auto">
+
+                  {/* Load error */}
+                  {deployError && (
+                    <div className="mx-[14px] mt-[14px] flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
+                      <Icon icon="solar:danger-triangle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-foreground/80 mb-[2px]">Failed to load deploy info</p>
+                        <p className="text-[9px] text-foreground/50 leading-relaxed break-words">{deployError}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Version section */}
                   <div className="border-b border-border">
