@@ -83,11 +83,13 @@ function SourceSection({
   notifications,
   onMarkRead,
   onDismiss,
+  onTaskClick,
 }: {
   source: NotificationSource;
   notifications: AppNotification[];
   onMarkRead: (id: string) => void;
   onDismiss: (id: string) => void;
+  onTaskClick: (id: string) => void;
 }) {
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -117,6 +119,7 @@ function SourceSection({
           notification={n}
           onMarkRead={onMarkRead}
           onDismiss={onDismiss}
+          onTaskClick={onTaskClick}
         />
       ))}
     </div>
@@ -128,11 +131,13 @@ function DateSection({
   notifications,
   onMarkRead,
   onDismiss,
+  onTaskClick,
 }: {
   label: string;
   notifications: AppNotification[];
   onMarkRead: (id: string) => void;
   onDismiss: (id: string) => void;
+  onTaskClick: (id: string) => void;
 }) {
   if (notifications.length === 0) return null;
   const sourceGroups = groupBySource(notifications);
@@ -149,6 +154,7 @@ function DateSection({
           notifications={items}
           onMarkRead={onMarkRead}
           onDismiss={onDismiss}
+          onTaskClick={onTaskClick}
         />
       ))}
     </div>
@@ -156,7 +162,7 @@ function DateSection({
 }
 
 export function NotificationCenter() {
-  const { state, unreadCount, markRead, markAllRead, dismiss, clearAll } = useNotifications();
+  const { state, unreadCount, markRead, markAllRead, dismiss, clearAll, setFocusTaskId } = useNotifications();
   const { state: wsState, setPhase } = useWorkspace();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -165,6 +171,12 @@ export function NotificationCenter() {
     setOpen(false);
     if (wsState.phase === 'hub') setPhase('standalone');
     navigate('/debug/notifications');
+  }
+
+  function handleTaskClick(id: string) {
+    setOpen(false);
+    setFocusTaskId(id);
+    navigate('/develop');
   }
   const grouped = groupByDate(state.notifications);
   const isEmpty = state.notifications.length === 0;
@@ -231,18 +243,21 @@ export function NotificationCenter() {
               notifications={grouped.today}
               onMarkRead={markRead}
               onDismiss={dismiss}
+              onTaskClick={handleTaskClick}
             />
             <DateSection
               label="Yesterday"
               notifications={grouped.yesterday}
               onMarkRead={markRead}
               onDismiss={dismiss}
+              onTaskClick={handleTaskClick}
             />
             <DateSection
               label="Earlier"
               notifications={grouped.earlier}
               onMarkRead={markRead}
               onDismiss={dismiss}
+              onTaskClick={handleTaskClick}
             />
           </ScrollArea>
         )}
