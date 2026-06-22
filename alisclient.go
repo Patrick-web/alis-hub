@@ -276,7 +276,7 @@ func (c *AlisClient) RunDefine(ctx context.Context, req *dbdv1.RunDefineRequest)
 	method := "alis.os.dbd.v1.DbdService/RunDefine"
 	protoBytes := marshalRunDefineRequest(req.Neuron, req.Commit)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
@@ -296,7 +296,7 @@ func (c *AlisClient) GetOperation(ctx context.Context, name string) (*dbdv1.Oper
 	method := "google.longrunning.Operations/GetOperation"
 	protoBytes := marshalGetOperationRequest(name)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("GetOperation: %w", err)
 	}
@@ -600,7 +600,7 @@ func (c *AlisClient) ExplainDefine(ctx context.Context, definition string, artif
 		return nil, fmt.Errorf("ExplainDefine: cannot derive definition name from %q", neuron)
 	}
 	protoBytes := marshalExplainDefineRequest(definition, artifacts, neuron)
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.glass.v1.GlassService/ExplainDefine", protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.glass.v1.GlassService/ExplainDefine", protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("ExplainDefine: %w", err)
 	}
@@ -643,7 +643,7 @@ func (c *AlisClient) RunBuild(ctx context.Context, req *dbdv1.RunBuildRequest) (
 	method := "alis.os.dbd.v1.DbdService/RunBuild"
 	protoBytes := marshalRunBuildRequest(req.Neuron, req.Commit, req.Images)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunBuild: %w", err)
 	}
@@ -845,7 +845,7 @@ func (c *AlisClient) RunDeploy(ctx context.Context, req *dbdv1.RunDeployRequest)
 	method := "alis.os.dbd.v1.DbdService/RunDeploy"
 	protoBytes := marshalRunDeployRequest(req.Environments, req.Neuron, req.Version, req.PlanOnly, req.Beta)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunDeploy: %w", err)
 	}
@@ -961,7 +961,7 @@ func marshalFinishLocalBuildRequest(neuronVersion string, failed bool) []byte {
 // failed is true when docker build exited non-zero.
 func (c *AlisClient) FinishLocalBuild(ctx context.Context, neuronVersion string, failed bool) error {
 	protoBytes := marshalFinishLocalBuildRequest(neuronVersion, failed)
-	_, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.resources.products.v1.Service/FinishLocalBuild", protoBytes)
+	_, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.resources.products.v1.Service/FinishLocalBuild", protoBytes)
 	if err != nil {
 		return fmt.Errorf("FinishLocalBuild: %w", err)
 	}
@@ -1026,7 +1026,7 @@ func (c *AlisClient) ListNeuronVersions(ctx context.Context, parent string) ([]*
 	req = protowire.AppendVarint(req, 100)
 
 	method := "alis.os.neurons.v1.NeuronVersionsService/ListNeuronVersions"
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, method, req)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, req)
 	if err != nil {
 		return nil, fmt.Errorf("ListNeuronVersions: %w", err)
 	}
@@ -1296,7 +1296,7 @@ type PackageScript struct {
 func (c *AlisClient) GeneratePackageScripts(ctx context.Context, definition string, locations []PackageScriptLocation) ([]PackageScript, error) {
 	protoBytes := marshalGeneratePackageScriptsRequest(definition, locations)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/GeneratePackageScripts", protoBytes)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GeneratePackageScripts", protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("GeneratePackageScripts: %w", err)
 	}
@@ -1527,7 +1527,7 @@ func (c *AlisClient) authArtifactRegistry(ctx context.Context, org, product stri
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.gcloud.v1.AuthService/AuthArtifactRegistry", req)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.gcloud.v1.AuthService/AuthArtifactRegistry", req)
 	if err != nil {
 		return "", err
 	}
@@ -1563,7 +1563,7 @@ func (c *AlisClient) retrieveProductNpmHosts(ctx context.Context, org, product s
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/RetrieveProductNpmHosts", req)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/RetrieveProductNpmHosts", req)
 	if err != nil {
 		return nil, err
 	}
@@ -1609,7 +1609,7 @@ func (c *AlisClient) generateLanguagePackageConfigsDart(ctx context.Context, org
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("definitions/%s.%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPC(ctx, "alis.os.vscode.v2.VscodeService/GenerateLanguagePackageConfigs", req)
+	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GenerateLanguagePackageConfigs", req)
 	if err != nil {
 		return nil, err
 	}
