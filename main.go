@@ -3,6 +3,9 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"alis-hub-v3/internal/updater"
@@ -17,6 +20,19 @@ var version = "dev"
 var assets embed.FS
 
 func main() {
+	// Multi-call binary: act as git credential helper when invoked under that name.
+	if base := filepath.Base(os.Args[0]); strings.Contains(base, "git-credential-alis") {
+		RunAsCredentialHelper()
+		return
+	}
+
+	// Best-effort: refresh git auth on every app launch.
+	go func() {
+		if err := SyncGitAuth(); err != nil {
+			log.Printf("git auth sync: %v", err)
+		}
+	}()
+
 	updaterSvc := updater.NewService(version)
 	notifSvc := wailsnotif.New()
 	productSvc := NewProductService()
