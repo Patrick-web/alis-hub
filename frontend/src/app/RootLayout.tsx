@@ -159,7 +159,7 @@ export function RootLayout() {
             {workspaceSidebar && <Sidebar />}
             <Outlet key={`${state.organisation}/${state.product}`} />
             {/* Develop task panel — keep-alive at layout level so tabs persist across navigation */}
-            <div style={{ display: isOnDevelop ? undefined : 'none' }}>
+            <div className="h-full" style={{ display: isOnDevelop ? undefined : 'none' }}>
               <DevelopTaskPanel />
             </div>
           </div>
