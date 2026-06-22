@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.5.1] - 2026-06-22
+
+### Bug Fixes
+- Fixed an issue where an expired session in the workspace showed a raw error instead of redirecting to the login screen.
+- Fixed an issue where alis-hub was overwriting the VS Code extension's git credential configuration, breaking git auth for the alis extension.
+- Fixed an issue where the right panel in the Develop page did not stretch to full height.
+- Improved the update flow: downloads now start automatically when an update is detected, with better progress states and install error recovery.
+
 ## [v0.5.0] - 2026-06-22
 
 ### What's New
