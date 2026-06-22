@@ -11,7 +11,6 @@ import (
 )
 
 var forgejoHostRe = regexp.MustCompile(`^forgejo-\d+\.[a-z0-9-]+\.run\.app$`)
-var vscodeAuthPathRe = regexp.MustCompile(`alisexchange\.alis-build[/\\]git-auth`)
 
 // SyncGitAuth discovers Forgejo repos under ~/alis.build/, writes
 // ~/.alis/git-auth.gitconfig with a fresh Bearer token for each host,
@@ -165,53 +164,25 @@ func writeGitAuthConfig(token string, repos []forgejoRepo) (string, error) {
 	return authPath, nil
 }
 
-// migrateRepoConfig replaces VS Code extension [include] path entries in the
-// repo's .git/config with the app-managed authConfigPath.
+// migrateRepoConfig ensures the hub's authConfigPath is included in the repo's
+// .git/config without disturbing any existing entries (including those managed
+// by the VS Code extension).
 func migrateRepoConfig(configPath, authConfigPath string) error {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return err
 	}
 
-	lines := strings.Split(string(data), "\n")
-	var out []string
-	inInclude := false
-	replaced := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Track current section.
-		if strings.HasPrefix(trimmed, "[") {
-			inInclude = strings.ToLower(trimmed) == "[include]"
-		}
-
-		if inInclude && strings.HasPrefix(trimmed, "path") {
-			// path = <value>
-			parts := strings.SplitN(trimmed, "=", 2)
-			if len(parts) == 2 && vscodeAuthPathRe.MatchString(strings.TrimSpace(parts[1])) {
-				// Replace the VS Code extension path with our own.
-				out = append(out, "\tpath = "+authConfigPath)
-				replaced = true
-				continue
-			}
-		}
-
-		out = append(out, line)
+	if strings.Contains(string(data), authConfigPath) {
+		return nil
 	}
 
-	// If no VS Code path was found, add our include section.
-	if !replaced {
-		// Check if our path is already present.
-		for _, line := range lines {
-			if strings.Contains(line, authConfigPath) {
-				return nil
-			}
-		}
-		out = append(out, "[include]", "\tpath = "+authConfigPath)
+	appended := string(data)
+	if !strings.HasSuffix(appended, "\n") {
+		appended += "\n"
 	}
-
-	return os.WriteFile(configPath, []byte(strings.Join(out, "\n")), 0600)
+	appended += "[include]\n\tpath = " + authConfigPath + "\n"
+	return os.WriteFile(configPath, []byte(appended), 0600)
 }
 
 // installCredentialHelper creates ~/.alis/bin/git-credential-alis as a symlink
