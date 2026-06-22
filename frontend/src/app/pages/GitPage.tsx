@@ -9,6 +9,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../compone
 import { useWorkspace } from '../stores/workspace';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
 import { Loader } from '../components/Loader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const LOG_LIMIT = 200;
 
@@ -46,6 +47,8 @@ export function GitPage() {
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [error, setError] = useState('');
+  const [discardPending, setDiscardPending] = useState<string[] | null>(null);
+  const [discarding, setDiscarding] = useState(false);
 
   // Fetch build/define paths from the backend whenever the product changes
   useEffect(() => {
@@ -159,10 +162,24 @@ export function GitPage() {
     refresh();
   }
 
-  async function handleDiscard(path: string) {
-    if (!confirm(`Discard changes to ${path}?`)) return;
-    await GitService.DiscardFile(repoPath, path);
-    refresh();
+  function handleDiscard(paths: string[]) {
+    setDiscardPending(paths);
+  }
+
+  async function confirmDiscard() {
+    if (!discardPending) return;
+    setDiscarding(true);
+    try {
+      for (const path of discardPending) {
+        await GitService.DiscardFile(repoPath, path);
+      }
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setDiscarding(false);
+      setDiscardPending(null);
+    }
   }
 
   async function handleStageAll() {
@@ -228,8 +245,24 @@ export function GitPage() {
   const diffFilePath = selectedCommitFile?.path ?? selectedFile;
   const diffStaged = selectedCommitFile ? false : selectedStaged;
 
+  const discardDescription = discardPending
+    ? discardPending.length === 1
+      ? <>Discard changes to <span className="text-foreground font-semibold">{discardPending[0].split('/').pop()}</span>? This cannot be undone.</>
+      : <>Discard changes to <span className="text-foreground font-semibold">{discardPending.length} files</span>? This cannot be undone.</>
+    : '';
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <ConfirmDialog
+        open={discardPending !== null}
+        onOpenChange={(o) => { if (!o && !discarding) setDiscardPending(null); }}
+        title="Discard changes"
+        description={discardDescription}
+        confirmLabel="Discard"
+        loadingLabel="Discarding…"
+        loading={discarding}
+        onConfirm={confirmDiscard}
+      />
       {/* Repo selector bar */}
       <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 border-b border-foreground/10 bg-black/10">
         <button
