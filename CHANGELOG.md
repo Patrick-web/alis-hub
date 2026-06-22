@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.5.0] - 2026-06-22
+
+### What's New
+- The Develop page now supports multiple concurrent tasks in a tab-based panel — open Build, Deploy, Define, and Packages for different services side-by-side without losing state
+- Each task tab persists when you navigate away from the Develop page and back
+- The right pane is now resizable — drag the left edge to make it wider or narrower
+- A re-login modal now appears automatically when your session expires, so you don't lose your place
+- The app now manages Git credentials for the VS Code extension, removing the need to authenticate separately in the editor
+- Git SCM now has stage and discard buttons at the folder level, making it faster to manage changes across multiple files
+
+### Bug Fixes
+- Fixed an issue where clicking "Open in Develop" or "Deploy" in a notification did nothing if you had navigated away from the Develop page
+- Fixed an issue where deploy pane errors were not shown and auth failures left the pane in a broken state
+- Fixed an issue where authentication to auth.alis.build failed due to a gRPC transport mismatch
+- Clicking a task notification or status strip chip now correctly focuses the corresponding tab in the Develop panel
+
 ## [v0.4.0] - 2026-06-21
 
 ### What's New
