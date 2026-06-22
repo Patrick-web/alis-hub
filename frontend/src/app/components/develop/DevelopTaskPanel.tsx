@@ -78,7 +78,7 @@ export function DevelopTaskPanel() {
 
   return (
     <div
-      className="border-l border-border flex flex-col overflow-hidden shrink-0 relative bg-background"
+      className="border-l border-border flex flex-col overflow-hidden shrink-0 relative bg-background h-full"
       style={{ width: paneWidth }}
     >
       {/* Left drag handle */}
