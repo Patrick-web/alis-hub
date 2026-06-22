@@ -13,7 +13,7 @@ interface Props {
   onSelectFile: (path: string, staged: boolean) => void;
   onStage: (path: string) => void;
   onUnstage: (path: string) => void;
-  onDiscard: (path: string) => void;
+  onDiscard: (paths: string[]) => void;
   onStageAll: () => void;
   onCommit: () => void;
   onCommitMessageChange: (msg: string) => void;
@@ -42,6 +42,17 @@ function buildTree(files: Array<GitFileStatus | string>): TreeNode {
     node.items.push(file);
   }
   return root;
+}
+
+function collectPaths(node: TreeNode): string[] {
+  const paths: string[] = [];
+  for (const item of node.items) {
+    paths.push(typeof item === 'string' ? item : item.path);
+  }
+  for (const child of node.children.values()) {
+    paths.push(...collectPaths(child));
+  }
+  return paths;
 }
 
 function statusIcon(code: string) {
@@ -111,6 +122,7 @@ function FileRow({
 function TreeDir({
   node, depth, staged, selectedFile, selectedStaged,
   onSelectFile, onAction1, onAction2, action1Icon, action2Icon, action1Title, action2Title,
+  onFolderAction1, onFolderAction2,
 }: {
   node: TreeNode;
   depth: number;
@@ -124,10 +136,15 @@ function TreeDir({
   action2Icon?: React.ReactNode;
   action1Title?: string;
   action2Title?: string;
+  onFolderAction1?: (paths: string[]) => void;
+  onFolderAction2?: (paths: string[]) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const [folderHover, setFolderHover] = useState(false);
   const dirs = [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name));
   const pl = depth * 12;
+
+  const folderPaths = collectPaths(node);
 
   return (
     <>
@@ -135,6 +152,8 @@ function TreeDir({
         <div
           className="flex items-center gap-1 py-[3px] pr-3 cursor-pointer text-xs text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5 select-none"
           style={{ paddingLeft: `${pl}px` }}
+          onMouseEnter={() => setFolderHover(true)}
+          onMouseLeave={() => setFolderHover(false)}
           onClick={() => setOpen(o => !o)}
         >
           {open
@@ -145,7 +164,29 @@ function TreeDir({
             ? <FolderOpen size={11} className="shrink-0 text-foreground/30" />
             : <Folder size={11} className="shrink-0 text-foreground/30" />
           }
-          <span className="truncate">{node.name}</span>
+          <span className="flex-1 truncate">{node.name}</span>
+          {folderHover && (onFolderAction1 || onFolderAction2) && (
+            <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+              {onFolderAction1 && (
+                <button
+                  title={action1Title}
+                  onClick={() => onFolderAction1(folderPaths)}
+                  className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90"
+                >
+                  {action1Icon}
+                </button>
+              )}
+              {onFolderAction2 && (
+                <button
+                  title={action2Title}
+                  onClick={() => onFolderAction2(folderPaths)}
+                  className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90"
+                >
+                  {action2Icon}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
       {open && (
@@ -165,6 +206,8 @@ function TreeDir({
               action2Icon={action2Icon}
               action1Title={action1Title}
               action2Title={action2Title}
+              onFolderAction1={onFolderAction1}
+              onFolderAction2={onFolderAction2}
             />
           ))}
           {node.items.map(file => {
@@ -284,6 +327,7 @@ export function GitFileList({
               onAction1={onUnstage}
               action1Icon={<Minus size={11} />}
               action1Title="Unstage"
+              onFolderAction1={(paths) => paths.forEach(p => onUnstage(p))}
             />
           ) : (
             status.staged.map(f => (
@@ -329,11 +373,13 @@ export function GitFileList({
               selectedStaged={selectedStaged}
               onSelectFile={onSelectFile}
               onAction1={onStage}
-              onAction2={onDiscard}
+              onAction2={(path) => onDiscard([path])}
               action1Icon={<Plus size={11} />}
               action2Icon={<RotateCcw size={11} />}
               action1Title="Stage"
               action2Title="Discard changes"
+              onFolderAction1={(paths) => paths.forEach(p => onStage(p))}
+              onFolderAction2={onDiscard}
             />
           ) : (
             status.unstaged.map(f => (
@@ -344,7 +390,7 @@ export function GitFileList({
                 selected={selectedFile === f.path && !selectedStaged}
                 onSelect={() => onSelectFile(f.path, false)}
                 onAction1={() => onStage(f.path)}
-                onAction2={() => onDiscard(f.path)}
+                onAction2={() => onDiscard([f.path])}
                 action1Icon={<Plus size={11} />}
                 action2Icon={<RotateCcw size={11} />}
                 action1Title="Stage"
@@ -371,6 +417,7 @@ export function GitFileList({
                 onAction1={onStage}
                 action1Icon={<Plus size={11} />}
                 action1Title="Stage file"
+                onFolderAction1={(paths) => paths.forEach(p => onStage(p))}
               />
             ) : (
               status.untracked.map(p => (

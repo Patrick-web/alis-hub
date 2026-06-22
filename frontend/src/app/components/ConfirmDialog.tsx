@@ -16,6 +16,7 @@ interface ConfirmDialogProps {
   title: string;
   description: React.ReactNode;
   confirmLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
   requireText?: string;
@@ -27,6 +28,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = 'Delete',
+  loadingLabel,
   loading = false,
   onConfirm,
   requireText,
@@ -81,7 +83,7 @@ export function ConfirmDialog({
             onClick={(e) => { e.preventDefault(); onConfirm(); }}
             disabled={loading || !confirmed}
           >
-            {loading ? 'Deleting…' : confirmLabel}
+            {loading ? (loadingLabel ?? 'Processing…') : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
