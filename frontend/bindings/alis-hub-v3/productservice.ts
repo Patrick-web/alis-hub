@@ -18,6 +18,16 @@ export function BootstrapBlock(params: $models.BootstrapBlockParams): $Cancellab
 }
 
 /**
+ * CheckAuth returns true when a valid, refreshable auth token can be obtained.
+ * Unlike IsLoggedIn, this actually tries to fetch/refresh the token, so it
+ * returns false when the refresh token has expired even if the credentials
+ * file still exists.
+ */
+export function CheckAuth(): $CancellablePromise<boolean> {
+    return $Call.ByID(2302560144);
+}
+
+/**
  * CheckProductCloneStatus returns true if both the define and build repos for
  * the given product are already present on the local filesystem.
  */

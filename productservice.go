@@ -453,6 +453,19 @@ func (s *ProductService) IsLoggedIn() bool {
 	return err == nil
 }
 
+// CheckAuth returns true when a valid, refreshable auth token can be obtained.
+// Unlike IsLoggedIn, this actually tries to fetch/refresh the token, so it
+// returns false when the refresh token has expired even if the credentials
+// file still exists.
+func (s *ProductService) CheckAuth() bool {
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		return false
+	}
+	_, err = ts.Token()
+	return err == nil
+}
+
 // Login triggers the PKCE OAuth2 flow. The browser opens, the user authenticates,
 // and tokens are saved to ~/.alis/console-credentials.json.
 func (s *ProductService) Login() error {

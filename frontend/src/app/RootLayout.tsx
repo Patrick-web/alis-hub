@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
@@ -10,11 +10,14 @@ import { LoginPage } from './pages/LoginPage';
 import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
+import { ReloginModal } from './components/ReloginModal';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
 import { initAccentColor } from './stores/accent';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
 import { Loader } from './components/Loader';
+
+const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function RootLayout() {
   const location = useLocation();
@@ -22,6 +25,8 @@ export function RootLayout() {
   const { state, setPhase } = useWorkspace();
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const isOnDevelop = location.pathname === '/develop';
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { initAccentColor(); }, []);
 
@@ -46,6 +51,34 @@ export function RootLayout() {
       .catch(() => setPhase('login'));
   }, []);
 
+  // Poll auth validity once the user is past the login screen.
+  // Also re-check when the window regains focus (e.g. after the laptop sleeps).
+  useEffect(() => {
+    const unauthPhases: AppPhase[] = ['init', 'login'];
+    if (unauthPhases.includes(state.phase)) return;
+
+    async function checkAuth() {
+      try {
+        const ok = await (ProductService.CheckAuth as () => Promise<boolean>)();
+        if (!ok) setSessionExpired(true);
+      } catch {
+        setSessionExpired(true);
+      }
+    }
+
+    authPollRef.current = setInterval(checkAuth, AUTH_POLL_MS);
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') checkAuth();
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      if (authPollRef.current) clearInterval(authPollRef.current);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [state.phase]);
+
   // Pre-workspace phases render fullscreen without nav chrome
   if (state.phase === 'init') {
     return (
@@ -63,14 +96,19 @@ export function RootLayout() {
     );
   }
 
+  const reloginModal = sessionExpired
+    ? <ReloginModal onSuccess={() => setSessionExpired(false)} />
+    : null;
+
   if (state.phase === 'hub') {
-    return <HubPage />;
+    return <>{<HubPage />}{reloginModal}</>;
   }
 
   if (state.phase === 'picking-org') {
     return (
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <LandingZonesPage />
+        {reloginModal}
       </div>
     );
   }
@@ -79,6 +117,7 @@ export function RootLayout() {
     return (
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <ProductPickerPage />
+        {reloginModal}
       </div>
     );
   }
@@ -98,6 +137,7 @@ export function RootLayout() {
         </div>
         <SuggestionsBubble />
         <StatusStrip />
+        {reloginModal}
       </div>
     );
   }
@@ -134,6 +174,7 @@ export function RootLayout() {
       </div>
       <SuggestionsBubble />
       <StatusStrip />
+      {reloginModal}
     </div>
   );
 }
