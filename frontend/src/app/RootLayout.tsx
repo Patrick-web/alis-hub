@@ -6,6 +6,8 @@ import { Sidebar } from './components/Sidebar';
 import { StatusStrip } from './components/StatusStrip';
 import { SuggestionsBubble } from './components/SuggestionsBubble';
 import { PackageTerminalPane } from './components/PackageTerminalPane';
+import { DevelopTaskPanel } from './components/develop/DevelopTaskPanel';
+import { DevelopTabsProvider } from './stores/developTabs';
 import { LoginPage } from './pages/LoginPage';
 import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
@@ -149,32 +151,38 @@ export function RootLayout() {
     showSidebar;
 
   return (
-    <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
-      <TopNav />
-      <div className="flex flex-1 overflow-hidden flex-col">
-        <div className="flex flex-1 overflow-hidden">
-          {workspaceSidebar && <Sidebar />}
-          <Outlet key={`${state.organisation}/${state.product}`} />
-        </div>
-        {/* Package terminal pane — kept mounted here to preserve PTY across navigation */}
-        {sessions.length > 0 && (
-          <div
-            style={{ display: isOnDevelop ? undefined : 'none', height: '280px', flexShrink: 0 }}
-          >
-            <PackageTerminalPane
-              ref={paneRef}
-              sessions={sessions}
-              onCloseSession={onCloseSession}
-              onClose={clearSessions}
-              onInput={onInput}
-              onResize={onResize}
-            />
+    <DevelopTabsProvider>
+      <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
+        <TopNav />
+        <div className="flex flex-1 overflow-hidden flex-col">
+          <div className="flex flex-1 overflow-hidden">
+            {workspaceSidebar && <Sidebar />}
+            <Outlet key={`${state.organisation}/${state.product}`} />
+            {/* Develop task panel — keep-alive at layout level so tabs persist across navigation */}
+            <div style={{ display: isOnDevelop ? undefined : 'none' }}>
+              <DevelopTaskPanel />
+            </div>
           </div>
-        )}
+          {/* Package terminal pane — kept mounted here to preserve PTY across navigation */}
+          {sessions.length > 0 && (
+            <div
+              style={{ display: isOnDevelop ? undefined : 'none', height: '280px', flexShrink: 0 }}
+            >
+              <PackageTerminalPane
+                ref={paneRef}
+                sessions={sessions}
+                onCloseSession={onCloseSession}
+                onClose={clearSessions}
+                onInput={onInput}
+                onResize={onResize}
+              />
+            </div>
+          )}
+        </div>
+        <SuggestionsBubble />
+        <StatusStrip />
+        {reloginModal}
       </div>
-      <SuggestionsBubble />
-      <StatusStrip />
-      {reloginModal}
-    </div>
+    </DevelopTabsProvider>
   );
 }
