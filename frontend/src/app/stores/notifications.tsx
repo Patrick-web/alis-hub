@@ -81,6 +81,11 @@ type StoreAction =
   | { type: 'DISMISS'; payload: string }
   | { type: 'CLEAR_ALL' };
 
+export interface PendingPaneOpen {
+  type: 'deploy' | 'build' | 'define';
+  neuron: string;
+}
+
 interface NotificationContextValue {
   state: NotificationState;
   addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => string;
@@ -92,6 +97,8 @@ interface NotificationContextValue {
   unreadCount: number;
   focusTaskId: string | null;
   setFocusTaskId: (id: string | null) => void;
+  pendingOpen: PendingPaneOpen | null;
+  setPendingOpen: (action: PendingPaneOpen | null) => void;
 }
 
 const STORAGE_KEY = 'alis:notifications';
@@ -159,6 +166,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     notifications: loadFromStorage(),
   }));
   const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<PendingPaneOpen | null>(null);
 
   useEffect(() => {
     saveToStorage(state.notifications);
@@ -212,6 +220,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         unreadCount,
         focusTaskId,
         setFocusTaskId,
+        pendingOpen,
+        setPendingOpen,
       }}
     >
       {children}

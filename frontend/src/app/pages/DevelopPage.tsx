@@ -1,6 +1,7 @@
 import { Loader } from '../components/Loader';
 import { EmptyState } from '../components/EmptyState';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -101,8 +102,9 @@ function isAuthError(e: unknown): boolean {
 
 export function DevelopPage() {
   const { state, setNeurons, setPhase } = useWorkspace();
-  const { addNotification, updateNotification, focusTaskId, setFocusTaskId, state: notifState } = useNotifications();
+  const { addNotification, updateNotification, focusTaskId, setFocusTaskId, pendingOpen, setPendingOpen, state: notifState } = useNotifications();
   const { sessions: packageSessions, addSessions, setTaskId: setPackagesTaskId } = usePackageSessions();
+  const navigate = useNavigate();
 
   // Task notification IDs — kept in refs so effects can reference without re-running
   const buildTaskIdRef = useRef<string | null>(null);
@@ -413,6 +415,15 @@ export function DevelopPage() {
     }
   }, [state.organisation, state.product, state.activeEnvName]);
 
+  // Open a pane when navigated here via a notification action button (e.g. "Deploy")
+  useEffect(() => {
+    if (!pendingOpen) return;
+    setPendingOpen(null);
+    if (pendingOpen.type === 'deploy') openDeployPane(pendingOpen.neuron);
+    else if (pendingOpen.type === 'build') openBuildPane(pendingOpen.neuron);
+    else if (pendingOpen.type === 'define') openDefinePane(pendingOpen.neuron);
+  }, [pendingOpen]);
+
   const handleRunDeploy = async () => {
     if (!deployNeuron || selectedDeployEnvs.length === 0 || !deployVersion) return;
     const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${deployNeuron}`;
@@ -460,7 +471,7 @@ export function DevelopPage() {
             } else {
               updateNotification(doneId, {
                 severity: 'success', title: 'Deploy complete', task: { status: 'done', step: 'result' },
-                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => setFocusTaskId(doneId) }],
+                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
               });
             }
           }
@@ -520,13 +531,13 @@ export function DevelopPage() {
               updateNotification(buildTaskIdRef.current, {
                 severity: 'success', title: 'Build complete', body,
                 task: { status: 'done', step: 'result' },
-                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { setPendingOpen({ type: 'deploy', neuron: buildNeuron }); navigate('/develop'); } }],
               });
               buildTaskIdRef.current = null;
             }
             notify.success('Build complete', {
               description: body,
-              action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
+              action: { label: 'Deploy', onClick: () => { setPendingOpen({ type: 'deploy', neuron: buildNeuron }); navigate('/develop'); } },
             });
             systemNotify('Build complete', body);
           } else if (buildTaskIdRef.current) {
@@ -597,13 +608,13 @@ export function DevelopPage() {
               updateNotification(buildTaskIdRef.current, {
                 severity: 'success', title: 'Local build complete',
                 task: { status: 'done', step: 'result' },
-                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => openDeployPane(buildNeuron) }],
+                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { setPendingOpen({ type: 'deploy', neuron: buildNeuron }); navigate('/develop'); } }],
               });
               buildTaskIdRef.current = null;
             }
             notify.success('Local build complete', {
               description: buildNeuron,
-              action: { label: 'Deploy', onClick: () => openDeployPane(buildNeuron) },
+              action: { label: 'Deploy', onClick: () => { setPendingOpen({ type: 'deploy', neuron: buildNeuron }); navigate('/develop'); } },
             });
             systemNotify('Local build complete', buildNeuron);
           } else if (buildTaskIdRef.current) {
@@ -659,7 +670,7 @@ export function DevelopPage() {
               const doneId = defineTaskIdRef.current;
               updateNotification(doneId, {
                 severity: 'success', title: 'Define complete', task: { status: 'done', step: 'glass' },
-                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => setFocusTaskId(doneId) }],
+                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
               });
               defineTaskIdRef.current = null;
             }
