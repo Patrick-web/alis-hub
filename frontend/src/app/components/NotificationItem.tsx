@@ -32,18 +32,21 @@ interface NotificationItemProps {
   notification: AppNotification;
   onMarkRead: (id: string) => void;
   onDismiss: (id: string) => void;
+  onTaskClick?: (id: string) => void;
 }
 
 export function NotificationItem({
   notification,
   onMarkRead,
   onDismiss,
+  onTaskClick,
 }: NotificationItemProps) {
   const color = SEVERITY_COLOR[notification.severity];
   const isRunning = notification.task?.status === "running";
 
   function handleClick() {
     if (!notification.read) onMarkRead(notification.id);
+    if (notification.task && onTaskClick) onTaskClick(notification.id);
   }
 
   function handleDismiss(e: React.MouseEvent) {
