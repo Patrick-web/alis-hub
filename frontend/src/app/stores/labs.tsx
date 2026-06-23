@@ -36,6 +36,27 @@ export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
     description: 'When a build fails, offer to re-run with verbose output.',
     enabled: true,
   },
+  {
+    id: 'packages-installed-commit',
+    category: 'Build & Deploy',
+    title: 'Suggest commit after package install',
+    description: 'After packages install successfully, suggest committing the updated files.',
+    enabled: true,
+  },
+  {
+    id: 'git-pull-define-upgrade',
+    category: 'Define',
+    title: 'Suggest package install after define repo pull',
+    description: 'When new commits are pulled on the define repo, suggest installing packages.',
+    enabled: true,
+  },
+  {
+    id: 'git-pull-build-upgrade',
+    category: 'Build & Deploy',
+    title: 'Suggest package install after build repo pull with dependency changes',
+    description: 'When a build repo pull includes dependency files (go.mod, package.json, etc.), suggest installing packages.',
+    enabled: true,
+  },
 ];
 
 export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
