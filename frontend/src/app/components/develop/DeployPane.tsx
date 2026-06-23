@@ -9,7 +9,7 @@ import { useWorkspace } from '../../stores/workspace';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
-import type { DeployEnv, DeployResult, DeployStep } from './types';
+import type { DeployEnv, DeployStep, EnvRunState } from './types';
 import { isAuthError, formatRelativeTime } from './types';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
@@ -34,12 +34,14 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const [version, setVersion] = useState('');
   const [planOnly, setPlanOnly] = useState(false);
   const [beta, setBeta] = useState(false);
-  const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
-  const [progressMsg, setProgressMsg] = useState('Starting...');
 
-  const termRef = useRef<BuildTerminalHandle>(null);
-  const logOffsetRef = useRef<number>(0);
-  const logBufferRef = useRef<string[]>([]);
+  // Per-environment run state
+  const [envRuns, setEnvRuns] = useState<EnvRunState[]>([]);
+  const [activeRunEnv, setActiveRunEnv] = useState('');
+
+  const termRefsMap = useRef<Record<string, BuildTerminalHandle | null>>({});
+  const logOffsetRefs = useRef<Record<string, number>>({});
+  const logBufferRefs = useRef<Record<string, string[]>>({});
   const taskIdRef = useRef<string | null>(null);
 
   const orgRef = useRef(state.organisation);
@@ -54,14 +56,14 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       const { step: savedStep, meta } = restore.task;
       setStep(savedStep as DeployStep);
       taskIdRef.current = restore.id;
-      logBufferRef.current = [...restore.task.logBuffer];
-      if (savedStep === 'running' && meta.operationName) {
-        setDeployResult({
-          operationName: meta.operationName as string,
-          version: (meta.version as string) || '',
-          deployments: meta.logsUrl ? [{ logsUrl: meta.logsUrl as string }] : [],
-          notes: '', done: false,
+      if (savedStep === 'running' && Array.isArray(meta.envOps)) {
+        const ops = meta.envOps as EnvRunState[];
+        ops.forEach(op => {
+          logOffsetRefs.current[op.env] = 0;
+          logBufferRefs.current[op.env] = [...(restore.task!.logBuffer ?? [])];
         });
+        setEnvRuns(ops.map(op => ({ ...op, done: false, progressMsg: 'Reconnecting...' })));
+        setActiveRunEnv(ops[0]?.env ?? '');
       }
     } else {
       loadDeployInfo();
@@ -75,8 +77,9 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     setVersions([]);
     setSelectedEnvs([]);
     setVersion('');
-    setDeployResult(null);
-    logOffsetRef.current = 0;
+    setEnvRuns([]);
+    logOffsetRefs.current = {};
+    logBufferRefs.current = {};
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
     try {
       const [overview, versionList] = await Promise.all([
@@ -109,83 +112,169 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     if (selectedEnvs.length === 0 || !version) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
     setStep('running');
-    setProgressMsg('Starting Deploy...');
-    termRef.current?.clear();
-    logOffsetRef.current = 0;
-    logBufferRef.current = [];
+
+    // Reset per-env refs
+    termRefsMap.current = {};
+    logOffsetRefs.current = {};
+    logBufferRefs.current = {};
+    selectedEnvs.forEach(env => {
+      logOffsetRefs.current[env] = 0;
+      logBufferRefs.current[env] = [];
+    });
+
+    // Init run states
+    const initialRuns: EnvRunState[] = selectedEnvs.map(envName => {
+      const envObj = envs.find(e => e.name === envName);
+      return {
+        env: envName,
+        displayName: envObj?.displayName || envName,
+        operationName: '',
+        logsUrl: '',
+        version: '',
+        progressMsg: 'Starting...',
+        done: false,
+      };
+    });
+    setEnvRuns(initialRuns);
+    setActiveRunEnv(selectedEnvs[0]);
+
     const taskId = addNotification({
       severity: 'info', source: 'deploy', title: 'Deploy started', body: neuron, persistent: true,
       task: { type: 'deploy', status: 'running', neuronId: neuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: {} },
     });
     taskIdRef.current = taskId;
     setTabNotificationId(tabId, taskId);
-    try {
-      const result = await DeployService.RunDeploy(neuronResource, version, selectedEnvs, planOnly, beta);
-      setDeployResult(result as any);
-      updateNotification(taskId, {
-        task: { meta: { operationName: (result as any).operationName, version: (result as any).version, logsUrl: (result as any).deployments?.[0]?.logsUrl || '' } },
-      });
-    } catch (e: any) {
-      if (isAuthError(e)) { setPhase('login'); return; }
-      setProgressMsg(`Failed: ${e?.message || e}`);
-      setStep('result');
-      setDeployResult({ operationName: '', version: '', deployments: [], notes: '', done: true, error: e?.message || 'Deploy failed' });
-      updateNotification(taskId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
-      taskIdRef.current = null;
-    }
+
+    // Start one deploy per environment in parallel
+    const results = await Promise.allSettled(
+      selectedEnvs.map(env => DeployService.RunDeploy(neuronResource, version, [env], planOnly, beta))
+    );
+
+    const updatedRuns: EnvRunState[] = initialRuns.map((run, i) => {
+      const result = results[i];
+      if (result.status === 'fulfilled' && result.value) {
+        return {
+          ...run,
+          operationName: result.value.operationName ?? '',
+          logsUrl: result.value.deployments?.[0]?.logsUrl ?? '',
+          version: result.value.version ?? version,
+          progressMsg: result.value.notes || 'Running...',
+        };
+      } else {
+        const errMsg = (result as PromiseRejectedResult).reason?.message || 'Failed to start';
+        return { ...run, done: true, error: errMsg, progressMsg: `Failed: ${errMsg}` };
+      }
+    });
+    setEnvRuns(updatedRuns);
+
+    // Persist env ops in notification meta for restore
+    updateNotification(taskId, {
+      task: {
+        meta: {
+          envOps: updatedRuns.map(r => ({
+            env: r.env, displayName: r.displayName, operationName: r.operationName,
+            logsUrl: r.logsUrl, version: r.version,
+          })),
+        },
+      },
+    });
   }
 
-  // Poll deploy operation
+  // Poll all running operations
+  const pollKey = envRuns.filter(r => r.operationName && !r.done).map(r => r.operationName).join(',');
   useEffect(() => {
-    if (!deployResult || deployResult.done || step !== 'running') return;
+    if (!pollKey || step !== 'running') return;
     const interval = setInterval(async () => {
-      try {
-        const result = await DeployService.PollDeployOperation(deployResult.operationName);
-        setDeployResult(result as any);
-        if (result?.done) {
-          clearInterval(interval);
-          setStep('result');
-          if (taskIdRef.current) {
-            const doneId = taskIdRef.current;
-            taskIdRef.current = null;
-            if (result.error) {
-              updateNotification(doneId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
-            } else {
-              updateNotification(doneId, {
-                severity: 'success', title: 'Deploy complete', task: { status: 'done', step: 'result' },
-                actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
-              });
-            }
+      let updatedRuns: EnvRunState[] | null = null;
+      setEnvRuns(prev => {
+        updatedRuns = prev;
+        return prev;
+      });
+      if (!updatedRuns) return;
+
+      const running = (updatedRuns as EnvRunState[]).filter(r => r.operationName && !r.done);
+      if (running.length === 0) return;
+
+      const polled = await Promise.allSettled(
+        running.map(r => DeployService.PollDeployOperation(r.operationName))
+      );
+
+      setEnvRuns(prev => {
+        const next = [...prev];
+        running.forEach((run, i) => {
+          const res = polled[i];
+          const idx = next.findIndex(r => r.env === run.env);
+          if (idx === -1) return;
+          if (res.status === 'fulfilled' && res.value) {
+            const r = res.value;
+            next[idx] = {
+              ...next[idx],
+              done: r.done ?? false,
+              error: r.error || undefined,
+              version: r.version || next[idx].version,
+              progressMsg: r.notes || next[idx].progressMsg,
+            };
+          } else if (res.status === 'rejected') {
+            next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
           }
-        } else if (result?.notes) {
-          setProgressMsg(result.notes);
-        }
-      } catch {
-        clearInterval(interval);
-      }
+        });
+        return next;
+      });
     }, 5000);
     return () => clearInterval(interval);
-  }, [deployResult?.operationName, deployResult?.done, step]);
+  }, [pollKey, step]);
 
-  // Stream deploy logs
+  // Transition to result and update notification when all runs finish
   useEffect(() => {
-    const logsUrl = deployResult?.deployments?.[0]?.logsUrl;
-    if (!logsUrl) return;
-    const fetchLogs = async () => {
-      try {
-        const chunk = await DeployService.FetchDeployLogs(logsUrl, logOffsetRef.current);
-        if (chunk?.content) {
-          termRef.current?.write(chunk.content);
-          logOffsetRef.current = chunk.nextOffset;
-          logBufferRef.current.push(chunk.content);
-          if (taskIdRef.current) updateNotification(taskIdRef.current, { task: { logBuffer: [...logBufferRef.current] } });
-        }
-      } catch {}
-    };
-    if (deployResult?.done) { fetchLogs(); return; }
-    const interval = setInterval(fetchLogs, 3000);
-    return () => clearInterval(interval);
-  }, [deployResult?.deployments?.[0]?.logsUrl, deployResult?.done]);
+    if (step !== 'running' || envRuns.length === 0) return;
+    const allDone = envRuns.every(r => r.done);
+    if (!allDone) return;
+    setStep('result');
+    if (taskIdRef.current) {
+      const doneId = taskIdRef.current;
+      taskIdRef.current = null;
+      const hasError = envRuns.some(r => r.error);
+      if (hasError) {
+        updateNotification(doneId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
+      } else {
+        updateNotification(doneId, {
+          severity: 'success', title: 'Deploy complete', task: { status: 'done', step: 'result' },
+          actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
+        });
+      }
+    }
+  }, [envRuns, step]);
+
+  // Stream logs for all envs
+  const logsKey = envRuns.filter(r => r.logsUrl).map(r => r.logsUrl + r.done).join(',');
+  useEffect(() => {
+    const withLogs = envRuns.filter(r => r.logsUrl);
+    if (withLogs.length === 0) return;
+
+    const intervals: (ReturnType<typeof setInterval> | null)[] = withLogs.map(run => {
+      const fetchLogs = async () => {
+        try {
+          const chunk = await DeployService.FetchDeployLogs(run.logsUrl, logOffsetRefs.current[run.env] ?? 0);
+          if (chunk?.content) {
+            termRefsMap.current[run.env]?.write(chunk.content);
+            logOffsetRefs.current[run.env] = chunk.nextOffset;
+            logBufferRefs.current[run.env] = [...(logBufferRefs.current[run.env] ?? []), chunk.content];
+            if (taskIdRef.current) {
+              const combined = Object.values(logBufferRefs.current).flat();
+              updateNotification(taskIdRef.current, { task: { logBuffer: combined } });
+            }
+          }
+        } catch {}
+      };
+      if (run.done) {
+        fetchLogs();
+        return null;
+      }
+      return setInterval(fetchLogs, 3000);
+    });
+
+    return () => intervals.forEach(i => { if (i !== null) clearInterval(i); });
+  }, [logsKey]);
 
   return (
     <>
@@ -320,44 +409,84 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         </div>
       )}
 
-      {/* Steps: running + result share terminal */}
+      {/* Steps: running + result — one terminal per env */}
       {(step === 'running' || step === 'result') && (
         <div className="flex-1 flex flex-col min-h-0">
-          {step === 'running' && (
-            <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
-              <Loader size={20} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Planning' : 'Deploying'} · {version}</p>
-                <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{progressMsg}</p>
-              </div>
+          {/* Env tab bar — only shown when deploying to multiple environments */}
+          {envRuns.length > 1 && (
+            <div className="shrink-0 flex border-b border-border overflow-x-auto">
+              {envRuns.map(run => (
+                <button
+                  key={run.env}
+                  onClick={() => setActiveRunEnv(run.env)}
+                  className={`flex items-center gap-[6px] px-[12px] py-[8px] text-[10px] shrink-0 border-r border-border transition-colors ${
+                    activeRunEnv === run.env
+                      ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
+                      : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/[2%]'
+                  }`}
+                >
+                  {run.done && run.error ? (
+                    <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px] shrink-0" />
+                  ) : run.done ? (
+                    <Icon icon="solar:check-circle-linear" className="text-success text-[11px] shrink-0" />
+                  ) : (
+                    <Loader size={10} />
+                  )}
+                  <span className="font-medium">{run.displayName}</span>
+                </button>
+              ))}
             </div>
           )}
-          {step === 'result' && (
-            <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${deployResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
-              {deployResult?.error ? (
-                <div className="flex items-start gap-[8px]">
-                  <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                  <p className="text-[10px] text-foreground/70 leading-relaxed">{deployResult.error}</p>
-                </div>
-              ) : (
-                <div className="flex items-center gap-[8px]">
-                  <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Plan Complete' : 'Deploy Complete'}</p>
-                    {(deployResult?.version || version) && (
-                      <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{deployResult?.version || version}</p>
-                    )}
+
+          {/* Per-env terminal panes */}
+          {envRuns.map(run => (
+            <div
+              key={run.env}
+              className="flex-1 flex flex-col min-h-0"
+              style={{ display: (activeRunEnv === run.env || envRuns.length === 1) ? 'flex' : 'none' }}
+            >
+              {/* Per-env status header */}
+              {step === 'running' && !run.done && (
+                <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
+                  <Loader size={20} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Planning' : 'Deploying'} · {run.version || version}</p>
+                    <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{run.progressMsg}</p>
                   </div>
-                  {deployResult?.deployments?.[0]?.logsUrl && (
-                    <button onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)} className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
-                      <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
-                    </button>
+                </div>
+              )}
+              {(step === 'result' || run.done) && (
+                <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${run.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
+                  {run.error ? (
+                    <div className="flex items-start gap-[8px]">
+                      <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
+                      <p className="text-[10px] text-foreground/70 leading-relaxed">{run.error}</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-[8px]">
+                      <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Plan Complete' : 'Deploy Complete'}</p>
+                        {(run.version || version) && (
+                          <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{run.version || version}</p>
+                        )}
+                      </div>
+                      {run.logsUrl && (
+                        <button onClick={() => Browser.OpenURL(run.logsUrl)} className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
+                          <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
+              <BuildTerminal
+                ref={r => { termRefsMap.current[run.env] = r; }}
+                className="flex-1 min-h-0"
+              />
             </div>
-          )}
-          <BuildTerminal ref={termRef} className="flex-1 min-h-0" />
+          ))}
+
           {step === 'result' && (
             <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
               <button onClick={loadDeployInfo} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">

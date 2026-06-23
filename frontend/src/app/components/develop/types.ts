@@ -48,6 +48,17 @@ export interface DeployEnv {
   currentVersion: string;
 }
 
+export interface EnvRunState {
+  env: string;
+  displayName: string;
+  operationName: string;
+  logsUrl: string;
+  version: string;
+  progressMsg: string;
+  done: boolean;
+  error?: string;
+}
+
 export interface DeployResult {
   operationName: string;
   version: string;
