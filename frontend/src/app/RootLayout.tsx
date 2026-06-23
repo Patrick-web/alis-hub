@@ -13,6 +13,10 @@ import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { ReloginModal } from './components/ReloginModal';
+import { CommandPalette } from './components/CommandPalette';
+import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
+import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
+import { useCommandPalette } from './stores/commandPalette';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
 import { initAccentColor } from './stores/accent';
@@ -28,6 +32,7 @@ export function RootLayout() {
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const isOnDevelop = location.pathname === '/develop';
   const [sessionExpired, setSessionExpired] = useState(false);
+  const { toggle } = useCommandPalette();
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { initAccentColor(); }, []);
@@ -42,6 +47,17 @@ export function RootLayout() {
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [navigate]);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.code === 'KeyK') {
+        e.preventDefault();
+        toggle();
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [toggle]);
 
   // On mount: check login status, then route to appropriate phase.
   // DEV: ?phase=picking-org overrides for browser testing without Wails bridge.
@@ -181,6 +197,9 @@ export function RootLayout() {
         </div>
         <SuggestionsBubble />
         <StatusStrip />
+        <CommandPalette />
+        <DevelopCommandsExtension />
+        <GCloudCommandsExtension />
         {reloginModal}
       </div>
     </DevelopTabsProvider>
