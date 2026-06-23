@@ -8,6 +8,7 @@ import { GitBranch, GitCommit, GitFileDiff, GitStatus } from '../components/git/
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
 import { useWorkspace } from '../stores/workspace';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
+import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 
@@ -103,6 +104,23 @@ export function GitPage() {
       refresh();
     }
   }, [repoPath]);
+
+  // Start fsnotify watcher and refresh on backend-pushed change events
+  useEffect(() => {
+    if (!repoPath) return;
+    GitService.WatchRepo(repoPath);
+    const off = Events.On('git:changed', (ev: any) => {
+      if (ev.data === repoPath) refresh();
+    });
+    return () => off();
+  }, [repoPath, refresh]);
+
+  // Refresh when the app window regains focus
+  useEffect(() => {
+    const handle = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', handle);
+    return () => document.removeEventListener('visibilitychange', handle);
+  }, [refresh]);
 
   // Load working-tree diff when a file is selected
   useEffect(() => {

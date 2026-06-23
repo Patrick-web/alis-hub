@@ -10,17 +10,95 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // GitService provides local git operations for the block merge flow.
 type GitService struct {
-	mu  sync.Mutex
-	app *application.App
+	mu             sync.Mutex
+	app            *application.App
+	watcher        *fsnotify.Watcher
+	pathToRepo     map[string]string  // watched fs path → repoPath
+	debounceTimers map[string]*time.Timer
 }
 
-func NewGitService() *GitService { return &GitService{} }
+func NewGitService() *GitService {
+	w, _ := fsnotify.NewWatcher()
+	svc := &GitService{
+		watcher:        w,
+		pathToRepo:     make(map[string]string),
+		debounceTimers: make(map[string]*time.Timer),
+	}
+	go svc.watchLoop()
+	return svc
+}
+
+func (g *GitService) watchLoop() {
+	for {
+		select {
+		case event, ok := <-g.watcher.Events:
+			if !ok {
+				return
+			}
+			g.mu.Lock()
+			repoPath, found := g.pathToRepo[filepath.Dir(event.Name)]
+			if !found {
+				repoPath, found = g.pathToRepo[event.Name]
+			}
+			if found {
+				if t, exists := g.debounceTimers[repoPath]; exists {
+					t.Stop()
+				}
+				rp := repoPath
+				g.debounceTimers[repoPath] = time.AfterFunc(400*time.Millisecond, func() {
+					g.emitChanged(rp)
+				})
+			}
+			g.mu.Unlock()
+		case <-g.watcher.Errors:
+			// ignore
+		}
+	}
+}
+
+// WatchRepo begins watching repoPath/.git for external changes.
+// Idempotent — safe to call multiple times for the same path.
+func (g *GitService) WatchRepo(repoPath string) error {
+	gitDir := filepath.Join(repoPath, ".git")
+	refsDir := filepath.Join(gitDir, "refs", "heads")
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if _, already := g.pathToRepo[gitDir]; already {
+		return nil
+	}
+
+	if err := g.watcher.Add(gitDir); err != nil {
+		return err
+	}
+	g.pathToRepo[gitDir] = repoPath
+
+	// Best-effort: refs/heads may not exist yet on a fresh clone
+	if _, err := os.Stat(refsDir); err == nil {
+		if err2 := g.watcher.Add(refsDir); err2 == nil {
+			g.pathToRepo[refsDir] = repoPath
+		}
+	}
+	return nil
+}
+
+func (g *GitService) emitChanged(repoPath string) {
+	g.mu.Lock()
+	app := g.app
+	g.mu.Unlock()
+	if app != nil {
+		app.Event.Emit("git:changed", repoPath)
+	}
+}
 
 func (g *GitService) SetApp(app *application.App) {
 	g.mu.Lock()
