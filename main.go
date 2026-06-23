@@ -127,7 +127,7 @@ func main() {
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
-	if version != "dev" {
+	if !isDevelopment {
 		updater.BackgroundCheck(app, version, 30*time.Second)
 	}
 
