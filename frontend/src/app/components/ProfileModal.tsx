@@ -12,6 +12,7 @@ import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/
 import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
 import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
+import { useSourceControl } from '../stores/sourceControl';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
@@ -20,7 +21,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates';
+type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control';
 
 interface UserProfile {
   email: string;
@@ -123,8 +124,9 @@ const SIDEBAR_GROUPS = [
   {
     label: 'Advanced',
     items: [
-      { id: 'labs' as Tab,    label: 'Labs',    icon: 'solar:test-tube-linear',      color: '#bf5af2' },
-      { id: 'updates' as Tab, label: 'Updates', icon: 'solar:refresh-circle-linear', color: '#3b82f6' },
+      { id: 'labs' as Tab,           label: 'Labs',           icon: 'solar:test-tube-linear',        color: '#bf5af2' },
+      { id: 'updates' as Tab,        label: 'Updates',        icon: 'solar:refresh-circle-linear',   color: '#3b82f6' },
+      { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:git-branch-linear',       color: undefined },
     ],
   },
 ];
@@ -138,6 +140,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff';
   };
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
+  const { state: scState, setFileListView, setDiffView } = useSourceControl();
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -651,6 +654,55 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                         <Icon icon="solar:link-square-linear" className="text-sm" />
                         Alis Console
                       </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Source Control ── */}
+                {activeTab === 'source-control' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>File List</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="View">
+                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                            <button
+                              onClick={() => setFileListView('list')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === 'list' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              List
+                            </button>
+                            <button
+                              onClick={() => setFileListView('tree')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === 'tree' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              Tree
+                            </button>
+                          </div>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Diff Viewer</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Mode">
+                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                            <button
+                              onClick={() => setDiffView('unified')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === 'unified' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              Unified
+                            </button>
+                            <button
+                              onClick={() => setDiffView('split')}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === 'split' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                            >
+                              Split
+                            </button>
+                          </div>
+                        </SettingRow>
+                      </SettingsCard>
                     </div>
                   </div>
                 )}

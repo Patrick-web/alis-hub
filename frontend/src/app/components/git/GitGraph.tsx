@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useMemo, useState, useCallback } from 'react';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
 import { GitCommit } from './types';
 import * as GitService from '../../../../bindings/alis-hub-v3/gitservice';
 import type { CommitFile } from '../../../../bindings/alis-hub-v3/models';
@@ -202,58 +203,69 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
           const isLoading = commit.hash === loadingHash;
 
           return (
-            <div
-              key={commit.hash}
-              style={{ position: 'absolute', top: vItem.start, height: ROW_H, width: '100%' }}
-              className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                isSelected ? 'bg-pink-500/10' : 'hover:bg-foreground/5'
-              }`}
-              onClick={() => handleCommitClick(commit.hash)}
-            >
-              {/* SVG graph column */}
-              <svg width={svgWidth} height={ROW_H} style={{ flexShrink: 0 }}>
-                {row.activeLanes.map(al => {
-                  const alCx = al.lane * GRAPH_W + GRAPH_W / 2;
-                  if (al.hash === commit.hash) return null;
-                  return (
-                    <line
-                      key={`cont-${al.hash}`}
-                      x1={alCx} y1={0} x2={alCx} y2={ROW_H}
-                      stroke={al.color} strokeWidth={1.5} opacity={0.5}
-                    />
-                  );
-                })}
-                {edges.map((e, i) => {
-                  const fromX = e.fromLane * GRAPH_W + GRAPH_W / 2;
-                  const toX = e.toLane * GRAPH_W + GRAPH_W / 2;
-                  const d = fromX === toX
-                    ? `M ${fromX} ${ROW_H / 2} L ${toX} ${ROW_H}`
-                    : `M ${fromX} ${ROW_H / 2} C ${fromX} ${ROW_H * 0.8} ${toX} ${ROW_H * 0.8} ${toX} ${ROW_H}`;
-                  return <path key={i} d={d} stroke={e.color} strokeWidth={1.5} fill="none" opacity={0.7} />;
-                })}
-                <circle cx={cx} cy={ROW_H / 2} r={DOT_R} fill={color} />
-              </svg>
+            <ContextMenu key={commit.hash}>
+              <ContextMenuTrigger asChild>
+                <div
+                  style={{ position: 'absolute', top: vItem.start, height: ROW_H, width: '100%' }}
+                  className={`flex items-center gap-2 cursor-pointer transition-colors ${
+                    isSelected ? 'bg-pink-500/10' : 'hover:bg-foreground/5'
+                  }`}
+                  onClick={() => handleCommitClick(commit.hash)}
+                >
+                  {/* SVG graph column */}
+                  <svg width={svgWidth} height={ROW_H} style={{ flexShrink: 0 }}>
+                    {row.activeLanes.map(al => {
+                      const alCx = al.lane * GRAPH_W + GRAPH_W / 2;
+                      if (al.hash === commit.hash) return null;
+                      return (
+                        <line
+                          key={`cont-${al.hash}`}
+                          x1={alCx} y1={0} x2={alCx} y2={ROW_H}
+                          stroke={al.color} strokeWidth={1.5} opacity={0.5}
+                        />
+                      );
+                    })}
+                    {edges.map((e, i) => {
+                      const fromX = e.fromLane * GRAPH_W + GRAPH_W / 2;
+                      const toX = e.toLane * GRAPH_W + GRAPH_W / 2;
+                      const d = fromX === toX
+                        ? `M ${fromX} ${ROW_H / 2} L ${toX} ${ROW_H}`
+                        : `M ${fromX} ${ROW_H / 2} C ${fromX} ${ROW_H * 0.8} ${toX} ${ROW_H * 0.8} ${toX} ${ROW_H}`;
+                      return <path key={i} d={d} stroke={e.color} strokeWidth={1.5} fill="none" opacity={0.7} />;
+                    })}
+                    <circle cx={cx} cy={ROW_H / 2} r={DOT_R} fill={color} />
+                  </svg>
 
-              {/* Text */}
-              <div className="flex-1 min-w-0 flex items-center gap-2 pr-3">
-                {/* Expand indicator */}
-                <span className="text-[9px] text-foreground/20 shrink-0 w-3 text-center">
-                  {isLoading ? '…' : isExpanded ? '▾' : '▸'}
-                </span>
-                <span className="text-xs text-foreground/80 truncate flex-1">{commit.subject}</span>
-                {commit.refNames.length > 0 && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    {commit.refNames.slice(0, 2).map(ref => (
-                      <span key={ref} className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                        {ref.replace(/^HEAD -> /, '').replace(/^origin\//, '')}
-                      </span>
-                    ))}
+                  {/* Text */}
+                  <div className="flex-1 min-w-0 flex items-center gap-2 pr-3">
+                    {/* Expand indicator */}
+                    <span className="text-[9px] text-foreground/20 shrink-0 w-3 text-center">
+                      {isLoading ? '…' : isExpanded ? '▾' : '▸'}
+                    </span>
+                    <span className="text-xs text-foreground/80 truncate flex-1">{commit.subject}</span>
+                    {commit.refNames.length > 0 && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        {commit.refNames.slice(0, 2).map(ref => (
+                          <span key={ref} className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                            {ref.replace(/^HEAD -> /, '').replace(/^origin\//, '')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <span className="text-[10px] text-foreground/30 shrink-0 font-mono">{commit.hash.slice(0, 7)}</span>
+                    <span className="text-[10px] text-foreground/30 shrink-0">{formatRelTime(commit.timestamp)}</span>
                   </div>
-                )}
-                <span className="text-[10px] text-foreground/30 shrink-0 font-mono">{commit.hash.slice(0, 7)}</span>
-                <span className="text-[10px] text-foreground/30 shrink-0">{formatRelTime(commit.timestamp)}</span>
-              </div>
-            </div>
+                </div>
+              </ContextMenuTrigger>
+              <ContextMenuContent>
+                <ContextMenuItem onSelect={() => navigator.clipboard.writeText(commit.hash)}>
+                  Copy commit SHA
+                </ContextMenuItem>
+                <ContextMenuItem onSelect={() => navigator.clipboard.writeText(commit.subject)}>
+                  Copy commit message
+                </ContextMenuItem>
+              </ContextMenuContent>
+            </ContextMenu>
           );
         })}
       </div>

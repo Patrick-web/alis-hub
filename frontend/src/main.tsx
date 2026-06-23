@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./app/components/ErrorBoundary.tsx";
 import { WorkspaceProvider } from "./app/stores/workspace.tsx";
 import { NotificationProvider } from "./app/stores/notifications.tsx";
 import { LabsProvider } from "./app/stores/labs.tsx";
+import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
 import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
 import { CommandPaletteProvider } from "./app/stores/commandPalette.tsx";
@@ -20,6 +21,7 @@ createRoot(document.getElementById("root")!).render(
       <NotificationProvider>
         <WorkspaceProvider>
           <LabsProvider>
+            <SourceControlProvider>
             <SuggestionsProvider>
               <PackageSessionsProvider>
                 <CommandPaletteProvider>
@@ -30,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
                 </CommandPaletteProvider>
               </PackageSessionsProvider>
             </SuggestionsProvider>
+            </SourceControlProvider>
           </LabsProvider>
         </WorkspaceProvider>
       </NotificationProvider>
