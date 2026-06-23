@@ -124,6 +124,8 @@ func main() {
 
 	tray.SetMenu(trayMenu)
 
+	installAppMenu(app)
+
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
@@ -135,4 +137,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func installAppMenu(app *application.App) {
+	menu := app.NewMenu()
+	menu.AddRole(application.AppMenu)
+	menu.AddRole(application.EditMenu)
+
+	view := menu.AddSubmenu("View")
+	view.Add("Command Palette").SetAccelerator("CmdOrCtrl+K").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:command-palette", nil)
+	})
+
+	menu.AddRole(application.WindowMenu)
+	app.Menu.Set(menu)
 }
