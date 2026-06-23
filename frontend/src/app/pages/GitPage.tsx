@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { GitBranchBar } from '../components/git/GitBranchBar';
 import { GitDiffViewer } from '../components/git/GitDiffViewer';
 import { GitFileList } from '../components/git/GitFileList';
@@ -7,6 +8,8 @@ import { GitSyncLog } from '../components/git/GitSyncLog';
 import { GitBranch, GitCommit, GitFileDiff, GitStatus } from '../components/git/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
 import { useWorkspace } from '../stores/workspace';
+import { useLabs } from '../stores/labs';
+import { useSuggestions } from '../stores/suggestions';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
 import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
@@ -14,10 +17,23 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const LOG_LIMIT = 200;
 
+const PACKAGE_FILE_NAMES = [
+  'go.mod', 'go.sum',
+  'package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+  'requirements.txt', 'pipfile', 'pipfile.lock', 'pyproject.toml',
+  'pubspec.yaml', 'pubspec.lock',
+  'cargo.toml', 'cargo.lock',
+  'build.gradle', 'build.gradle.kts', 'pom.xml',
+  'gemfile', 'gemfile.lock',
+  'composer.json', 'composer.lock',
+];
+
 type ActiveRepo = 'build' | 'define';
 
 export function GitPage() {
   const { state } = useWorkspace();
+  const { isSuggestionEnabled } = useLabs();
+  const { addSuggestion } = useSuggestions();
 
   const [buildPath, setBuildPath] = useState('');
   const [definePath, setDefinePath] = useState('');
@@ -227,8 +243,55 @@ export function GitPage() {
 
   async function handlePull() {
     setPulling(true);
-    try { await GitService.PullOrigin(repoPath); } catch (e: any) { setError(String(e)); }
-    finally { setPulling(false); refresh(); }
+    const oldHead = commits[0]?.hash ?? null;
+    try {
+      await GitService.PullOrigin(repoPath);
+      if (oldHead) {
+        try {
+          const newLog = await GitService.GetLog(repoPath, LOG_LIMIT);
+          const newHead = newLog?.[0]?.hash ?? null;
+          if (newHead && newHead !== oldHead) {
+            if (activeRepo === 'define' && isSuggestionEnabled('git-pull-define-upgrade')) {
+              addSuggestion({
+                definitionId: 'git-pull-define-upgrade',
+                category: 'Define',
+                title: 'New define changes pulled',
+                body: 'Run package install to pick up the latest generated code.',
+                priority: 'passive',
+              });
+            } else if (activeRepo === 'build' && isSuggestionEnabled('git-pull-build-upgrade')) {
+              const oldHeadIdx = newLog?.findIndex(c => c.hash === oldHead) ?? -1;
+              const newCommits = newLog?.slice(0, oldHeadIdx === -1 ? undefined : oldHeadIdx) ?? [];
+              if (newCommits.length > 0) {
+                const fileResults = await Promise.all(
+                  newCommits.map(c => GitService.GetCommitFiles(repoPath, c.hash))
+                );
+                const allFiles = fileResults.flat().map((f: any) => f.path.toLowerCase());
+                const hasPackageFiles = allFiles.some((p: string) =>
+                  PACKAGE_FILE_NAMES.some(name => p === name || p.endsWith('/' + name))
+                );
+                if (hasPackageFiles) {
+                  addSuggestion({
+                    definitionId: 'git-pull-build-upgrade',
+                    category: 'Build & Deploy',
+                    title: 'Dependency files changed',
+                    body: 'Package management files were updated in the pull. Run install to sync.',
+                    priority: 'passive',
+                  });
+                }
+              }
+            }
+          }
+        } catch {
+          // suggestion detection is best-effort
+        }
+      }
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setPulling(false);
+      refresh();
+    }
   }
 
   async function handleCheckout(name: string) {
@@ -376,8 +439,37 @@ export function GitPage() {
 
               <ResizablePanel defaultSize={40} minSize={20}>
                 <div className="h-full flex flex-col overflow-hidden">
-                  <div className="shrink-0 px-4 py-2 border-b border-foreground/10 text-[11px] text-foreground/40 uppercase tracking-wider font-semibold">
-                    Git Graph · {commits.length} commits
+                  <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-foreground/10">
+                    <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
+                      Git Graph · {commits.length} commits
+                    </span>
+                    <button
+                      onClick={handlePull}
+                      disabled={pulling}
+                      title="Pull"
+                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 19V5M5 12l7 7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handlePush}
+                      disabled={pushing}
+                      title="Push"
+                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 5v14M19 12l-7-7-7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={refresh}
+                      title="Refresh"
+                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
+                    >
+                      <RefreshCw size={12} />
+                    </button>
                   </div>
                   <div className="flex-1 overflow-hidden">
                     <GitGraph
