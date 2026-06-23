@@ -10,6 +10,7 @@ import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
 import { Toaster } from "./app/components/ui/sonner.tsx";
 import { WailsNotificationBridge } from "./app/components/WailsNotificationBridge.tsx";
+import { NetworkStatus } from "./app/components/NetworkStatus.tsx";
 import "./styles/index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -23,6 +24,7 @@ createRoot(document.getElementById("root")!).render(
                 <App />
                 <Toaster position="bottom-right" />
                 <WailsNotificationBridge />
+                <NetworkStatus />
               </PackageSessionsProvider>
             </SuggestionsProvider>
           </LabsProvider>
