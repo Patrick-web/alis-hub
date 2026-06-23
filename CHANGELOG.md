@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.6.0] - 2026-06-23
+
+### What's New
+- Deploying to multiple environments now opens a separate terminal for each, so you can watch each deployment's logs independently with its own status indicator
+- The Git panel now highlights commits that haven't been pushed yet and adds sync buttons to push or pull directly from the graph
+- Git state now refreshes automatically when you focus the app window or when files change on disk — no more manual refreshes
+- Source control view preferences are now persisted across sessions, and there's a new Settings tab in the source control panel
+- A new command palette (Cmd+K) lets you quickly jump to actions across the app
+- Smart suggestions now prompt you to commit after installing packages or to upgrade packages after a pull
+- A dismissable toast now appears when the app loses internet connectivity
+- A loading indicator and toast now appear when switching environments
+
+### Bug Fixes
+- Fixed an issue where the command palette shortcut (Cmd+K) wasn't working after navigating away
+- Fixed the command palette to open reliably via the native macOS menu accelerator
+- Fixed update checks incorrectly running in dev builds
+
 ## [v0.5.1] - 2026-06-22
 
 ### Bug Fixes
