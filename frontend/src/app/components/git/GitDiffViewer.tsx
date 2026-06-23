@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useSourceControl } from '../../stores/sourceControl';
 import { DiffFile, DiffModeEnum, DiffView } from '@git-diff-view/react';
 import '@git-diff-view/react/styles/diff-view-pure.css';
 import { Columns2, AlignJustify } from 'lucide-react';
@@ -13,7 +14,8 @@ interface Props {
 }
 
 export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
-  const [splitMode, setSplitMode] = useState(false);
+  const { state: scState, setDiffView } = useSourceControl();
+  const splitMode = scState.diffView === 'split';
 
   const diffFile = useMemo(() => {
     if (!diff || !filePath) return null;
@@ -56,7 +58,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setSplitMode(false)}
+                onClick={() => setDiffView('unified')}
                 className={`p-1 rounded transition-colors ${!splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
               >
                 <AlignJustify size={13} />
@@ -67,7 +69,7 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setSplitMode(true)}
+                onClick={() => setDiffView('split')}
                 className={`p-1 rounded transition-colors ${splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
               >
                 <Columns2 size={13} />

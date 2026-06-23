@@ -1,6 +1,7 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
+import { useSourceControl } from '../../stores/sourceControl';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { GitFileStatus, GitStatus } from './types';
 
@@ -264,7 +265,8 @@ export function GitFileList({
   status, selectedFile, selectedStaged, commitMessage, committing,
   onSelectFile, onStage, onUnstage, onDiscard, onStageAll, onCommit, onCommitMessageChange,
 }: Props) {
-  const [treeMode, setTreeMode] = useState(false);
+  const { state: scState, setFileListView } = useSourceControl();
+  const treeMode = scState.fileListView === 'tree';
   const canCommit = status.staged.length > 0 && commitMessage.trim().length > 0 && !committing;
 
   const stagedTree = buildTree(status.staged);
@@ -278,7 +280,7 @@ export function GitFileList({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => setTreeMode(false)}
+              onClick={() => setFileListView('list')}
               className={`p-1 rounded transition-colors ${!treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
             >
               <List size={12} />
@@ -289,7 +291,7 @@ export function GitFileList({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => setTreeMode(true)}
+              onClick={() => setFileListView('tree')}
               className={`p-1 rounded transition-colors ${treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
             >
               <FolderTree size={12} />
