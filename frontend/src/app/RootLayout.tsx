@@ -17,6 +17,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
 import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
 import { useCommandPalette } from './stores/commandPalette';
+import { Events } from '@wailsio/runtime';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
 import { initAccentColor } from './stores/accent';
@@ -49,14 +50,8 @@ export function RootLayout() {
   }, [navigate]);
 
   useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        toggle();
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    const off = Events.On('menu:command-palette', () => toggle());
+    return () => off();
   }, [toggle]);
 
   // On mount: check login status, then route to appropriate phase.
