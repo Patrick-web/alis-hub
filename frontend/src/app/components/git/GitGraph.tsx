@@ -109,6 +109,27 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
   const maxLane = useMemo(() => Math.max(0, ...graphRows.map(r => r.lane)), [graphRows]);
   const svgWidth = (maxLane + 2) * GRAPH_W;
 
+  const unpushedHashes = useMemo((): Set<string> => {
+    const headCommit = commits.find(c => c.refNames.some(r => r.startsWith('HEAD -> ')));
+    if (!headCommit) return new Set();
+    const currentBranch = headCommit.refNames.find(r => r.startsWith('HEAD -> '))!.replace('HEAD -> ', '');
+    const remoteRef = `origin/${currentBranch}`;
+    const remoteCommit = commits.find(c => c.refNames.includes(remoteRef));
+    if (!remoteCommit) return new Set();
+    const commitMap = new Map(commits.map(c => [c.hash, c]));
+    const unpushed = new Set<string>();
+    const visited = new Set<string>();
+    const queue = [headCommit.hash];
+    while (queue.length > 0) {
+      const hash = queue.shift()!;
+      if (visited.has(hash) || hash === remoteCommit.hash) continue;
+      visited.add(hash);
+      unpushed.add(hash);
+      for (const p of commitMap.get(hash)?.parentHashes ?? []) queue.push(p);
+    }
+    return unpushed;
+  }, [commits]);
+
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [commitFilesCache, setCommitFilesCache] = useState<Record<string, CommitFile[]>>({});
   const [loadingHash, setLoadingHash] = useState<string | null>(null);
@@ -233,7 +254,10 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
                         : `M ${fromX} ${ROW_H / 2} C ${fromX} ${ROW_H * 0.8} ${toX} ${ROW_H * 0.8} ${toX} ${ROW_H}`;
                       return <path key={i} d={d} stroke={e.color} strokeWidth={1.5} fill="none" opacity={0.7} />;
                     })}
-                    <circle cx={cx} cy={ROW_H / 2} r={DOT_R} fill={color} />
+                    {unpushedHashes.has(commit.hash)
+                      ? <circle cx={cx} cy={ROW_H / 2} r={DOT_R} fill="transparent" stroke={color} strokeWidth={1.5} />
+                      : <circle cx={cx} cy={ROW_H / 2} r={DOT_R} fill={color} />
+                    }
                   </svg>
 
                   {/* Text */}
