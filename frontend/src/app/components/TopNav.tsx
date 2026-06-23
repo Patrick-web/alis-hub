@@ -7,6 +7,7 @@ import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { notify } from '../lib/notify';
 
 function WindowControls() {
   return (
@@ -49,6 +50,7 @@ export function TopNav() {
   const [avatarName, setAvatarName] = useState('');
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);
+  const [switchingEnv, setSwitchingEnv] = useState(false);
 
   useEffect(() => {
     ProductService.GetUserProfile().then((p: any) => {
@@ -186,12 +188,16 @@ export function TopNav() {
         <div className="content-stretch flex h-full items-center shrink-0">
           <button
             onClick={() => setEnvModalOpen(true)}
-            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-foreground/5 transition-colors border-l border-border"
+            disabled={switchingEnv}
+            className="content-stretch flex gap-[5px] h-full items-center px-[12px] relative shrink-0 hover:bg-foreground/5 transition-colors border-l border-border disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <p className="font-mono leading-normal not-italic relative shrink-0 text-[11px] text-foreground whitespace-nowrap">
               {activeEnvDisplay}
             </p>
-            <Icon icon="solar:alt-arrow-down-linear" className="text-foreground text-xs opacity-50" />
+            {switchingEnv
+              ? <Icon icon="solar:refresh-linear" className="text-foreground text-xs opacity-50 animate-spin" />
+              : <Icon icon="solar:alt-arrow-down-linear" className="text-foreground text-xs opacity-50" />
+            }
           </button>
         </div>
 
@@ -242,12 +248,19 @@ export function TopNav() {
                   <button
                     key={env.name}
                     onClick={() => {
-                      setActiveEnv(env.name);
                       setEnvModalOpen(false);
-                      Call.ByName('main.ProductService.SwitchEnvironment',
+                      setSwitchingEnv(true);
+                      const p = Call.ByName(
+                        'main.ProductService.SwitchEnvironment',
                         state.organisation, state.product, env.name,
                         env.gcpProjectId ?? '', env.gcpProjectNumber ?? '', env.gcpRegion ?? ''
-                      ).catch(console.error);
+                      ).then(() => { setActiveEnv(env.name); });
+                      notify.promise(p, {
+                        loading: `Switching to ${env.displayName}…`,
+                        success: `Switched to ${env.displayName}`,
+                        error: `Failed to switch to ${env.displayName}`,
+                      });
+                      p.finally(() => setSwitchingEnv(false));
                     }}
                     className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
                       isActive
