@@ -54,6 +54,17 @@ export function RootLayout() {
     return () => off();
   }, [toggle]);
 
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        toggle();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [toggle]);
+
   // On mount: check login status, then route to appropriate phase.
   // DEV: ?phase=picking-org overrides for browser testing without Wails bridge.
   useEffect(() => {
