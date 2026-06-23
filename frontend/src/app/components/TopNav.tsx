@@ -6,6 +6,7 @@ import { useWorkspace } from '../stores/workspace';
 import { Call, Window } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
+import { useCommandPalette } from '../stores/commandPalette';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
 
@@ -107,6 +108,8 @@ export function TopNav() {
     .finally(() => { neuronsLoadingRef.current = false; });
   }, [state.organisation, state.product, state.neurons.length]);
 
+  const { open: openPalette } = useCommandPalette();
+
   const activeEnvDisplay = state.loadedEnvs.find(e => e.name === state.activeEnvName)?.displayName ?? 'Environment';
 
   const getActiveTab = () => {
@@ -184,6 +187,15 @@ export function TopNav() {
 
       {/* Right: Environment + Profile + Update badge */}
       <div className="flex items-center h-full px-[10px] gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        {/* Command palette trigger */}
+        <button
+          onClick={openPalette}
+          title="Command Palette (⌘K)"
+          className="flex items-center gap-[5px] px-[8px] h-[24px] rounded-[6px] border border-border bg-transparent hover:bg-foreground/5 transition-colors text-foreground/40 hover:text-foreground/70 shrink-0"
+        >
+          <Icon icon="solar:command-linear" className="text-[13px]" />
+          <span className="text-[10px] font-mono">K</span>
+        </button>
         {/* Environment picker — opens modal */}
         <div className="content-stretch flex h-full items-center shrink-0">
           <button
