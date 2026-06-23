@@ -28,6 +28,18 @@ const ACTION_FACTORIES: Record<string, ActionFactory> = {
     { label: 'View Terminal', variant: 'primary', onClick: () => { navigate('/develop'); dismiss(s.id); } },
     { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
   ],
+  'packages-installed-commit': (s, navigate, dismiss) => [
+    { label: 'Open Source Control', variant: 'primary', onClick: () => { navigate('/git'); dismiss(s.id); } },
+    { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
+  ],
+  'git-pull-define-upgrade': (s, navigate, dismiss) => [
+    { label: 'Install Packages', variant: 'primary', onClick: () => { navigate('/develop'); dismiss(s.id); } },
+    { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
+  ],
+  'git-pull-build-upgrade': (s, navigate, dismiss) => [
+    { label: 'Install Packages', variant: 'primary', onClick: () => { navigate('/develop'); dismiss(s.id); } },
+    { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
+  ],
 };
 
 function SuggestionCard({ suggestion, actions }: { suggestion: Suggestion; actions: SuggestionAction[] }) {

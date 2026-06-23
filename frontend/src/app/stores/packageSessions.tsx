@@ -123,6 +123,15 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
         priority: 'passive',
       });
     }
+    if (!hasErrors && isSuggestionEnabled('packages-installed-commit')) {
+      addSuggestion({
+        definitionId: 'packages-installed-commit',
+        category: 'Build & Deploy',
+        title: 'Commit package changes?',
+        body: 'Packages installed successfully. Stage and commit the updated files.',
+        priority: 'passive',
+      });
+    }
     if (hasErrors && isSuggestionEnabled('build-failure-verbose')) {
       addSuggestion({
         definitionId: 'build-failure-verbose',
