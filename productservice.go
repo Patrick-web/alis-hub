@@ -2575,9 +2575,18 @@ func marshalCreateBlockVersionFromCommitsRequest(blockID, instanceName, defineCo
 	return req
 }
 
-// OpenWorktreeInFinder opens the given directory in macOS Finder.
+// OpenWorktreeInFinder opens the given directory in the system file manager.
 func (s *ProductService) OpenWorktreeInFinder(path string) error {
-	return exec.Command("open", path).Run()
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		cmd = exec.Command("open", path)
+	case "windows":
+		cmd = exec.Command("explorer", path)
+	default:
+		cmd = exec.Command("xdg-open", path)
+	}
+	return cmd.Start()
 }
 
 // neuronVersionRoot derives ~/alis.build/{org}/build/{product}/{neuron}/{version} from a package string.

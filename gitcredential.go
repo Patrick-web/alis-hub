@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -173,7 +175,10 @@ func migrateRepoConfig(configPath, authConfigPath string) error {
 		return err
 	}
 
-	if strings.Contains(string(data), authConfigPath) {
+	// Git requires forward slashes in [include] path values on all platforms.
+	gitConfigPath := filepath.ToSlash(authConfigPath)
+
+	if strings.Contains(string(data), gitConfigPath) || strings.Contains(string(data), authConfigPath) {
 		return nil
 	}
 
@@ -181,12 +186,12 @@ func migrateRepoConfig(configPath, authConfigPath string) error {
 	if !strings.HasSuffix(appended, "\n") {
 		appended += "\n"
 	}
-	appended += "[include]\n\tpath = " + authConfigPath + "\n"
+	appended += "[include]\n\tpath = " + gitConfigPath + "\n"
 	return os.WriteFile(configPath, []byte(appended), 0600)
 }
 
-// installCredentialHelper creates ~/.alis/bin/git-credential-alis as a symlink
-// to the running executable (multi-call binary pattern).
+// installCredentialHelper installs git-credential-alis into ~/.alis/bin/.
+// On Windows, os.Symlink requires elevated privileges, so we copy the exe instead.
 func installCredentialHelper() error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -207,10 +212,32 @@ func installCredentialHelper() error {
 		return err
 	}
 
-	helperPath := filepath.Join(binDir, "git-credential-alis")
+	helperName := "git-credential-alis"
+	if runtime.GOOS == "windows" {
+		helperName += ".exe"
+	}
+	helperPath := filepath.Join(binDir, helperName)
 	// Always recreate so path stays current after updates.
 	_ = os.Remove(helperPath)
+	if runtime.GOOS == "windows" {
+		return copyExe(exe, helperPath)
+	}
 	return os.Symlink(exe, helperPath)
+}
+
+func copyExe(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // RunAsCredentialHelper implements the git credential helper protocol.
@@ -273,7 +300,11 @@ func configureGlobalCredentialHelper() error {
 	if err != nil {
 		return err
 	}
-	helperPath := filepath.Join(home, ".alis", "bin", "git-credential-alis")
+	helperName := "git-credential-alis"
+	if runtime.GOOS == "windows" {
+		helperName += ".exe"
+	}
+	helperPath := filepath.Join(home, ".alis", "bin", helperName)
 
 	// git config --global credential.https://forgejo-*.run.app.helper <path>
 	// Unfortunately git doesn't support wildcards in credential URLs, so we set
