@@ -9,11 +9,13 @@ import { useWorkspace } from '../../stores/workspace';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
-import type { DefineCommit, BuildResult, BuildStep, BuildMode } from './types';
+import type { DefineCommit, BuildResult, BuildStep, BuildMode, DeployEnv, EnvRunState } from './types';
 import { parseNeuron, formatTimestamp } from './types';
 import { notify } from '../../lib/notify';
 import { systemNotify } from '../../lib/systemNotify';
 import * as BuildService from '../../../../bindings/alis-hub-v3/buildservice';
+import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
+import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 
 interface BuildPaneProps {
   tabId: string;
@@ -38,6 +40,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
   const [localBuildId, setLocalBuildId] = useState<string | null>(null);
 
+  // Build+Deploy state
+  const [deployEnvs, setDeployEnvs] = useState<DeployEnv[]>([]);
+  const [selectedDeployEnvs, setSelectedDeployEnvs] = useState<string[]>([]);
+  const [envsLoading, setEnvsLoading] = useState(false);
+  const [buildPhase, setBuildPhase] = useState<'build' | 'deploy'>('build');
+  const [deployRuns, setDeployRuns] = useState<EnvRunState[]>([]);
+  const [activeRunEnv, setActiveRunEnv] = useState('');
+
   const termRef = useRef<BuildTerminalHandle>(null);
   const logOffsetRef = useRef<number>(0);
   const logBufferRef = useRef<string[]>([]);
@@ -45,8 +55,21 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
 
   const orgRef = useRef(state.organisation);
   const productRef = useRef(state.product);
+  const activeEnvRef = useRef(state.activeEnvName);
   orgRef.current = state.organisation;
   productRef.current = state.product;
+  activeEnvRef.current = state.activeEnvName;
+
+  // Refs for build+deploy phase
+  const buildModeRef = useRef(buildMode);
+  buildModeRef.current = buildMode;
+  const selectedDeployEnvsRef = useRef(selectedDeployEnvs);
+  selectedDeployEnvsRef.current = selectedDeployEnvs;
+  const deployEnvsRef = useRef(deployEnvs);
+  deployEnvsRef.current = deployEnvs;
+  const deployTermsMap = useRef<Record<string, BuildTerminalHandle | null>>({});
+  const deployLogOffsets = useRef<Record<string, number>>({});
+  const deployLogBuffers = useRef<Record<string, string[]>>({});
 
   useEffect(() => {
     if (restore?.task) {
@@ -74,6 +97,10 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     setBranch(b);
     setLocalBuildId(null);
     logOffsetRef.current = 0;
+    setBuildPhase('build');
+    setDeployRuns([]);
+    setActiveRunEnv('');
+    setSelectedDeployEnvs([]);
     setCommitsLoading(true);
     const parsed = parseNeuron(neuron);
     const [, commitsResult] = await Promise.allSettled([
@@ -102,6 +129,29 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     }
   }
 
+  async function loadDeployEnvs() {
+    setEnvsLoading(true);
+    setDeployEnvs([]);
+    try {
+      const overview = await ProductService.GetServicesOverview(orgRef.current, productRef.current);
+      const envList: DeployEnv[] = (overview?.environments ?? []).map((env: any) => ({
+        name: env.name, displayName: env.displayName, currentVersion: '',
+      }));
+      setDeployEnvs(envList);
+      if (activeEnvRef.current) {
+        const active = envList.find(e => e.name === activeEnvRef.current);
+        if (active) setSelectedDeployEnvs([active.name]);
+      }
+    } catch {} finally {
+      setEnvsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (buildMode !== 'deploy') return;
+    loadDeployEnvs();
+  }, [buildMode]);
+
   async function handleRunBuild() {
     if (!selectedCommit) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
@@ -128,18 +178,9 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       return;
     }
 
-    if (buildMode === 'deploy') {
-      setStep('running');
-      setProgressMsg('Building and deploying...');
-      setTimeout(() => {
-        termRef.current?.write('\x1b[33m[deploy]\x1b[0m  Coming soon — not yet implemented.\r\n');
-        setStep('result');
-        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, stub: true });
-      }, 200);
-      return;
-    }
-
+    // Cloud build (both 'cloud' and 'deploy' modes)
     setStep('running');
+    setBuildPhase('build');
     setProgressMsg('Starting Build...');
     const taskId = addNotification({
       severity: 'info', source: 'build', title: 'Build started', body: neuron, persistent: true,
@@ -160,6 +201,44 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     }
   }
 
+  async function handleStartDeploy(version: string) {
+    setBuildPhase('deploy');
+    setProgressMsg('Starting Deploy...');
+    deployLogOffsets.current = {};
+    deployLogBuffers.current = {};
+    deployTermsMap.current = {};
+
+    const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
+    const envs = selectedDeployEnvsRef.current;
+    const envObjList = deployEnvsRef.current;
+
+    envs.forEach(env => {
+      deployLogOffsets.current[env] = 0;
+      deployLogBuffers.current[env] = [];
+    });
+
+    const initialRuns: EnvRunState[] = envs.map(envName => {
+      const envObj = envObjList.find(e => e.name === envName);
+      return { env: envName, displayName: envObj?.displayName || envName, operationName: '', logsUrl: '', version: '', progressMsg: 'Starting...', done: false };
+    });
+    setDeployRuns(initialRuns);
+    setActiveRunEnv(envs[0] || '');
+
+    let startError: string | null = null;
+    const deployResult = await DeployService.RunDeploy(neuronResource, version, envs, false, false)
+      .catch((e: unknown) => { startError = e instanceof Error ? e.message : String(e); return null; });
+
+    const updatedRuns: EnvRunState[] = initialRuns.map((run, i) => ({
+      ...run,
+      operationName: deployResult?.operationName ?? '',
+      deploymentIndex: i,
+      progressMsg: startError ? `Failed: ${startError}` : (deployResult?.notes || 'Running...'),
+      done: !!startError,
+      error: startError ?? undefined,
+    }));
+    setDeployRuns(updatedRuns);
+  }
+
   // Poll cloud build
   useEffect(() => {
     if (!buildResult || buildResult.done || step !== 'running') return;
@@ -170,26 +249,35 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         setBuildResult(result as BuildResult);
         if (result?.done) {
           clearInterval(interval);
-          setStep('result');
           if (!result.error) {
-            const version = result.neuronVersion || result.version;
-            const body = version ? `${neuron} · ${version}` : neuron;
-            if (taskIdRef.current) {
-              updateNotification(taskIdRef.current, {
-                severity: 'success', title: 'Build complete', body,
-                task: { status: 'done', step: 'result' },
-                actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } }],
+            if (buildModeRef.current === 'deploy') {
+              const version = result.neuronVersion || result.version;
+              setStep('running');
+              handleStartDeploy(version);
+            } else {
+              setStep('result');
+              const version = result.neuronVersion || result.version;
+              const body = version ? `${neuron} · ${version}` : neuron;
+              if (taskIdRef.current) {
+                updateNotification(taskIdRef.current, {
+                  severity: 'success', title: 'Build complete', body,
+                  task: { status: 'done', step: 'result' },
+                  actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } }],
+                });
+                taskIdRef.current = null;
+              }
+              notify.success('Build complete', {
+                description: body,
+                action: { label: 'Deploy', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } },
               });
+              systemNotify('Build complete', body);
+            }
+          } else {
+            setStep('result');
+            if (taskIdRef.current) {
+              updateNotification(taskIdRef.current, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
               taskIdRef.current = null;
             }
-            notify.success('Build complete', {
-              description: body,
-              action: { label: 'Deploy', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } },
-            });
-            systemNotify('Build complete', body);
-          } else if (taskIdRef.current) {
-            updateNotification(taskIdRef.current, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
-            taskIdRef.current = null;
           }
         } else if (result?.notes) {
           setProgressMsg(result.notes);
@@ -262,6 +350,91 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     }, 500);
     return () => clearInterval(interval);
   }, [localBuildId, step]);
+
+  // Poll deploy operations (build+deploy mode)
+  const deployPollKey = deployRuns.filter(r => r.operationName && !r.done).map(r => r.operationName).join(',');
+  useEffect(() => {
+    if (!deployPollKey || step !== 'running' || buildPhase !== 'deploy') return;
+    const interval = setInterval(async () => {
+      let updatedRuns: EnvRunState[] | null = null;
+      setDeployRuns(prev => { updatedRuns = prev; return prev; });
+      if (!updatedRuns) return;
+
+      const running = (updatedRuns as EnvRunState[]).filter(r => r.operationName && !r.done);
+      if (running.length === 0) return;
+
+      const uniqueOpNames = [...new Set(running.map(r => r.operationName))];
+      const polled = await Promise.allSettled(
+        uniqueOpNames.map(name => DeployService.PollDeployOperation(name))
+      );
+
+      setDeployRuns(prev => {
+        const next = [...prev];
+        uniqueOpNames.forEach((opName, opIdx) => {
+          const res = polled[opIdx];
+          const envMatches = next.filter(r => r.operationName === opName && !r.done);
+          envMatches.forEach(run => {
+            const idx = next.findIndex(r => r.env === run.env);
+            if (idx === -1) return;
+            if (res.status === 'fulfilled' && res.value) {
+              const r = res.value;
+              next[idx] = {
+                ...next[idx],
+                done: r.done ?? false,
+                error: r.error || undefined,
+                version: r.version || next[idx].version,
+                logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
+                progressMsg: r.notes || next[idx].progressMsg,
+              };
+            } else if (res.status === 'rejected') {
+              next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
+            }
+          });
+        });
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [deployPollKey, step, buildPhase]);
+
+  // Stream deploy logs (build+deploy mode)
+  const deployLogsKey = deployRuns.filter(r => r.logsUrl).map(r => r.logsUrl + r.done).join(',');
+  useEffect(() => {
+    const withLogs = deployRuns.filter(r => r.logsUrl);
+    if (withLogs.length === 0) return;
+
+    const intervals: (ReturnType<typeof setInterval> | null)[] = withLogs.map(run => {
+      const fetchLogs = async () => {
+        try {
+          const chunk = await DeployService.FetchDeployLogs(run.logsUrl, deployLogOffsets.current[run.env] ?? 0);
+          if (chunk?.content) {
+            deployTermsMap.current[run.env]?.write(chunk.content);
+            deployLogOffsets.current[run.env] = chunk.nextOffset;
+            deployLogBuffers.current[run.env] = [...(deployLogBuffers.current[run.env] ?? []), chunk.content];
+          }
+        } catch {}
+      };
+      if (run.done) { fetchLogs(); return null; }
+      return setInterval(fetchLogs, 3000);
+    });
+
+    return () => intervals.forEach(i => { if (i !== null) clearInterval(i); });
+  }, [deployLogsKey]);
+
+  // Transition to result when all deploy runs finish
+  useEffect(() => {
+    if (step !== 'running' || buildPhase !== 'deploy' || deployRuns.length === 0) return;
+    if (!deployRuns.every(r => r.done)) return;
+    setStep('result');
+    if (taskIdRef.current) {
+      const doneId = taskIdRef.current;
+      taskIdRef.current = null;
+      const hasError = deployRuns.some(r => r.error);
+      updateNotification(doneId, hasError
+        ? { severity: 'error', title: 'Build & Deploy failed', task: { status: 'error', step: 'result' } }
+        : { severity: 'success', title: 'Build & Deploy complete', body: neuron, task: { status: 'done', step: 'result' } });
+    }
+  }, [deployRuns, step, buildPhase]);
 
   return (
     <>
@@ -350,14 +523,57 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
               </button>
             ))}
           </div>
-          <Button variant="primary" className="w-full justify-center py-[10px]" onClick={handleRunBuild}>
+
+          {/* Environment picker — shown only for Build and Deploy mode */}
+          {buildMode === 'deploy' && (
+            <div className="mb-[20px]">
+              <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">Target Environments</p>
+              {envsLoading ? (
+                <div className="flex items-center gap-[8px] text-[10px] text-foreground/40">
+                  <Loader size={14} />
+                  Loading...
+                </div>
+              ) : deployEnvs.length === 0 ? (
+                <p className="text-[10px] text-foreground/30">No environments found.</p>
+              ) : (
+                <div className="flex flex-col gap-[2px]">
+                  {deployEnvs.map(env => {
+                    const selected = selectedDeployEnvs.includes(env.name);
+                    return (
+                      <button
+                        key={env.name}
+                        onClick={() => setSelectedDeployEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
+                        className={`flex items-center gap-[10px] px-[12px] py-[9px] rounded-[6px] border transition-colors text-left ${
+                          selected
+                            ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                            : 'bg-background border-border text-foreground/50 hover:text-foreground/70'
+                        }`}
+                      >
+                        <span className={`size-[12px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand border-brand' : 'border-border'}`}>
+                          {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[8px]" />}
+                        </span>
+                        <span className="text-[11px] font-medium flex-1">{env.displayName || env.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          <Button
+            variant="primary"
+            className="w-full justify-center py-[10px]"
+            disabled={buildMode === 'deploy' && selectedDeployEnvs.length === 0}
+            onClick={handleRunBuild}
+          >
             {buildMode === 'cloud' ? 'Run Cloud Build' : buildMode === 'local' ? 'Build Locally' : 'Build and Deploy'}
           </Button>
         </div>
       )}
 
-      {/* Steps: running + result share the terminal */}
-      {(step === 'running' || step === 'result') && (
+      {/* Steps: running + result — build phase (single terminal) */}
+      {(step === 'running' || step === 'result') && buildPhase === 'build' && (
         <div className="flex-1 flex flex-col min-h-0">
           {step === 'running' && (
             <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
@@ -373,14 +589,9 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           )}
           {step === 'result' && (
             <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
-              buildResult?.stub ? 'bg-[rgba(255,159,10,0.05)]' : buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
+              buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
             }`}>
-              {buildResult?.stub ? (
-                <div className="flex items-center gap-[8px]">
-                  <Icon icon="solar:clock-circle-linear" className="text-warning text-sm shrink-0" />
-                  <p className="text-[10px] font-bold text-foreground/70 leading-tight">Build and Deploy — Coming Soon</p>
-                </div>
-              ) : buildResult?.error ? (
+              {buildResult?.error ? (
                 <div className="flex items-start gap-[8px]">
                   <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                   <p className="text-[10px] text-foreground/70 leading-relaxed">{buildResult.error}</p>
@@ -411,6 +622,92 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
               <button onClick={() => loadCommits('master')} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
                 <Icon icon="solar:refresh-linear" className="text-sm" />
                 Run Build again
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Steps: running + result — deploy phase (per-env terminals) */}
+      {(step === 'running' || step === 'result') && buildPhase === 'deploy' && (
+        <div className="flex-1 flex flex-col min-h-0">
+          {deployRuns.length > 1 && (
+            <div className="shrink-0 flex border-b border-border overflow-x-auto">
+              {deployRuns.map(run => (
+                <button
+                  key={run.env}
+                  onClick={() => setActiveRunEnv(run.env)}
+                  className={`flex items-center gap-[6px] px-[12px] py-[8px] text-[10px] shrink-0 border-r border-border transition-colors ${
+                    activeRunEnv === run.env
+                      ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
+                      : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/[2%]'
+                  }`}
+                >
+                  {run.done && run.error ? (
+                    <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px] shrink-0" />
+                  ) : run.done ? (
+                    <Icon icon="solar:check-circle-linear" className="text-success text-[11px] shrink-0" />
+                  ) : (
+                    <Loader size={10} />
+                  )}
+                  <span className="font-medium">{run.displayName}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {deployRuns.map(run => (
+            <div
+              key={run.env}
+              className="flex-1 flex flex-col min-h-0"
+              style={{ display: (activeRunEnv === run.env || deployRuns.length === 1) ? 'flex' : 'none' }}
+            >
+              {step === 'running' && !run.done && (
+                <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
+                  <Loader size={20} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-bold text-foreground leading-tight">Deploying</p>
+                    <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{run.progressMsg}</p>
+                  </div>
+                </div>
+              )}
+              {(step === 'result' || run.done) && (
+                <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${run.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
+                  {run.error ? (
+                    <div className="flex items-start gap-[8px]">
+                      <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
+                      <p className="text-[10px] text-foreground/70 leading-relaxed">{run.error}</p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-[8px]">
+                      <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold text-foreground leading-tight">Deploy Complete</p>
+                        {run.version && (
+                          <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{run.version}</p>
+                        )}
+                      </div>
+                      {run.logsUrl && (
+                        <button onClick={() => Browser.OpenURL(run.logsUrl)} className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
+                          <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              <BuildTerminal
+                ref={r => { deployTermsMap.current[run.env] = r; }}
+                className="flex-1 min-h-0"
+              />
+            </div>
+          ))}
+
+          {step === 'result' && (
+            <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
+              <button onClick={() => loadCommits('master')} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
+                <Icon icon="solar:refresh-linear" className="text-sm" />
+                Run again
               </button>
             </div>
           )}
