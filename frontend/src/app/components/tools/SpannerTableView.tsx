@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Loader } from '../Loader';
 import { Button } from '../Button';
 import { FilterSelect } from '../FilterSelect';
+import { SearchableSelect } from '../ui/searchable-select';
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle,
 } from '../ui/sheet';
@@ -338,22 +339,17 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             {whereConditions.map((cond) => (
               <div key={cond.id} className="flex items-center gap-[5px]">
                 <Icon icon="solar:filter-linear" className="text-[10px] text-foreground/25 shrink-0" />
-                <select
+                <SearchableSelect
                   value={cond.column}
-                  onChange={(e) => updateCondition(cond.id, { column: e.target.value })}
-                  className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer max-w-[130px]"
-                >
-                  {(columns.length > 0 ? columns : [cond.column]).map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <select
+                  options={columns.length > 0 ? columns : [cond.column]}
+                  onChange={(val) => updateCondition(cond.id, { column: val })}
+                  className="max-w-[130px]"
+                />
+                <SearchableSelect
                   value={cond.op}
-                  onChange={(e) => updateCondition(cond.id, { op: e.target.value as WhereOp })}
-                  className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] cursor-pointer"
-                >
-                  {OPS.map((op) => <option key={op} value={op}>{op}</option>)}
-                </select>
+                  options={[...OPS]}
+                  onChange={(val) => updateCondition(cond.id, { op: val as WhereOp })}
+                />
                 {!NO_VALUE_OPS.includes(cond.op) && (
                   <input
                     value={cond.value}

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { ForgejoPR, GitBranch } from './types';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, GitPullRequest, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { GitPullRequest, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { SearchableSelect } from '../ui/searchable-select';
 
 interface Props {
   prs: ForgejoPR[];
@@ -38,7 +38,10 @@ export function GitPRList({
   const [head, setHead] = useState(currentBranch);
   const [base, setBase] = useState('main');
 
-  const localBranches = branches.filter(b => !b.isRemote).map(b => b.name);
+  const remoteBranches = branches
+    .filter(b => b.isRemote)
+    .map(b => b.name.replace(/^origin\//, ''))
+    .filter((v, i, a) => a.indexOf(v) === i);
 
   async function handleCreate() {
     if (!title.trim()) return;
@@ -107,9 +110,9 @@ export function GitPRList({
               onChange={e => setBody(e.target.value)}
             />
             <div className="flex gap-1.5">
-              <BranchSelect label="From" value={head} options={localBranches} onChange={setHead} />
+              <SearchableSelect label="From" value={head} options={remoteBranches} onChange={setHead} className="flex-1 min-w-0" />
               <span className="text-foreground/30 text-xs self-center">→</span>
-              <BranchSelect label="Into" value={base} options={localBranches} onChange={setBase} />
+              <SearchableSelect label="Into" value={base} options={remoteBranches} onChange={setBase} className="flex-1 min-w-0" />
             </div>
             <div className="flex gap-1.5 justify-end">
               <button
@@ -174,35 +177,5 @@ export function GitPRList({
         )}
       </div>
     </div>
-  );
-}
-
-function BranchSelect({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void;
-}) {
-  return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger asChild>
-        <button className="flex items-center gap-1 text-[10px] bg-foreground/5 border border-foreground/15 rounded px-1.5 py-1 text-foreground/70 hover:border-foreground/25 transition-colors flex-1 min-w-0">
-          <span className="text-foreground/30 shrink-0">{label}</span>
-          <span className="font-mono truncate flex-1">{value}</span>
-          <ChevronDown size={9} className="shrink-0 text-foreground/30" />
-        </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content className="z-50 min-w-[160px] max-h-[200px] overflow-y-auto rounded-md bg-background border border-foreground/10 shadow-xl py-1 text-xs" sideOffset={4}>
-          {options.map(opt => (
-            <DropdownMenu.Item
-              key={opt}
-              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/70 font-mono"
-              onSelect={() => onChange(opt)}
-            >
-              {opt === value && <span className="text-pink-400 text-[10px]">✓</span>}
-              <span style={{ marginLeft: opt === value ? 0 : 14 }}>{opt}</span>
-            </DropdownMenu.Item>
-          ))}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
   );
 }
