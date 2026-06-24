@@ -131,16 +131,15 @@ export function UpdateNotification({ info, progress, installError, onInstall, on
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>
               <span>{pct}%</span>
-              <span>Will restart automatically</span>
             </div>
           </>
         )}
 
-        {/* Done — installing / error */}
+        {/* Done — ready to install / error */}
         {isDone && (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
-              {installError ? 'Install failed' : 'Restarting…'}
+              {installError ? 'Install failed' : `v${info.latestVersion} ready`}
             </div>
             {installError ? (
               <div style={{ fontSize: 11, color: 'rgba(255,92,95,0.9)', lineHeight: 1.5 }}>
@@ -148,7 +147,7 @@ export function UpdateNotification({ info, progress, installError, onInstall, on
               </div>
             ) : (
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                v{info.latestVersion} downloaded. Applying update…
+                Downloaded and ready to install.
               </div>
             )}
           </>
@@ -174,9 +173,10 @@ export function UpdateNotification({ info, progress, installError, onInstall, on
               <button onClick={onInstall} style={primaryBtn}>Install &amp; Restart</button>
             </>
           ) : (
-            <div style={{ ...ghostBtn, flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.35)', cursor: 'default' }}>
-              Restarting…
-            </div>
+            <>
+              <button onClick={onDismiss} style={ghostBtn}>Later</button>
+              <button onClick={onInstall} style={primaryBtn}>Install &amp; Restart</button>
+            </>
           )
         ) : (
           <>
