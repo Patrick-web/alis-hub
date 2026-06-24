@@ -57,6 +57,7 @@ export interface EnvRunState {
   progressMsg: string;
   done: boolean;
   error?: string;
+  deploymentIndex?: number;
 }
 
 export interface DeployResult {
