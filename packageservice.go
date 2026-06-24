@@ -159,7 +159,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 		if rel == "" || rel == "." {
 			names[dir] = folderName
 		} else {
-			names[dir] = folderName + "/" + rel
+			names[dir] = folderName + "/" + filepath.ToSlash(rel)
 		}
 		return nil
 	})
