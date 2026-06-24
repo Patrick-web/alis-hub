@@ -145,25 +145,25 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     taskIdRef.current = taskId;
     setTabNotificationId(tabId, taskId);
 
-    // Start one deploy per environment in parallel
-    const results = await Promise.allSettled(
-      selectedEnvs.map(env => DeployService.RunDeploy(neuronResource, version, [env], planOnly, beta))
-    );
+    // Start a single deploy for all environments
+    let deployResult = null;
+    let startError: string | null = null;
+    try {
+      deployResult = await DeployService.RunDeploy(neuronResource, version, selectedEnvs, planOnly, beta);
+    } catch (e: unknown) {
+      startError = e instanceof Error ? e.message : String(e);
+    }
 
     const updatedRuns: EnvRunState[] = initialRuns.map((run, i) => {
-      const result = results[i];
-      if (result.status === 'fulfilled' && result.value) {
+      if (deployResult) {
         return {
           ...run,
-          operationName: result.value.operationName ?? '',
-          logsUrl: result.value.deployments?.[0]?.logsUrl ?? '',
-          version: result.value.version ?? version,
-          progressMsg: result.value.notes || 'Running...',
+          operationName: deployResult.operationName ?? '',
+          deploymentIndex: i,
+          progressMsg: deployResult.notes || 'Running...',
         };
-      } else {
-        const errMsg = (result as PromiseRejectedResult).reason?.message || 'Failed to start';
-        return { ...run, done: true, error: errMsg, progressMsg: `Failed: ${errMsg}` };
       }
+      return { ...run, done: true, error: startError ?? 'Failed to start', progressMsg: `Failed: ${startError}` };
     });
     setEnvRuns(updatedRuns);
 
@@ -173,7 +173,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         meta: {
           envOps: updatedRuns.map(r => ({
             env: r.env, displayName: r.displayName, operationName: r.operationName,
-            logsUrl: r.logsUrl, version: r.version,
+            logsUrl: r.logsUrl, version: r.version, deploymentIndex: r.deploymentIndex,
           })),
         },
       },
@@ -195,28 +195,33 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       const running = (updatedRuns as EnvRunState[]).filter(r => r.operationName && !r.done);
       if (running.length === 0) return;
 
+      const uniqueOpNames = [...new Set(running.map(r => r.operationName))];
       const polled = await Promise.allSettled(
-        running.map(r => DeployService.PollDeployOperation(r.operationName))
+        uniqueOpNames.map(name => DeployService.PollDeployOperation(name))
       );
 
       setEnvRuns(prev => {
         const next = [...prev];
-        running.forEach((run, i) => {
-          const res = polled[i];
-          const idx = next.findIndex(r => r.env === run.env);
-          if (idx === -1) return;
-          if (res.status === 'fulfilled' && res.value) {
-            const r = res.value;
-            next[idx] = {
-              ...next[idx],
-              done: r.done ?? false,
-              error: r.error || undefined,
-              version: r.version || next[idx].version,
-              progressMsg: r.notes || next[idx].progressMsg,
-            };
-          } else if (res.status === 'rejected') {
-            next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
-          }
+        uniqueOpNames.forEach((opName, opIdx) => {
+          const res = polled[opIdx];
+          const envs = next.filter(r => r.operationName === opName && !r.done);
+          envs.forEach(run => {
+            const idx = next.findIndex(r => r.env === run.env);
+            if (idx === -1) return;
+            if (res.status === 'fulfilled' && res.value) {
+              const r = res.value;
+              next[idx] = {
+                ...next[idx],
+                done: r.done ?? false,
+                error: r.error || undefined,
+                version: r.version || next[idx].version,
+                logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
+                progressMsg: r.notes || next[idx].progressMsg,
+              };
+            } else if (res.status === 'rejected') {
+              next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
+            }
+          });
         });
         return next;
       });
