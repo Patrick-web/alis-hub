@@ -19,6 +19,9 @@ var version = "dev"
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var appIcon []byte
+
 func main() {
 	// Multi-call binary: act as git credential helper when invoked under that name.
 	if base := filepath.Base(os.Args[0]); strings.Contains(base, "git-credential-alis") {
@@ -42,6 +45,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "AlisHub",
 		Description: "AlisHub Desktop Application",
+		Icon:        appIcon,
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
