@@ -3,6 +3,7 @@ module alis-hub-v3
 go 1.25.0
 
 require (
+	github.com/UserExistsError/conpty v0.1.4
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/creack/pty v1.1.24
 	github.com/fsnotify/fsnotify v1.10.1
