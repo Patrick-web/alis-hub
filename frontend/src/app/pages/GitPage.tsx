@@ -4,8 +4,9 @@ import { GitBranchBar } from '../components/git/GitBranchBar';
 import { GitDiffViewer } from '../components/git/GitDiffViewer';
 import { GitFileList } from '../components/git/GitFileList';
 import { GitGraph } from '../components/git/GitGraph';
+import { GitPRPanel } from '../components/git/GitPRPanel';
 import { GitSyncLog } from '../components/git/GitSyncLog';
-import { GitBranch, GitCommit, GitFileDiff, GitStatus } from '../components/git/types';
+import { GitBranch, GitCommit, GitFileDiff, GitStatus, ForgejoPR } from '../components/git/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
 import { useWorkspace } from '../stores/workspace';
 import { useLabs } from '../stores/labs';
@@ -67,6 +68,14 @@ export function GitPage() {
   const [discardPending, setDiscardPending] = useState<string[] | null>(null);
   const [discarding, setDiscarding] = useState(false);
 
+  // Forgejo PR state
+  const [isForgejo, setIsForgejo] = useState(false);
+  const [showPRPanel, setShowPRPanel] = useState(false);
+  const [prs, setPRs] = useState<ForgejoPR[]>([]);
+  const [loadingPRs, setLoadingPRs] = useState(false);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [mergingPR, setMergingPR] = useState<number | null>(null);
+
   // Fetch build/define paths from the backend whenever the product changes
   useEffect(() => {
     if (!state.organisation || !state.product) {
@@ -117,9 +126,25 @@ export function GitPage() {
       setDiff(null);
       setDiffError('');
       setCommitMessage('');
+      setShowPRPanel(false);
+      setIsForgejo(false);
+      setPRs([]);
       refresh();
     }
   }, [repoPath]);
+
+  // Check if the active repo is Forgejo-hosted
+  useEffect(() => {
+    if (!repoPath) return;
+    GitService.IsForgejo(repoPath)
+      .then(result => setIsForgejo(result ?? false))
+      .catch(() => setIsForgejo(false));
+  }, [repoPath]);
+
+  // Load PRs when the PR panel is opened
+  useEffect(() => {
+    if (showPRPanel && repoPath) fetchPRs();
+  }, [showPRPanel, repoPath]);
 
   // Start fsnotify watcher and refresh on backend-pushed change events
   useEffect(() => {
@@ -294,6 +319,44 @@ export function GitPage() {
     }
   }
 
+  async function fetchPRs() {
+    if (!repoPath) return;
+    setLoadingPRs(true);
+    try {
+      const result = await GitService.ListPRs(repoPath);
+      setPRs((result as any as ForgejoPR[]) ?? []);
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setLoadingPRs(false);
+    }
+  }
+
+  async function handleCreatePR(title: string, body: string, head: string, base: string) {
+    setCreatingPR(true);
+    try {
+      await GitService.CreatePR(repoPath, title, body, head, base);
+      await fetchPRs();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setCreatingPR(false);
+    }
+  }
+
+  async function handleMergePR(number: number, style: 'merge' | 'rebase' | 'squash') {
+    setMergingPR(number);
+    try {
+      await GitService.MergePR(repoPath, number, style);
+      await fetchPRs();
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setMergingPR(null);
+    }
+  }
+
   async function handleCheckout(name: string) {
     await GitService.CheckoutBranch(repoPath, name);
     refresh();
@@ -390,24 +453,42 @@ export function GitPage() {
                 onRefresh={refresh}
                 pushing={pushing}
                 pulling={pulling}
+                prCount={isForgejo ? prs.length : undefined}
+                showingPRs={showPRPanel}
+                onTogglePRs={isForgejo ? () => setShowPRPanel(v => !v) : undefined}
               />
               <div className="flex-1 overflow-hidden">
-                <GitFileList
-                  status={gitStatus}
-                  selectedFile={selectedCommitFile ? null : selectedFile}
-                  selectedStaged={selectedStaged}
-                  commitMessage={commitMessage}
-                  committing={committing}
-                  onSelectFile={selectFile}
-                  onStage={handleStage}
-                  onUnstage={handleUnstage}
-                  onDiscard={handleDiscard}
-                  onStageAll={handleStageAll}
-                  onCommit={handleCommit}
-                  onCommitMessageChange={setCommitMessage}
-                />
+                {showPRPanel ? (
+                  <GitPRPanel
+                    repoPath={repoPath}
+                    currentBranch={currentBranch}
+                    branches={branches}
+                    prs={prs}
+                    loading={loadingPRs}
+                    creating={creatingPR}
+                    merging={mergingPR}
+                    onRefresh={fetchPRs}
+                    onCreate={handleCreatePR}
+                    onMerge={handleMergePR}
+                  />
+                ) : (
+                  <GitFileList
+                    status={gitStatus}
+                    selectedFile={selectedCommitFile ? null : selectedFile}
+                    selectedStaged={selectedStaged}
+                    commitMessage={commitMessage}
+                    committing={committing}
+                    onSelectFile={selectFile}
+                    onStage={handleStage}
+                    onUnstage={handleUnstage}
+                    onDiscard={handleDiscard}
+                    onStageAll={handleStageAll}
+                    onCommit={handleCommit}
+                    onCommitMessageChange={setCommitMessage}
+                  />
+                )}
               </div>
-              <GitSyncLog />
+              {!showPRPanel && <GitSyncLog />}
             </div>
           </ResizablePanel>
 

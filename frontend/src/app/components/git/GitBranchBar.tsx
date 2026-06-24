@@ -1,6 +1,6 @@
 import { GitBranch } from './types';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, GitBranch as BranchIcon, Plus, RefreshCw } from 'lucide-react';
+import { Check, ChevronDown, GitBranch as BranchIcon, GitPullRequest, Plus, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
 interface Props {
@@ -13,10 +13,14 @@ interface Props {
   onRefresh: () => void;
   pushing: boolean;
   pulling: boolean;
+  prCount?: number;
+  showingPRs?: boolean;
+  onTogglePRs?: () => void;
 }
 
 export function GitBranchBar({
   currentBranch, branches, onCheckout, onCreateBranch, onPush, onPull, onRefresh, pushing, pulling,
+  prCount, showingPRs, onTogglePRs,
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
@@ -141,6 +145,25 @@ export function GitBranchBar({
       >
         <RefreshCw size={12} />
       </button>
+
+      {onTogglePRs && (
+        <button
+          onClick={onTogglePRs}
+          title="Pull Requests"
+          className={`relative p-1 rounded transition-colors ${
+            showingPRs
+              ? 'bg-pink-600/20 text-pink-400'
+              : 'hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70'
+          }`}
+        >
+          <GitPullRequest size={13} />
+          {prCount != null && prCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] flex items-center justify-center text-[9px] bg-pink-600 text-white rounded-full px-0.5 leading-none">
+              {prCount > 99 ? '99+' : prCount}
+            </span>
+          )}
+        </button>
+      )}
     </div>
   );
 }

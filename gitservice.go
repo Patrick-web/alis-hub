@@ -2,8 +2,12 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,16 +22,19 @@ import (
 
 // GitService provides local git operations for the block merge flow.
 type GitService struct {
+	tokens         *ConsoleTokenSource
 	mu             sync.Mutex
 	app            *application.App
 	watcher        *fsnotify.Watcher
-	pathToRepo     map[string]string  // watched fs path → repoPath
+	pathToRepo     map[string]string // watched fs path → repoPath
 	debounceTimers map[string]*time.Timer
 }
 
 func NewGitService() *GitService {
 	w, _ := fsnotify.NewWatcher()
+	tokens, _ := NewConsoleTokenSource() // nil if not logged in yet
 	svc := &GitService{
+		tokens:         tokens,
 		watcher:        w,
 		pathToRepo:     make(map[string]string),
 		debounceTimers: make(map[string]*time.Timer),
@@ -644,7 +651,10 @@ func (g *GitService) Commit(repoPath, message string) error {
 
 // GetBranches returns all local and remote branches.
 func (g *GitService) GetBranches(repoPath string) ([]GitBranch, error) {
-	out, err := gitCmd(repoPath, "git", "branch", "-a", "--format=%(refname:short)|%(HEAD)")
+	// Include full refname so we can reliably detect remote tracking branches;
+	// %(refname:short) alone strips "refs/remotes/" leaving "origin/branch" which
+	// is indistinguishable from a local branch named "origin/branch".
+	out, err := gitCmd(repoPath, "git", "branch", "-a", "--format=%(refname:short)|%(refname)|%(HEAD)")
 	if err != nil {
 		return nil, err
 	}
@@ -653,15 +663,15 @@ func (g *GitService) GetBranches(repoPath string) ([]GitBranch, error) {
 		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, "|", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(line, "|", 3)
+		if len(parts) != 3 {
 			continue
 		}
-		name, head := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+		name, fullRef, head := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
 		branches = append(branches, GitBranch{
 			Name:      name,
 			IsCurrent: head == "*",
-			IsRemote:  strings.HasPrefix(name, "remotes/"),
+			IsRemote:  strings.HasPrefix(fullRef, "refs/remotes/"),
 		})
 	}
 	return branches, nil
@@ -762,6 +772,215 @@ func (g *GitService) streamScm(cmd *exec.Cmd) error {
 	go func() { defer wg.Done(); forward(stderr) }()
 	wg.Wait()
 	return cmd.Wait()
+}
+
+// --- Forgejo Pull Request API ---
+
+// ForgejoPR represents a pull request on a Forgejo-hosted repository.
+type ForgejoPR struct {
+	Number     int    `json:"number"`
+	Title      string `json:"title"`
+	Body       string `json:"body"`
+	State      string `json:"state"`
+	HeadBranch string `json:"headBranch"`
+	BaseBranch string `json:"baseBranch"`
+	Author     string `json:"author"`
+	HTMLURL    string `json:"htmlUrl"`
+	CreatedAt  string `json:"createdAt"`
+	Mergeable  bool   `json:"mergeable"`
+}
+
+// parseForgejoRemote reads the origin remote URL and returns the Forgejo base URL,
+// owner, and repo name. Returns an error if the remote is not a Forgejo host.
+func (g *GitService) parseForgejoRemote(repoPath string) (baseURL, owner, repoName string, err error) {
+	out, err := gitCmd(repoPath, "git", "remote", "get-url", "origin")
+	if err != nil {
+		return "", "", "", fmt.Errorf("get remote url: %w", err)
+	}
+	u, err := url.Parse(strings.TrimSpace(out))
+	if err != nil {
+		return "", "", "", fmt.Errorf("parse remote url: %w", err)
+	}
+	if !forgejoHostRe.MatchString(u.Host) {
+		return "", "", "", fmt.Errorf("not a forgejo host: %s", u.Host)
+	}
+	parts := strings.SplitN(strings.Trim(u.Path, "/"), "/", 2)
+	if len(parts) != 2 {
+		return "", "", "", fmt.Errorf("unexpected path: %s", u.Path)
+	}
+	return u.Scheme + "://" + u.Host, parts[0], strings.TrimSuffix(parts[1], ".git"), nil
+}
+
+// forgejoAPI makes an authenticated request to the Forgejo REST API.
+func (g *GitService) forgejoAPI(baseURL, method, path string, body []byte) ([]byte, error) {
+	if g.tokens == nil {
+		var err error
+		g.tokens, err = NewConsoleTokenSource()
+		if err != nil {
+			return nil, fmt.Errorf("not logged in")
+		}
+	}
+	token, err := g.tokens.AccessToken()
+	if err != nil {
+		return nil, fmt.Errorf("get token: %w", err)
+	}
+	var reqBody io.Reader
+	if body != nil {
+		reqBody = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(method, baseURL+"/api/v1/"+path, reqBody)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("forgejo %s: %s", resp.Status, strings.TrimSpace(string(data)))
+	}
+	return data, nil
+}
+
+// parsePRResponse converts the Forgejo API response into a ForgejoPR.
+func parsePRResponse(raw struct {
+	Number int    `json:"number"`
+	Title  string `json:"title"`
+	Body   string `json:"body"`
+	State  string `json:"state"`
+	Head   struct {
+		Ref string `json:"ref"`
+	} `json:"head"`
+	Base struct {
+		Ref string `json:"ref"`
+	} `json:"base"`
+	User struct {
+		Login string `json:"login"`
+	} `json:"user"`
+	HTMLURL   string `json:"html_url"`
+	CreatedAt string `json:"created_at"`
+	Mergeable bool   `json:"mergeable"`
+}) ForgejoPR {
+	return ForgejoPR{
+		Number:     raw.Number,
+		Title:      raw.Title,
+		Body:       raw.Body,
+		State:      raw.State,
+		HeadBranch: raw.Head.Ref,
+		BaseBranch: raw.Base.Ref,
+		Author:     raw.User.Login,
+		HTMLURL:    raw.HTMLURL,
+		CreatedAt:  raw.CreatedAt,
+		Mergeable:  raw.Mergeable,
+	}
+}
+
+// IsForgejo returns true if the repo's origin remote is a Forgejo host.
+func (g *GitService) IsForgejo(repoPath string) (bool, error) {
+	_, _, _, err := g.parseForgejoRemote(repoPath)
+	return err == nil, nil
+}
+
+// ListPRs returns open pull requests for the given repo.
+func (g *GitService) ListPRs(repoPath string) ([]ForgejoPR, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodGet,
+		fmt.Sprintf("repos/%s/%s/pulls?state=open&limit=50", owner, repo), nil)
+	if err != nil {
+		return nil, err
+	}
+	type rawPR struct {
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		Body   string `json:"body"`
+		State  string `json:"state"`
+		Head   struct {
+			Ref string `json:"ref"`
+		} `json:"head"`
+		Base struct {
+			Ref string `json:"ref"`
+		} `json:"base"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+		HTMLURL   string `json:"html_url"`
+		CreatedAt string `json:"created_at"`
+		Mergeable bool   `json:"mergeable"`
+	}
+	var raws []rawPR
+	if err := json.Unmarshal(data, &raws); err != nil {
+		return nil, fmt.Errorf("parse prs: %w", err)
+	}
+	prs := make([]ForgejoPR, len(raws))
+	for i, r := range raws {
+		prs[i] = parsePRResponse(r)
+	}
+	return prs, nil
+}
+
+// CreatePR creates a new pull request. head and base are branch names.
+func (g *GitService) CreatePR(repoPath, title, body, head, base string) (*ForgejoPR, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := json.Marshal(map[string]string{"title": title, "body": body, "head": head, "base": base})
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodPost,
+		fmt.Sprintf("repos/%s/%s/pulls", owner, repo), payload)
+	if err != nil {
+		return nil, err
+	}
+	var raw struct {
+		Number int    `json:"number"`
+		Title  string `json:"title"`
+		Body   string `json:"body"`
+		State  string `json:"state"`
+		Head   struct {
+			Ref string `json:"ref"`
+		} `json:"head"`
+		Base struct {
+			Ref string `json:"ref"`
+		} `json:"base"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+		HTMLURL   string `json:"html_url"`
+		CreatedAt string `json:"created_at"`
+		Mergeable bool   `json:"mergeable"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse created pr: %w", err)
+	}
+	pr := parsePRResponse(raw)
+	return &pr, nil
+}
+
+// MergePR merges a pull request. mergeStyle is "merge", "rebase", or "squash".
+func (g *GitService) MergePR(repoPath string, number int, mergeStyle string) error {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return err
+	}
+	payload, err := json.Marshal(map[string]string{"Do": mergeStyle})
+	if err != nil {
+		return err
+	}
+	_, err = g.forgejoAPI(baseURL, http.MethodPost,
+		fmt.Sprintf("repos/%s/%s/pulls/%d/merge", owner, repo, number), payload)
+	return err
 }
 
 // gitLang maps a file extension to a language identifier for the diff viewer.
