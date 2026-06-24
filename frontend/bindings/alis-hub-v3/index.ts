@@ -111,6 +111,7 @@ export {
     ShareAccount,
     ShareData,
     SharePerson,
+    SpannerBackup,
     SpannerDMLResult,
     SpannerDatabase,
     SpannerInstance,
