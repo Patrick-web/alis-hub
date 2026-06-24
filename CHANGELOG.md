@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.7.1] - 2026-06-24
+
+### Bug Fixes
+- Fixed an issue where the app would restart automatically after downloading an update without asking — you now choose when to install
+
 ## [v0.7.0] - 2026-06-24
 
 ### What's New
