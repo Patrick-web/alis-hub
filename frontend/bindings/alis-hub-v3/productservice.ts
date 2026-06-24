@@ -380,7 +380,7 @@ export function OpenInIDE(productName: string, ide: string): $CancellablePromise
 }
 
 /**
- * OpenWorktreeInFinder opens the given directory in macOS Finder.
+ * OpenWorktreeInFinder opens the given directory in the system file manager.
  */
 export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
     return $Call.ByID(1416065536, path);
