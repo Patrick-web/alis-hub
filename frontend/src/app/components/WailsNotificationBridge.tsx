@@ -120,7 +120,6 @@ export function WailsNotificationBridge() {
         offProgress();
         downloadingRef.current = false;
         setDownloadProgress({ downloaded: p.downloaded, total: p.total, done: true });
-        applyUpdate();
         return;
       }
       setDownloadProgress({ downloaded: p.downloaded, total: p.total, done: false });
