@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { GitPullRequest, Loader2, RefreshCw, X } from 'lucide-react';
 import { GitBranchBar } from '../components/git/GitBranchBar';
 import { GitDiffViewer } from '../components/git/GitDiffViewer';
 import { GitFileList } from '../components/git/GitFileList';
 import { GitGraph } from '../components/git/GitGraph';
-import { GitPRPanel } from '../components/git/GitPRPanel';
+import { GitPRList } from '../components/git/GitPRList';
+import { GitPRDetail } from '../components/git/GitPRDetail';
 import { GitSyncLog } from '../components/git/GitSyncLog';
 import { GitBranch, GitCommit, GitFileDiff, GitStatus, ForgejoPR } from '../components/git/types';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
@@ -74,7 +75,8 @@ export function GitPage() {
   const [prs, setPRs] = useState<ForgejoPR[]>([]);
   const [loadingPRs, setLoadingPRs] = useState(false);
   const [creatingPR, setCreatingPR] = useState(false);
-  const [mergingPR, setMergingPR] = useState<number | null>(null);
+  const [mergingPR, setMergingPR] = useState(false);
+  const [selectedPR, setSelectedPR] = useState<ForgejoPR | null>(null);
 
   // Fetch build/define paths from the backend whenever the product changes
   useEffect(() => {
@@ -129,6 +131,7 @@ export function GitPage() {
       setShowPRPanel(false);
       setIsForgejo(false);
       setPRs([]);
+      setSelectedPR(null);
       refresh();
     }
   }, [repoPath]);
@@ -323,7 +326,7 @@ export function GitPage() {
     if (!repoPath) return;
     setLoadingPRs(true);
     try {
-      const result = await GitService.ListPRs(repoPath);
+      const result = await GitService.ListPRs(repoPath, 'open');
       setPRs((result as any as ForgejoPR[]) ?? []);
     } catch (e: any) {
       setError(String(e));
@@ -345,15 +348,16 @@ export function GitPage() {
   }
 
   async function handleMergePR(number: number, style: 'merge' | 'rebase' | 'squash') {
-    setMergingPR(number);
+    setMergingPR(true);
     try {
       await GitService.MergePR(repoPath, number, style);
+      setSelectedPR(null);
       await fetchPRs();
       refresh();
     } catch (e: any) {
       setError(String(e));
     } finally {
-      setMergingPR(null);
+      setMergingPR(false);
     }
   }
 
@@ -440,36 +444,37 @@ export function GitPage() {
 
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Left: file list */}
+          {/* Left: file list or PR list */}
           <ResizablePanel defaultSize={22} minSize={16} maxSize={40}>
             <div className="flex flex-col h-full overflow-hidden">
-              <GitBranchBar
-                currentBranch={currentBranch}
-                branches={branches}
-                onCheckout={handleCheckout}
-                onCreateBranch={handleCreateBranch}
-                onPush={handlePush}
-                onPull={handlePull}
-                onRefresh={refresh}
-                pushing={pushing}
-                pulling={pulling}
-                prCount={isForgejo ? prs.length : undefined}
-                showingPRs={showPRPanel}
-                onTogglePRs={isForgejo ? () => setShowPRPanel(v => !v) : undefined}
-              />
+              {!showPRPanel && (
+                <GitBranchBar
+                  currentBranch={currentBranch}
+                  branches={branches}
+                  onCheckout={handleCheckout}
+                  onCreateBranch={handleCreateBranch}
+                  onPush={handlePush}
+                  onPull={handlePull}
+                  onRefresh={refresh}
+                  pushing={pushing}
+                  pulling={pulling}
+                  prCount={isForgejo ? prs.length : undefined}
+                  showingPRs={showPRPanel}
+                  onTogglePRs={isForgejo ? () => setShowPRPanel(v => !v) : undefined}
+                />
+              )}
               <div className="flex-1 overflow-hidden">
                 {showPRPanel ? (
-                  <GitPRPanel
-                    repoPath={repoPath}
-                    currentBranch={currentBranch}
-                    branches={branches}
+                  <GitPRList
                     prs={prs}
+                    selectedPR={selectedPR}
                     loading={loadingPRs}
                     creating={creatingPR}
-                    merging={mergingPR}
-                    onRefresh={fetchPRs}
+                    branches={branches}
+                    currentBranch={currentBranch}
+                    onSelect={setSelectedPR}
                     onCreate={handleCreatePR}
-                    onMerge={handleMergePR}
+                    onRefresh={fetchPRs}
                   />
                 ) : (
                   <GitFileList
@@ -494,79 +499,201 @@ export function GitPage() {
 
           <ResizableHandle />
 
-          {/* Right: diff + graph stacked */}
+          {/* Right: PR detail OR diff + graph */}
           <ResizablePanel defaultSize={78}>
-            <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={60} minSize={30}>
-                {diffLoading ? (
-                  <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
-                    Loading diff…
-                  </div>
-                ) : diffError ? (
-                  <div className="flex items-center justify-center h-full px-6">
-                    <p className="text-xs text-red-400 text-center">{diffError}</p>
-                  </div>
-                ) : (
-                  <GitDiffViewer
-                    diff={diff}
-                    filePath={diffFilePath}
-                    staged={diffStaged}
-                    commitHash={selectedCommitFile?.hash ?? null}
-                  />
-                )}
-              </ResizablePanel>
-
-              <ResizableHandle />
-
-              <ResizablePanel defaultSize={40} minSize={20}>
-                <div className="h-full flex flex-col overflow-hidden">
-                  <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-foreground/10">
-                    <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
-                      Git Graph · {commits.length} commits
-                    </span>
-                    <button
-                      onClick={handlePull}
-                      disabled={pulling}
-                      title="Pull"
-                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 19V5M5 12l7 7 7-7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={handlePush}
-                      disabled={pushing}
-                      title="Push"
-                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M12 5v14M19 12l-7-7-7 7" />
-                      </svg>
-                    </button>
-                    <button
-                      onClick={refresh}
-                      title="Refresh"
-                      className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
-                    >
-                      <RefreshCw size={12} />
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    <GitGraph
-                      commits={commits}
-                      repoPath={repoPath}
-                      selectedHash={selectedCommit}
-                      selectedCommitFile={selectedCommitFile}
-                      onSelectCommit={setSelectedCommit}
-                      onSelectCommitFile={handleSelectCommitFile}
+            {showPRPanel ? (
+              selectedPR ? (
+                <GitPRDetail
+                  pr={selectedPR}
+                  repoPath={repoPath}
+                  merging={mergingPR}
+                  onMerge={handleMergePR}
+                  onClose={() => setSelectedPR(null)}
+                />
+              ) : (
+                <PRListOverview
+                  prs={prs}
+                  loading={loadingPRs}
+                  onSelect={setSelectedPR}
+                  onToggleOff={() => setShowPRPanel(false)}
+                  onCreate={() => {/* PR creation is in GitPRList left panel */}}
+                  onRefresh={fetchPRs}
+                />
+              )
+            ) : (
+              <ResizablePanelGroup direction="vertical">
+                <ResizablePanel defaultSize={60} minSize={30}>
+                  {diffLoading ? (
+                    <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
+                      Loading diff…
+                    </div>
+                  ) : diffError ? (
+                    <div className="flex items-center justify-center h-full px-6">
+                      <p className="text-xs text-red-400 text-center">{diffError}</p>
+                    </div>
+                  ) : (
+                    <GitDiffViewer
+                      diff={diff}
+                      filePath={diffFilePath}
+                      staged={diffStaged}
+                      commitHash={selectedCommitFile?.hash ?? null}
                     />
+                  )}
+                </ResizablePanel>
+
+                <ResizableHandle />
+
+                <ResizablePanel defaultSize={40} minSize={20}>
+                  <div className="h-full flex flex-col overflow-hidden">
+                    <div className="shrink-0 flex items-center gap-1 px-3 py-2 border-b border-foreground/10">
+                      <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
+                        Git Graph · {commits.length} commits
+                      </span>
+                      <button
+                        onClick={handlePull}
+                        disabled={pulling}
+                        title="Pull"
+                        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 19V5M5 12l7 7 7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={handlePush}
+                        disabled={pushing}
+                        title="Push"
+                        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M12 5v14M19 12l-7-7-7 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={refresh}
+                        title="Refresh"
+                        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
+                      >
+                        <RefreshCw size={12} />
+                      </button>
+                      {isForgejo && (
+                        <button
+                          onClick={() => setShowPRPanel(true)}
+                          title="Pull Requests"
+                          className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/>
+                            <path d="M6 9v3a6 6 0 006 6h3"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <GitGraph
+                        commits={commits}
+                        repoPath={repoPath}
+                        selectedHash={selectedCommit}
+                        selectedCommitFile={selectedCommitFile}
+                        onSelectCommit={setSelectedCommit}
+                        onSelectCommitFile={handleSelectCommitFile}
+                      />
+                    </div>
                   </div>
-                </div>
-              </ResizablePanel>
-            </ResizablePanelGroup>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
+      </div>
+    </div>
+  );
+}
+
+function PRListOverview({
+  prs, loading, onSelect, onToggleOff, onRefresh,
+}: {
+  prs: ForgejoPR[];
+  loading: boolean;
+  onSelect: (pr: ForgejoPR) => void;
+  onToggleOff: () => void;
+  onCreate: () => void;
+  onRefresh: () => void;
+}) {
+  function relativeTime(iso: string): string {
+    const ms = Date.now() - new Date(iso).getTime();
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    return d < 30 ? `${d}d ago` : new Date(iso).toLocaleDateString();
+  }
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="shrink-0 flex items-center gap-2 px-4 py-3 border-b border-foreground/10">
+        <GitPullRequest size={14} className="text-foreground/40 shrink-0" />
+        <span className="text-sm text-foreground/70 font-medium flex-1">Pull Requests</span>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          title="Refresh"
+          className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+        >
+          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+        </button>
+        <button
+          onClick={onToggleOff}
+          title="Back to source control"
+          className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* PR table */}
+      <div className="flex-1 overflow-y-auto">
+        {loading && prs.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-foreground/30">
+            <Loader2 size={18} className="animate-spin" />
+          </div>
+        ) : prs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <GitPullRequest size={24} className="text-foreground/15" />
+            <p className="text-sm text-foreground/30">No open pull requests</p>
+          </div>
+        ) : (
+          prs.map(pr => (
+            <button
+              key={pr.number}
+              onClick={() => onSelect(pr)}
+              className="w-full text-left flex items-center gap-3 px-4 py-3 border-b border-foreground/8 hover:bg-foreground/[0.03] transition-colors group"
+            >
+              <GitPullRequest size={14} className="shrink-0 text-green-400/70" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 min-w-0">
+                  <span className="text-xs text-foreground/30 shrink-0">#{pr.number}</span>
+                  <span className="text-sm text-foreground/80 truncate group-hover:text-foreground/90 transition-colors">
+                    {pr.title}
+                  </span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2 text-[11px] text-foreground/35">
+                  <span className="font-mono text-pink-400/60">{pr.headBranch}</span>
+                  <span>→</span>
+                  <span className="font-mono">{pr.baseBranch}</span>
+                  <span>·</span>
+                  <span>{pr.author}</span>
+                  <span>·</span>
+                  <span>{relativeTime(pr.createdAt)}</span>
+                </div>
+              </div>
+            </button>
+          ))
+        )}
       </div>
     </div>
   );

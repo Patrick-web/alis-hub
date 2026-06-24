@@ -32,6 +32,21 @@ export interface GitCommit {
   refNames: string[];
 }
 
+export interface PRCommit {
+  sha: string;
+  message: string;
+  author: string;
+  timestamp: string;
+}
+
+export interface PRComment {
+  id: number;
+  body: string;
+  author: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ForgejoPR {
   number: number;
   title: string;

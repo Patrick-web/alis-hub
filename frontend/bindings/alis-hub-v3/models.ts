@@ -2441,6 +2441,82 @@ export class Organisation {
 }
 
 /**
+ * PRComment is a conversation comment on a pull request.
+ */
+export class PRComment {
+    "id": number;
+    "body": string;
+    "author": string;
+    "createdAt": string;
+    "updatedAt": string;
+
+    /** Creates a new PRComment instance. */
+    constructor($$source: Partial<PRComment> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("body" in $$source)) {
+            this["body"] = "";
+        }
+        if (!("author" in $$source)) {
+            this["author"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = "";
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PRComment instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PRComment {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PRComment($$parsedSource as Partial<PRComment>);
+    }
+}
+
+/**
+ * PRCommit is a commit included in a pull request.
+ */
+export class PRCommit {
+    "sha": string;
+    "message": string;
+    "author": string;
+    "timestamp": string;
+
+    /** Creates a new PRCommit instance. */
+    constructor($$source: Partial<PRCommit> = {}) {
+        if (!("sha" in $$source)) {
+            this["sha"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("author" in $$source)) {
+            this["author"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PRCommit instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PRCommit {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PRCommit($$parsedSource as Partial<PRCommit>);
+    }
+}
+
+/**
  * ScanNeuronPackages scans the neuron build directory for language config files.
  */
 export class PackageInfo {

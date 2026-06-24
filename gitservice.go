@@ -495,9 +495,16 @@ type CommitFile struct {
 
 // GetCommitFiles returns the list of files changed by a specific commit.
 func (g *GitService) GetCommitFiles(repoPath, hash string) ([]CommitFile, error) {
-	out, err := gitCmd(repoPath, "git", "diff-tree", "--no-commit-id", "-r", "--name-status", hash)
+	// git show handles shallow clones and missing parents gracefully; diff-tree silently
+	// returns empty output when the parent commit is not in the local object store.
+	out, err := gitCmd(repoPath, "git", "show", "--name-status", "--format=", hash)
 	if err != nil {
-		return nil, fmt.Errorf("diff-tree: %w", err)
+		// Commit is not in the local clone; fetch it and retry.
+		gitCmd(repoPath, "git", "fetch", "--depth=1", "origin", hash) //nolint:errcheck
+		out, err = gitCmd(repoPath, "git", "show", "--name-status", "--format=", hash)
+		if err != nil {
+			return nil, fmt.Errorf("show: %w", err)
+		}
 	}
 	var files []CommitFile
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
@@ -521,6 +528,11 @@ func (g *GitService) GetCommitFiles(repoPath, hash string) ([]CommitFile, error)
 
 // GetCommitFileDiff returns the diff for a single file within a specific commit.
 func (g *GitService) GetCommitFileDiff(repoPath, hash, filePath string) (*GitFileDiff, error) {
+	// Ensure the commit and its parent are available locally (needed for diff).
+	if _, err := gitCmd(repoPath, "git", "cat-file", "-t", hash); err != nil {
+		gitCmd(repoPath, "git", "fetch", "--depth=2", "origin", hash) //nolint:errcheck
+	}
+
 	lang := gitLang(filePath)
 	diff := &GitFileDiff{Language: lang}
 
@@ -532,12 +544,11 @@ func (g *GitService) GetCommitFileDiff(repoPath, hash, filePath string) (*GitFil
 	old, _ := gitCmd(repoPath, "git", "show", hash+"^:"+filePath)
 	diff.OldContent = old
 
-	// Diff between parent and this commit
+	// Diff between parent and this commit. Falls back to showing the whole file as additions
+	// when the parent is unavailable (new file, initial commit, or shallow clone boundary).
 	rawDiff, _ := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", hash+"^", hash, "--", filePath)
 	if rawDiff == "" {
-		// New file in initial commit — synthesise an all-addition diff
-		rawDiff2, _ := gitCmd(repoPath, "git", "show", "--no-color", "-U0", "--", hash, filePath)
-		rawDiff = rawDiff2
+		rawDiff, _ = gitCmd(repoPath, "git", "show", "--no-color", "-U3", hash, "--", filePath)
 	}
 	diff.Hunks = gitParseHunks(rawDiff)
 
@@ -888,14 +899,34 @@ func (g *GitService) IsForgejo(repoPath string) (bool, error) {
 	return err == nil, nil
 }
 
-// ListPRs returns open pull requests for the given repo.
-func (g *GitService) ListPRs(repoPath string) ([]ForgejoPR, error) {
+// PRCommit is a commit included in a pull request.
+type PRCommit struct {
+	SHA       string `json:"sha"`
+	Message   string `json:"message"`
+	Author    string `json:"author"`
+	Timestamp string `json:"timestamp"`
+}
+
+// PRComment is a conversation comment on a pull request.
+type PRComment struct {
+	ID        int    `json:"id"`
+	Body      string `json:"body"`
+	Author    string `json:"author"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
+}
+
+// ListPRs returns pull requests for the given repo. state is "open", "closed", or "all".
+func (g *GitService) ListPRs(repoPath, state string) ([]ForgejoPR, error) {
 	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
 	if err != nil {
 		return nil, err
 	}
+	if state == "" {
+		state = "open"
+	}
 	data, err := g.forgejoAPI(baseURL, http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/pulls?state=open&limit=50", owner, repo), nil)
+		fmt.Sprintf("repos/%s/%s/pulls?state=%s&limit=50", owner, repo, state), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -981,6 +1012,176 @@ func (g *GitService) MergePR(repoPath string, number int, mergeStyle string) err
 	_, err = g.forgejoAPI(baseURL, http.MethodPost,
 		fmt.Sprintf("repos/%s/%s/pulls/%d/merge", owner, repo, number), payload)
 	return err
+}
+
+// GetPRCommits returns the list of commits included in a pull request.
+func (g *GitService) GetPRCommits(repoPath string, number int) ([]PRCommit, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodGet,
+		fmt.Sprintf("repos/%s/%s/pulls/%d/commits?limit=50", owner, repo, number), nil)
+	if err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		SHA    string `json:"sha"`
+		Commit struct {
+			Message   string `json:"message"`
+			Author    struct {
+				Name string `json:"name"`
+				Date string `json:"date"`
+			} `json:"author"`
+		} `json:"commit"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse commits: %w", err)
+	}
+	commits := make([]PRCommit, len(raw))
+	for i, r := range raw {
+		msg := r.Commit.Message
+		if idx := strings.IndexByte(msg, '\n'); idx >= 0 {
+			msg = msg[:idx]
+		}
+		commits[i] = PRCommit{
+			SHA:       r.SHA,
+			Message:   msg,
+			Author:    r.Commit.Author.Name,
+			Timestamp: r.Commit.Author.Date,
+		}
+	}
+	return commits, nil
+}
+
+// GetPRComments returns the conversation comments on a pull request.
+func (g *GitService) GetPRComments(repoPath string, number int) ([]PRComment, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodGet,
+		fmt.Sprintf("repos/%s/%s/issues/%d/comments?limit=50", owner, repo, number), nil)
+	if err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		ID   int    `json:"id"`
+		Body string `json:"body"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse comments: %w", err)
+	}
+	comments := make([]PRComment, len(raw))
+	for i, r := range raw {
+		comments[i] = PRComment{
+			ID:        r.ID,
+			Body:      r.Body,
+			Author:    r.User.Login,
+			CreatedAt: r.CreatedAt,
+			UpdatedAt: r.UpdatedAt,
+		}
+	}
+	return comments, nil
+}
+
+// AddPRComment posts a new comment on a pull request and returns the created comment.
+func (g *GitService) AddPRComment(repoPath string, number int, body string) (*PRComment, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := json.Marshal(map[string]string{"body": body})
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodPost,
+		fmt.Sprintf("repos/%s/%s/issues/%d/comments", owner, repo, number), payload)
+	if err != nil {
+		return nil, err
+	}
+	var raw struct {
+		ID   int    `json:"id"`
+		Body string `json:"body"`
+		User struct {
+			Login string `json:"login"`
+		} `json:"user"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse comment: %w", err)
+	}
+	return &PRComment{
+		ID:        raw.ID,
+		Body:      raw.Body,
+		Author:    raw.User.Login,
+		CreatedAt: raw.CreatedAt,
+		UpdatedAt: raw.UpdatedAt,
+	}, nil
+}
+
+// GetPRFiles returns the list of files changed in a pull request.
+func (g *GitService) GetPRFiles(repoPath string, number int) ([]CommitFile, error) {
+	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
+	if err != nil {
+		return nil, err
+	}
+	data, err := g.forgejoAPI(baseURL, http.MethodGet,
+		fmt.Sprintf("repos/%s/%s/pulls/%d/files?limit=100", owner, repo, number), nil)
+	if err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		Filename string `json:"filename"`
+		Status   string `json:"status"` // "added", "modified", "deleted", "renamed"
+		OldName  string `json:"previous_filename"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse files: %w", err)
+	}
+	// Map Forgejo status strings to single-letter status codes
+	statusMap := map[string]string{
+		"added": "A", "modified": "M", "deleted": "D", "renamed": "R",
+	}
+	files := make([]CommitFile, len(raw))
+	for i, r := range raw {
+		code := statusMap[r.Status]
+		if code == "" {
+			code = "M"
+		}
+		files[i] = CommitFile{Path: r.Filename, StatusCode: code, OldPath: r.OldName}
+	}
+	return files, nil
+}
+
+// GetPRFileDiff returns the diff for a single file across the PR's head vs base branches.
+// Uses a three-dot diff: git diff origin/{base}...origin/{head} -- {filePath}
+func (g *GitService) GetPRFileDiff(repoPath, baseBranch, headBranch, filePath string) (*GitFileDiff, error) {
+	// Fetch both branches so origin/{base} and origin/{head} refs are current.
+	gitCmd(repoPath, "git", "fetch", "origin", baseBranch, headBranch) //nolint:errcheck
+
+	lang := gitLang(filePath)
+	diff := &GitFileDiff{Language: lang}
+
+	baseRef := "origin/" + baseBranch
+	headRef := "origin/" + headBranch
+
+	old, _ := gitCmd(repoPath, "git", "show", baseRef+":"+filePath)
+	diff.OldContent = old
+
+	new_, _ := gitCmd(repoPath, "git", "show", headRef+":"+filePath)
+	diff.NewContent = new_
+
+	rawDiff, _ := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+"..."+headRef, "--", filePath)
+	diff.Hunks = gitParseHunks(rawDiff)
+
+	return diff, nil
 }
 
 // gitLang maps a file extension to a language identifier for the diff viewer.

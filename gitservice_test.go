@@ -44,7 +44,7 @@ func TestForgejoListPRs(t *testing.T) {
 	svc := newGitSvcWithAuth(t)
 	repoPath := voyageBuildPath(t)
 
-	prs, err := svc.ListPRs(repoPath)
+	prs, err := svc.ListPRs(repoPath, "open")
 	if err != nil {
 		t.Fatalf("ListPRs: %v", err)
 	}
@@ -70,4 +70,95 @@ func TestForgejoCreatePR(t *testing.T) {
 		t.Fatalf("CreatePR: %v", err)
 	}
 	t.Logf("created PR #%d: %q  %s → %s  url=%s", pr.Number, pr.Title, pr.HeadBranch, pr.BaseBranch, pr.HTMLURL)
+}
+
+// TestForgejoPRCommitFiles verifies GetPRCommits + GetCommitFiles + GetCommitFileDiff
+// against the first open PR on voyage/vp.
+func TestForgejoPRCommitFiles(t *testing.T) {
+	svc := newGitSvcWithAuth(t)
+	repoPath := voyageBuildPath(t)
+
+	prs, err := svc.ListPRs(repoPath, "open")
+	if err != nil {
+		t.Fatalf("ListPRs: %v", err)
+	}
+	if len(prs) == 0 {
+		t.Skip("no open PRs to test against")
+	}
+	pr := prs[0]
+	t.Logf("using PR #%d %q  %s → %s", pr.Number, pr.Title, pr.HeadBranch, pr.BaseBranch)
+
+	commits, err := svc.GetPRCommits(repoPath, pr.Number)
+	if err != nil {
+		t.Fatalf("GetPRCommits: %v", err)
+	}
+	t.Logf("commits in PR: %d", len(commits))
+	if len(commits) == 0 {
+		t.Fatal("expected at least one commit in the PR")
+	}
+
+	commit := commits[0]
+	t.Logf("first commit: %s %q by %s", commit.SHA[:7], commit.Message, commit.Author)
+
+	files, err := svc.GetCommitFiles(repoPath, commit.SHA)
+	if err != nil {
+		t.Fatalf("GetCommitFiles(%s): %v", commit.SHA[:7], err)
+	}
+	t.Logf("files changed in commit: %d", len(files))
+	for _, f := range files {
+		t.Logf("  %s %s", f.StatusCode, f.Path)
+	}
+	if len(files) == 0 {
+		t.Fatal("expected at least one file changed in the commit")
+	}
+
+	// Test diff for the first file
+	firstFile := files[0]
+	diff, err := svc.GetCommitFileDiff(repoPath, commit.SHA, firstFile.Path)
+	if err != nil {
+		t.Fatalf("GetCommitFileDiff(%s, %s): %v", commit.SHA[:7], firstFile.Path, err)
+	}
+	t.Logf("diff for %s: oldLen=%d newLen=%d hunks=%d", firstFile.Path, len(diff.OldContent), len(diff.NewContent), len(diff.Hunks))
+	if len(diff.NewContent) == 0 {
+		t.Fatalf("GetCommitFileDiff: expected non-empty new content for %s", firstFile.Path)
+	}
+}
+
+// TestForgejoPRFileDiff verifies GetPRFiles + GetPRFileDiff against the first open PR.
+func TestForgejoPRFileDiff(t *testing.T) {
+	svc := newGitSvcWithAuth(t)
+	repoPath := voyageBuildPath(t)
+
+	prs, err := svc.ListPRs(repoPath, "open")
+	if err != nil {
+		t.Fatalf("ListPRs: %v", err)
+	}
+	if len(prs) == 0 {
+		t.Skip("no open PRs to test against")
+	}
+	pr := prs[0]
+	t.Logf("using PR #%d %q  %s → %s", pr.Number, pr.Title, pr.HeadBranch, pr.BaseBranch)
+
+	files, err := svc.GetPRFiles(repoPath, pr.Number)
+	if err != nil {
+		t.Fatalf("GetPRFiles: %v", err)
+	}
+	t.Logf("files changed in PR: %d", len(files))
+	for _, f := range files {
+		t.Logf("  %s %s", f.StatusCode, f.Path)
+	}
+	if len(files) == 0 {
+		t.Fatal("expected at least one file changed in the PR")
+	}
+
+	firstFile := files[0]
+	diff, err := svc.GetPRFileDiff(repoPath, pr.BaseBranch, pr.HeadBranch, firstFile.Path)
+	if err != nil {
+		t.Fatalf("GetPRFileDiff(%s): %v", firstFile.Path, err)
+	}
+	t.Logf("PR file diff for %s: oldLen=%d newLen=%d hunks=%d",
+		firstFile.Path, len(diff.OldContent), len(diff.NewContent), len(diff.Hunks))
+	if len(diff.NewContent) == 0 && len(diff.OldContent) == 0 {
+		t.Fatal("expected non-empty diff content")
+	}
 }
