@@ -820,6 +820,39 @@ func (g *GCloudService) ListSpannerTables(databaseResourceName string) ([]Spanne
 	return tables, nil
 }
 
+// ── Cloud Spanner Backups ──────────────────────────────────────────────────────
+
+type SpannerBackup struct {
+	Name            string   `json:"name"`
+	Database        string   `json:"database"`
+	State           string   `json:"state"`
+	CreateTime      string   `json:"createTime"`
+	ExpireTime      string   `json:"expireTime"`
+	VersionTime     string   `json:"versionTime"`
+	MaxExpireTime   string   `json:"maxExpireTime"`
+	SizeBytes       string   `json:"sizeBytes"` // API returns as a JSON string
+	DatabaseDialect string   `json:"databaseDialect"`
+	BackupSchedules []string `json:"backupSchedules"`
+}
+
+type spannerBackupListResp struct {
+	Backups []SpannerBackup `json:"backups"`
+}
+
+// ListSpannerBackups lists backups for a Spanner instance.
+// instanceResourceName is the full resource name e.g. "projects/{p}/instances/{i}".
+func (g *GCloudService) ListSpannerBackups(instanceResourceName string) ([]SpannerBackup, error) {
+	u := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/backups", instanceResourceName)
+	var result spannerBackupListResp
+	if err := g.apiGet(u, &result); err != nil {
+		return nil, err
+	}
+	if result.Backups == nil {
+		return []SpannerBackup{}, nil
+	}
+	return result.Backups, nil
+}
+
 // ExecuteSpannerQuery runs a read-only SQL query against a Spanner database.
 // databaseResourceName is the full name e.g. "projects/{p}/instances/{i}/databases/{d}".
 // Spanner's executeSql is session-scoped: we create a session, run the query, then delete it.
@@ -954,6 +987,10 @@ func (g *GCloudService) OpenInConsole(section, projectID, resource string) {
 		consoleURL = "https://console.cloud.google.com/security/secret-manager?project=" + url.QueryEscape(projectID)
 	case "spanner":
 		consoleURL = "https://console.cloud.google.com/spanner/instances?project=" + url.QueryEscape(projectID)
+	case "spanner-backups":
+		consoleURL = fmt.Sprintf(
+			"https://console.cloud.google.com/spanner/instances/%s/backups?project=%s",
+			url.PathEscape(resource), url.QueryEscape(projectID))
 	default:
 		consoleURL = "https://console.cloud.google.com/?project=" + url.QueryEscape(projectID)
 	}

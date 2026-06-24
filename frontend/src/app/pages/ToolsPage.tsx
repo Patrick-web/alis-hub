@@ -9,10 +9,11 @@ import { LogsExplorer } from '../components/tools/LogsExplorer';
 import { ArtifactRegistry } from '../components/tools/ArtifactRegistry';
 import { SecretManager } from '../components/tools/SecretManager';
 import { SpannerExplorer } from '../components/tools/SpannerExplorer';
+import { SpannerBackupsExplorer } from '../components/tools/SpannerBackupsExplorer';
 import { GCloudSetup } from '../components/tools/GCloudSetup';
 import * as PS from '../../../bindings/alis-hub-v3/productservice';
 
-type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner';
+type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner' | 'backups';
 
 type ProjectContext = {
   id: string;
@@ -27,6 +28,7 @@ const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = 
   { id: 'artifactregistry', label: 'Artifact Registry', subtitle: 'Packages', icon: 'solar:archive-bold' },
   { id: 'secrets', label: 'Secret Manager', subtitle: 'Secrets', icon: 'solar:lock-keyhole-bold' },
   { id: 'spanner', label: 'Spanner', subtitle: 'Cloud Spanner', icon: 'solar:database-bold' },
+  { id: 'backups', label: 'Backups', subtitle: 'Spanner Backups', icon: 'solar:history-bold' },
 ];
 
 function isAuthError(e: unknown): boolean {
@@ -238,6 +240,7 @@ export function ToolsPage() {
               {activeTab === 'artifactregistry' && <ArtifactRegistry projectID={projectID} region={region} />}
               {activeTab === 'secrets' && <SecretManager projectID={projectID} />}
               {activeTab === 'spanner' && <SpannerExplorer projectID={projectID} />}
+              {activeTab === 'backups' && <SpannerBackupsExplorer projectID={projectID} />}
             </>
           )}
         </div>

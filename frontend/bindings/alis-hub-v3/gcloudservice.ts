@@ -117,18 +117,28 @@ export function ListSecrets(projectID: string): $CancellablePromise<$models.SMSe
 }
 
 /**
+ * ListSpannerBackups lists backups for a Spanner instance.
+ * instanceResourceName is the full resource name e.g. "projects/{p}/instances/{i}".
+ */
+export function ListSpannerBackups(instanceResourceName: string): $CancellablePromise<$models.SpannerBackup[]> {
+    return $Call.ByID(3173956327, instanceResourceName).then(($result: any) => {
+        return $$createType22($result);
+    });
+}
+
+/**
  * ListSpannerDatabases lists databases in a Spanner instance.
  * instanceResourceName is the full name e.g. "projects/{project}/instances/{instance}".
  */
 export function ListSpannerDatabases(instanceResourceName: string): $CancellablePromise<$models.SpannerDatabase[]> {
     return $Call.ByID(1359586522, instanceResourceName).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
 export function ListSpannerInstances(projectID: string): $CancellablePromise<$models.SpannerInstance[]> {
     return $Call.ByID(2154481176, projectID).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
@@ -138,7 +148,7 @@ export function ListSpannerInstances(projectID: string): $CancellablePromise<$mo
  */
 export function ListSpannerTables(databaseResourceName: string): $CancellablePromise<$models.SpannerTable[]> {
     return $Call.ByID(1954101685, databaseResourceName).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType28($result);
     });
 }
 
@@ -148,7 +158,7 @@ export function ListSpannerTables(databaseResourceName: string): $CancellablePro
  */
 export function ListVersions(packageResourceName: string): $CancellablePromise<$models.ARVersion[]> {
     return $Call.ByID(2139956354, packageResourceName).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType30($result);
     });
 }
 
@@ -165,7 +175,7 @@ export function OpenInConsole(section: string, projectID: string, resource: stri
  */
 export function PollSetupOutput(runID: string, offset: number): $CancellablePromise<$models.SetupChunk | null> {
     return $Call.ByID(16531906, runID, offset).then(($result: any) => {
-        return $$createType30($result);
+        return $$createType32($result);
     });
 }
 
@@ -220,13 +230,15 @@ const $$createType17 = $models.SMSecretVersion.createFrom;
 const $$createType18 = $Create.Array($$createType17);
 const $$createType19 = $models.SMSecret.createFrom;
 const $$createType20 = $Create.Array($$createType19);
-const $$createType21 = $models.SpannerDatabase.createFrom;
+const $$createType21 = $models.SpannerBackup.createFrom;
 const $$createType22 = $Create.Array($$createType21);
-const $$createType23 = $models.SpannerInstance.createFrom;
+const $$createType23 = $models.SpannerDatabase.createFrom;
 const $$createType24 = $Create.Array($$createType23);
-const $$createType25 = $models.SpannerTable.createFrom;
+const $$createType25 = $models.SpannerInstance.createFrom;
 const $$createType26 = $Create.Array($$createType25);
-const $$createType27 = $models.ARVersion.createFrom;
+const $$createType27 = $models.SpannerTable.createFrom;
 const $$createType28 = $Create.Array($$createType27);
-const $$createType29 = $models.SetupChunk.createFrom;
-const $$createType30 = $Create.Nullable($$createType29);
+const $$createType29 = $models.ARVersion.createFrom;
+const $$createType30 = $Create.Array($$createType29);
+const $$createType31 = $models.SetupChunk.createFrom;
+const $$createType32 = $Create.Nullable($$createType31);

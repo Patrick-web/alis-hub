@@ -3183,6 +3183,71 @@ export class SharePerson {
     }
 }
 
+export class SpannerBackup {
+    "name": string;
+    "database": string;
+    "state": string;
+    "createTime": string;
+    "expireTime": string;
+    "versionTime": string;
+    "maxExpireTime": string;
+
+    /**
+     * API returns as a JSON string
+     */
+    "sizeBytes": string;
+    "databaseDialect": string;
+    "backupSchedules": string[];
+
+    /** Creates a new SpannerBackup instance. */
+    constructor($$source: Partial<SpannerBackup> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("database" in $$source)) {
+            this["database"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("createTime" in $$source)) {
+            this["createTime"] = "";
+        }
+        if (!("expireTime" in $$source)) {
+            this["expireTime"] = "";
+        }
+        if (!("versionTime" in $$source)) {
+            this["versionTime"] = "";
+        }
+        if (!("maxExpireTime" in $$source)) {
+            this["maxExpireTime"] = "";
+        }
+        if (!("sizeBytes" in $$source)) {
+            this["sizeBytes"] = "";
+        }
+        if (!("databaseDialect" in $$source)) {
+            this["databaseDialect"] = "";
+        }
+        if (!("backupSchedules" in $$source)) {
+            this["backupSchedules"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerBackup instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerBackup {
+        const $$createField9_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("backupSchedules" in $$parsedSource) {
+            $$parsedSource["backupSchedules"] = $$createField9_0($$parsedSource["backupSchedules"]);
+        }
+        return new SpannerBackup($$parsedSource as Partial<SpannerBackup>);
+    }
+}
+
 /**
  * SpannerDMLResult holds the outcome of a partitioned DML statement.
  */
