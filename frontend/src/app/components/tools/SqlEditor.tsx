@@ -80,7 +80,6 @@ export function SqlEditor({ value, onChange, onRun, placeholder }: Props) {
 
   const extensions = useMemo(() => [
     sql(),
-    isDark ? darkTheme : lightTheme,
     syntaxHighlighting(isDark ? darkHighlight : lightHighlight),
     Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => { onRun(); return true; } }])),
   ], [isDark, onRun]);
@@ -89,6 +88,7 @@ export function SqlEditor({ value, onChange, onRun, placeholder }: Props) {
     <CodeMirror
       value={value}
       onChange={onChange}
+      theme={isDark ? darkTheme : lightTheme}
       extensions={extensions}
       placeholder={placeholder}
       height="100%"
