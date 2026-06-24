@@ -91,6 +91,8 @@ export {
     NeuronScanResult,
     NeuronVersionSummary,
     Organisation,
+    PRComment,
+    PRCommit,
     PackageInfo,
     PackageScript,
     PkgRegistries,
