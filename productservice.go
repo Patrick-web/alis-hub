@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -105,6 +106,12 @@ type EnvInfo struct {
 type EnvVariable struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
+}
+
+type DeploymentEnvVar struct {
+	Name    string
+	Value   string
+	Managed bool
 }
 
 // ── Install Block types ───────────────────────────────────────────────────────
@@ -853,6 +860,99 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 		return nil, fmt.Errorf("GetEnvironmentVariables: response too short (%d bytes)", len(body))
 	}
 	return parseEnvVariablesFromGetEnvironment(body[5:])
+}
+
+// retrieveDeploymentEnvs calls NeuronsService/RetrieveDeploymentEnvs with
+// migrated=true and returns all vars with their managed flag.
+func (s *ProductService) retrieveDeploymentEnvs(envName string) ([]DeploymentEnvVar, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, envName)
+	buf = protowire.AppendTag(buf, 3, protowire.VarintType)
+	buf = protowire.AppendVarint(buf, 1) // migrated = true
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.neurons.v1.NeuronsService/RetrieveDeploymentEnvs", buf)
+	if err != nil {
+		return nil, fmt.Errorf("retrieveDeploymentEnvs: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("retrieveDeploymentEnvs: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("retrieveDeploymentEnvs: response too short (%d bytes)", len(body))
+	}
+
+	// Parse top-level field 2 (repeated Env) from the response payload.
+	data := body[5:]
+	var vars []DeploymentEnvVar
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if typ != protowire.BytesType || num != 2 {
+			continue
+		}
+		// Parse Env sub-message: field 1=name, field 2=value, field 3=managed
+		var v DeploymentEnvVar
+		sub := b
+		for len(sub) > 0 {
+			fn, ft, fn2 := protowire.ConsumeTag(sub)
+			if fn2 < 0 {
+				break
+			}
+			sub = sub[fn2:]
+			switch ft {
+			case protowire.BytesType:
+				sb, sm := protowire.ConsumeBytes(sub)
+				if sm < 0 {
+					sub = nil
+					break
+				}
+				sub = sub[sm:]
+				switch fn {
+				case 1:
+					v.Name = string(sb)
+				case 2:
+					v.Value = string(sb)
+				}
+			case protowire.VarintType:
+				sv, sm := protowire.ConsumeVarint(sub)
+				if sm < 0 {
+					sub = nil
+					break
+				}
+				sub = sub[sm:]
+				if fn == 3 {
+					v.Managed = sv != 0
+				}
+			default:
+				sm := protowire.ConsumeFieldValue(fn, ft, sub)
+				if sm < 0 {
+					sub = nil
+					break
+				}
+				sub = sub[sm:]
+			}
+		}
+		if v.Name != "" {
+			vars = append(vars, v)
+		}
+	}
+	return vars, nil
 }
 
 // SetEnvironmentVariables replaces all variables on an environment by calling
@@ -4640,85 +4740,64 @@ func parseWorkstationAny(anyBytes []byte) string {
 	return ""
 }
 
-// SwitchEnvironment updates the local .alis/.env file to reflect the newly
-// selected environment. It rewrites the env-specific system variables
-// (ALIS_OS_PROJECT, ALIS_PROJECT_NR, ALIS_REGION, ALIS_MANAGED_SPANNER_DB,
-// ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX) and regenerates the Builder Managed
-// section with the environment's variables from the API.
-// If no local .env file exists the call is a no-op.
+// SwitchEnvironment rewrites the local .alis/.env file to match the output
+// produced by the Alis VSCode extension when switching environments.
 func (s *ProductService) SwitchEnvironment(org, product, envName, projectID, projectNumber, region string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("home dir: %w", err)
 	}
-	envFilePath := filepath.Join(home, "alis.build", org, "build", product, ".alis", ".env")
-
-	content, err := os.ReadFile(envFilePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("read env file: %w", err)
-	}
-
-	vars, err := s.GetEnvironmentVariables(envName)
-	if err != nil {
-		return fmt.Errorf("get environment variables: %w", err)
-	}
 
 	envParts := strings.Split(envName, "/")
 	envID := envParts[len(envParts)-1]
 
-	lines := strings.Split(string(content), "\n")
+	alisDir := filepath.Join(home, "alis.build", org, "build", product, ".alis")
+	envFilePath := filepath.Join(alisDir, ".env")
+	keyFilePath := filepath.Join(alisDir, "key.json")
 
-	builderIdx := -1
-	for i, line := range lines {
-		if strings.HasPrefix(line, "# Builder Managed via") {
-			builderIdx = i
-			break
+	vars, err := s.retrieveDeploymentEnvs(envName)
+	if err != nil {
+		return fmt.Errorf("retrieve deployment envs: %w", err)
+	}
+
+	var managed, nonManaged []DeploymentEnvVar
+	for _, v := range vars {
+		if v.Managed {
+			managed = append(managed, v)
+		} else {
+			nonManaged = append(nonManaged, v)
 		}
 	}
-
-	end := len(lines)
-	if builderIdx >= 0 {
-		end = builderIdx
-	}
-
-	for i := 0; i < end; i++ {
-		line := lines[i]
-		switch {
-		case projectID != "" && strings.HasPrefix(line, "ALIS_OS_PROJECT="):
-			lines[i] = `ALIS_OS_PROJECT="` + projectID + `"`
-		case projectID != "" && strings.HasPrefix(line, "ALIS_MANAGED_SPANNER_DB="):
-			lines[i] = `ALIS_MANAGED_SPANNER_DB="` + projectID + `"`
-		case projectNumber != "" && strings.HasPrefix(line, "ALIS_PROJECT_NR="):
-			lines[i] = `ALIS_PROJECT_NR="` + projectNumber + `"`
-		case region != "" && strings.HasPrefix(line, "ALIS_REGION="):
-			lines[i] = `ALIS_REGION="` + region + `"`
-		case envID != "" && strings.HasPrefix(line, "ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX="):
-			prefix := fmt.Sprintf("organisations/%s/products/%s/deployments/%s/neurons/", org, product, envID)
-			lines[i] = `ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX="` + prefix + `"`
-		}
-	}
-
-	var sb strings.Builder
-	for i := 0; i < end; i++ {
-		sb.WriteString(lines[i])
-		sb.WriteByte('\n')
-	}
+	sort.Slice(managed, func(i, j int) bool { return managed[i].Name > managed[j].Name })
+	sort.Slice(nonManaged, func(i, j int) bool { return nonManaged[i].Name > nonManaged[j].Name })
 
 	builderURL := fmt.Sprintf("https://console.alisx.com/build/landing-zone/%s/%s/environments/%s/variables", org, product, envID)
-	sb.WriteString("# Builder Managed via the Alis Build Console at ")
-	sb.WriteString(builderURL)
-	sb.WriteByte('\n')
-	for _, v := range vars {
-		sb.WriteString(v.Label)
+
+	var sb strings.Builder
+	sb.WriteString("# Alis Build Managed\n")
+	for _, v := range managed {
+		sb.WriteString(v.Name)
 		sb.WriteString(`="`)
 		sb.WriteString(v.Value)
-		sb.WriteString(`"`)
-		sb.WriteByte('\n')
+		sb.WriteString("\"\n")
+	}
+	sb.WriteString("\n# Local Authentication\n")
+	sb.WriteString(`GOOGLE_APPLICATION_CREDENTIALS="`)
+	sb.WriteString(keyFilePath)
+	sb.WriteString("\"\n")
+	sb.WriteString("\n# Builder Managed via the Alis Build Console at ")
+	sb.WriteString(builderURL)
+	sb.WriteByte('\n')
+	for _, v := range nonManaged {
+		sb.WriteString(v.Name)
+		sb.WriteString(`="`)
+		sb.WriteString(v.Value)
+		sb.WriteString("\"\n")
 	}
 
+	if err := os.MkdirAll(alisDir, 0755); err != nil {
+		return fmt.Errorf("mkdir alis dir: %w", err)
+	}
 	return os.WriteFile(envFilePath, []byte(sb.String()), 0644)
 }
 
