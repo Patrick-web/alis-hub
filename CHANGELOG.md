@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.6.1] - 2026-06-24
+
+### Bug Fixes
+- Fixed an issue where deploy logs never appeared in the terminal during a deployment
+- Fixed an issue where deploying to more than one environment at a time would always fail with a timeout error
+
 ## [v0.6.0] - 2026-06-23
 
 ### What's New
