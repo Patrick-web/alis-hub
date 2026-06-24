@@ -16,6 +16,7 @@ import { systemNotify } from '../../lib/systemNotify';
 import * as BuildService from '../../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
+import { SearchableSelect } from '../ui/searchable-select';
 
 interface BuildPaneProps {
   tabId: string;
@@ -443,18 +444,12 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
             <Icon icon="solar:branch-linear" className="text-foreground/35 text-sm shrink-0" />
-            <div className="relative flex-1 min-w-0">
-              <select
-                value={branch}
-                onChange={(e) => handleBranchChange(e.target.value)}
-                className="w-full appearance-none bg-transparent text-[10px] text-foreground font-mono outline-none cursor-pointer pr-[16px]"
-              >
-                {branches.map((b) => (
-                  <option key={b} value={b} className="bg-background text-foreground">{b}</option>
-                ))}
-              </select>
-              <Icon icon="solar:alt-arrow-down-linear" className="absolute right-0 top-1/2 -translate-y-1/2 text-foreground/35 text-xs pointer-events-none" />
-            </div>
+            <SearchableSelect
+              value={branch}
+              options={branches}
+              onChange={handleBranchChange}
+              className="flex-1 min-w-0"
+            />
           </div>
           <div className="flex-1 overflow-y-auto">
             {commitsLoading ? (
