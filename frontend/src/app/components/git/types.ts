@@ -31,3 +31,16 @@ export interface GitCommit {
   timestamp: number;
   refNames: string[];
 }
+
+export interface ForgejoPR {
+  number: number;
+  title: string;
+  body: string;
+  state: string;
+  headBranch: string;
+  baseBranch: string;
+  author: string;
+  htmlUrl: string;
+  createdAt: string;
+  mergeable: boolean;
+}
