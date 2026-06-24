@@ -411,6 +411,26 @@ func gitCmd(dir string, args ...string) (string, error) {
 	return string(out), err
 }
 
+// gitCmdAuth runs a git command with an injected Bearer token for HTTPS remotes.
+// git -c http.extraHeader="Authorization: Bearer {token}" {rest of args}
+func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
+	if len(args) == 0 || args[0] != "git" {
+		return "", fmt.Errorf("gitCmdAuth: first arg must be 'git'")
+	}
+	token, err := g.tokens.AccessToken()
+	if err != nil || token == "" {
+		return gitCmd(dir, args...)
+	}
+	// Inject as a -c flag between "git" and the subcommand.
+	authArgs := make([]string, 0, len(args)+2)
+	authArgs = append(authArgs, "git", "-c", "http.extraHeader=Authorization: Bearer "+token)
+	authArgs = append(authArgs, args[1:]...)
+	cmd := exec.Command(authArgs[0], authArgs[1:]...)
+	cmd.Dir = dir
+	out, cerr := cmd.CombinedOutput()
+	return string(out), cerr
+}
+
 func gitCmdEnv(dir string, env []string, args ...string) (string, error) {
 	if len(args) == 0 || args[0] != "git" {
 		return "", fmt.Errorf("gitCmdEnv: first arg must be 'git'")
@@ -500,7 +520,7 @@ func (g *GitService) GetCommitFiles(repoPath, hash string) ([]CommitFile, error)
 	out, err := gitCmd(repoPath, "git", "show", "--name-status", "--format=", hash)
 	if err != nil {
 		// Commit is not in the local clone; fetch it and retry.
-		gitCmd(repoPath, "git", "fetch", "--depth=1", "origin", hash) //nolint:errcheck
+		g.gitCmdAuth(repoPath, "git", "fetch", "--depth=1", "origin", hash) //nolint:errcheck
 		out, err = gitCmd(repoPath, "git", "show", "--name-status", "--format=", hash)
 		if err != nil {
 			return nil, fmt.Errorf("show: %w", err)
@@ -530,7 +550,7 @@ func (g *GitService) GetCommitFiles(repoPath, hash string) ([]CommitFile, error)
 func (g *GitService) GetCommitFileDiff(repoPath, hash, filePath string) (*GitFileDiff, error) {
 	// Ensure the commit is available locally.
 	if _, err := gitCmd(repoPath, "git", "cat-file", "-t", hash); err != nil {
-		gitCmd(repoPath, "git", "fetch", "--depth=2", "origin", hash) //nolint:errcheck
+		g.gitCmdAuth(repoPath, "git", "fetch", "--depth=2", "origin", hash) //nolint:errcheck
 	}
 
 	lang := gitLang(filePath)
@@ -1175,8 +1195,8 @@ func (g *GitService) GetPRFiles(repoPath string, number int) ([]CommitFile, erro
 // GetPRFileDiff returns the diff for a single file across the PR's head vs base branches.
 // Uses a three-dot diff: git diff origin/{base}...origin/{head} -- {filePath}
 func (g *GitService) GetPRFileDiff(repoPath, baseBranch, headBranch, filePath string) (*GitFileDiff, error) {
-	// Best-effort fetch to update origin/{base} and origin/{head} refs.
-	gitCmd(repoPath, "git", "fetch", "origin", baseBranch, headBranch) //nolint:errcheck
+	// Fetch to update origin/{base} and origin/{head} refs, authenticated via bearer token.
+	g.gitCmdAuth(repoPath, "git", "fetch", "origin", baseBranch, headBranch) //nolint:errcheck
 
 	lang := gitLang(filePath)
 	diff := &GitFileDiff{Language: lang}
