@@ -1,7 +1,9 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
+import { Icon } from '@iconify/react';
 import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useSourceControl } from '../../stores/sourceControl';
+import { getFileIcon } from '../../utils/fileIcon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
 import { GitFileStatus, GitStatus } from './types';
 
@@ -101,6 +103,7 @@ function FileRow({
       title={path}
     >
       {statusIcon(code)}
+      <Icon icon={getFileIcon(path)} className="shrink-0 text-sm" />
       <span className="flex-1 truncate">{filePart(path)}</span>
       {hover && (
         <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
