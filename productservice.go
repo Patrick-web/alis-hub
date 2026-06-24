@@ -2930,7 +2930,9 @@ func openBrowserURL(url string) {
 	case "linux":
 		cmd = exec.Command("xdg-open", url)
 	default:
-		cmd = exec.Command("cmd", "/c", "start", url)
+		// Use rundll32 to avoid cmd.exe treating & as a command separator,
+		// which strips redirect_uri and other query parameters from OAuth URLs.
+		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
 	}
 	cmd.Start()
 }
