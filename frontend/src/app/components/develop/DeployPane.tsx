@@ -146,13 +146,12 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     setTabNotificationId(tabId, taskId);
 
     // Start a single deploy for all environments
-    let deployResult = null;
     let startError: string | null = null;
-    try {
-      deployResult = await DeployService.RunDeploy(neuronResource, version, selectedEnvs, planOnly, beta);
-    } catch (e: unknown) {
-      startError = e instanceof Error ? e.message : String(e);
-    }
+    const deployResult = await DeployService.RunDeploy(neuronResource, version, selectedEnvs, planOnly, beta)
+      .catch((e: unknown) => {
+        startError = e instanceof Error ? e.message : String(e);
+        return null;
+      });
 
     const updatedRuns: EnvRunState[] = initialRuns.map((run, i) => {
       if (deployResult) {
