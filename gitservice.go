@@ -186,6 +186,7 @@ func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeRe
 func (g *GitService) gitCmdStream(dir string, args ...string) (string, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -407,6 +408,7 @@ func gitCmd(dir string, args ...string) (string, error) {
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -427,6 +429,7 @@ func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 	authArgs = append(authArgs, args[1:]...)
 	cmd := exec.Command(authArgs[0], authArgs[1:]...)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	out, cerr := cmd.CombinedOutput()
 	return string(out), cerr
 }
@@ -437,7 +440,7 @@ func gitCmdEnv(dir string, env []string, args ...string) (string, error) {
 	}
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Env = append(os.Environ(), append(env, "GIT_TERMINAL_PROMPT=0")...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
