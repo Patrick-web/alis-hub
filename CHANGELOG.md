@@ -1,5 +1,23 @@
 # Changelog
 
+## [v0.7.0] - 2026-06-24
+
+### What's New
+- You can now switch between Build mode and Deploy mode directly in the Build pane
+- Pull requests from Forgejo repos now open in a dedicated full-screen PR experience
+- File type icons (VSCode-style) now appear in the source control file list
+
+### Bug Fixes
+- Fixed an issue where the env switcher's `.env` output didn't match the VSCode extension format
+- Fixed an issue where git operations could hang due to credential prompts on non-interactive terminals
+- Fixed terminal rendering on Windows by switching to ConPTY
+- Fixed CodeMirror theme not applying correctly when switching themes
+- Fixed several Windows compatibility issues: git credential helper, file manager integration, and path handling
+- Fixed the app icon not appearing on Windows executables
+- Fixed opening URLs on Windows
+- Fixed git fetch authentication for HTTPS remotes in PR diff views
+- Fixed PR diff viewer failing in shallow clones
+
 ## [v0.6.1] - 2026-06-24
 
 ### Bug Fixes
