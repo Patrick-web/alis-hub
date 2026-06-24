@@ -528,7 +528,7 @@ func (g *GitService) GetCommitFiles(repoPath, hash string) ([]CommitFile, error)
 
 // GetCommitFileDiff returns the diff for a single file within a specific commit.
 func (g *GitService) GetCommitFileDiff(repoPath, hash, filePath string) (*GitFileDiff, error) {
-	// Ensure the commit and its parent are available locally (needed for diff).
+	// Ensure the commit is available locally.
 	if _, err := gitCmd(repoPath, "git", "cat-file", "-t", hash); err != nil {
 		gitCmd(repoPath, "git", "fetch", "--depth=2", "origin", hash) //nolint:errcheck
 	}
@@ -536,19 +536,31 @@ func (g *GitService) GetCommitFileDiff(repoPath, hash, filePath string) (*GitFil
 	lang := gitLang(filePath)
 	diff := &GitFileDiff{Language: lang}
 
-	// New content: file at this commit
-	new_, _ := gitCmd(repoPath, "git", "show", hash+":"+filePath)
-	diff.NewContent = new_
+	// New content: file at this commit.
+	if new_, err := gitCmd(repoPath, "git", "show", hash+":"+filePath); err == nil {
+		diff.NewContent = new_
+	}
 
-	// Old content: file at parent; fails gracefully for new files or initial commits
-	old, _ := gitCmd(repoPath, "git", "show", hash+"^:"+filePath)
-	diff.OldContent = old
+	// Old content: silently empty for new files or shallow-clone boundaries (parent not available).
+	if old, err := gitCmd(repoPath, "git", "show", hash+"^:"+filePath); err == nil {
+		diff.OldContent = old
+	}
 
-	// Diff between parent and this commit. Falls back to showing the whole file as additions
-	// when the parent is unavailable (new file, initial commit, or shallow clone boundary).
-	rawDiff, _ := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", hash+"^", hash, "--", filePath)
+	// Diff between parent and this commit.
+	rawDiff, diffErr := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", hash+"^", hash, "--", filePath)
+	if diffErr != nil {
+		rawDiff = ""
+	}
 	if rawDiff == "" {
-		rawDiff, _ = gitCmd(repoPath, "git", "show", "--no-color", "-U3", hash, "--", filePath)
+		// Parent unavailable (new file, initial commit, shallow-clone boundary): fall back to
+		// git show which outputs the whole-file diff. Strip the commit header it prepends.
+		if showOut, err := gitCmd(repoPath, "git", "show", "--no-color", "-U3", hash, "--", filePath); err == nil {
+			if idx := strings.Index(showOut, "\ndiff --git "); idx >= 0 {
+				rawDiff = showOut[idx+1:]
+			} else if strings.HasPrefix(showOut, "diff --git ") {
+				rawDiff = showOut
+			}
+		}
 	}
 	diff.Hunks = gitParseHunks(rawDiff)
 
@@ -1163,7 +1175,7 @@ func (g *GitService) GetPRFiles(repoPath string, number int) ([]CommitFile, erro
 // GetPRFileDiff returns the diff for a single file across the PR's head vs base branches.
 // Uses a three-dot diff: git diff origin/{base}...origin/{head} -- {filePath}
 func (g *GitService) GetPRFileDiff(repoPath, baseBranch, headBranch, filePath string) (*GitFileDiff, error) {
-	// Fetch both branches so origin/{base} and origin/{head} refs are current.
+	// Best-effort fetch to update origin/{base} and origin/{head} refs.
 	gitCmd(repoPath, "git", "fetch", "origin", baseBranch, headBranch) //nolint:errcheck
 
 	lang := gitLang(filePath)
@@ -1172,14 +1184,22 @@ func (g *GitService) GetPRFileDiff(repoPath, baseBranch, headBranch, filePath st
 	baseRef := "origin/" + baseBranch
 	headRef := "origin/" + headBranch
 
-	old, _ := gitCmd(repoPath, "git", "show", baseRef+":"+filePath)
-	diff.OldContent = old
+	if old, err := gitCmd(repoPath, "git", "show", baseRef+":"+filePath); err == nil {
+		diff.OldContent = old
+	}
+	if new_, err := gitCmd(repoPath, "git", "show", headRef+":"+filePath); err == nil {
+		diff.NewContent = new_
+	}
 
-	new_, _ := gitCmd(repoPath, "git", "show", headRef+":"+filePath)
-	diff.NewContent = new_
-
-	rawDiff, _ := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+"..."+headRef, "--", filePath)
-	diff.Hunks = gitParseHunks(rawDiff)
+	// Three-dot diff shows changes on head since it diverged from base.
+	// Falls back to two-dot when the merge-base isn't in the shallow clone.
+	rawDiff, err := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+"..."+headRef, "--", filePath)
+	if err != nil || rawDiff == "" {
+		rawDiff, err = gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+".."+headRef, "--", filePath)
+	}
+	if err == nil {
+		diff.Hunks = gitParseHunks(rawDiff)
+	}
 
 	return diff, nil
 }

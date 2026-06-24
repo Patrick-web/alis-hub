@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -112,7 +113,7 @@ func TestForgejoPRCommitFiles(t *testing.T) {
 		t.Fatal("expected at least one file changed in the commit")
 	}
 
-	// Test diff for the first file
+	// Test diff for the first file — exercises the shallow-clone fallback path
 	firstFile := files[0]
 	diff, err := svc.GetCommitFileDiff(repoPath, commit.SHA, firstFile.Path)
 	if err != nil {
@@ -121,6 +122,13 @@ func TestForgejoPRCommitFiles(t *testing.T) {
 	t.Logf("diff for %s: oldLen=%d newLen=%d hunks=%d", firstFile.Path, len(diff.OldContent), len(diff.NewContent), len(diff.Hunks))
 	if len(diff.NewContent) == 0 {
 		t.Fatalf("GetCommitFileDiff: expected non-empty new content for %s", firstFile.Path)
+	}
+	if len(diff.Hunks) == 0 {
+		t.Fatalf("GetCommitFileDiff: expected non-empty hunks for %s (diff viewer will show blank)", firstFile.Path)
+	}
+	// Hunks must start with diff --git so @git-diff-view/core can parse them
+	if !strings.HasPrefix(diff.Hunks[0], "diff --git ") {
+		t.Fatalf("GetCommitFileDiff: hunks[0] must start with 'diff --git', got: %.60q", diff.Hunks[0])
 	}
 }
 
@@ -160,5 +168,11 @@ func TestForgejoPRFileDiff(t *testing.T) {
 		firstFile.Path, len(diff.OldContent), len(diff.NewContent), len(diff.Hunks))
 	if len(diff.NewContent) == 0 && len(diff.OldContent) == 0 {
 		t.Fatal("expected non-empty diff content")
+	}
+	if len(diff.Hunks) == 0 {
+		t.Fatal("expected non-empty hunks (diff viewer will show blank without them)")
+	}
+	if !strings.HasPrefix(diff.Hunks[0], "diff --git ") {
+		t.Fatalf("hunks[0] must start with 'diff --git', got: %.60q", diff.Hunks[0])
 	}
 }
