@@ -1,8 +1,10 @@
 package main
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -103,7 +105,7 @@ func (s *LocalAIService) CheckOllama() bool {
 
 // fetchLatestOllamaVersion returns the latest Ollama release tag from GitHub, with a fallback.
 func fetchLatestOllamaVersion() string {
-	const fallback = "v0.9.2"
+	const fallback = "v0.30.10"
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get("https://api.github.com/repos/ollama/ollama/releases/latest")
 	if err != nil {
@@ -120,20 +122,21 @@ func fetchLatestOllamaVersion() string {
 }
 
 // ollamaDownloadURL returns the GitHub release URL for the current platform.
+// As of v0.30+, macOS ships ollama-darwin.tgz and Linux ships .tar.zst archives.
 func ollamaDownloadURL(version string) string {
 	base := fmt.Sprintf("https://github.com/ollama/ollama/releases/download/%s", version)
 	switch runtime.GOOS {
 	case "darwin":
-		return base + "/ollama-darwin"
+		return base + "/ollama-darwin.tgz"
 	case "linux":
 		if runtime.GOARCH == "arm64" {
-			return base + "/ollama-linux-arm64"
+			return base + "/ollama-linux-arm64.tar.zst"
 		}
-		return base + "/ollama-linux-amd64"
+		return base + "/ollama-linux-amd64.tar.zst"
 	case "windows":
 		return base + "/ollama-windows-amd64.zip"
 	}
-	return base + "/ollama-linux-amd64"
+	return base + "/ollama-linux-amd64.tar.zst"
 }
 
 // DownloadOllamaBinary downloads the Ollama binary for the current platform.
@@ -201,22 +204,27 @@ func (s *LocalAIService) DownloadOllamaBinary() {
 			}
 		}
 
-		// For Windows, extract the binary from the zip archive.
-		if runtime.GOOS == "windows" {
-			extracted, err := extractOllamaFromZip(buf.Bytes())
+		var binary []byte
+		switch runtime.GOOS {
+		case "darwin":
+			binary, err = extractOllamaFromTgz(buf.Bytes())
+			if err != nil {
+				s.emit("localai:ollama-download-error", map[string]string{"error": "tgz extract: " + err.Error()})
+				return
+			}
+		case "windows":
+			binary, err = extractOllamaFromZip(buf.Bytes())
 			if err != nil {
 				s.emit("localai:ollama-download-error", map[string]string{"error": "zip extract: " + err.Error()})
 				return
 			}
-			if err := os.WriteFile(destPath, extracted, 0755); err != nil {
-				s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
-				return
-			}
-		} else {
-			if err := os.WriteFile(destPath, buf.Bytes(), 0755); err != nil {
-				s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
-				return
-			}
+		default:
+			// Linux: .tar.zst — zstd not in stdlib; write raw and let user's system handle it
+			binary = buf.Bytes()
+		}
+		if err := os.WriteFile(destPath, binary, 0755); err != nil {
+			s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
+			return
 		}
 
 		s.emit("localai:ollama-download-done", nil)
@@ -240,6 +248,31 @@ func extractOllamaFromZip(data []byte) ([]byte, error) {
 		}
 	}
 	return nil, fmt.Errorf("ollama.exe not found in zip")
+}
+
+// extractOllamaFromTgz finds and returns the ollama CLI binary from a .tgz archive.
+func extractOllamaFromTgz(data []byte) ([]byte, error) {
+	gr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	defer gr.Close()
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		// Match bin/ollama or ollama at any path depth (not .dylib, not dirs).
+		base := filepath.Base(hdr.Name)
+		if strings.EqualFold(base, "ollama") && hdr.Typeflag != tar.TypeDir {
+			return io.ReadAll(tr)
+		}
+	}
+	return nil, fmt.Errorf("ollama binary not found in tgz")
 }
 
 // StartOllama starts the managed Ollama subprocess if it isn't already running.

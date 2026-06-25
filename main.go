@@ -135,6 +135,7 @@ func main() {
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
+	localAISvc.SetApp(app)
 	if !isDevelopment {
 		updater.BackgroundCheck(app, version, 30*time.Second)
 	}
