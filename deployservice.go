@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
@@ -52,7 +53,8 @@ type DeployItem struct {
 // NeuronVersionSummary is a neuron version returned to the frontend.
 // State: 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED.
 type NeuronVersionSummary struct {
-	Version     string `json:"version"`
+	Name        string `json:"name"`    // full resource name e.g. organisations/x/products/y/neurons/bff-v1/versions/1-0-65
+	Version     string `json:"version"` // short version string e.g. 1.0.65
 	CreateTime  int64  `json:"createTime"` // unix seconds
 	BuildCommit string `json:"buildCommit"`
 	LogsURL     string `json:"logsUrl"`
@@ -77,6 +79,7 @@ func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSumma
 	var out []*NeuronVersionSummary
 	for _, item := range items {
 		out = append(out, &NeuronVersionSummary{
+			Name:        item.Name,
 			Version:     item.Version,
 			CreateTime:  item.CreateTime,
 			BuildCommit: item.BuildCommit,
@@ -98,11 +101,19 @@ func (s *DeployService) RunDeploy(neuron, version string, environments []string,
 		return nil, err
 	}
 
-	log.Printf("[deploy] RunDeploy: neuron=%s version=%s envs=%v planOnly=%v beta=%v", neuron, version, environments, planOnly, beta)
+	// The server expects a dotted version string e.g. "1.0.66" (not a full resource name,
+	// not dashes). If a full resource name was passed, extract the last segment and convert
+	// hyphens to dots (e.g. ".../versions/1-0-66" → "1.0.66").
+	versionID := version
+	if idx := strings.LastIndex(version, "/"); idx >= 0 {
+		versionID = strings.ReplaceAll(version[idx+1:], "-", ".")
+	}
+
+	log.Printf("[deploy] RunDeploy: neuron=%s versionID=%s envs=%v planOnly=%v beta=%v", neuron, versionID, environments, planOnly, beta)
 
 	req := &dbdv1.RunDeployRequest{
 		Neuron:       neuron,
-		Version:      version,
+		Version:      versionID,
 		Environments: environments,
 		PlanOnly:     planOnly,
 		Beta:         beta,

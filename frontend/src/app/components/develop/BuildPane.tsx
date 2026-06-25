@@ -252,7 +252,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           clearInterval(interval);
           if (!result.error) {
             if (buildModeRef.current === 'deploy') {
-              const version = result.neuronVersion || result.version;
+              const version = result.version || result.neuronVersion;
               setStep('running');
               handleStartDeploy(version);
             } else {
