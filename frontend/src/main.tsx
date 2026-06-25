@@ -10,6 +10,7 @@ import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
 import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
 import { CommandPaletteProvider } from "./app/stores/commandPalette.tsx";
+import { LocalAIProvider } from "./app/stores/localai.tsx";
 import { Toaster } from "./app/components/ui/sonner.tsx";
 import { WailsNotificationBridge } from "./app/components/WailsNotificationBridge.tsx";
 import { NetworkStatus } from "./app/components/NetworkStatus.tsx";
@@ -21,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
       <NotificationProvider>
         <WorkspaceProvider>
           <LabsProvider>
+            <LocalAIProvider>
             <SourceControlProvider>
             <SuggestionsProvider>
               <PackageSessionsProvider>
@@ -33,6 +35,7 @@ createRoot(document.getElementById("root")!).render(
               </PackageSessionsProvider>
             </SuggestionsProvider>
             </SourceControlProvider>
+            </LocalAIProvider>
           </LabsProvider>
         </WorkspaceProvider>
       </NotificationProvider>

@@ -41,6 +41,7 @@ func main() {
 	productSvc := NewProductService()
 	gitSvc := NewGitService()
 	changelogSvc := NewChangelogService(version)
+	localAISvc := NewLocalAIService()
 
 	app := application.New(application.Options{
 		Name:        "AlisHub",
@@ -60,6 +61,7 @@ func main() {
 			application.NewService(NewGCloudService()),
 			application.NewService(gitSvc),
 			application.NewService(changelogSvc),
+			application.NewService(localAISvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),

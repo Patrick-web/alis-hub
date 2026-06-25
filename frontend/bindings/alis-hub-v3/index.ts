@@ -9,6 +9,7 @@ import * as DeployService from "./deployservice.js";
 import * as GCloudService from "./gcloudservice.js";
 import * as GitService from "./gitservice.js";
 import * as GreetService from "./greetservice.js";
+import * as LocalAIService from "./localaiservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
 import * as ServiceManager from "./servicemanager.js";
@@ -21,6 +22,7 @@ export {
     GCloudService,
     GitService,
     GreetService,
+    LocalAIService,
     PackageService,
     ProductService,
     ServiceManager
@@ -90,6 +92,7 @@ export {
     NeuronItem,
     NeuronScanResult,
     NeuronVersionSummary,
+    OllamaStatus,
     Organisation,
     PRComment,
     PRCommit,
