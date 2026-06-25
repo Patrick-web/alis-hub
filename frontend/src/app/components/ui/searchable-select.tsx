@@ -4,9 +4,15 @@ import { Command as CommandPrimitive } from 'cmdk';
 import { Check, ChevronDown, Search } from 'lucide-react';
 import { cn } from './utils';
 
+type Option = string | { label: string; value: string };
+
+function toEntry(o: Option): { label: string; value: string } {
+  return typeof o === 'string' ? { label: o, value: o } : o;
+}
+
 interface SearchableSelectProps {
   value: string;
-  options: string[];
+  options: Option[];
   onChange: (value: string) => void;
   placeholder?: string;
   label?: string;
@@ -24,12 +30,15 @@ export function SearchableSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
+  const entries = options.map(toEntry);
   const filtered = query.trim()
-    ? options.filter(o => o.toLowerCase().includes(query.toLowerCase()))
-    : options;
+    ? entries.filter(e => e.label.toLowerCase().includes(query.toLowerCase()))
+    : entries;
 
-  function handleSelect(opt: string) {
-    onChange(opt);
+  const displayLabel = entries.find(e => e.value === value)?.label ?? value;
+
+  function handleSelect(val: string) {
+    onChange(val);
     setOpen(false);
     setQuery('');
   }
@@ -45,7 +54,7 @@ export function SearchableSelect({
           )}
         >
           {label && <span className="text-foreground/30 shrink-0">{label}</span>}
-          <span className="font-mono truncate flex-1 text-left">{value || placeholder}</span>
+          <span className="font-mono truncate flex-1 text-left">{displayLabel || placeholder}</span>
           <ChevronDown size={9} className={cn('shrink-0 text-foreground/30 transition-transform', open && 'rotate-180')} />
         </button>
       </PopoverPrimitive.Trigger>
@@ -72,18 +81,18 @@ export function SearchableSelect({
                   No results
                 </CommandPrimitive.Empty>
               ) : (
-                filtered.map(opt => (
+                filtered.map(entry => (
                   <CommandPrimitive.Item
-                    key={opt}
-                    value={opt}
-                    onSelect={() => handleSelect(opt)}
+                    key={entry.value}
+                    value={entry.value}
+                    onSelect={() => handleSelect(entry.value)}
                     className="flex items-center gap-2 px-2 py-1.5 cursor-pointer text-[11px] text-foreground/70 font-mono hover:bg-foreground/5 aria-selected:bg-foreground/5 outline-none"
                   >
                     <Check
                       size={10}
-                      className={cn('shrink-0 text-pink-400', opt === value ? 'opacity-100' : 'opacity-0')}
+                      className={cn('shrink-0 text-pink-400', entry.value === value ? 'opacity-100' : 'opacity-0')}
                     />
-                    <span className="truncate">{opt}</span>
+                    <span className="truncate">{entry.label}</span>
                   </CommandPrimitive.Item>
                 ))
               )}

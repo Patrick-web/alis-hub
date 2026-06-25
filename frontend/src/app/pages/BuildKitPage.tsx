@@ -4,6 +4,7 @@ import { Browser } from '@wailsio/runtime';
 import { Icon } from '@iconify/react';
 import { useWorkspace } from '../stores/workspace';
 import * as BuildKitService from '../../../bindings/alis-hub-v3/buildkitservice';
+import { SearchableSelect } from '../components/ui/searchable-select';
 
 const flows = [
   {
@@ -194,17 +195,12 @@ export function BuildKitPage() {
               Build Specification
             </h2>
             {specs.length > 0 && (
-              <select
+              <SearchableSelect
                 value={selectedSpecName}
-                onChange={(e) => setSelectedSpecName(e.target.value)}
-                className="bg-card border border-border text-foreground text-[11px] font-mono px-[8px] py-[4px] rounded-[4px] focus:outline-none focus:border-[rgba(248,129,169,0.5)] cursor-pointer hover:border-foreground/30 transition-colors max-w-[280px]"
-              >
-                {specs.map((s: any) => (
-                  <option key={s.name} value={s.name}>
-                    {s.displayName || s.name}
-                  </option>
-                ))}
-              </select>
+                options={specs.map((s: any) => ({ label: s.displayName || s.name, value: s.name }))}
+                onChange={setSelectedSpecName}
+                className="max-w-[280px]"
+              />
             )}
           </div>
           <p className="text-[11px] text-foreground/45 mb-[12px]">

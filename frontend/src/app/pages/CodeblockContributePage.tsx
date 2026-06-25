@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Loader } from '../components/Loader';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import type { CodeblockInstance, BlockCommit } from '../../../bindings/alis-hub-v3/models';
+import { SearchableSelect } from '../components/ui/searchable-select';
 
 type Step = 'instance' | 'edit' | 'version';
 
@@ -27,7 +28,6 @@ const STATE_COLOR: Record<number, string> = {
 };
 
 const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[4px]';
-const selectClass = "bg-background border border-border rounded-[4px] px-[10px] py-[8px] text-foreground text-[12px] outline-none focus:border-brand w-full transition-colors appearance-none";
 const textareaClass = "bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors";
 
 function relativeDate(iso: string): string {
@@ -187,15 +187,12 @@ export function CodeblockContributePage() {
           <div className="p-[10px] border-t border-border flex flex-col gap-[8px]">
             <div className="mb-[4px]">
               <p className={labelClass}>Release Level</p>
-              <select
-                className={selectClass}
-                value={releaseLevel}
-                onChange={e => setReleaseLevel(Number(e.target.value))}
-              >
-                {RELEASE_LEVELS.map(l => (
-                  <option key={l.value} value={l.value}>{l.label}</option>
-                ))}
-              </select>
+              <SearchableSelect
+                value={String(releaseLevel)}
+                options={RELEASE_LEVELS.map(l => ({ label: l.label, value: String(l.value) }))}
+                onChange={v => setReleaseLevel(Number(v))}
+                className="w-full"
+              />
             </div>
             <div className="mb-[8px]">
               <p className={labelClass}>Release Notes</p>
