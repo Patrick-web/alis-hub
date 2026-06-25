@@ -110,8 +110,16 @@ export function LocalAISetupCard() {
         </div>
       </div>
 
+      {/* Ready confirmation */}
+      {state.enabled && state.modelPulled && (
+        <div className="px-[12px] py-[8px] flex items-center gap-[6px] border-t border-foreground/[0.06]">
+          <Icon icon="solar:check-circle-linear" className="text-[12px] text-success/60 shrink-0" />
+          <span className="text-[10px] text-foreground/35 font-mono">Commit message generation and AI Insights are active</span>
+        </div>
+      )}
+
       {/* Action area */}
-      {state.enabled && (
+      {state.enabled && !state.modelPulled && (
         <div className="px-[12px] py-[8px] flex flex-col gap-[6px]">
 
           {/* Step 1: Download Ollama binary */}
