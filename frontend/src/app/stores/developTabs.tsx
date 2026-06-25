@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { create } from 'zustand';
 import type { AppNotification, TaskType } from './notifications';
 
 export interface DevelopTab {
@@ -9,7 +9,7 @@ export interface DevelopTab {
   restore?: AppNotification;
 }
 
-interface DevelopTabsContextValue {
+interface DevelopTabsStore {
   tabs: DevelopTab[];
   activeTabId: string | null;
   openTab: (type: TaskType, neuron: string, restore?: AppNotification) => void;
@@ -18,50 +18,21 @@ interface DevelopTabsContextValue {
   setTabNotificationId: (tabId: string, notifId: string) => void;
 }
 
-const DevelopTabsContext = createContext<DevelopTabsContextValue | null>(null);
-
-export function DevelopTabsProvider({ children }: { children: ReactNode }) {
-  const [tabs, setTabs] = useState<DevelopTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string | null>(null);
-
-  const openTab = useCallback((type: TaskType, neuron: string, restore?: AppNotification) => {
-    setTabs(prev => {
-      const existing = prev.find(t => t.type === type && t.neuron === neuron);
-      if (existing) {
-        setActiveTabId(existing.id);
-        return prev;
-      }
-      const id = crypto.randomUUID();
-      setActiveTabId(id);
-      return [...prev, { id, type, neuron, restore }];
-    });
-  }, []);
-
-  const closeTab = useCallback((id: string) => {
-    setTabs(prev => {
-      const next = prev.filter(t => t.id !== id);
-      setActiveTabId(cur => (cur === id ? (next[next.length - 1]?.id ?? null) : cur));
-      return next;
-    });
-  }, []);
-
-  const activateTab = useCallback((id: string) => setActiveTabId(id), []);
-
-  const setTabNotificationId = useCallback((tabId: string, notifId: string) => {
-    setTabs(prev => prev.map(t => t.id === tabId ? { ...t, notificationId: notifId } : t));
-  }, []);
-
-  return (
-    <DevelopTabsContext.Provider
-      value={{ tabs, activeTabId, openTab, closeTab, activateTab, setTabNotificationId }}
-    >
-      {children}
-    </DevelopTabsContext.Provider>
-  );
-}
-
-export function useDevelopTabs() {
-  const ctx = useContext(DevelopTabsContext);
-  if (!ctx) throw new Error('useDevelopTabs must be used within DevelopTabsProvider');
-  return ctx;
-}
+export const useDevelopTabs = create<DevelopTabsStore>((set) => ({
+  tabs: [],
+  activeTabId: null,
+  openTab: (type, neuron, restore) => set(state => {
+    const existing = state.tabs.find(t => t.type === type && t.neuron === neuron);
+    if (existing) return { activeTabId: existing.id };
+    const id = crypto.randomUUID();
+    return { tabs: [...state.tabs, { id, type, neuron, restore }], activeTabId: id };
+  }),
+  closeTab: (id) => set(state => {
+    const next = state.tabs.filter(t => t.id !== id);
+    return { tabs: next, activeTabId: state.activeTabId === id ? (next[next.length - 1]?.id ?? null) : state.activeTabId };
+  }),
+  activateTab: (id) => set({ activeTabId: id }),
+  setTabNotificationId: (tabId, notifId) => set(state => ({
+    tabs: state.tabs.map(t => t.id === tabId ? { ...t, notificationId: notifId } : t),
+  })),
+}));
