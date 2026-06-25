@@ -219,13 +219,21 @@ export function GitPage() {
   }
 
   async function handleStage(path: string) {
-    await GitService.StageFile(repoPath, path);
-    refresh();
+    try {
+      await GitService.StageFile(repoPath, path);
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    }
   }
 
   async function handleUnstage(path: string) {
-    await GitService.UnstageFile(repoPath, path);
-    refresh();
+    try {
+      await GitService.UnstageFile(repoPath, path);
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    }
   }
 
   function handleDiscard(paths: string[]) {

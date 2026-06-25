@@ -363,6 +363,7 @@ func (s *LocalAIService) PullModel(model string) {
 		}
 		defer resp.Body.Close()
 		dec := json.NewDecoder(resp.Body)
+		success := false
 		for {
 			var event map[string]any
 			if err := dec.Decode(&event); err != nil {
@@ -372,12 +373,21 @@ func (s *LocalAIService) PullModel(model string) {
 				s.emit("localai:pull-error", map[string]string{"error": err.Error()})
 				return
 			}
+			if errMsg, _ := event["error"].(string); errMsg != "" {
+				s.emit("localai:pull-error", map[string]string{"error": errMsg})
+				return
+			}
 			if status, _ := event["status"].(string); status == "success" {
+				success = true
 				break
 			}
 			s.emit("localai:pull-progress", event)
 		}
-		s.emit("localai:pull-done", nil)
+		if success {
+			s.emit("localai:pull-done", nil)
+		} else {
+			s.emit("localai:pull-error", map[string]string{"error": "pull ended without success"})
+		}
 	}()
 }
 

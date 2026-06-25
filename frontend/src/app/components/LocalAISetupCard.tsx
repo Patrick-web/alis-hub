@@ -3,8 +3,8 @@ import { Icon } from '@iconify/react';
 import { useLocalAI, type LocalAIModel } from '../stores/localai';
 
 const MODELS: { id: LocalAIModel; label: string; size: string }[] = [
-  { id: 'gemma3:2b', label: '2b · fast',   size: '~1.6 GB' },
-  { id: 'gemma3:4b', label: '4b · better', size: '~2.5 GB' },
+  { id: 'gemma4:e2b', label: 'e2b · fast',   size: '~1.5 GB' },
+  { id: 'gemma4:12b', label: '12b · better', size: '~7 GB' },
 ];
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {

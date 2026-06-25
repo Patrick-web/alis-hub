@@ -9,7 +9,7 @@ import {
 import { Events } from '@wailsio/runtime';
 import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
 
-export type LocalAIModel = 'gemma3:2b' | 'gemma3:4b';
+export type LocalAIModel = 'gemma4:e2b' | 'gemma4:12b';
 
 export interface PullProgress {
   status: string;
@@ -64,14 +64,14 @@ interface LocalAIContextValue {
 }
 
 const STORAGE_KEY = 'alis:localai';
-const DEFAULT_MODEL: LocalAIModel = 'gemma3:2b';
+const DEFAULT_MODEL: LocalAIModel = 'gemma4:e2b';
 
 function loadFromStorage(): Pick<LocalAIState, 'enabled' | 'model'> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { enabled: false, model: DEFAULT_MODEL };
     const parsed = JSON.parse(raw);
-    const model = parsed.model === 'gemma3:4b' ? 'gemma3:4b' : 'gemma3:2b';
+    const model = parsed.model === 'gemma4:12b' ? 'gemma4:12b' : 'gemma4:e2b';
     return { enabled: parsed.enabled ?? false, model };
   } catch {
     return { enabled: false, model: DEFAULT_MODEL };
@@ -153,8 +153,7 @@ export function LocalAIProvider({ children }: { children: ReactNode }) {
     let modelPulled = false;
     if (status.running) {
       const models = await LocalAIService.GetPulledModels().catch(() => [] as string[]);
-      const base = state.model.split(':')[0];
-      modelPulled = models.some(m => m === state.model || m.startsWith(base + ':'));
+      modelPulled = models.some(m => m === state.model);
     }
     dispatch({ type: 'SET_STATUS', payload: { binaryReady: status.binaryReady, ollamaRunning: status.running, modelPulled } });
   }, [state.model]);
@@ -166,8 +165,7 @@ export function LocalAIProvider({ children }: { children: ReactNode }) {
       let modelPulled = false;
       if (status.running) {
         const models = await LocalAIService.GetPulledModels().catch(() => [] as string[]);
-        const base = state.model.split(':')[0];
-        modelPulled = models.some(m => m === state.model || m.startsWith(base + ':'));
+        modelPulled = models.some(m => m === state.model);
       }
       dispatch({ type: 'SET_STATUS', payload: { binaryReady: status.binaryReady, ollamaRunning: status.running, modelPulled } });
 
