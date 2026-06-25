@@ -13,9 +13,11 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs } from '../stores/labs';
 import { useSuggestions } from '../stores/suggestions';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
+import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
 import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useLocalAI } from '../stores/localai';
 
 const LOG_LIMIT = 200;
 
@@ -36,6 +38,7 @@ export function GitPage() {
   const { state } = useWorkspace();
   const { isSuggestionEnabled } = useLabs();
   const { addSuggestion } = useSuggestions();
+  const { state: localAIState } = useLocalAI();
 
   const [buildPath, setBuildPath] = useState('');
   const [definePath, setDefinePath] = useState('');
@@ -63,6 +66,7 @@ export function GitPage() {
 
   const [commitMessage, setCommitMessage] = useState('');
   const [committing, setCommitting] = useState(false);
+  const [generatingCommitMsg, setGeneratingCommitMsg] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [error, setError] = useState('');
@@ -263,6 +267,19 @@ export function GitPage() {
     }
   }
 
+  async function handleGenerateCommitMessage() {
+    if (!repoPath) return;
+    setGeneratingCommitMsg(true);
+    try {
+      const msg = await LocalAIService.GenerateCommitMessage(repoPath, localAIState.model);
+      if (msg) setCommitMessage(msg);
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setGeneratingCommitMsg(false);
+    }
+  }
+
   async function handlePush() {
     setPushing(true);
     try { await GitService.PushOrigin(repoPath); } catch (e: any) { setError(String(e)); }
@@ -309,6 +326,17 @@ export function GitPage() {
                 }
               }
             }
+          }
+          // AI contextual suggestion (fire-and-forget, non-blocking)
+          if (localAIState.enabled && localAIState.modelPulled && isSuggestionEnabled('ai-contextual-insight')) {
+            const context = `A git pull just completed on the ${activeRepo} repo. New commits were pulled.`;
+            LocalAIService.Generate(
+              localAIState.model,
+              'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
+              context,
+            ).then(body => {
+              if (body) addSuggestion({ definitionId: 'ai-contextual-insight', category: 'AI Insights', title: 'AI suggestion', body, priority: 'passive' });
+            }).catch(() => {});
           }
         } catch {
           // suggestion detection is best-effort
@@ -483,6 +511,7 @@ export function GitPage() {
                     selectedStaged={selectedStaged}
                     commitMessage={commitMessage}
                     committing={committing}
+                    generatingCommitMsg={generatingCommitMsg}
                     onSelectFile={selectFile}
                     onStage={handleStage}
                     onUnstage={handleUnstage}
@@ -490,6 +519,7 @@ export function GitPage() {
                     onStageAll={handleStageAll}
                     onCommit={handleCommit}
                     onCommitMessageChange={setCommitMessage}
+                    onGenerateCommitMessage={handleGenerateCommitMessage}
                   />
                 )}
               </div>

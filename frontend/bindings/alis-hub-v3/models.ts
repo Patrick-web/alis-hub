@@ -2398,6 +2398,41 @@ export class NeuronVersionSummary {
     }
 }
 
+/**
+ * OllamaStatus describes the current state of the managed Ollama runtime.
+ */
+export class OllamaStatus {
+    /**
+     * binary exists on disk
+     */
+    "binaryReady": boolean;
+
+    /**
+     * HTTP API is responding
+     */
+    "running": boolean;
+
+    /** Creates a new OllamaStatus instance. */
+    constructor($$source: Partial<OllamaStatus> = {}) {
+        if (!("binaryReady" in $$source)) {
+            this["binaryReady"] = false;
+        }
+        if (!("running" in $$source)) {
+            this["running"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new OllamaStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): OllamaStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new OllamaStatus($$parsedSource as Partial<OllamaStatus>);
+    }
+}
+
 export class Organisation {
     "name": string;
     "displayName": string;

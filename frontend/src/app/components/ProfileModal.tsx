@@ -14,6 +14,7 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { useSourceControl } from '../stores/sourceControl';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
+import { LocalAISetupCard } from './LocalAISetupCard';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
 interface ProfileModalProps {
@@ -501,6 +502,11 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                 {/* ── Labs ── */}
                 {activeTab === 'labs' && (
                   <div className="p-[14px] flex flex-col gap-[12px]">
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Local AI</SectionTitle>
+                      <LocalAISetupCard />
+                    </div>
+
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Smart Suggestions</SectionTitle>
                       <SettingsCard>

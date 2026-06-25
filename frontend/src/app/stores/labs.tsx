@@ -11,7 +11,8 @@ export type SuggestionCategory =
   | 'Build & Deploy'
   | 'Define'
   | 'Environment Hygiene'
-  | 'Release Readiness';
+  | 'Release Readiness'
+  | 'AI Insights';
 
 export interface SuggestionDefinition {
   id: string;
@@ -57,6 +58,13 @@ export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
     description: 'When a build repo pull includes dependency files (go.mod, package.json, etc.), suggest installing packages.',
     enabled: true,
   },
+  {
+    id: 'ai-contextual-insight',
+    category: 'AI Insights',
+    title: 'AI contextual suggestions',
+    description: 'Generate context-aware next-step suggestions using your local Gemma model after key events.',
+    enabled: true,
+  },
 ];
 
 export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
@@ -64,6 +72,7 @@ export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
   'Define',
   'Environment Hygiene',
   'Release Readiness',
+  'AI Insights',
 ];
 
 interface LabsState {

@@ -12,7 +12,9 @@ import type { TerminalSession, PackageTerminalPaneHandle } from '../components/P
 import { useNotifications } from './notifications';
 import { useLabs } from './labs';
 import { useSuggestions } from './suggestions';
+import { useLocalAI } from './localai';
 import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
+import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
 
 interface PackageSessionsContextValue {
   sessions: TerminalSession[];
@@ -37,6 +39,7 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
   const { updateNotification } = useNotifications();
   const { isSuggestionEnabled } = useLabs();
   const { addSuggestion } = useSuggestions();
+  const { state: localAIState } = useLocalAI();
 
   // Polling loop — stays alive regardless of which page is mounted
   useEffect(() => {
@@ -141,8 +144,19 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
         priority: 'passive',
       });
     }
+    // AI contextual suggestion (fire-and-forget)
+    if (localAIState.enabled && localAIState.modelPulled && isSuggestionEnabled('ai-contextual-insight')) {
+      const outcome = hasErrors ? 'failed with errors' : 'completed successfully';
+      LocalAIService.Generate(
+        localAIState.model,
+        'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
+        `A package build just ${outcome}.`,
+      ).then(body => {
+        if (body) addSuggestion({ definitionId: 'ai-contextual-insight', category: 'AI Insights', title: 'AI suggestion', body, priority: 'passive' });
+      }).catch(() => {});
+    }
     taskIdRef.current = null;
-  }, [sessions, updateNotification, isSuggestionEnabled, addSuggestion]);
+  }, [sessions, updateNotification, isSuggestionEnabled, addSuggestion, localAIState]);
 
   return (
     <PackageSessionsContext.Provider
