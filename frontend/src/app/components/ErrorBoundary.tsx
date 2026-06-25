@@ -1,5 +1,51 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useState } from 'react';
+import { useRouteError, isRouteErrorResponse } from 'react-router';
 import { Icon } from '@iconify/react';
+
+export function RouteErrorPage() {
+  const error = useRouteError();
+  const [showDetails, setShowDetails] = useState(false);
+  const message = isRouteErrorResponse(error)
+    ? `${error.status} ${error.statusText}`
+    : error instanceof Error
+      ? error.message
+      : 'An unexpected error occurred.';
+  const stack = error instanceof Error ? error.stack : undefined;
+
+  return (
+    <div className="h-screen w-full bg-background flex flex-col items-center justify-center px-[32px]">
+      <div className="w-full max-w-[480px] flex flex-col gap-[20px]">
+        <div className="flex items-center gap-[10px]">
+          <Icon icon="solar:close-circle-bold" className="text-destructive text-[22px] shrink-0" />
+          <h1 className="text-[15px] font-bold text-foreground font-mono">Something went wrong</h1>
+        </div>
+        <p className="text-[12px] text-foreground/45 font-mono leading-relaxed">{message}</p>
+        <div className="flex items-center gap-[10px]">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex items-center gap-[6px] px-[12px] py-[7px] rounded-[6px] bg-card border border-border text-foreground text-[11px] font-mono hover:border-border transition-colors"
+          >
+            <Icon icon="solar:refresh-linear" className="text-[13px]" />
+            Reload app
+          </button>
+          {stack && (
+            <button
+              onClick={() => setShowDetails(s => !s)}
+              className="text-[11px] text-foreground/30 hover:text-foreground font-mono transition-colors"
+            >
+              {showDetails ? 'Hide' : 'Show'} details
+            </button>
+          )}
+        </div>
+        {showDetails && stack && (
+          <pre className="bg-background border border-border rounded-[6px] p-[12px] text-[10px] text-foreground/50 font-mono overflow-auto max-h-[220px] whitespace-pre-wrap break-all">
+            {stack}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   children: ReactNode;
