@@ -30,8 +30,8 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const [deployError, setDeployError] = useState<string | null>(null);
   const [envs, setEnvs] = useState<DeployEnv[]>([]);
   const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
-  const [versions, setVersions] = useState<{ version: string; createTime: number }[]>([]);
-  const [version, setVersion] = useState('');
+  const [versions, setVersions] = useState<{ name: string; version: string; createTime: number }[]>([]);
+  const [version, setVersion] = useState(''); // short display version e.g. 1.0.65
   const [planOnly, setPlanOnly] = useState(false);
   const [beta, setBeta] = useState(false);
 
@@ -87,7 +87,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         DeployService.ListNeuronVersions(neuronResource),
       ]);
       const builtVersions = (versionList ?? []).filter(v => v !== null).map(v => ({
-        version: v!.version, createTime: v!.createTime,
+        name: v!.name, version: v!.version, createTime: v!.createTime,
       }));
       setVersions(builtVersions);
       if (builtVersions.length > 0) setVersion(builtVersions[0].version);
@@ -320,7 +320,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                     const ago = v.createTime > 0 ? formatRelativeTime(v.createTime) : '';
                     return (
                       <button
-                        key={v.version}
+                        key={v.name}
                         onClick={() => setVersion(v.version)}
                         className={`w-full text-left px-[16px] py-[9px] border-b border-border flex items-center gap-[10px] transition-colors ${
                           selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-foreground/[2%]'

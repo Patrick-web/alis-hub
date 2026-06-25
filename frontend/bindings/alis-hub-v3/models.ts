@@ -2358,6 +2358,14 @@ export class NeuronScanResult {
  * State: 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED.
  */
 export class NeuronVersionSummary {
+    /**
+     * full resource name e.g. organisations/x/products/y/neurons/bff-v1/versions/1-0-65
+     */
+    "name": string;
+
+    /**
+     * short version string e.g. 1.0.65
+     */
     "version": string;
 
     /**
@@ -2370,6 +2378,9 @@ export class NeuronVersionSummary {
 
     /** Creates a new NeuronVersionSummary instance. */
     constructor($$source: Partial<NeuronVersionSummary> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
         if (!("version" in $$source)) {
             this["version"] = "";
         }
