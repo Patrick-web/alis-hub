@@ -1,8 +1,10 @@
 package main
 
 import (
+	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -106,6 +108,62 @@ func TestExtractOllamaFromZip_InvalidZip(t *testing.T) {
 	_, err := extractOllamaFromZip([]byte("not a zip"))
 	if err == nil {
 		t.Fatal("expected error for invalid zip data, got nil")
+	}
+}
+
+// ── extractTgzToDir ─────────────────────────────────────────────────────────
+
+func makeTgz(t *testing.T, files map[string][]byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+	for name, content := range files {
+		tw.WriteHeader(&tar.Header{Name: name, Typeflag: tar.TypeReg, Size: int64(len(content)), Mode: 0755})
+		tw.Write(content)
+	}
+	tw.Close()
+	gw.Close()
+	return buf.Bytes()
+}
+
+func TestExtractTgzToDir_AllFilesWritten(t *testing.T) {
+	tgzData := makeTgz(t, map[string][]byte{
+		"ollama":                  []byte("fake-ollama"),
+		"lib/ollama/llama-server": []byte("fake-llama-server"),
+	})
+	dir := t.TempDir()
+	if err := extractTgzToDir(tgzData, dir); err != nil {
+		t.Fatalf("extractTgzToDir() error: %v", err)
+	}
+	for _, rel := range []string{"ollama", "lib/ollama/llama-server"} {
+		if _, err := os.Stat(filepath.Join(dir, rel)); err != nil {
+			t.Errorf("expected file %q to exist after extraction", rel)
+		}
+	}
+}
+
+func TestExtractTgzToDir_InvalidTgz(t *testing.T) {
+	if err := extractTgzToDir([]byte("not a tgz"), t.TempDir()); err == nil {
+		t.Fatal("expected error for invalid tgz data, got nil")
+	}
+}
+
+func TestExtractTgzToDir_PathTraversalIgnored(t *testing.T) {
+	var buf bytes.Buffer
+	gw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(gw)
+	tw.WriteHeader(&tar.Header{Name: "../evil.sh", Typeflag: tar.TypeReg, Size: 5, Mode: 0755})
+	tw.Write([]byte("evil!"))
+	tw.Close()
+	gw.Close()
+
+	dir := t.TempDir()
+	if err := extractTgzToDir(buf.Bytes(), dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(dir), "evil.sh")); err == nil {
+		t.Error("path traversal succeeded — evil.sh should not have been written")
 	}
 }
 

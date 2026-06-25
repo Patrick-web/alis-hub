@@ -204,27 +204,30 @@ func (s *LocalAIService) DownloadOllamaBinary() {
 			}
 		}
 
-		var binary []byte
+		binDir := filepath.Dir(destPath)
 		switch runtime.GOOS {
 		case "darwin":
-			binary, err = extractOllamaFromTgz(buf.Bytes())
-			if err != nil {
+			// tgz contains ollama + lib/ollama/llama-server; extract all to binDir.
+			if err := extractTgzToDir(buf.Bytes(), binDir); err != nil {
 				s.emit("localai:ollama-download-error", map[string]string{"error": "tgz extract: " + err.Error()})
 				return
 			}
 		case "windows":
-			binary, err = extractOllamaFromZip(buf.Bytes())
+			binary, err := extractOllamaFromZip(buf.Bytes())
 			if err != nil {
 				s.emit("localai:ollama-download-error", map[string]string{"error": "zip extract: " + err.Error()})
 				return
 			}
+			if err := os.WriteFile(destPath, binary, 0755); err != nil {
+				s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
+				return
+			}
 		default:
-			// Linux: .tar.zst — zstd not in stdlib; write raw and let user's system handle it
-			binary = buf.Bytes()
-		}
-		if err := os.WriteFile(destPath, binary, 0755); err != nil {
-			s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
-			return
+			// Linux: .tar.zst — zstd not in stdlib; write raw bytes for now.
+			if err := os.WriteFile(destPath, buf.Bytes(), 0755); err != nil {
+				s.emit("localai:ollama-download-error", map[string]string{"error": err.Error()})
+				return
+			}
 		}
 
 		s.emit("localai:ollama-download-done", nil)
@@ -250,11 +253,12 @@ func extractOllamaFromZip(data []byte) ([]byte, error) {
 	return nil, fmt.Errorf("ollama.exe not found in zip")
 }
 
-// extractOllamaFromTgz finds and returns the ollama CLI binary from a .tgz archive.
-func extractOllamaFromTgz(data []byte) ([]byte, error) {
+// extractTgzToDir extracts all files from a .tgz archive into destDir, preserving structure.
+// Ollama v0.30+ ships ollama + lib/ollama/llama-server in the same tgz; both must be present.
+func extractTgzToDir(data []byte, destDir string) error {
 	gr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer gr.Close()
 	tr := tar.NewReader(gr)
@@ -264,15 +268,39 @@ func extractOllamaFromTgz(data []byte) ([]byte, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return err
 		}
-		// Match bin/ollama or ollama at any path depth (not .dylib, not dirs).
-		base := filepath.Base(hdr.Name)
-		if strings.EqualFold(base, "ollama") && hdr.Typeflag != tar.TypeDir {
-			return io.ReadAll(tr)
+		// Sanitise path to prevent traversal attacks.
+		name := filepath.Clean(hdr.Name)
+		if strings.HasPrefix(name, "..") {
+			continue
+		}
+		target := filepath.Join(destDir, name)
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg, tar.TypeRegA:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			mode := os.FileMode(hdr.Mode)
+			if mode == 0 {
+				mode = 0644
+			}
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			f.Close()
 		}
 	}
-	return nil, fmt.Errorf("ollama binary not found in tgz")
+	return nil
 }
 
 // StartOllama starts the managed Ollama subprocess if it isn't already running.
