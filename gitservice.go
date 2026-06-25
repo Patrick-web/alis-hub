@@ -667,14 +667,20 @@ func gitParseHunks(raw string) []string {
 
 // StageFile stages a single file.
 func (g *GitService) StageFile(repoPath, filePath string) error {
-	_, err := gitCmd(repoPath, "git", "add", "--", filePath)
-	return err
+	out, err := gitCmd(repoPath, "git", "add", "--", filePath)
+	if err != nil {
+		return fmt.Errorf("git add: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
 }
 
 // UnstageFile removes a file from the staging area.
 func (g *GitService) UnstageFile(repoPath, filePath string) error {
-	_, err := gitCmd(repoPath, "git", "restore", "--staged", "--", filePath)
-	return err
+	out, err := gitCmd(repoPath, "git", "restore", "--staged", "--", filePath)
+	if err != nil {
+		return fmt.Errorf("git restore: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
 }
 
 // DiscardFile discards working tree changes for a file.

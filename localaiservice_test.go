@@ -33,17 +33,17 @@ func TestOllamaDownloadURL(t *testing.T) {
 
 	switch runtime.GOOS {
 	case "darwin":
-		if !strings.HasSuffix(got, "/ollama-darwin") {
-			t.Errorf("darwin URL should end with /ollama-darwin, got %q", got)
+		if !strings.HasSuffix(got, "/ollama-darwin.tgz") {
+			t.Errorf("darwin URL should end with /ollama-darwin.tgz, got %q", got)
 		}
 	case "linux":
 		if runtime.GOARCH == "arm64" {
-			if !strings.HasSuffix(got, "/ollama-linux-arm64") {
-				t.Errorf("linux/arm64 URL should end with /ollama-linux-arm64, got %q", got)
+			if !strings.HasSuffix(got, "/ollama-linux-arm64.tar.zst") {
+				t.Errorf("linux/arm64 URL should end with /ollama-linux-arm64.tar.zst, got %q", got)
 			}
 		} else {
-			if !strings.HasSuffix(got, "/ollama-linux-amd64") {
-				t.Errorf("linux/amd64 URL should end with /ollama-linux-amd64, got %q", got)
+			if !strings.HasSuffix(got, "/ollama-linux-amd64.tar.zst") {
+				t.Errorf("linux/amd64 URL should end with /ollama-linux-amd64.tar.zst, got %q", got)
 			}
 		}
 	case "windows":
@@ -207,8 +207,8 @@ func TestGetPulledModels(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{
 			"models": []map[string]any{
-				{"name": "gemma3:2b"},
-				{"name": "gemma3:4b"},
+				{"name": "gemma4:e2b"},
+				{"name": "gemma4:12b"},
 			},
 		})
 	}))
@@ -222,7 +222,7 @@ func TestGetPulledModels(t *testing.T) {
 	if len(models) != 2 {
 		t.Fatalf("expected 2 models, got %d", len(models))
 	}
-	if models[0] != "gemma3:2b" || models[1] != "gemma3:4b" {
+	if models[0] != "gemma4:e2b" || models[1] != "gemma4:12b" {
 		t.Errorf("unexpected models: %v", models)
 	}
 }
@@ -254,7 +254,7 @@ func TestGenerate_Success(t *testing.T) {
 	defer srv.Close()
 
 	svc := newTestService(srv.URL)
-	got, err := svc.Generate("gemma3:2b", "system prompt", "user prompt")
+	got, err := svc.Generate("gemma4:e2b", "system prompt", "user prompt")
 	if err != nil {
 		t.Fatalf("Generate() error: %v", err)
 	}
@@ -292,10 +292,10 @@ func TestGenerate_RequestContents(t *testing.T) {
 	defer srv.Close()
 
 	svc := newTestService(srv.URL)
-	svc.Generate("gemma3:4b", "mysystem", "myuser")
+	svc.Generate("gemma4:12b", "mysystem", "myuser")
 
-	if captured["model"] != "gemma3:4b" {
-		t.Errorf("model field = %v, want gemma3:4b", captured["model"])
+	if captured["model"] != "gemma4:12b" {
+		t.Errorf("model field = %v, want gemma4:12b", captured["model"])
 	}
 	if captured["system"] != "mysystem" {
 		t.Errorf("system field = %v, want mysystem", captured["system"])
@@ -314,7 +314,7 @@ func TestGenerateCommitMessage_NoStagedChanges(t *testing.T) {
 	// Use a temp dir that is not a git repo — diff will be empty.
 	dir := t.TempDir()
 	svc := newTestService("http://127.0.0.1:19999")
-	_, err := svc.GenerateCommitMessage(dir, "gemma3:2b")
+	_, err := svc.GenerateCommitMessage(dir, "gemma4:e2b")
 	if err == nil {
 		t.Fatal("expected error for empty diff, got nil")
 	}
@@ -348,7 +348,7 @@ func TestGenerateCommitMessage_WithStagedChanges(t *testing.T) {
 	defer srv.Close()
 
 	svc := newTestService(srv.URL)
-	msg, err := svc.GenerateCommitMessage(dir, "gemma3:2b")
+	msg, err := svc.GenerateCommitMessage(dir, "gemma4:e2b")
 	if err != nil {
 		t.Fatalf("GenerateCommitMessage() error: %v", err)
 	}
@@ -379,7 +379,7 @@ func TestPullModel_Success(t *testing.T) {
 	svc := newTestService(srv.URL)
 	svc.app = nil // no wails app; emit is a no-op
 
-	svc.PullModel("gemma3:2b")
+	svc.PullModel("gemma4:e2b")
 
 	// Give the goroutine a moment to finish.
 	time.Sleep(200 * time.Millisecond)
@@ -397,7 +397,7 @@ func TestPullModel_ServerError(t *testing.T) {
 
 	svc := newTestService(srv.URL)
 	// Should not panic even when the server returns an error.
-	svc.PullModel("gemma3:2b")
+	svc.PullModel("gemma4:e2b")
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -476,7 +476,7 @@ func TestGenerate_RealOllama(t *testing.T) {
 		t.Skip("Ollama not running — start it with: ollama serve")
 	}
 
-	model := "gemma3:2b"
+	model := "gemma4:e2b"
 	out, err := svc.Generate(model, "You are a helpful assistant.", "Say hello in one sentence.")
 	if err != nil {
 		t.Fatalf("Generate() error: %v", err)
