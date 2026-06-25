@@ -14,6 +14,7 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { useSourceControl } from '../stores/sourceControl';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
+import { useUserProfile } from '../stores/userProfile';
 import { LocalAISetupCard } from './LocalAISetupCard';
 import { ReleaseNotesModal } from './ReleaseNotesModal';
 
@@ -23,12 +24,6 @@ interface ProfileModalProps {
 }
 
 type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control';
-
-interface UserProfile {
-  email: string;
-  name: string;
-  picture: string;
-}
 
 interface UpdateInfo {
   available: boolean;
@@ -143,8 +138,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
   const { state: scState, setFileListView, setDiffView } = useSourceControl();
   const [activeTab, setActiveTab] = useState<Tab>('account');
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const { profile, profileError } = useUserProfile();
 
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -172,9 +166,6 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
   useEffect(() => {
     if (!open) return;
-    ProductService.GetUserProfile().then((p: any) => {
-      if (p) setProfile(p);
-    }).catch((e: any) => setProfileError(String(e)));
 
     UpdaterService.AppInfo().then((info: any) => {
       if (info) setAppInfo(info as AppInfo);
@@ -284,15 +275,18 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           >
             {/* Title bar */}
             <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border">
-              <div className="flex items-center gap-[6px]">
-                <div className="w-[12px] h-[12px] rounded-full bg-[#ff5f57]" />
-                <div className="w-[12px] h-[12px] rounded-full bg-[#febc2e]" />
-                <div className="w-[12px] h-[12px] rounded-full bg-[#28c840]" />
-              </div>
+              <div className="w-[52px]" />
               <span className="flex-1 text-center text-[13px] font-semibold text-foreground/45 tracking-[-0.2px]">
                 Settings
               </span>
-              <div className="w-[52px]" />
+              <div className="w-[52px] flex justify-end">
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.07] transition-colors"
+                >
+                  <Icon icon="solar:close-circle-linear" className="text-[15px]" />
+                </button>
+              </div>
             </div>
 
             <div className="flex min-h-[440px]">

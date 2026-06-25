@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from './ui/dialog';
 import { useCommandPalette } from '../stores/commandPalette';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
+import { useUserProfile } from '../stores/userProfile';
 
 function WindowControls() {
   return (
@@ -47,20 +48,14 @@ export function TopNav() {
   const location = useLocation();
   const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [avatarName, setAvatarName] = useState('');
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);
   const [switchingEnv, setSwitchingEnv] = useState(false);
 
-  useEffect(() => {
-    ProductService.GetUserProfile().then((p: any) => {
-      if (p) {
-        setAvatarUrl(p.picture || '');
-        setAvatarName(p.name || '');
-      }
-    }).catch(() => {});
-  }, []);
+  const { profile, fetchProfile } = useUserProfile();
+  const avatarUrl = profile?.picture ?? '';
+  const avatarName = profile?.name ?? '';
+  useEffect(() => { fetchProfile(); }, []);
 
   const [envsLoading, setEnvsLoading] = useState(false);
   const envsLoadingRef = useRef(false);

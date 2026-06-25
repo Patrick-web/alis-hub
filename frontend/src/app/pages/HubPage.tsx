@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Window } from '@wailsio/runtime';
 import { useWorkspace } from '../stores/workspace';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { useUserProfile } from '../stores/userProfile';
 
 function WindowControls() {
   return (
@@ -33,18 +33,11 @@ export function HubPage() {
   const navigate = useNavigate();
   const { state, setPhase, setProduct } = useWorkspace();
   const [profileOpen, setProfileOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [avatarName, setAvatarName] = useState('');
   const [avatarImgError, setAvatarImgError] = useState(false);
 
-  useEffect(() => {
-    ProductService.GetUserProfile().then((p: any) => {
-      if (p) {
-        setAvatarUrl(p.picture || '');
-        setAvatarName(p.name || '');
-      }
-    }).catch(() => {});
-  }, []);
+  const { profile } = useUserProfile();
+  const avatarUrl = profile?.picture ?? '';
+  const avatarName = profile?.name ?? '';
 
   const goStandalone = (path: string) => {
     setPhase('standalone');
