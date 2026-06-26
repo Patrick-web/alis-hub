@@ -410,12 +410,8 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
 }
 
 /**
- * SwitchEnvironment updates the local .alis/.env file to reflect the newly
- * selected environment. It rewrites the env-specific system variables
- * (ALIS_OS_PROJECT, ALIS_PROJECT_NR, ALIS_REGION, ALIS_MANAGED_SPANNER_DB,
- * ALIS_OS_ORG_BACKEND_PRODUCT_PREFIX) and regenerates the Builder Managed
- * section with the environment's variables from the API.
- * If no local .env file exists the call is a no-op.
+ * SwitchEnvironment rewrites the local .alis/.env file to match the output
+ * produced by the Alis VSCode extension when switching environments.
  */
 export function SwitchEnvironment(org: string, product: string, envName: string, projectID: string, projectNumber: string, region: string): $CancellablePromise<void> {
     return $Call.ByID(3506000719, org, product, envName, projectID, projectNumber, region);
