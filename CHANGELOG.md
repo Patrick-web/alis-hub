@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.8.0] - 2026-06-26
+
+### What's New
+- Local AI is now available: run Gemma on-device via Ollama to generate commit messages and smart suggestions without sending data to the cloud
+- Spanner Backups are now viewable in GCloud Tools
+- Dropdowns throughout the app now use a searchable select component with filtering support
+
+### Bug Fixes
+- Fixed an issue where the app icon appeared too large in the macOS Dock
+- Fixed Ollama download and setup not completing correctly
+- Fixed Ollama model detection and updated to use Gemma 4 models
+- Fixed git pull/push operations failing due to missing authentication token and terminal prompt interference
+- Fixed deployments failing when the version string format didn't match what the VSCode extension expected
+- Fixed development tab state being lost on navigation; added a route error boundary to prevent full-app crashes
+- Fixed an issue where the user profile wasn't pre-loaded, and replaced window traffic lights with a close button
+
 ## [v0.7.1] - 2026-06-24
 
 ### Bug Fixes
