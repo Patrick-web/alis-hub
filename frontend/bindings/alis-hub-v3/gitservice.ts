@@ -79,11 +79,21 @@ export function DiscardFile(repoPath: string, filePath: string): $CancellablePro
 }
 
 /**
+ * GetAheadBehind returns how many commits the current branch is ahead/behind its upstream.
+ * Returns zeros when no upstream is configured or when the comparison fails.
+ */
+export function GetAheadBehind(repoPath: string): $CancellablePromise<$models.AheadBehind | null> {
+    return $Call.ByID(1150452256, repoPath).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * GetBranches returns all local and remote branches.
  */
 export function GetBranches(repoPath: string): $CancellablePromise<$models.GitBranch[]> {
     return $Call.ByID(3919711711, repoPath).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType7($result);
     });
 }
 
@@ -92,7 +102,7 @@ export function GetBranches(repoPath: string): $CancellablePromise<$models.GitBr
  */
 export function GetCommitFileDiff(repoPath: string, hash: string, filePath: string): $CancellablePromise<$models.GitFileDiff | null> {
     return $Call.ByID(2802220399, repoPath, hash, filePath).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -101,7 +111,7 @@ export function GetCommitFileDiff(repoPath: string, hash: string, filePath: stri
  */
 export function GetCommitFiles(repoPath: string, hash: string): $CancellablePromise<$models.CommitFile[]> {
     return $Call.ByID(434630353, repoPath, hash).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType11($result);
     });
 }
 
@@ -110,7 +120,7 @@ export function GetCommitFiles(repoPath: string, hash: string): $CancellableProm
  */
 export function GetConflictContent(repoPath: string, filePath: string): $CancellablePromise<$models.ConflictFileContent | null> {
     return $Call.ByID(2044518434, repoPath, filePath).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
@@ -119,7 +129,7 @@ export function GetConflictContent(repoPath: string, filePath: string): $Cancell
  */
 export function GetConflictFiles(repoPath: string): $CancellablePromise<string[]> {
     return $Call.ByID(652532720, repoPath).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
@@ -136,7 +146,7 @@ export function GetCurrentBranch(repoPath: string): $CancellablePromise<string> 
  */
 export function GetFileDiff(repoPath: string, filePath: string, staged: boolean): $CancellablePromise<$models.GitFileDiff | null> {
     return $Call.ByID(1333579366, repoPath, filePath, staged).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -145,7 +155,7 @@ export function GetFileDiff(repoPath: string, filePath: string, staged: boolean)
  */
 export function GetLog(repoPath: string, limit: number): $CancellablePromise<$models.GitCommit[]> {
     return $Call.ByID(1590913447, repoPath, limit).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
@@ -154,7 +164,7 @@ export function GetLog(repoPath: string, limit: number): $CancellablePromise<$mo
  */
 export function GetPRComments(repoPath: string, $number: number): $CancellablePromise<$models.PRComment[]> {
     return $Call.ByID(1666356855, repoPath, $number).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType17($result);
     });
 }
 
@@ -163,7 +173,7 @@ export function GetPRComments(repoPath: string, $number: number): $CancellablePr
  */
 export function GetPRCommits(repoPath: string, $number: number): $CancellablePromise<$models.PRCommit[]> {
     return $Call.ByID(1353400125, repoPath, $number).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -173,7 +183,7 @@ export function GetPRCommits(repoPath: string, $number: number): $CancellablePro
  */
 export function GetPRFileDiff(repoPath: string, baseBranch: string, headBranch: string, filePath: string): $CancellablePromise<$models.GitFileDiff | null> {
     return $Call.ByID(276206784, repoPath, baseBranch, headBranch, filePath).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType9($result);
     });
 }
 
@@ -182,7 +192,7 @@ export function GetPRFileDiff(repoPath: string, baseBranch: string, headBranch: 
  */
 export function GetPRFiles(repoPath: string, $number: number): $CancellablePromise<$models.CommitFile[]> {
     return $Call.ByID(2369629616, repoPath, $number).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType11($result);
     });
 }
 
@@ -192,7 +202,7 @@ export function GetPRFiles(repoPath: string, $number: number): $CancellablePromi
  */
 export function GetProductRepoPaths(org: string, product: string): $CancellablePromise<$models.ProductRepoPaths | null> {
     return $Call.ByID(674422590, org, product).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -201,7 +211,7 @@ export function GetProductRepoPaths(org: string, product: string): $CancellableP
  */
 export function GetStatus(repoPath: string): $CancellablePromise<$models.GitStatus | null> {
     return $Call.ByID(2522644849, repoPath).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType23($result);
     });
 }
 
@@ -217,7 +227,7 @@ export function IsForgejo(repoPath: string): $CancellablePromise<boolean> {
  */
 export function ListPRs(repoPath: string, state: string): $CancellablePromise<$models.ForgejoPR[]> {
     return $Call.ByID(365587936, repoPath, state).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -276,7 +286,7 @@ export function StageFile(repoPath: string, filePath: string): $CancellablePromi
  */
 export function StartLocalMerge(repoPath: string, branchName: string): $CancellablePromise<$models.LocalMergeResult | null> {
     return $Call.ByID(2277677406, repoPath, branchName).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
@@ -300,24 +310,26 @@ const $$createType0 = $models.PRComment.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.ForgejoPR.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.GitBranch.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.GitFileDiff.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.CommitFile.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $models.ConflictFileContent.createFrom;
-const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $Create.Array($Create.Any);
-const $$createType13 = $models.GitCommit.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $Create.Array($$createType0);
-const $$createType16 = $models.PRCommit.createFrom;
-const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = $models.ProductRepoPaths.createFrom;
-const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $models.GitStatus.createFrom;
+const $$createType4 = $models.AheadBehind.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $models.GitBranch.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.GitFileDiff.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $models.CommitFile.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = $models.ConflictFileContent.createFrom;
+const $$createType13 = $Create.Nullable($$createType12);
+const $$createType14 = $Create.Array($Create.Any);
+const $$createType15 = $models.GitCommit.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = $Create.Array($$createType0);
+const $$createType18 = $models.PRCommit.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = $models.ProductRepoPaths.createFrom;
 const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $Create.Array($$createType2);
-const $$createType23 = $models.LocalMergeResult.createFrom;
-const $$createType24 = $Create.Nullable($$createType23);
+const $$createType22 = $models.GitStatus.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $Create.Array($$createType2);
+const $$createType25 = $models.LocalMergeResult.createFrom;
+const $$createType26 = $Create.Nullable($$createType25);

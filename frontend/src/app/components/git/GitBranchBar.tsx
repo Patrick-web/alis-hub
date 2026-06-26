@@ -13,6 +13,8 @@ interface Props {
   onRefresh: () => void;
   pushing: boolean;
   pulling: boolean;
+  ahead?: number;
+  behind?: number;
   prCount?: number;
   showingPRs?: boolean;
   onTogglePRs?: () => void;
@@ -20,7 +22,7 @@ interface Props {
 
 export function GitBranchBar({
   currentBranch, branches, onCheckout, onCreateBranch, onPush, onPull, onRefresh, pushing, pulling,
-  prCount, showingPRs, onTogglePRs,
+  ahead, behind, prCount, showingPRs, onTogglePRs,
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
@@ -119,9 +121,10 @@ export function GitBranchBar({
       <button
         onClick={onPull}
         disabled={pulling}
-        title="Pull"
-        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+        title={behind ? `Pull (${behind} behind)` : 'Pull'}
+        className="flex items-center gap-0.5 p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
       >
+        {!!behind && <span className="text-[10px] font-medium leading-none">{behind}</span>}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 19V5M5 12l7 7 7-7" />
         </svg>
@@ -130,9 +133,10 @@ export function GitBranchBar({
       <button
         onClick={onPush}
         disabled={pushing}
-        title="Push"
-        className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
+        title={ahead ? `Push (${ahead} ahead)` : 'Push'}
+        className="flex items-center gap-0.5 p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
       >
+        {!!ahead && <span className="text-[10px] font-medium leading-none">{ahead}</span>}
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 5v14M19 12l-7-7-7 7" />
         </svg>

@@ -627,6 +627,28 @@ func (g *GitService) GetStatus(repoPath string) (*GitStatus, error) {
 	return status, nil
 }
 
+// AheadBehind holds the number of commits the current branch is ahead/behind its upstream.
+type AheadBehind struct {
+	Ahead  int `json:"ahead"`
+	Behind int `json:"behind"`
+}
+
+// GetAheadBehind returns how many commits the current branch is ahead/behind its upstream.
+// Returns zeros when no upstream is configured or when the comparison fails.
+func (g *GitService) GetAheadBehind(repoPath string) (*AheadBehind, error) {
+	out, err := gitCmd(repoPath, "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
+	if err != nil {
+		return &AheadBehind{}, nil
+	}
+	parts := strings.Fields(strings.TrimSpace(out))
+	if len(parts) != 2 {
+		return &AheadBehind{}, nil
+	}
+	ahead, _ := strconv.Atoi(parts[0])
+	behind, _ := strconv.Atoi(parts[1])
+	return &AheadBehind{Ahead: ahead, Behind: behind}, nil
+}
+
 // GetFileDiff returns old and new file content plus diff hunks for the diff viewer.
 // staged=true shows index vs HEAD; staged=false shows working tree vs index.
 func (g *GitService) GetFileDiff(repoPath, filePath string, staged bool) (*GitFileDiff, error) {
@@ -766,12 +788,24 @@ func (g *GitService) PullOrigin(repoPath string) error {
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer
 // token injected via -c http.extraHeader when a token is available.
+// If the token cannot be obtained, an auth:expired event is emitted so the
+// frontend can prompt the user to sign in again immediately.
 func (g *GitService) authedGitCmd(args ...string) *exec.Cmd {
 	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	var cmdArgs []string
+	if g.tokens == nil {
+		g.tokens, _ = NewConsoleTokenSource()
+	}
 	if g.tokens != nil {
 		if token, err := g.tokens.AccessToken(); err == nil && token != "" {
 			cmdArgs = append(cmdArgs, "-c", "http.extraHeader=Authorization: Bearer "+token)
+		} else if err != nil {
+			g.mu.Lock()
+			app := g.app
+			g.mu.Unlock()
+			if app != nil {
+				app.Event.Emit("auth:expired")
+			}
 		}
 	}
 	cmdArgs = append(cmdArgs, args...)

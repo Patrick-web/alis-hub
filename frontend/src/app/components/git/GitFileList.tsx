@@ -1,6 +1,6 @@
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { Icon } from '@iconify/react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RotateCcw, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useSourceControl } from '../../stores/sourceControl';
 import { getFileIcon } from '../../utils/fileIcon';
@@ -14,6 +14,8 @@ interface Props {
   commitMessage: string;
   committing: boolean;
   generatingCommitMsg: boolean;
+  ahead?: number;
+  behind?: number;
   onSelectFile: (path: string, staged: boolean) => void;
   onStage: (path: string) => void;
   onUnstage: (path: string) => void;
@@ -22,6 +24,7 @@ interface Props {
   onCommit: () => void;
   onCommitMessageChange: (msg: string) => void;
   onGenerateCommitMessage: () => void;
+  onSync?: () => void;
 }
 
 interface TreeNode {
@@ -268,7 +271,9 @@ function Section({
 
 export function GitFileList({
   status, selectedFile, selectedStaged, commitMessage, committing, generatingCommitMsg,
+  ahead, behind,
   onSelectFile, onStage, onUnstage, onDiscard, onStageAll, onCommit, onCommitMessageChange, onGenerateCommitMessage,
+  onSync,
 }: Props) {
   const { state: scState, setFileListView } = useSourceControl();
   const treeMode = scState.fileListView === 'tree';
@@ -280,6 +285,41 @@ export function GitFileList({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Commit box — at top like VSCode */}
+      <div className="shrink-0 border-b border-foreground/10 p-3 flex flex-col gap-2">
+        <textarea
+          className="w-full bg-foreground/5 border border-foreground/10 rounded text-xs text-foreground/80 placeholder-white/25 p-2 resize-none outline-none focus:border-pink-500/40 transition-colors"
+          rows={3}
+          placeholder="Commit message…"
+          value={commitMessage}
+          onChange={e => onCommitMessageChange(e.target.value)}
+        />
+        <button
+          onClick={onGenerateCommitMessage}
+          disabled={status.staged.length === 0 || generatingCommitMsg || committing}
+          className="w-full py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground/60 flex items-center justify-center gap-1.5"
+        >
+          <Sparkles size={11} className="text-purple-400/80" />
+          {generatingCommitMsg ? 'Generating…' : 'Generate with AI'}
+        </button>
+        <button
+          onClick={onCommit}
+          disabled={!canCommit}
+          className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
+        >
+          {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
+        </button>
+        {(!!ahead || !!behind) && onSync && (
+          <button
+            onClick={onSync}
+            className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5"
+          >
+            <RefreshCw size={11} />
+            Sync Changes{ahead ? ` ${ahead}↑` : ''}{behind ? ` ${behind}↓` : ''}
+          </button>
+        )}
+      </div>
+
       {/* View toggle */}
       <div className="shrink-0 flex items-center justify-end gap-1 px-2 py-1 border-b border-foreground/10">
         <Tooltip>
@@ -444,31 +484,6 @@ export function GitFileList({
         )}
       </div>
 
-      {/* Commit box */}
-      <div className="shrink-0 border-t border-foreground/10 p-3 flex flex-col gap-2">
-        <textarea
-          className="w-full bg-foreground/5 border border-foreground/10 rounded text-xs text-foreground/80 placeholder-white/25 p-2 resize-none outline-none focus:border-pink-500/40 transition-colors"
-          rows={3}
-          placeholder="Commit message…"
-          value={commitMessage}
-          onChange={e => onCommitMessageChange(e.target.value)}
-        />
-        <button
-          onClick={onGenerateCommitMessage}
-          disabled={status.staged.length === 0 || generatingCommitMsg || committing}
-          className="w-full py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground/60 flex items-center justify-center gap-1.5"
-        >
-          <Sparkles size={11} className="text-purple-400/80" />
-          {generatingCommitMsg ? 'Generating…' : 'Generate with AI'}
-        </button>
-        <button
-          onClick={onCommit}
-          disabled={!canCommit}
-          className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
-        >
-          {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
-        </button>
-      </div>
     </div>
   );
 }

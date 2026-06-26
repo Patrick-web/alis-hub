@@ -33,6 +33,7 @@ export {
     ARRepository,
     ARVersion,
     AccountUser,
+    AheadBehind,
     BlockAccessData,
     BlockAccessMember,
     BlockCommit,

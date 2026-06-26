@@ -76,6 +76,7 @@ export function RootLayout() {
 
   // Poll auth validity once the user is past the login screen.
   // Also re-check when the window regains focus (e.g. after the laptop sleeps).
+  // Also listen for auth:expired events emitted by the backend (e.g. on push/pull failure).
   useEffect(() => {
     const unauthPhases: AppPhase[] = ['init', 'login'];
     if (unauthPhases.includes(state.phase)) return;
@@ -96,9 +97,12 @@ export function RootLayout() {
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
 
+    const offAuthExpired = Events.On('auth:expired', () => setSessionExpired(true));
+
     return () => {
       if (authPollRef.current) clearInterval(authPollRef.current);
       document.removeEventListener('visibilitychange', onVisibilityChange);
+      offAuthExpired();
     };
   }, [state.phase]);
 
