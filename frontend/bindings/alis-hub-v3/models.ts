@@ -133,6 +133,34 @@ export class AccountUser {
     }
 }
 
+/**
+ * AheadBehind holds the number of commits the current branch is ahead/behind its upstream.
+ */
+export class AheadBehind {
+    "ahead": number;
+    "behind": number;
+
+    /** Creates a new AheadBehind instance. */
+    constructor($$source: Partial<AheadBehind> = {}) {
+        if (!("ahead" in $$source)) {
+            this["ahead"] = 0;
+        }
+        if (!("behind" in $$source)) {
+            this["behind"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AheadBehind instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AheadBehind {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AheadBehind($$parsedSource as Partial<AheadBehind>);
+    }
+}
+
 export class BlockAccessData {
     "members": BlockAccessMember[];
 
