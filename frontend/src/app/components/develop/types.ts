@@ -96,7 +96,7 @@ export function parseNeuron(name: string) {
 
 export function formatTimestamp(ts: number): string {
   const d = new Date(ts * 1000);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export function formatRelativeTime(unixSeconds: number): string {
