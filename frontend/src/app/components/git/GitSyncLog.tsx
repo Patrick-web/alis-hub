@@ -2,14 +2,26 @@ import { Events } from '@wailsio/runtime';
 import { ChevronDown, ChevronUp, Terminal } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-export function GitSyncLog() {
+interface Props {
+  repoPath: string;
+}
+
+export function GitSyncLog({ repoPath }: Props) {
   const [lines, setLines] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setLines([]);
+    setOpen(false);
+  }, [repoPath]);
+
+  useEffect(() => {
     const off = Events.On('git:scm:log', (ev: any) => {
-      const line: string = typeof ev === 'string' ? ev : (ev?.data ?? String(ev));
+      const payload = typeof ev === 'string' ? { repoPath: '', line: ev } : (ev?.data ?? ev);
+      const evRepoPath: string = payload?.repoPath ?? '';
+      const line: string = payload?.line ?? String(ev);
+      if (evRepoPath && evRepoPath !== repoPath) return;
       setLines(prev => {
         const next = [...prev, line];
         return next.length > 200 ? next.slice(-200) : next;
@@ -17,7 +29,7 @@ export function GitSyncLog() {
       setOpen(true);
     });
     return () => { off(); };
-  }, []);
+  }, [repoPath]);
 
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

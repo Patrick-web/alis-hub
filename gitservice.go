@@ -500,12 +500,12 @@ type GitCommit struct {
 	RefNames     []string `json:"refNames"`
 }
 
-func (g *GitService) emitScmLog(line string) {
+func (g *GitService) emitScmLog(repoPath, line string) {
 	g.mu.Lock()
 	app := g.app
 	g.mu.Unlock()
 	if app != nil {
-		app.Event.Emit("git:scm:log", line)
+		app.Event.Emit("git:scm:log", map[string]string{"repoPath": repoPath, "line": line})
 	}
 }
 
@@ -771,19 +771,19 @@ func (g *GitService) CreateBranch(repoPath, branchName string) error {
 
 // PushOrigin pushes the current branch to origin, streaming output.
 func (g *GitService) PushOrigin(repoPath string) error {
-	g.emitScmLog("$ git push origin HEAD\r\n")
+	g.emitScmLog(repoPath, "$ git push origin HEAD\r\n")
 	args := []string{"push", "origin", "HEAD"}
 	cmd := g.authedGitCmd(args...)
 	cmd.Dir = repoPath
-	return g.streamScm(cmd)
+	return g.streamScm(cmd, repoPath)
 }
 
 // PullOrigin pulls the current branch from origin, streaming output.
 func (g *GitService) PullOrigin(repoPath string) error {
-	g.emitScmLog("$ git pull\r\n")
+	g.emitScmLog(repoPath, "$ git pull\r\n")
 	cmd := g.authedGitCmd("pull")
 	cmd.Dir = repoPath
-	return g.streamScm(cmd)
+	return g.streamScm(cmd, repoPath)
 }
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer
@@ -857,7 +857,7 @@ func (g *GitService) GetLog(repoPath string, limit int) ([]GitCommit, error) {
 }
 
 // streamScm runs a command and streams stdout+stderr via emitScmLog.
-func (g *GitService) streamScm(cmd *exec.Cmd) error {
+func (g *GitService) streamScm(cmd *exec.Cmd, repoPath string) error {
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
@@ -866,7 +866,7 @@ func (g *GitService) streamScm(cmd *exec.Cmd) error {
 	forward := func(r io.Reader) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
-			g.emitScmLog(scanner.Text() + "\r\n")
+			g.emitScmLog(repoPath, scanner.Text()+"\r\n")
 		}
 	}
 	var wg sync.WaitGroup

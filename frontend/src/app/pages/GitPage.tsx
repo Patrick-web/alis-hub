@@ -422,7 +422,7 @@ function RepoSection({
         />
       )}
 
-      <GitSyncLog />
+      <GitSyncLog repoPath={repoPath} />
     </div>
   );
 }
