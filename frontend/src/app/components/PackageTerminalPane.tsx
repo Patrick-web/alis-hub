@@ -1,6 +1,7 @@
 import { useState, useRef, forwardRef, useImperativeHandle } from "react";
 import { Icon } from "@iconify/react";
 import { BuildTerminal, type BuildTerminalHandle } from "./BuildTerminal";
+import { TabBar } from "./ui/TabBar";
 
 export interface TerminalSession {
   runID: string;
@@ -76,31 +77,19 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center gap-[2px] px-[8px] border-b border-border shrink-0 h-[30px] overflow-x-auto">
-          {sessions.map((s) => (
-            <button
-              key={s.runID}
-              onClick={() => setActiveID(s.runID)}
-              className={`flex items-center gap-[5px] px-[8px] h-[22px] rounded-[3px] text-[10px] font-mono shrink-0 transition-colors ${
-                effectiveActive === s.runID
-                  ? "bg-card text-foreground"
-                  : "text-foreground/50 hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              {statusIcon(s)}
-              <span className="max-w-[160px] truncate">{s.title}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCloseSession(s.runID);
-                }}
-                className="ml-[2px] text-foreground/30 hover:text-foreground transition-colors"
-              >
-                <Icon icon="solar:close-circle-linear" className="text-[9px]" />
-              </button>
-            </button>
-          ))}
-        </div>
+        <TabBar
+          items={sessions.map((s) => ({
+            id: s.runID,
+            label: s.title,
+            statusSlot: statusIcon(s),
+          }))}
+          activeId={effectiveActive}
+          onActivate={setActiveID}
+          onClose={onCloseSession}
+          onCloseMultiple={(ids) => ids.forEach((id) => onCloseSession(id))}
+          variant="filled"
+          size="sm"
+        />
 
         {/* Terminals — all mounted, only active is visible */}
         <div className="flex-1 min-h-0 relative">

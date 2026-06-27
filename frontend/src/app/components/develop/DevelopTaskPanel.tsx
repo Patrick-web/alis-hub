@@ -1,7 +1,8 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Icon } from '@iconify/react';
 import { useDevelopTabs } from '../../stores/developTabs';
 import { useNotifications } from '../../stores/notifications';
+import { TabBar } from '../ui/TabBar';
 import { DefinePane } from './DefinePane';
 import { BuildPane } from './BuildPane';
 import { DeployPane } from './DeployPane';
@@ -26,8 +27,15 @@ const TYPE_LABELS: Record<TaskType, string> = {
   packages: 'Packages',
 };
 
+function StatusDot({ status }: { status: string }): ReactNode {
+  if (status === 'running') return <span className="size-[5px] rounded-full bg-brand animate-pulse shrink-0" />;
+  if (status === 'done') return <span className="size-[5px] rounded-full bg-green-400 shrink-0" />;
+  if (status === 'error') return <span className="size-[5px] rounded-full bg-red-400 shrink-0" />;
+  return null;
+}
+
 export function DevelopTaskPanel() {
-  const { tabs, activeTabId, closeTab, activateTab } = useDevelopTabs();
+  const { tabs, activeTabId, closeTab, closeMultiple, activateTab } = useDevelopTabs();
   const { state: notifState } = useNotifications();
 
   const [paneWidth, setPaneWidth] = useState(DEFAULT_WIDTH);
@@ -90,43 +98,20 @@ export function DevelopTaskPanel() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center gap-[2px] px-[8px] border-b border-border shrink-0 h-[36px] overflow-x-auto">
-        {tabs.map(tab => {
-          const isActive = tab.id === activeTabId;
-          const status = tabStatus(tab.notificationId);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => activateTab(tab.id)}
-              className={`flex items-center gap-[6px] px-[8px] h-[26px] rounded-[4px] shrink-0 max-w-[180px] transition-colors group/tab ${
-                isActive
-                  ? 'bg-card border border-border text-foreground'
-                  : 'text-foreground/40 hover:text-foreground/70 hover:bg-accent/30'
-              }`}
-            >
-              <Icon icon={TYPE_ICONS[tab.type]} className="text-[11px] shrink-0" />
-              <span className="text-[10px] font-mono truncate min-w-0">{tab.neuron}</span>
-              {/* Status dot */}
-              {status === 'running' && (
-                <span className="size-[5px] rounded-full bg-brand animate-pulse shrink-0" />
-              )}
-              {status === 'done' && (
-                <span className="size-[5px] rounded-full bg-green-400 shrink-0" />
-              )}
-              {status === 'error' && (
-                <span className="size-[5px] rounded-full bg-red-400 shrink-0" />
-              )}
-              {/* Close */}
-              <button
-                onClick={e => { e.stopPropagation(); closeTab(tab.id); }}
-                className="size-[14px] flex items-center justify-center text-foreground/25 hover:text-foreground rounded-[2px] hover:bg-accent transition-colors opacity-0 group-hover/tab:opacity-100 shrink-0"
-              >
-                <Icon icon="solar:close-circle-linear" className="text-[10px]" />
-              </button>
-            </button>
-          );
-        })}
-      </div>
+      <TabBar
+        items={tabs.map(tab => ({
+          id: tab.id,
+          label: tab.neuron,
+          icon: <Icon icon={TYPE_ICONS[tab.type]} className="text-[11px] shrink-0" />,
+          statusSlot: <StatusDot status={tabStatus(tab.notificationId)} />,
+        }))}
+        activeId={activeTabId ?? ''}
+        onActivate={activateTab}
+        onClose={closeTab}
+        onCloseMultiple={closeMultiple}
+        variant="filled"
+        size="md"
+      />
 
       {/* Pane header */}
       {activeTabId && (() => {
