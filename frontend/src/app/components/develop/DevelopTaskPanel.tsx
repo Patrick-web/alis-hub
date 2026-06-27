@@ -165,7 +165,7 @@ export function DevelopTaskPanel() {
               <DeployPane tabId={tab.id} neuron={tab.neuron} restore={tab.restore} />
             )}
             {tab.type === 'packages' && (
-              <PackagesPane tabId={tab.id} neuron={tab.neuron} neuronNames={[tab.neuron]} />
+              <PackagesPane tabId={tab.id} neuron={tab.neuron} neuronNames={tab.neuron.split(',')} />
             )}
           </div>
         ))}
