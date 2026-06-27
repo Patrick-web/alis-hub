@@ -3281,11 +3281,24 @@ func parseOrganisationGitRepo(data []byte) (string, error) {
 	return "", nil
 }
 
-type emitWriter struct{ emit func(string) }
+type emitWriter struct {
+	emit func(string)
+	mu   sync.Mutex
+	buf  strings.Builder
+}
 
 func (w *emitWriter) Write(p []byte) (int, error) {
 	w.emit(string(p))
+	w.mu.Lock()
+	w.buf.Write(p)
+	w.mu.Unlock()
 	return len(p), nil
+}
+
+func (w *emitWriter) output() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return strings.TrimSpace(w.buf.String())
 }
 
 func systemCredentialHelper() string {
@@ -3332,12 +3345,18 @@ func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error
 			return "", fmt.Errorf("mkdir %s: %w", filepath.Dir(dir), err)
 		}
 		if err := runGit("clone", remoteURL, dir); err != nil {
+			if out := ew.output(); out != "" {
+				return "", fmt.Errorf("git clone: %w\n%s", err, out)
+			}
 			return "", fmt.Errorf("git clone: %w", err)
 		}
 		return "cloned", nil
 	}
 
 	if err := runGit("-C", dir, "fetch", remoteURL); err != nil {
+		if out := ew.output(); out != "" {
+			return "", fmt.Errorf("git fetch: %w\n%s", err, out)
+		}
 		return "", fmt.Errorf("git fetch: %w", err)
 	}
 	return "fetched", nil
