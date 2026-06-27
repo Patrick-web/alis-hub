@@ -122,12 +122,63 @@ func (g *GitService) emitLog(line string) {
 	}
 }
 
+func (g *GitService) emitAuthExpired() {
+	g.mu.Lock()
+	app := g.app
+	g.mu.Unlock()
+	if app != nil {
+		app.Event.Emit("auth:expired")
+	}
+}
+
 type LocalMergeResult struct {
 	RepoPath      string   `json:"repoPath"`
 	BranchName    string   `json:"branchName"`
 	HasConflicts  bool     `json:"hasConflicts"`
 	ConflictFiles []string `json:"conflictFiles"`
 	ErrorMessage  string   `json:"errorMessage"`
+}
+
+// GitSyncResult is returned by PushOrigin and PullOrigin with a classified outcome.
+// Kind values: "ok" | "up_to_date" | "push_rejected" | "pull_conflict" |
+//
+//	"uncommitted_changes" | "network_error" | "auth_error" | "other_error"
+type GitSyncResult struct {
+	Kind          string   `json:"kind"`
+	Message       string   `json:"message"`
+	ConflictFiles []string `json:"conflictFiles"`
+}
+
+// classifyGitOutput maps combined git stdout+stderr to a typed outcome.
+func classifyGitOutput(output string, err error) (kind, message string) {
+	if err == nil {
+		lower := strings.ToLower(output)
+		if strings.Contains(lower, "everything up-to-date") || strings.Contains(lower, "already up to date") {
+			return "up_to_date", "Already up to date."
+		}
+		return "ok", ""
+	}
+	lower := strings.ToLower(output)
+	switch {
+	case strings.Contains(lower, "! [rejected]") || strings.Contains(lower, "failed to push some refs"):
+		return "push_rejected", "The remote has changes you don't have locally. Pull first, then push."
+	case strings.Contains(output, "CONFLICT") || strings.Contains(output, "Automatic merge failed"):
+		return "pull_conflict", "Merge conflicts detected. Resolve the conflicts to complete the pull."
+	case strings.Contains(lower, "already up to date"):
+		return "up_to_date", "Already up to date."
+	case strings.Contains(lower, "please commit your changes or stash"):
+		return "uncommitted_changes", "You have local changes that would be overwritten. Commit or stash them first."
+	case strings.Contains(lower, "could not read from remote") || strings.Contains(lower, "unable to access") || strings.Contains(lower, "failed to connect"):
+		return "network_error", "Could not reach the remote repository. Check your network connection."
+	case strings.Contains(lower, "authentication failed") || strings.Contains(lower, "token has expired") || strings.Contains(output, "403"):
+		return "auth_error", "Authentication failed. Your session may have expired."
+	default:
+		msg := strings.TrimSpace(output)
+		if msg == "" {
+			msg = err.Error()
+		}
+		return "other_error", msg
+	}
 }
 
 type ConflictHunk struct {
@@ -769,21 +820,35 @@ func (g *GitService) CreateBranch(repoPath, branchName string) error {
 	return err
 }
 
-// PushOrigin pushes the current branch to origin, streaming output.
-func (g *GitService) PushOrigin(repoPath string) error {
+// PushOrigin pushes the current branch to origin and returns a classified result.
+func (g *GitService) PushOrigin(repoPath string) GitSyncResult {
 	g.emitScmLog(repoPath, "$ git push origin HEAD\r\n")
-	args := []string{"push", "origin", "HEAD"}
-	cmd := g.authedGitCmd(args...)
+	cmd := g.authedGitCmd("push", "origin", "HEAD")
 	cmd.Dir = repoPath
-	return g.streamScm(cmd, repoPath)
+	output, err := g.streamScm(cmd, repoPath)
+	kind, message := classifyGitOutput(output, err)
+	if kind == "auth_error" {
+		g.emitAuthExpired()
+	}
+	return GitSyncResult{Kind: kind, Message: message}
 }
 
-// PullOrigin pulls the current branch from origin, streaming output.
-func (g *GitService) PullOrigin(repoPath string) error {
+// PullOrigin pulls the current branch from origin and returns a classified result.
+// For pull_conflict, ConflictFiles is populated.
+func (g *GitService) PullOrigin(repoPath string) GitSyncResult {
 	g.emitScmLog(repoPath, "$ git pull\r\n")
 	cmd := g.authedGitCmd("pull")
 	cmd.Dir = repoPath
-	return g.streamScm(cmd, repoPath)
+	output, err := g.streamScm(cmd, repoPath)
+	kind, message := classifyGitOutput(output, err)
+	if kind == "auth_error" {
+		g.emitAuthExpired()
+	}
+	result := GitSyncResult{Kind: kind, Message: message}
+	if kind == "pull_conflict" {
+		result.ConflictFiles, _ = g.GetConflictFiles(repoPath)
+	}
+	return result
 }
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer
@@ -856,17 +921,23 @@ func (g *GitService) GetLog(repoPath string, limit int) ([]GitCommit, error) {
 	return commits, nil
 }
 
-// streamScm runs a command and streams stdout+stderr via emitScmLog.
-func (g *GitService) streamScm(cmd *exec.Cmd, repoPath string) error {
+// streamScm runs a command, streams stdout+stderr via emitScmLog, and returns the combined output.
+func (g *GitService) streamScm(cmd *exec.Cmd, repoPath string) (string, error) {
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
-		return err
+		return "", err
 	}
+	var mu sync.Mutex
+	var combined strings.Builder
 	forward := func(r io.Reader) {
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
-			g.emitScmLog(repoPath, scanner.Text()+"\r\n")
+			line := scanner.Text() + "\r\n"
+			g.emitScmLog(repoPath, line)
+			mu.Lock()
+			combined.WriteString(line)
+			mu.Unlock()
 		}
 	}
 	var wg sync.WaitGroup
@@ -874,7 +945,7 @@ func (g *GitService) streamScm(cmd *exec.Cmd, repoPath string) error {
 	go func() { defer wg.Done(); forward(stdout) }()
 	go func() { defer wg.Done(); forward(stderr) }()
 	wg.Wait()
-	return cmd.Wait()
+	return combined.String(), cmd.Wait()
 }
 
 // --- Forgejo Pull Request API ---

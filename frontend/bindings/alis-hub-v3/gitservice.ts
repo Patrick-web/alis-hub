@@ -239,17 +239,22 @@ export function MergePR(repoPath: string, $number: number, mergeStyle: string): 
 }
 
 /**
- * PullOrigin pulls the current branch from origin, streaming output.
+ * PullOrigin pulls the current branch from origin and returns a classified result.
+ * For pull_conflict, ConflictFiles is populated.
  */
-export function PullOrigin(repoPath: string): $CancellablePromise<void> {
-    return $Call.ByID(1482641752, repoPath);
+export function PullOrigin(repoPath: string): $CancellablePromise<$models.GitSyncResult> {
+    return $Call.ByID(1482641752, repoPath).then(($result: any) => {
+        return $$createType25($result);
+    });
 }
 
 /**
- * PushOrigin pushes the current branch to origin, streaming output.
+ * PushOrigin pushes the current branch to origin and returns a classified result.
  */
-export function PushOrigin(repoPath: string): $CancellablePromise<void> {
-    return $Call.ByID(3747123927, repoPath);
+export function PushOrigin(repoPath: string): $CancellablePromise<$models.GitSyncResult> {
+    return $Call.ByID(3747123927, repoPath).then(($result: any) => {
+        return $$createType25($result);
+    });
 }
 
 /**
@@ -286,7 +291,7 @@ export function StageFile(repoPath: string, filePath: string): $CancellablePromi
  */
 export function StartLocalMerge(repoPath: string, branchName: string): $CancellablePromise<$models.LocalMergeResult | null> {
     return $Call.ByID(2277677406, repoPath, branchName).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType27($result);
     });
 }
 
@@ -331,5 +336,6 @@ const $$createType21 = $Create.Nullable($$createType20);
 const $$createType22 = $models.GitStatus.createFrom;
 const $$createType23 = $Create.Nullable($$createType22);
 const $$createType24 = $Create.Array($$createType2);
-const $$createType25 = $models.LocalMergeResult.createFrom;
-const $$createType26 = $Create.Nullable($$createType25);
+const $$createType25 = $models.GitSyncResult.createFrom;
+const $$createType26 = $models.LocalMergeResult.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);

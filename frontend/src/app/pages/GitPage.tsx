@@ -6,6 +6,8 @@ import { GitGraph } from '../components/git/GitGraph';
 import { GitPRList } from '../components/git/GitPRList';
 import { GitPRDetail } from '../components/git/GitPRDetail';
 import { GitSyncLog } from '../components/git/GitSyncLog';
+import { GitOperationBanner } from '../components/git/GitOperationBanner';
+import { GitConflictEditor } from '../components/git/GitConflictEditor';
 import { GitBranch, GitCommit, GitFileDiff, GitStatus, ForgejoPR } from '../components/git/types';
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
@@ -69,6 +71,8 @@ function RepoSection({
   const [ahead, setAhead] = useState(0);
   const [behind, setBehind] = useState(0);
   const [error, setError] = useState('');
+  const [syncResult, setSyncResult] = useState<{ kind: string; message: string; conflictFiles?: string[] } | null>(null);
+  const [showConflictEditor, setShowConflictEditor] = useState(false);
   const [discardPending, setDiscardPending] = useState<string[] | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [isForgejo, setIsForgejo] = useState(false);
@@ -228,71 +232,77 @@ function RepoSection({
 
   async function handlePush() {
     setPushing(true);
-    try { await GitService.PushOrigin(repoPath); } catch (e: any) { setError(String(e)); }
-    finally { setPushing(false); refresh(); }
+    setSyncResult(null);
+    const result = await GitService.PushOrigin(repoPath) as any;
+    if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
+      setSyncResult(result);
+    }
+    setPushing(false);
+    refresh();
   }
 
   async function handlePull() {
     setPulling(true);
+    setSyncResult(null);
     const oldHead = commits[0]?.hash ?? null;
-    try {
-      await GitService.PullOrigin(repoPath);
-      if (oldHead) {
-        try {
-          const newLog = await GitService.GetLog(repoPath, LOG_LIMIT);
-          const newHead = newLog?.[0]?.hash ?? null;
-          if (newHead && newHead !== oldHead) {
-            if (repoLabel === 'Define' && isSuggestionEnabled('git-pull-define-upgrade')) {
-              addSuggestion({
-                definitionId: 'git-pull-define-upgrade',
-                category: 'Define',
-                title: 'New define changes pulled',
-                body: 'Run package install to pick up the latest generated code.',
-                priority: 'passive',
-              });
-            } else if (repoLabel === 'Build' && isSuggestionEnabled('git-pull-build-upgrade')) {
-              const oldHeadIdx = newLog?.findIndex(c => c.hash === oldHead) ?? -1;
-              const newCommits = newLog?.slice(0, oldHeadIdx === -1 ? undefined : oldHeadIdx) ?? [];
-              if (newCommits.length > 0) {
-                const fileResults = await Promise.all(
-                  newCommits.map(c => GitService.GetCommitFiles(repoPath, c.hash))
-                );
-                const allFiles = fileResults.flat().map((f: any) => f.path.toLowerCase());
-                const hasPackageFiles = allFiles.some((p: string) =>
-                  PACKAGE_FILE_NAMES.some(name => p === name || p.endsWith('/' + name))
-                );
-                if (hasPackageFiles) {
-                  addSuggestion({
-                    definitionId: 'git-pull-build-upgrade',
-                    category: 'Build & Deploy',
-                    title: 'Dependency files changed',
-                    body: 'Package management files were updated in the pull. Run install to sync.',
-                    priority: 'passive',
-                  });
-                }
+    const result = await GitService.PullOrigin(repoPath) as any;
+    if (result?.kind === 'pull_conflict') {
+      setSyncResult(result);
+      setShowConflictEditor(true);
+    } else if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
+      setSyncResult(result);
+    } else if (result?.kind === 'ok' && oldHead) {
+      try {
+        const newLog = await GitService.GetLog(repoPath, LOG_LIMIT);
+        const newHead = newLog?.[0]?.hash ?? null;
+        if (newHead && newHead !== oldHead) {
+          if (repoLabel === 'Define' && isSuggestionEnabled('git-pull-define-upgrade')) {
+            addSuggestion({
+              definitionId: 'git-pull-define-upgrade',
+              category: 'Define',
+              title: 'New define changes pulled',
+              body: 'Run package install to pick up the latest generated code.',
+              priority: 'passive',
+            });
+          } else if (repoLabel === 'Build' && isSuggestionEnabled('git-pull-build-upgrade')) {
+            const oldHeadIdx = newLog?.findIndex(c => c.hash === oldHead) ?? -1;
+            const newCommits = newLog?.slice(0, oldHeadIdx === -1 ? undefined : oldHeadIdx) ?? [];
+            if (newCommits.length > 0) {
+              const fileResults = await Promise.all(
+                newCommits.map(c => GitService.GetCommitFiles(repoPath, c.hash))
+              );
+              const allFiles = fileResults.flat().map((f: any) => f.path.toLowerCase());
+              const hasPackageFiles = allFiles.some((p: string) =>
+                PACKAGE_FILE_NAMES.some(name => p === name || p.endsWith('/' + name))
+              );
+              if (hasPackageFiles) {
+                addSuggestion({
+                  definitionId: 'git-pull-build-upgrade',
+                  category: 'Build & Deploy',
+                  title: 'Dependency files changed',
+                  body: 'Package management files were updated in the pull. Run install to sync.',
+                  priority: 'passive',
+                });
               }
             }
           }
-          if (localAIEnabled && localAIModelPulled && isSuggestionEnabled('ai-contextual-insight')) {
-            const context = `A git pull just completed on the ${repoLabel} repo. New commits were pulled.`;
-            LocalAIService.Generate(
-              localAIModel,
-              'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
-              context,
-            ).then(body => {
-              if (body) addSuggestion({ definitionId: 'ai-contextual-insight', category: 'AI Insights', title: 'AI suggestion', body, priority: 'passive' });
-            }).catch(() => {});
-          }
-        } catch {
-          // suggestion detection is best-effort
         }
+        if (localAIEnabled && localAIModelPulled && isSuggestionEnabled('ai-contextual-insight')) {
+          const context = `A git pull just completed on the ${repoLabel} repo. New commits were pulled.`;
+          LocalAIService.Generate(
+            localAIModel,
+            'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
+            context,
+          ).then(body => {
+            if (body) addSuggestion({ definitionId: 'ai-contextual-insight', category: 'AI Insights', title: 'AI suggestion', body, priority: 'passive' });
+          }).catch(() => {});
+        }
+      } catch {
+        // suggestion detection is best-effort
       }
-    } catch (e: any) {
-      setError(String(e));
-    } finally {
-      setPulling(false);
-      refresh();
     }
+    setPulling(false);
+    refresh();
   }
 
   async function handleSync() {
@@ -361,6 +371,14 @@ function RepoSection({
         </div>
       )}
 
+      <GitOperationBanner
+        result={syncResult}
+        onSync={handleSync}
+        onResolve={() => setShowConflictEditor(true)}
+        onRetry={syncResult?.kind === 'network_error' ? (pushing ? handlePush : handlePull) : undefined}
+        onDismiss={() => setSyncResult(null)}
+      />
+
       {!showPRPanel && (
         <GitBranchBar
           currentBranch={currentBranch}
@@ -380,7 +398,14 @@ function RepoSection({
         />
       )}
 
-      {showPRPanel && selectedPR ? (
+      {showConflictEditor && syncResult?.conflictFiles && syncResult.conflictFiles.length > 0 ? (
+        <GitConflictEditor
+          repoPath={repoPath}
+          conflictFiles={syncResult.conflictFiles}
+          onComplete={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
+          onAbort={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
+        />
+      ) : showPRPanel && selectedPR ? (
         <GitPRDetail
           pr={selectedPR}
           repoPath={repoPath}

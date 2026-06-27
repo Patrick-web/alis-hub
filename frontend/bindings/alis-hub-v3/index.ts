@@ -75,6 +75,7 @@ export {
     GitFileStatus,
     GitRepoInfo,
     GitStatus,
+    GitSyncResult,
     GlassArtifact,
     GlassDefinition,
     GlassResult,
