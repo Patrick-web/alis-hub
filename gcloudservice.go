@@ -918,13 +918,25 @@ func (g *GCloudService) ExecuteSpannerDML(databaseResourceName, sql string) (*Sp
 	sessionName := sessionResp.Name
 	defer g.deleteSpannerSession(sessionName)
 
+	// Partitioned DML must use a transaction created via BeginTransaction; inline
+	// "begin" selectors are not supported for this transaction type.
+	beginURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:beginTransaction", sessionName)
+	var txnResp struct {
+		ID string `json:"id"`
+	}
+	if err := g.apiPost(beginURL, map[string]interface{}{
+		"options": map[string]interface{}{
+			"partitionedDml": map[string]interface{}{},
+		},
+	}, &txnResp); err != nil {
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+
 	execURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeSql", sessionName)
 	payload := map[string]interface{}{
 		"sql": sql,
 		"transaction": map[string]interface{}{
-			"begin": map[string]interface{}{
-				"partitionedDml": map[string]interface{}{},
-			},
+			"id": txnResp.ID,
 		},
 	}
 	var resp struct {
