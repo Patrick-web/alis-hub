@@ -28,6 +28,16 @@ func SyncGitAuth() error {
 		return fmt.Errorf("get access token: %w", err)
 	}
 
+	// Always install and configure the credential helper, even on a fresh install
+	// where no repos have been cloned yet. This ensures it's available as a
+	// fallback the first time a private Forgejo repo is cloned.
+	if err := installCredentialHelper(); err != nil {
+		fmt.Fprintf(os.Stderr, "alis-hub: install credential helper: %v\n", err)
+	}
+	if err := configureGlobalCredentialHelper(); err != nil {
+		fmt.Fprintf(os.Stderr, "alis-hub: configure credential helper: %v\n", err)
+	}
+
 	repos, err := discoverForgejoRepos()
 	if err != nil {
 		return fmt.Errorf("discover repos: %w", err)
@@ -46,10 +56,6 @@ func SyncGitAuth() error {
 			// Non-fatal: log and continue.
 			fmt.Fprintf(os.Stderr, "alis-hub: migrate %s: %v\n", r.configPath, err)
 		}
-	}
-
-	if err := installCredentialHelper(); err != nil {
-		fmt.Fprintf(os.Stderr, "alis-hub: install credential helper: %v\n", err)
 	}
 
 	return nil
