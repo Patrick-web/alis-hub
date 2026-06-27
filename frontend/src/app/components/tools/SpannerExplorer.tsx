@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { Loader } from "../Loader";
 import { Button } from "../Button";
@@ -14,6 +14,7 @@ import {
   AlertDialogAction,
 } from "../ui/alert-dialog";
 import { SqlEditor } from "./SqlEditor";
+import { TabBar } from "../ui/TabBar";
 import * as GS from "../../../../bindings/alis-hub-v3/gcloudservice";
 import type {
   SpannerInstance,
@@ -138,52 +139,18 @@ export function SpannerExplorer({ projectID }: Props) {
   }
 
   // ── Tab system ─────────────────────────────────────────────────────────────
-  type ContextItem =
-    | { label: string; onClick: () => void; destructive?: boolean }
-    | "divider";
-  interface TabContextMenuState {
-    x: number;
-    y: number;
-    items: ContextItem[];
-  }
-
   const [tabs, setTabs] = useState<string[]>([QUERY_TAB]);
   const [activeTab, setActiveTab] = useState<string>(QUERY_TAB);
   const [mountedTabs, setMountedTabs] = useState<Set<string>>(
     new Set([QUERY_TAB]),
   );
   const [tableTabs, setTableTabs] = useState<Record<string, TableTabInfo>>({});
-  const [tabContextMenu, setTabContextMenu] =
-    useState<TabContextMenuState | null>(null);
-  const tabContextMenuRef = useRef<HTMLDivElement>(null);
-  const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
-  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null);
   const [queryTabCounter, setQueryTabCounter] = useState(2);
   const [queryTabNames, setQueryTabNames] = useState<Record<string, string>>(
     {},
   );
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-
-  useEffect(() => {
-    if (!tabContextMenu) return;
-    function onDown(e: MouseEvent) {
-      if (
-        tabContextMenuRef.current &&
-        !tabContextMenuRef.current.contains(e.target as Node)
-      )
-        setTabContextMenu(null);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setTabContextMenu(null);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [tabContextMenu]);
 
   function activateTab(tabId: string) {
     setActiveTab(tabId);
@@ -262,26 +229,24 @@ export function SpannerExplorer({ projectID }: Props) {
     }
   }
 
-  function closeTab(tabId: string, e: React.MouseEvent) {
-    e.stopPropagation();
-    removeTab(tabId);
-  }
+  function removeMultipleTabs(ids: string[]) {
+    const removeSet = new Set(ids);
+    // Always keep at least one query tab
+    const qInRemove = ids.filter(isQueryTab);
+    const qOutsideRemove = tabs.filter((t) => isQueryTab(t) && !removeSet.has(t));
+    if (qOutsideRemove.length === 0 && qInRemove.length > 0)
+      removeSet.delete(qInRemove[0]);
 
-  function closeOtherTabs(keepTabId: string) {
-    const firstQueryTab = tabs.find(isQueryTab) ?? QUERY_TAB;
-    const toKeep = new Set([
-      keepTabId,
-      ...(isQueryTab(keepTabId) ? [] : [firstQueryTab]),
-    ]);
-    const toRemove = tabs.filter((t) => !toKeep.has(t));
-    setTabs((prev) => prev.filter((t) => toKeep.has(t)));
+    const toRemove = tabs.filter((t) => removeSet.has(t));
+    const qRemove = toRemove.filter(isQueryTab);
+    const tRemove = toRemove.filter((t) => !isQueryTab(t));
+
+    setTabs((prev) => prev.filter((t) => !removeSet.has(t)));
     setMountedTabs((prev) => {
       const s = new Set(prev);
       toRemove.forEach((t) => s.delete(t));
       return s;
     });
-    const qRemove = toRemove.filter(isQueryTab);
-    const tRemove = toRemove.filter((t) => !isQueryTab(t));
     if (qRemove.length > 0) {
       setQueryTabStates((prev) => {
         const n = { ...prev };
@@ -294,61 +259,32 @@ export function SpannerExplorer({ projectID }: Props) {
         return n;
       });
     }
-    if (tRemove.length > 0)
+    if (tRemove.length > 0) {
       setTableTabs((prev) => {
         const n = { ...prev };
         tRemove.forEach((t) => delete n[t]);
         return n;
       });
-    if (!toKeep.has(activeTab)) setActiveTab(keepTabId);
-  }
-
-  function closeAllTabs() {
-    const firstQueryTab = tabs.find(isQueryTab) ?? QUERY_TAB;
-    setTabs([firstQueryTab]);
-    setMountedTabs(new Set([firstQueryTab]));
-    setTableTabs({});
-    setQueryTabStates((prev) => ({
-      [firstQueryTab]: prev[firstQueryTab] ?? { ...DEFAULT_QUERY_TAB_STATE },
-    }));
-    setQueryTabNames((prev) => ({ [firstQueryTab]: prev[firstQueryTab] }));
-    setActiveTab(firstQueryTab);
-  }
-
-  function openTabContextMenu(e: React.MouseEvent, tabId: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    const x = Math.min(e.clientX, window.innerWidth - 180);
-    const y = Math.min(e.clientY, window.innerHeight - 120);
-    const canClose = !isQueryTab(tabId) || tabs.filter(isQueryTab).length > 1;
-    const hasOthers = tabs.length > 1;
-    const items: ContextItem[] = [];
-    if (canClose)
-      items.push({
-        label: "Close",
-        onClick: () => {
-          setTabContextMenu(null);
-          removeTab(tabId);
-        },
-      });
-    if (hasOthers) {
-      items.push({
-        label: "Close Others",
-        onClick: () => {
-          setTabContextMenu(null);
-          closeOtherTabs(tabId);
-        },
-      });
-      items.push({
-        label: "Close All",
-        onClick: () => {
-          setTabContextMenu(null);
-          closeAllTabs();
-        },
-      });
     }
-    if (items.length === 0) return;
-    setTabContextMenu({ x, y, items });
+    if (removeSet.has(activeTab)) {
+      const remaining = tabs.filter((t) => !removeSet.has(t));
+      setActiveTab(remaining[0] ?? QUERY_TAB);
+    }
+    if (editingTabId && removeSet.has(editingTabId)) {
+      setEditingTabId(null);
+      setEditingName("");
+    }
+  }
+
+  function handleReorder(fromId: string, toId: string) {
+    setTabs((prev) => {
+      const without = prev.filter((t) => t !== fromId);
+      const at = without.indexOf(toId);
+      if (at === -1) return prev;
+      const result = [...without];
+      result.splice(at, 0, fromId);
+      return result;
+    });
   }
 
   // ── Query panel state ──────────────────────────────────────────────────────
@@ -651,118 +587,68 @@ export function SpannerExplorer({ projectID }: Props) {
       {/* ── Right pane with tabs ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Tab bar */}
-        <div className="flex items-stretch border-b border-border shrink-0 overflow-x-auto bg-muted">
-          {tabs.map((tabId) => {
-            const isActive = activeTab === tabId;
-            const isDragging = draggedTabId === tabId;
-            const isDragOver =
-              dragOverTabId === tabId && draggedTabId !== tabId;
+        <TabBar
+          items={tabs.map((tabId) => {
             const isQTab = isQueryTab(tabId);
             const label = isQTab
               ? (queryTabNames[tabId] ?? queryTabLabel(tabId))
               : (tableTabs[tabId]?.tableName ?? tabId);
-            const icon = isQTab
-              ? "solar:code-square-linear"
-              : "hugeicons:table";
-            const canClose = !isQTab || tabs.filter(isQueryTab).length > 1;
-
-            return (
-              <div
-                key={tabId}
-                onClick={() => activateTab(tabId)}
-                onContextMenu={(e) => openTabContextMenu(e, tabId)}
-                draggable={true}
-                onDragStart={() => setDraggedTabId(tabId)}
-                onDragEnd={() => {
-                  setDraggedTabId(null);
-                  setDragOverTabId(null);
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDragOverTabId(tabId);
-                }}
-                onDragLeave={() => setDragOverTabId(null)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (!draggedTabId || draggedTabId === tabId) {
-                    setDraggedTabId(null);
-                    setDragOverTabId(null);
-                    return;
-                  }
-                  setTabs((prev) => {
-                    const without = prev.filter((t) => t !== draggedTabId);
-                    const at = without.indexOf(tabId);
-                    if (at === -1) return prev;
-                    const result = [...without];
-                    result.splice(at, 0, draggedTabId);
-                    return result;
-                  });
-                  setDraggedTabId(null);
-                  setDragOverTabId(null);
-                }}
-                className={`flex items-center gap-[6px] pl-[10px] pr-[4px] text-[10px] font-mono shrink-0 border-r border-border cursor-pointer transition-colors select-none group ${
-                  isActive
-                    ? "text-foreground bg-background shadow-[inset_0_-2px_0_#f881a9]"
-                    : "text-foreground/40 hover:text-foreground hover:bg-foreground/[3%]"
-                } ${isDragging ? "opacity-40" : ""} ${isDragOver ? "border-l-2 border-l-[#f881a9]" : ""}`}
-                style={{ minHeight: 36 }}
-              >
+            const isActive = activeTab === tabId;
+            return {
+              id: tabId,
+              icon: (
                 <Icon
-                  icon={icon}
+                  icon={isQTab ? "solar:code-square-linear" : "hugeicons:table"}
                   className={`text-xs shrink-0 ${isActive && !isQTab ? "text-brand" : ""}`}
                 />
-                {isQTab && editingTabId === tabId ? (
-                  <input
-                    autoFocus
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={() => commitRename(tabId)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        commitRename(tabId);
-                      }
-                      if (e.key === "Escape") {
-                        setEditingTabId(null);
-                        setEditingName("");
-                      }
-                      e.stopPropagation();
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-[rgba(248,129,169,0.6)]"
-                  />
-                ) : (
-                  <span
-                    className="max-w-[110px] truncate"
-                    onDoubleClick={
-                      isQTab
-                        ? (e) => {
-                            e.stopPropagation();
-                            startRename(tabId);
-                          }
-                        : undefined
+              ),
+              label: isQTab && editingTabId === tabId ? (
+                <input
+                  autoFocus
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  onBlur={() => commitRename(tabId)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitRename(tabId);
                     }
-                  >
-                    {label}
-                  </span>
-                )}
-                {canClose ? (
-                  <span
-                    onClick={(e) => closeTab(tabId, e)}
-                    role="button"
-                    className="ml-[2px] p-[3px] rounded opacity-0 group-hover:opacity-100 text-foreground/40 hover:text-brand hover:bg-[rgba(248,129,169,0.1)] transition-all shrink-0"
-                  >
-                    <Icon
-                      icon="solar:close-circle-linear"
-                      className="text-[9px]"
-                    />
-                  </span>
-                ) : (
-                  <span className="ml-[2px] w-[15px] shrink-0" />
-                )}
-              </div>
-            );
+                    if (e.key === "Escape") {
+                      setEditingTabId(null);
+                      setEditingName("");
+                    }
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-[rgba(248,129,169,0.6)]"
+                />
+              ) : (
+                <span
+                  className="max-w-[110px] truncate"
+                  onDoubleClick={
+                    isQTab
+                      ? (e) => {
+                          e.stopPropagation();
+                          startRename(tabId);
+                        }
+                      : undefined
+                  }
+                >
+                  {label}
+                </span>
+              ),
+              closeable: !isQTab || tabs.filter(isQueryTab).length > 1,
+            };
           })}
+          activeId={activeTab}
+          onActivate={activateTab}
+          onClose={removeTab}
+          onCloseMultiple={removeMultipleTabs}
+          onReorder={handleReorder}
+          variant="underline"
+          size="md"
+        >
           <button
             onClick={addQueryTab}
             className="flex items-center justify-center w-[32px] shrink-0 border-l border-border text-foreground/50 hover:text-foreground hover:bg-foreground/[6%] transition-colors self-stretch"
@@ -773,7 +659,7 @@ export function SpannerExplorer({ projectID }: Props) {
               className="text-[16px]"
             />
           </button>
-        </div>
+        </TabBar>
 
         {/* Tab content (lazy-mount, keep alive) */}
         <div className="flex-1 overflow-hidden relative">
@@ -971,34 +857,6 @@ export function SpannerExplorer({ projectID }: Props) {
             })}
         </div>
       </div>
-
-      {/* Tab context menu */}
-      {tabContextMenu && (
-        <div
-          ref={tabContextMenuRef}
-          style={{
-            position: "fixed",
-            top: tabContextMenu.y,
-            left: tabContextMenu.x,
-            zIndex: 9999,
-          }}
-          className="bg-background border border-border rounded-[3px] shadow-[0_8px_24px_rgba(0,0,0,0.65)] min-w-[160px] py-[4px]"
-        >
-          {tabContextMenu.items.map((item, i) =>
-            item === "divider" ? (
-              <div key={i} className="my-[2px] border-t border-border" />
-            ) : (
-              <button
-                key={i}
-                onClick={item.onClick}
-                className="w-full text-left px-[12px] py-[6px] text-[9px] font-mono uppercase transition-colors text-foreground/60 hover:bg-foreground/[6%] hover:text-foreground"
-              >
-                {item.label}
-              </button>
-            ),
-          )}
-        </div>
-      )}
 
       {/* Destructive query confirmation */}
       <AlertDialog
