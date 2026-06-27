@@ -1760,6 +1760,45 @@ export class GitStatus {
 }
 
 /**
+ * GitSyncResult is returned by PushOrigin and PullOrigin with a classified outcome.
+ * Kind values: "ok" | "up_to_date" | "push_rejected" | "pull_conflict" |
+ * 
+ * 	"uncommitted_changes" | "network_error" | "auth_error" | "other_error"
+ */
+export class GitSyncResult {
+    "kind": string;
+    "message": string;
+    "conflictFiles": string[];
+
+    /** Creates a new GitSyncResult instance. */
+    constructor($$source: Partial<GitSyncResult> = {}) {
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("conflictFiles" in $$source)) {
+            this["conflictFiles"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitSyncResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitSyncResult {
+        const $$createField2_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("conflictFiles" in $$parsedSource) {
+            $$parsedSource["conflictFiles"] = $$createField2_0($$parsedSource["conflictFiles"]);
+        }
+        return new GitSyncResult($$parsedSource as Partial<GitSyncResult>);
+    }
+}
+
+/**
  * GlassArtifact is one artifact type from ExplainDefine.
  */
 export class GlassArtifact {
