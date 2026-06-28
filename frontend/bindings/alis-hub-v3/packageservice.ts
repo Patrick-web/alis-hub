@@ -41,8 +41,8 @@ export function PollPackageRun(runID: string, offset: number): $CancellablePromi
  * PreparePackageScripts scans the neuron build directory for language manifests, then calls
  * VscodeService/GeneratePackageScripts to obtain the shell commands for each folder.
  */
-export function PreparePackageScripts(org: string, product: string, neuron: string, version: string): $CancellablePromise<$models.PackageScript[]> {
-    return $Call.ByID(972249452, org, product, neuron, version).then(($result: any) => {
+export function PreparePackageScripts(org: string, product: string, neuron: string, version: string, ignoreHidden: boolean, extraPatterns: string[]): $CancellablePromise<$models.PackageScript[]> {
+    return $Call.ByID(972249452, org, product, neuron, version, ignoreHidden, extraPatterns).then(($result: any) => {
         return $$createType3($result);
     });
 }

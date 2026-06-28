@@ -534,6 +534,62 @@ func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult
 	return &LocalBuildResult{BuildID: buildID}, nil
 }
 
+// GetCurrentBranch returns the currently checked-out branch name in the product build directory.
+func (s *BuildService) GetCurrentBranch(org, product string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "master", nil
+	}
+	productDir := filepath.Join(home, "alis.build", org, "build", product)
+	out, err := exec.Command("git", "-C", productDir, "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err != nil {
+		return "master", nil
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "" || branch == "HEAD" {
+		return "master", nil
+	}
+	return branch, nil
+}
+
+// GetNeuronLastCommitTimes returns a map of neuron ID → ISO-8601 timestamp of the last commit
+// that touched that neuron's directory on the given branch. Neurons with no matching commits
+// are omitted from the result.
+func (s *BuildService) GetNeuronLastCommitTimes(org, product, branch string) (map[string]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	productDir := filepath.Join(home, "alis.build", org, "build", product)
+	if _, err := os.Stat(productDir); err != nil {
+		return nil, fmt.Errorf("product build dir not found: %w", err)
+	}
+
+	// Collect immediate subdirectory names (neuron folders).
+	entries, err := os.ReadDir(productDir)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		neuronID := entry.Name()
+		ref := "origin/" + branch
+		out, err := exec.Command(
+			"git", "-C", productDir,
+			"log", "-1", "--format=%aI", ref, "--", neuronID+"/",
+		).Output()
+		if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+			continue
+		}
+		result[neuronID] = strings.TrimSpace(string(out))
+	}
+	return result, nil
+}
+
 // PollLocalBuild returns new output from a running local Docker build.
 // Pass 0 as offset on first call; pass NextOffset from each response on subsequent calls.
 func (s *BuildService) PollLocalBuild(buildID string, offset int) (*LocalBuildChunk, error) {

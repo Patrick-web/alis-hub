@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -7,14 +7,21 @@ import { useWorkspace } from '../stores/workspace';
 import { useNotifications } from '../stores/notifications';
 import { useDevelopTabs } from '../stores/developTabs';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
+import { useDevelopSettings } from '../stores/developSettings';
+import { Loader } from '../components/Loader';
 
 export function DevelopPage() {
   const { state, setNeurons } = useWorkspace();
   const { focusTaskId, setFocusTaskId, pendingOpen, setPendingOpen, state: notifState } = useNotifications();
   const { tabs, openTab, activateTab } = useDevelopTabs();
+  const { settings: devSettings } = useDevelopSettings();
 
   const [neuronFilter, setNeuronFilter] = useState('');
   const [selectedNeurons, setSelectedNeurons] = useState<Set<string>>(new Set());
+  const [commitTimes, setCommitTimes] = useState<Record<string, string>>({});
+  const [commitTimesLoading, setCommitTimesLoading] = useState(false);
+  const commitTimesBranchRef = useRef<string>('');
 
   useEffect(() => {
     if (!state.organisation || !state.product) return;
@@ -50,11 +57,76 @@ export function DevelopPage() {
     openTab(pendingOpen.type, pendingOpen.neuron);
   }, [pendingOpen]);
 
+  // Fetch commit times from the build repo whenever smart sort is enabled.
+  // Used as primary data for 'committed' and as fallback for the other keys.
+  useEffect(() => {
+    if (!devSettings.smartSortEnabled) return;
+    if (!state.organisation || !state.product) return;
+
+    (async () => {
+      setCommitTimesLoading(true);
+      try {
+        const branch = devSettings.defaultBranch === 'local'
+          ? await BuildService.GetCurrentBranch(state.organisation, state.product).catch(() => 'master')
+          : (devSettings.defaultBranch || 'master');
+        commitTimesBranchRef.current = branch as string;
+        const times = await BuildService.GetNeuronLastCommitTimes(state.organisation, state.product, branch as string);
+        setCommitTimes((times as Record<string, string>) ?? {});
+      } catch {
+        // leave commitTimes as-is
+      } finally {
+        setCommitTimesLoading(false);
+      }
+    })();
+  }, [devSettings.smartSortEnabled, devSettings.defaultBranch, state.organisation, state.product]);
+
   const visibleNeurons = state.neurons.filter(n =>
     !neuronFilter || (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase())
   );
-  const allVisibleSelected = visibleNeurons.length > 0 && visibleNeurons.every(n => selectedNeurons.has(n.name || n.id));
-  const someVisibleSelected = visibleNeurons.some(n => selectedNeurons.has(n.name || n.id));
+
+  const sortedNeurons = useMemo(() => {
+    if (!devSettings.smartSortEnabled) return visibleNeurons;
+
+    const key = devSettings.smartSortKey;
+
+    // Helper: convert an ISO-8601 string from commitTimes to a ms timestamp (0 if missing).
+    const commitMs = (neuronName: string): number => {
+      const iso = commitTimes[neuronName];
+      if (!iso) return 0;
+      const t = Date.parse(iso);
+      return isNaN(t) ? 0 : t;
+    };
+
+    if (key === 'committed') {
+      return [...visibleNeurons].sort((a, b) => {
+        const ta = commitMs(a.name || a.id);
+        const tb = commitMs(b.name || b.id);
+        return tb - ta;
+      });
+    }
+
+    // For defined/built/deployed: use notification timestamps as the primary signal,
+    // with build-repo commit times as a reliable fallback so the sort always has data.
+    const taskType = key === 'defined' ? 'define' : key === 'built' ? 'build' : 'deploy';
+    const notifTimestamps = new Map<string, number>();
+    for (const n of notifState.notifications) {
+      if (n.task?.type === taskType && n.task.startedAt) {
+        const existing = notifTimestamps.get(n.task.neuronId) ?? 0;
+        if (n.task.startedAt > existing) notifTimestamps.set(n.task.neuronId, n.task.startedAt);
+      }
+    }
+
+    return [...visibleNeurons].sort((a, b) => {
+      const name_a = a.name || a.id;
+      const name_b = b.name || b.id;
+      // Prefer notification timestamp; fall back to git commit time.
+      const ta = Math.max(notifTimestamps.get(name_a) ?? 0, commitMs(name_a));
+      const tb = Math.max(notifTimestamps.get(name_b) ?? 0, commitMs(name_b));
+      return tb - ta;
+    });
+  }, [visibleNeurons, devSettings.smartSortEnabled, devSettings.smartSortKey, notifState.notifications, commitTimes]);
+  const allVisibleSelected = sortedNeurons.length > 0 && sortedNeurons.every(n => selectedNeurons.has(n.name || n.id));
+  const someVisibleSelected = sortedNeurons.some(n => selectedNeurons.has(n.name || n.id));
 
   const toggleNeuron = (name: string) => setSelectedNeurons(prev => {
     const next = new Set(prev);
@@ -66,13 +138,13 @@ export function DevelopPage() {
     if (allVisibleSelected) {
       setSelectedNeurons(prev => {
         const next = new Set(prev);
-        visibleNeurons.forEach(n => next.delete(n.name || n.id));
+        sortedNeurons.forEach(n => next.delete(n.name || n.id));
         return next;
       });
     } else {
       setSelectedNeurons(prev => {
         const next = new Set(prev);
-        visibleNeurons.forEach(n => next.add(n.name || n.id));
+        sortedNeurons.forEach(n => next.add(n.name || n.id));
         return next;
       });
     }
@@ -85,6 +157,14 @@ export function DevelopPage() {
         <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
           SERVICES
         </p>
+        {devSettings.smartSortEnabled && (
+          <div className="flex items-center gap-[5px]">
+            {commitTimesLoading && <Loader size={10} />}
+            <span className="text-[9px] font-mono text-foreground/30 uppercase tracking-wide">
+              ↑ {devSettings.smartSortKey}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Filter toolbar */}
@@ -154,7 +234,7 @@ export function DevelopPage() {
               </tr>
             </thead>
             <tbody>
-              {visibleNeurons.map(neuron => {
+              {sortedNeurons.map(neuron => {
                 const name = neuron.name || neuron.id;
                 const isSelected = selectedNeurons.has(name);
                 return (

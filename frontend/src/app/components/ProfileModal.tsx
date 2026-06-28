@@ -10,9 +10,12 @@ import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
 import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
+import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
+import { SearchableSelect } from './ui/searchable-select';
 import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { useSourceControl } from '../stores/sourceControl';
+import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { useUserProfile } from '../stores/userProfile';
 import { LocalAISetupCard } from './LocalAISetupCard';
@@ -23,7 +26,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control';
+type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop';
 
 interface UpdateInfo {
   available: boolean;
@@ -123,12 +126,13 @@ const SIDEBAR_GROUPS = [
       { id: 'labs' as Tab,           label: 'Labs',           icon: 'solar:test-tube-linear',        color: '#bf5af2' },
       { id: 'updates' as Tab,        label: 'Updates',        icon: 'solar:refresh-circle-linear',   color: '#3b82f6' },
       { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:git-branch-linear',       color: undefined },
+      { id: 'develop' as Tab,        label: 'Develop',        icon: 'solar:code-square-linear',        color: undefined },
     ],
   },
 ];
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
-  const { setPhase } = useWorkspace();
+  const { state, setPhase } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { accentId, setAccent, customHex, setCustomAccent } = useAccentColor();
   const contrastForCustom = (hex: string) => {
@@ -137,7 +141,16 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   };
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
   const { state: scState, setFileListView, setDiffView } = useSourceControl();
+  const {
+    settings: devSettings,
+    setIgnoreHiddenFolders,
+    setIgnoredFolderPatterns,
+    setDefaultBranch,
+    setSmartSortEnabled,
+    setSmartSortKey,
+  } = useDevelopSettings();
   const [activeTab, setActiveTab] = useState<Tab>('account');
+  const [availableBranches, setAvailableBranches] = useState<string[]>([]);
   const { profile, profileError } = useUserProfile();
 
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
@@ -163,6 +176,14 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
       setSystemNotificationsEnabled(false);
     }
   }
+
+  useEffect(() => {
+    if (!open || activeTab !== 'develop') return;
+    if (!state.organisation || !state.product) return;
+    BuildService.GetBuildBranches(state.organisation, state.product)
+      .then((bs: any) => { if (bs && bs.length > 0) setAvailableBranches(bs as string[]); })
+      .catch(() => {});
+  }, [open, activeTab, state.organisation, state.product]);
 
   useEffect(() => {
     if (!open) return;
@@ -703,6 +724,119 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                           </div>
                         </SettingRow>
                       </SettingsCard>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Develop ── */}
+                {activeTab === 'develop' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    {state.organisation && state.product && (
+                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                        Settings for {state.organisation}/{state.product}
+                      </p>
+                    )}
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Folder Scanning</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Ignore hidden folders">
+                          <button
+                            onClick={() => setIgnoreHiddenFolders(!devSettings.ignoreHiddenFolders)}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.ignoreHiddenFolders ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                          >
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.ignoreHiddenFolders ? 'left-[16px]' : 'left-[2px]'}`} />
+                          </button>
+                        </SettingRow>
+                      </SettingsCard>
+                      <div className="flex flex-col gap-[4px]">
+                        <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px]">
+                          Ignored folder patterns
+                        </span>
+                        <SettingsCard>
+                          <textarea
+                            value={devSettings.ignoredFolderPatterns.join('\n')}
+                            onChange={e => {
+                              const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean);
+                              setIgnoredFolderPatterns(lines);
+                            }}
+                            placeholder={"node_modules\nbuild\ndist"}
+                            rows={4}
+                            spellCheck={false}
+                            className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
+                          />
+                        </SettingsCard>
+                        <p className="text-[10px] text-foreground/25 font-mono px-[1px]">One folder name or glob per line.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Git</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Default branch">
+                          <div className="flex items-center gap-[6px]">
+                            <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                              <button
+                                onClick={() => setDefaultBranch('local')}
+                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch === 'local' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                              >
+                                Local
+                              </button>
+                              <button
+                                onClick={() => {
+                                  if (devSettings.defaultBranch === 'local') {
+                                    setDefaultBranch(availableBranches[0] || 'master');
+                                  }
+                                }}
+                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch !== 'local' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                              >
+                                Custom
+                              </button>
+                            </div>
+                            {devSettings.defaultBranch !== 'local' && (
+                              <SearchableSelect
+                                value={devSettings.defaultBranch}
+                                options={availableBranches.length > 0 ? availableBranches : [devSettings.defaultBranch]}
+                                onChange={setDefaultBranch}
+                                placeholder="Select branch…"
+                                className="w-[130px]"
+                              />
+                            )}
+                          </div>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Smart Sort</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Smart Sort">
+                          <button
+                            onClick={() => setSmartSortEnabled(!devSettings.smartSortEnabled)}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.smartSortEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                          >
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.smartSortEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
+                          </button>
+                        </SettingRow>
+                        {devSettings.smartSortEnabled && (
+                          <SettingRow label="Sort by">
+                            <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                              {(['defined', 'built', 'deployed', 'committed'] as SmartSortKey[]).map(k => (
+                                <button
+                                  key={k}
+                                  onClick={() => setSmartSortKey(k)}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.smartSortKey === k ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                                >
+                                  {k.charAt(0).toUpperCase() + k.slice(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </SettingRow>
+                        )}
+                      </SettingsCard>
+                      <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                        Sorts services by the most recently touched, based on local activity or git history.
+                      </p>
                     </div>
                   </div>
                 )}

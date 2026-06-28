@@ -7,6 +7,7 @@ import { WorkspaceProvider } from "./app/stores/workspace.tsx";
 import { NotificationProvider } from "./app/stores/notifications.tsx";
 import { LabsProvider } from "./app/stores/labs.tsx";
 import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
+import { DevelopSettingsProvider } from "./app/stores/developSettings.tsx";
 import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
 import { CommandPaletteProvider } from "./app/stores/commandPalette.tsx";
@@ -24,6 +25,7 @@ createRoot(document.getElementById("root")!).render(
           <LabsProvider>
             <LocalAIProvider>
             <SourceControlProvider>
+            <DevelopSettingsProvider>
             <SuggestionsProvider>
               <PackageSessionsProvider>
                 <CommandPaletteProvider>
@@ -34,6 +36,7 @@ createRoot(document.getElementById("root")!).render(
                 </CommandPaletteProvider>
               </PackageSessionsProvider>
             </SuggestionsProvider>
+            </DevelopSettingsProvider>
             </SourceControlProvider>
             </LocalAIProvider>
           </LabsProvider>
