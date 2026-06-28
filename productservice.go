@@ -862,7 +862,7 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 	return parseEnvVariablesFromGetEnvironment(body[5:])
 }
 
-// retrieveDeploymentEnvs calls NeuronsService/RetrieveDeploymentEnvs with
+// retrieveDeploymentEnvs calls DeploymentsService/RetrieveDeploymentEnvs with
 // migrated=true and returns all vars with their managed flag.
 func (s *ProductService) retrieveDeploymentEnvs(envName string) ([]DeploymentEnvVar, error) {
 	if err := s.initTokens(); err != nil {
@@ -878,7 +878,7 @@ func (s *ProductService) retrieveDeploymentEnvs(envName string) ([]DeploymentEnv
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.neurons.v1.NeuronsService/RetrieveDeploymentEnvs", buf)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.neurons.v1.DeploymentsService/RetrieveDeploymentEnvs", buf)
 	if err != nil {
 		return nil, fmt.Errorf("retrieveDeploymentEnvs: %w", err)
 	}
