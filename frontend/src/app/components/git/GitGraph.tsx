@@ -1,6 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useRef, useMemo, useState, useCallback } from 'react';
+import { Icon } from '@iconify/react';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '../ui/context-menu';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { GitCommit } from './types';
 import * as GitService from '../../../../bindings/alis-hub-v3/gitservice';
 import type { CommitFile } from '../../../../bindings/alis-hub-v3/models';
@@ -269,12 +271,46 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
                     <span className="text-xs text-foreground/80 truncate flex-1">{commit.subject}</span>
                     {commit.refNames.length > 0 && (
                       <div className="flex items-center gap-1 shrink-0">
-                        {commit.refNames.slice(0, 2).map(ref => (
-                          <span key={ref} className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                            {ref.replace(/^HEAD -> /, '').replace(/^origin\//, '')}
-                          </span>
-                        ))}
+                        {(() => {
+                          const seen = new Set<string>();
+                          return commit.refNames.filter(ref => {
+                            const label = ref.replace(/^HEAD -> /, '').replace(/^origin\//, '');
+                            if (seen.has(label)) return false;
+                            seen.add(label);
+                            return true;
+                          }).slice(0, 2).map(ref => {
+                            const isHead = ref.startsWith('HEAD -> ');
+                            const isRemote = ref.startsWith('origin/');
+                            const tooltipText = isHead
+                              ? `Current HEAD · local branch`
+                              : isRemote
+                                ? `Remote tracking branch (${ref})`
+                                : ref.startsWith('tag: ')
+                                  ? `Tag: ${ref.replace('tag: ', '')}`
+                                  : `Local branch: ${ref}`;
+                            return (
+                              <Tooltip key={ref}>
+                                <TooltipTrigger asChild>
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 cursor-default">
+                                    {ref.replace(/^HEAD -> /, '').replace(/^origin\//, '')}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">{tooltipText}</TooltipContent>
+                              </Tooltip>
+                            );
+                          });
+                        })()}
                       </div>
+                    )}
+                    {unpushedHashes.has(commit.hash) && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0 flex items-center">
+                            <Icon icon="solar:cloud-upload-linear" className="text-amber-400/70 text-[12px]" />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Not yet pushed to remote</TooltipContent>
+                      </Tooltip>
                     )}
                     <span className="text-[10px] text-foreground/30 shrink-0 font-mono">{commit.hash.slice(0, 7)}</span>
                     <span className="text-[10px] text-foreground/30 shrink-0">{formatRelTime(commit.timestamp)}</span>
