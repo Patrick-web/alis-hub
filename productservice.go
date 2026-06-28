@@ -3333,6 +3333,7 @@ func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error
 	runGit := func(subcmd ...string) error {
 		args := append(baseArgs, subcmd...)
 		cmd := exec.Command("git", args...)
+		hideWindow(cmd)
 		cmd.Env = gitEnv
 		cmd.Stdin = nil
 		cmd.Stdout = ew
