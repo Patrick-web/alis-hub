@@ -315,9 +315,13 @@ func configureGlobalCredentialHelper() error {
 	// git config --global credential.https://forgejo-*.run.app.helper <path>
 	// Unfortunately git doesn't support wildcards in credential URLs, so we set
 	// the global default helper instead, guarded by the helper's own host check.
-	out, _ := exec.Command("git", "config", "--global", "--get", "credential.helper").Output()
+	getCmd := exec.Command("git", "config", "--global", "--get", "credential.helper")
+	hideWindow(getCmd)
+	out, _ := getCmd.Output()
 	if strings.TrimSpace(string(out)) == helperPath {
 		return nil
 	}
-	return exec.Command("git", "config", "--global", "credential.helper", helperPath).Run()
+	setCmd := exec.Command("git", "config", "--global", "credential.helper", helperPath)
+	hideWindow(setCmd)
+	return setCmd.Run()
 }
