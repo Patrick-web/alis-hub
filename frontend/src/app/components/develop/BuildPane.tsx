@@ -6,6 +6,7 @@ import { Loader } from '../Loader';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
+import { useDevelopSettings } from '../../stores/developSettings';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
@@ -26,6 +27,7 @@ interface BuildPaneProps {
 
 export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   const { state } = useWorkspace();
+  const { settings: devSettings } = useDevelopSettings();
   const { addNotification, updateNotification } = useNotifications();
   const { openTab, setTabNotificationId } = useDevelopTabs();
   const navigate = useNavigate();
@@ -85,9 +87,24 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         });
       }
     } else {
-      loadCommits('master');
+      resolveDefaultBranchAndLoad();
     }
   }, []);
+
+  async function resolveDefaultBranchAndLoad() {
+    let initialBranch = 'master';
+    if (devSettings.defaultBranch === 'local') {
+      try {
+        const local = await BuildService.GetCurrentBranch(orgRef.current, productRef.current);
+        if (local) initialBranch = local;
+      } catch {
+        // fall back to master
+      }
+    } else if (devSettings.defaultBranch) {
+      initialBranch = devSettings.defaultBranch;
+    }
+    loadCommits(initialBranch);
+  }
 
   async function loadCommits(b: string) {
     setStep('commits');
@@ -450,6 +467,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
               onChange={handleBranchChange}
               className="flex-1 min-w-0"
             />
+            <button
+              onClick={() => loadCommits(branch)}
+              disabled={commitsLoading}
+              className="flex items-center justify-center size-[24px] rounded-[4px] text-foreground/35 hover:text-foreground hover:bg-card transition-colors disabled:opacity-40 shrink-0"
+              title="Refresh commits"
+            >
+              <Icon icon="solar:refresh-linear" className="text-sm" />
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto">
             {commitsLoading ? (

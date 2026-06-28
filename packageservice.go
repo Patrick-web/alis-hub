@@ -51,7 +51,7 @@ func (s *PackageService) initClient() error {
 
 // PreparePackageScripts scans the neuron build directory for language manifests, then calls
 // VscodeService/GeneratePackageScripts to obtain the shell commands for each folder.
-func (s *PackageService) PreparePackageScripts(org, product, neuron, version string) ([]PackageScript, error) {
+func (s *PackageService) PreparePackageScripts(org, product, neuron, version string, ignoreHidden bool, extraPatterns []string) ([]PackageScript, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 	productDir := filepath.Join(home, "alis.build", org, "build", product)
 	folderName := neuron + "-" + version
 
-	locations, names, err := scanBuildDirForLocations(buildDir, productDir, folderName)
+	locations, names, err := scanBuildDirForLocations(buildDir, productDir, folderName, ignoreHidden, extraPatterns)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 
 // scanBuildDirForLocations finds language manifest files and returns PackageScriptLocations
 // along with a map of workDir → display name (e.g. "asana-v1" or "asana-v1/proto").
-func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]PackageScriptLocation, map[string]string, error) {
+func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHidden bool, extraPatterns []string) ([]PackageScriptLocation, map[string]string, error) {
 	if _, err := os.Stat(buildDir); err != nil {
 		return nil, nil, fmt.Errorf("build dir not found at %s: %w", buildDir, err)
 	}
@@ -137,6 +137,14 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 		if d.IsDir() {
 			if skipDirs[d.Name()] {
 				return filepath.SkipDir
+			}
+			if ignoreHidden && len(d.Name()) > 0 && d.Name()[0] == '.' {
+				return filepath.SkipDir
+			}
+			for _, pat := range extraPatterns {
+				if matched, _ := filepath.Match(pat, d.Name()); matched {
+					return filepath.SkipDir
+				}
 			}
 			return nil
 		}

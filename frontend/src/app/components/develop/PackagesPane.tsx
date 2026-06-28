@@ -3,6 +3,7 @@ import { Icon } from '@iconify/react';
 import { Button } from '../Button';
 import { Loader } from '../Loader';
 import { useWorkspace } from '../../stores/workspace';
+import { useDevelopSettings } from '../../stores/developSettings';
 import { useNotifications } from '../../stores/notifications';
 import { usePackageSessions } from '../../stores/packageSessions';
 import type { TerminalSession } from '../PackageTerminalPane';
@@ -19,6 +20,7 @@ interface PackagesPaneProps {
 export function PackagesPane({ neuronNames }: PackagesPaneProps) {
   const { state } = useWorkspace();
   const { addNotification } = useNotifications();
+  const { settings: devSettings } = useDevelopSettings();
   const { sessions: packageSessions, addSessions, setTaskId } = usePackageSessions();
 
   const [step, setStep] = useState<PackagesStep>('scan');
@@ -39,7 +41,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
       const allScripts: PackageScript[] = [];
       for (const name of neuronNames) {
         const parsed = parseNeuron(name);
-        const result = await PackageService.PreparePackageScripts(state.organisation, state.product, parsed.id, parsed.version);
+        const result = await PackageService.PreparePackageScripts(state.organisation, state.product, parsed.id, parsed.version, devSettings.ignoreHiddenFolders, devSettings.ignoredFolderPatterns);
         allScripts.push(...(result as PackageScript[]));
       }
       setScripts(allScripts);
