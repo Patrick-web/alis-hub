@@ -11,6 +11,7 @@ interface UserProfileStore {
   profile: UserProfile | null;
   profileError: string | null;
   fetchProfile: () => Promise<void>;
+  clearProfile: () => void;
 }
 
 export const useUserProfile = create<UserProfileStore>((set, get) => ({
@@ -25,4 +26,5 @@ export const useUserProfile = create<UserProfileStore>((set, get) => ({
       set({ profileError: String(e) });
     }
   },
+  clearProfile: () => set({ profile: null, profileError: null }),
 }));
