@@ -246,6 +246,7 @@
     else if (ua.includes('linux')) { platform = 'linux'; label = 'Linux'; }
 
     btn.textContent = `download for ${label}_`;
+    btn.href = `/download/${platform}`;
 
     try {
       const res = await fetch('/api/release');
