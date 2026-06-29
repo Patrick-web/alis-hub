@@ -183,7 +183,10 @@ jobs:
       - name: Install Wails v3 CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
       - name: Install NSIS
-        run: choco install nsis -y
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\NSIS"
       - name: Install frontend deps
         run: cd frontend && npm install
       - name: Generate bindings
