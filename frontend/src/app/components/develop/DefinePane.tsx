@@ -149,7 +149,18 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
     <>
       {/* Step: commits */}
       {step === 'commits' && (
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="shrink-0 flex items-center justify-end px-[14px] py-[7px] border-b border-border">
+            <button
+              onClick={loadCommits}
+              disabled={commitsLoading}
+              className="flex items-center justify-center size-[24px] rounded-[4px] text-foreground/35 hover:text-foreground hover:bg-card transition-colors disabled:opacity-40"
+              title="Refresh commits"
+            >
+              <Icon icon="solar:refresh-linear" className="text-sm" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
           {commitsLoading ? (
             <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
               <Loader size={20} />
@@ -176,6 +187,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
               ))}
             </div>
           )}
+          </div>
         </div>
       )}
 
