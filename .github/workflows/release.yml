@@ -193,22 +193,31 @@ jobs:
         run: wails3 generate bindings
       - name: Build frontend
         run: cd frontend && npm run build
-      - name: Generate Windows resources (icon + manifest)
+      - name: Generate Windows resources (amd64)
         run: wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
-      - name: Build binary
-        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3.exe .
+      - name: Build binary (amd64)
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-amd64.exe .
+        env:
+          GOARCH: amd64
+      - name: Generate Windows resources (arm64)
+        run: wails3 generate syso -arch arm64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_arm64.syso
+      - name: Build binary (arm64)
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-arm64.exe .
+        env:
+          GOARCH: arm64
       - name: Generate WebView2 bootstrapper
         run: wails3 generate webview2bootstrapper -dir build/windows/nsis
-      - name: Build NSIS installer
+      - name: Build NSIS installer (amd64 + arm64)
         shell: pwsh
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          $binaryPath = (Resolve-Path "alis-hub-v3.exe").Path
+          $amd64Path = (Resolve-Path "alis-hub-v3-amd64.exe").Path
+          $arm64Path = (Resolve-Path "alis-hub-v3-arm64.exe").Path
           New-Item -ItemType Directory -Force -Path bin | Out-Null
-          & makensis "-DARG_WAILS_AMD64_BINARY=$binaryPath" "-DINFO_PRODUCTVERSION=$version" build/windows/nsis/project.nsi
+          & makensis "-DARG_WAILS_AMD64_BINARY=$amd64Path" "-DARG_WAILS_ARM64_BINARY=$arm64Path" "-DINFO_PRODUCTVERSION=$version" build/windows/nsis/project.nsi
       - name: Rename installer
         shell: pwsh
-        run: Move-Item "bin/alis-hub-v3-amd64-installer.exe" "AlisHub-windows-${{ github.ref_name }}-installer.exe"
+        run: Move-Item "bin/alis-hub-v3-amd64_arm64-installer.exe" "AlisHub-windows-${{ github.ref_name }}-installer.exe"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
