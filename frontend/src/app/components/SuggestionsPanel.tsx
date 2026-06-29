@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Sheet, SheetContent } from './ui/sheet';
@@ -88,7 +88,17 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
       <SheetContent
         side="right"
-        className="bg-card border-l border-border text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
+        overlayClassName="bg-black/20"
+        className="border border-white/[0.08] text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col rounded-[14px] overflow-hidden"
+        style={{
+          top: '8px',
+          bottom: '8px',
+          right: '8px',
+          height: 'auto',
+          background: 'rgba(18,18,22,0.82)',
+          backdropFilter: 'blur(32px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(32px) saturate(160%)',
+        } as React.CSSProperties}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-[14px] pt-[14px] pb-[12px] border-b border-border pr-[44px]">
@@ -121,7 +131,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
           <ScrollArea className="flex-1">
             {orderedCategories.map(category => (
               <div key={category}>
-                <div className="px-[14px] py-[6px] sticky top-0 bg-card z-10">
+                <div className="px-[14px] py-[6px] sticky top-0 z-10" style={{ background: 'rgba(18,18,22,0.9)' }}>
                   <span className="text-[10px] text-foreground/30 font-bold uppercase tracking-widest font-mono">
                     {category}
                   </span>
