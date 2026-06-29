@@ -182,6 +182,8 @@ jobs:
           node-version: "20"
       - name: Install Wails v3 CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
+      - name: Install NSIS
+        run: choco install nsis -y
       - name: Install frontend deps
         run: cd frontend && npm install
       - name: Generate bindings
@@ -192,12 +194,22 @@ jobs:
         run: wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
       - name: Build binary
         run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3.exe .
-      - name: Package
-        run: Compress-Archive -Path alis-hub-v3.exe -DestinationPath "AlisHub-windows-${{ github.ref_name }}.zip"
+      - name: Generate WebView2 bootstrapper
+        run: wails3 generate webview2bootstrapper -dir build/windows/nsis
+      - name: Build NSIS installer
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $binaryPath = (Resolve-Path "alis-hub-v3.exe").Path
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          & makensis "-DARG_WAILS_AMD64_BINARY=$binaryPath" "-DINFO_PRODUCTVERSION=$version" build/windows/nsis/project.nsi
+      - name: Rename installer
+        shell: pwsh
+        run: Move-Item "bin/alis-hub-v3-amd64-installer.exe" "AlisHub-windows-${{ github.ref_name }}-installer.exe"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: AlisHub-windows-*.zip
+          path: AlisHub-windows-*-installer.exe
 
   release:
     needs: [build-macos, build-linux, build-windows]
@@ -221,7 +233,7 @@ jobs:
             AlisHub-macOS-*.zip
             AlisHub-macOS-*.dmg
             AlisHub-linux-*.tar.gz
-            AlisHub-windows-*.zip
+            AlisHub-windows-*-installer.exe
           body: ${{ steps.changelog.outputs.notes }}
           draft: false
           prerelease: false
