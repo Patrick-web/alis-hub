@@ -73,9 +73,10 @@ func main() {
 
 	// Create a new window
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:  "AlisHub",
-		Width:  1024,
-		Height: 768,
+		Title:     "AlisHub",
+		Width:     1024,
+		Height:    768,
+		Frameless: true,
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTranslucent,
 			TitleBar: application.MacTitleBar{

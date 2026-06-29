@@ -3,35 +3,16 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
-import { Call, Window } from '@wailsio/runtime';
+import { Call, System } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import { useCommandPalette } from '../stores/commandPalette';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
 import { useUserProfile } from '../stores/userProfile';
+import { MacWindowControls, WindowsWindowControls } from './WindowControls';
 
-function WindowControls() {
-  return (
-    <div className="flex items-center gap-[6px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button
-        onClick={() => Window.Close()}
-        className="w-[12px] h-[12px] rounded-full bg-destructive hover:bg-destructive transition-colors shrink-0 focus:outline-none"
-        title="Close"
-      />
-      <button
-        onClick={() => Window.Minimise()}
-        className="w-[12px] h-[12px] rounded-full bg-warning hover:bg-warning transition-colors shrink-0 focus:outline-none"
-        title="Minimise"
-      />
-      <button
-        onClick={() => Window.ToggleMaximise()}
-        className="w-[12px] h-[12px] rounded-full bg-success hover:bg-success transition-colors shrink-0 focus:outline-none"
-        title="Maximise"
-      />
-    </div>
-  );
-}
+const isWindows = System.IsWindows();
 
 const tabs = [
   { id: 'about', label: 'About', icon: <Icon icon="solar:info-circle-linear" className="text-lg" /> },
@@ -52,10 +33,9 @@ export function TopNav() {
   const [envModalOpen, setEnvModalOpen] = useState(false);
   const [switchingEnv, setSwitchingEnv] = useState(false);
 
-  const { profile, fetchProfile } = useUserProfile();
+  const { profile } = useUserProfile();
   const avatarUrl = profile?.picture ?? '';
   const avatarName = profile?.name ?? '';
-  useEffect(() => { fetchProfile(); }, []);
 
   const [envsLoading, setEnvsLoading] = useState(false);
   const envsLoadingRef = useRef(false);
@@ -128,11 +108,13 @@ export function TopNav() {
     >
       {/* Left: Window controls and breadcrumb */}
       <div className="flex items-center h-full pr-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        <div className="px-[10px] flex items-center justify-center">
-          <WindowControls />
-        </div>
+        {!isWindows && (
+          <div className="px-[10px] flex items-center justify-center">
+            <MacWindowControls />
+          </div>
+        )}
 
-        <div className="flex items-center gap-[6px] ml-[5px] border-l border-r border-border h-full px-[10px]">
+        <div className={`flex items-center gap-[6px] border-r border-border h-full px-[10px] ${!isWindows ? 'ml-[5px] border-l' : 'pl-[10px]'}`}>
           <button
             onClick={handleHomeClick}
             className="opacity-70 hover:opacity-100 transition-opacity"
@@ -180,8 +162,9 @@ export function TopNav() {
         </div>
       </div>
 
-      {/* Right: Environment + Profile + Update badge */}
-      <div className="flex items-center h-full px-[10px] gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      {/* Right: Environment + Profile + Windows controls */}
+      <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-center h-full px-[10px] gap-[10px]">
         {/* Command palette trigger */}
         <button
           onClick={openPalette}
@@ -230,6 +213,8 @@ export function TopNav() {
             <Icon icon="solar:user-circle-linear" className="text-foreground text-[22px]" />
           )}
         </button>
+      </div>
+      {isWindows && <WindowsWindowControls />}
       </div>
 
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
