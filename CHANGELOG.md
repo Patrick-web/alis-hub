@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.9.1] - 2026-06-29
+
+### What's New
+- Windows now shows custom minimize, maximize, and close buttons in the title bar, styled to match Windows 11 conventions
+
+### Bug Fixes
+- Fixed an issue where the user profile avatar and name wouldn't always load correctly across app screens
+
 ## [v0.9.0] - 2026-06-29
 
 ### What's New
