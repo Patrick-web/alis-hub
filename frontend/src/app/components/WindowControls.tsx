@@ -3,7 +3,7 @@ import { Window, Events } from '@wailsio/runtime';
 
 export function MacWindowControls() {
   return (
-    <div className="flex items-center gap-[6px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+    <div className="flex items-center gap-[6px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
       <button
         onClick={() => Window.Close()}
         className="w-[12px] h-[12px] rounded-full bg-destructive hover:bg-destructive transition-colors shrink-0 focus:outline-none"
@@ -61,7 +61,7 @@ export function WindowsWindowControls() {
   return (
     <div
       className="flex items-stretch h-full ml-[4px]"
-      style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+      style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
     >
       <button
         onClick={() => Window.Minimise()}

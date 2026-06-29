@@ -104,10 +104,10 @@ export function TopNav() {
   return (
     <div
       className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      style={{ '--wails-draggable': 'drag' } as React.CSSProperties}
     >
       {/* Left: Window controls and breadcrumb */}
-      <div className="flex items-center h-full pr-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-center h-full pr-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
         {!isWindows && (
           <div className="px-[10px] flex items-center justify-center">
             <MacWindowControls />
@@ -148,7 +148,7 @@ export function TopNav() {
       </div>
 
       {/* Center: Tabs */}
-      <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
         <div className="flex h-full border-r border-border">
           {tabs.map((tab) => (
             <Tab
@@ -163,7 +163,7 @@ export function TopNav() {
       </div>
 
       {/* Right: Environment + Profile + Windows controls */}
-      <div className="flex items-stretch h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-stretch h-full" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
       <div className="flex items-center h-full px-[10px] gap-[10px]">
         {/* Command palette trigger */}
         <button

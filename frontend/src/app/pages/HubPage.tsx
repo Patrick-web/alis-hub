@@ -1,33 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
-import { Window } from '@wailsio/runtime';
+import { System } from '@wailsio/runtime';
 import { useWorkspace } from '../stores/workspace';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
+import { MacWindowControls, WindowsWindowControls } from '../components/WindowControls';
 
-function WindowControls() {
-  return (
-    <div className="flex items-center gap-[6px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-      <button
-        onClick={() => Window.Close()}
-        className="w-[12px] h-[12px] rounded-full bg-destructive hover:bg-destructive transition-colors shrink-0 focus:outline-none"
-        title="Close"
-      />
-      <button
-        onClick={() => Window.Minimise()}
-        className="w-[12px] h-[12px] rounded-full bg-warning hover:bg-warning transition-colors shrink-0 focus:outline-none"
-        title="Minimise"
-      />
-      <button
-        onClick={() => Window.ToggleMaximise()}
-        className="w-[12px] h-[12px] rounded-full bg-success hover:bg-success transition-colors shrink-0 focus:outline-none"
-        title="Maximise"
-      />
-    </div>
-  );
-}
+const isWindows = System.IsWindows();
 
 export function HubPage() {
   const navigate = useNavigate();
@@ -86,13 +67,14 @@ export function HubPage() {
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
       {/* Title bar — only this strip is draggable */}
       <div
-        className="h-[40px] flex items-center justify-between px-[10px] shrink-0 border-b border-border"
-        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+        className="h-[40px] flex items-center justify-between shrink-0 border-b border-border"
+        style={{ '--wails-draggable': 'drag' } as React.CSSProperties}
       >
-        <div className="flex items-center gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-          <WindowControls />
+        <div className="flex items-center gap-[10px] px-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
+          {!isWindows && <MacWindowControls />}
         </div>
-        <div className="flex items-center gap-[10px]" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="flex items-stretch h-full" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
+        <div className="flex items-center gap-[10px] px-[10px]">
           <NotificationCenter />
           <button
             onClick={() => setProfileOpen(true)}
@@ -116,6 +98,8 @@ export function HubPage() {
               <Icon icon="solar:user-circle-linear" className="text-foreground text-[22px]" />
             )}
           </button>
+        </div>
+          {isWindows && <WindowsWindowControls />}
         </div>
       </div>
 
