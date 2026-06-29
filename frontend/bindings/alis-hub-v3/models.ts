@@ -3492,6 +3492,39 @@ export class SpannerQueryResult {
     }
 }
 
+/**
+ * SpannerRWTxnResult holds the open session and transaction details for a
+ * read-write transaction that has been started but not yet committed.
+ */
+export class SpannerRWTxnResult {
+    "sessionName": string;
+    "transactionId": string;
+    "rowsAffected": number;
+
+    /** Creates a new SpannerRWTxnResult instance. */
+    constructor($$source: Partial<SpannerRWTxnResult> = {}) {
+        if (!("sessionName" in $$source)) {
+            this["sessionName"] = "";
+        }
+        if (!("transactionId" in $$source)) {
+            this["transactionId"] = "";
+        }
+        if (!("rowsAffected" in $$source)) {
+            this["rowsAffected"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SpannerRWTxnResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SpannerRWTxnResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SpannerRWTxnResult($$parsedSource as Partial<SpannerRWTxnResult>);
+    }
+}
+
 export class SpannerTable {
     "name": string;
 

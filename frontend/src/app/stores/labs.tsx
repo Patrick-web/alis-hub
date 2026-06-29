@@ -12,7 +12,8 @@ export type SuggestionCategory =
   | 'Define'
   | 'Environment Hygiene'
   | 'Release Readiness'
-  | 'AI Insights';
+  | 'AI Insights'
+  | 'Tools';
 
 export interface SuggestionDefinition {
   id: string;
@@ -65,6 +66,13 @@ export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
     description: 'Generate context-aware next-step suggestions using your local Gemma model after key events.',
     enabled: true,
   },
+  {
+    id: 'spanner-rw-transaction',
+    category: 'Tools',
+    title: 'Spanner read-write transaction mode',
+    description: 'Execute DML in a read-write transaction that holds changes open until you choose to commit or rollback.',
+    enabled: true,
+  },
 ];
 
 export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
@@ -73,6 +81,7 @@ export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
   'Environment Hygiene',
   'Release Readiness',
   'AI Insights',
+  'Tools',
 ];
 
 interface LabsState {

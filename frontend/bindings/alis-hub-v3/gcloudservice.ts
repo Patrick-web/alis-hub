@@ -16,14 +16,33 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * BeginSpannerReadWriteTxn starts a read-write transaction, executes the given
+ * DML statement, and returns the open session/transaction so the caller can
+ * later commit or rollback. The session is intentionally not deleted here.
+ */
+export function BeginSpannerReadWriteTxn(databaseResourceName: string, sql: string): $CancellablePromise<$models.SpannerRWTxnResult | null> {
+    return $Call.ByID(1209311710, databaseResourceName, sql).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * CheckGCloudStatus reports whether gcloud is installed and can produce a valid
  * access token. It uses print-access-token (not just auth list) so it matches
  * exactly what the API calls require.
  */
 export function CheckGCloudStatus(): $CancellablePromise<$models.GCloudStatus> {
     return $Call.ByID(4101128005).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType2($result);
     });
+}
+
+/**
+ * CommitSpannerTransaction commits an open read-write transaction and cleans
+ * up the session.
+ */
+export function CommitSpannerTransaction(sessionName: string, transactionID: string): $CancellablePromise<void> {
+    return $Call.ByID(3228624477, sessionName, transactionID);
 }
 
 /**
@@ -32,18 +51,18 @@ export function CheckGCloudStatus(): $CancellablePromise<$models.GCloudStatus> {
  */
 export function ExecuteSpannerDML(databaseResourceName: string, sql: string): $CancellablePromise<$models.SpannerDMLResult | null> {
     return $Call.ByID(1040902000, databaseResourceName, sql).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
 /**
  * ExecuteSpannerQuery runs a read-only SQL query against a Spanner database.
  * databaseResourceName is the full name e.g. "projects/{p}/instances/{i}/databases/{d}".
- * Spanner's executeSql is session-scoped: we create a session, run the query, then delete it.
+ * Uses executeStreamingSql so result sets larger than 10 MB are handled correctly.
  */
 export function ExecuteSpannerQuery(databaseResourceName: string, sql: string): $CancellablePromise<$models.SpannerQueryResult | null> {
     return $Call.ByID(1045440973, databaseResourceName, sql).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType6($result);
     });
 }
 
@@ -57,13 +76,13 @@ export function GetObjectContent(bucket: string, object: string): $CancellablePr
 
 export function GetObjectMetadata(bucket: string, object: string): $CancellablePromise<$models.GCSObjectMetadata | null> {
     return $Call.ByID(76473239, bucket, object).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType8($result);
     });
 }
 
 export function ListBuckets(projectID: string): $CancellablePromise<$models.GCSBucket[]> {
     return $Call.ByID(1867656790, projectID).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType10($result);
     });
 }
 
@@ -72,31 +91,31 @@ export function ListBuckets(projectID: string): $CancellablePromise<$models.GCSB
  */
 export function ListCloudRunServices(projectID: string): $CancellablePromise<$models.CloudRunService[]> {
     return $Call.ByID(2635577109, projectID).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType12($result);
     });
 }
 
 export function ListLogEntries(projectID: string, filter: string, pageToken: string): $CancellablePromise<$models.LogPage> {
     return $Call.ByID(1181900761, projectID, filter, pageToken).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType13($result);
     });
 }
 
 export function ListObjects(bucket: string, prefix: string, pageToken: string): $CancellablePromise<$models.GCSObjectList> {
     return $Call.ByID(4097624265, bucket, prefix, pageToken).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
 export function ListPackages(projectID: string, region: string, repoName: string): $CancellablePromise<$models.ARPackage[]> {
     return $Call.ByID(2958372494, projectID, region, repoName).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
 export function ListRepositories(projectID: string, region: string): $CancellablePromise<$models.ARRepository[]> {
     return $Call.ByID(3391911399, projectID, region).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -106,13 +125,13 @@ export function ListRepositories(projectID: string, region: string): $Cancellabl
  */
 export function ListSecretVersions(secretResourceName: string): $CancellablePromise<$models.SMSecretVersion[]> {
     return $Call.ByID(1703252290, secretResourceName).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType20($result);
     });
 }
 
 export function ListSecrets(projectID: string): $CancellablePromise<$models.SMSecret[]> {
     return $Call.ByID(2564033992, projectID).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
@@ -122,7 +141,7 @@ export function ListSecrets(projectID: string): $CancellablePromise<$models.SMSe
  */
 export function ListSpannerBackups(instanceResourceName: string): $CancellablePromise<$models.SpannerBackup[]> {
     return $Call.ByID(3173956327, instanceResourceName).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -132,13 +151,13 @@ export function ListSpannerBackups(instanceResourceName: string): $CancellablePr
  */
 export function ListSpannerDatabases(instanceResourceName: string): $CancellablePromise<$models.SpannerDatabase[]> {
     return $Call.ByID(1359586522, instanceResourceName).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
 export function ListSpannerInstances(projectID: string): $CancellablePromise<$models.SpannerInstance[]> {
     return $Call.ByID(2154481176, projectID).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType28($result);
     });
 }
 
@@ -148,7 +167,7 @@ export function ListSpannerInstances(projectID: string): $CancellablePromise<$mo
  */
 export function ListSpannerTables(databaseResourceName: string): $CancellablePromise<$models.SpannerTable[]> {
     return $Call.ByID(1954101685, databaseResourceName).then(($result: any) => {
-        return $$createType28($result);
+        return $$createType30($result);
     });
 }
 
@@ -158,7 +177,7 @@ export function ListSpannerTables(databaseResourceName: string): $CancellablePro
  */
 export function ListVersions(packageResourceName: string): $CancellablePromise<$models.ARVersion[]> {
     return $Call.ByID(2139956354, packageResourceName).then(($result: any) => {
-        return $$createType30($result);
+        return $$createType32($result);
     });
 }
 
@@ -175,7 +194,7 @@ export function OpenInConsole(section: string, projectID: string, resource: stri
  */
 export function PollSetupOutput(runID: string, offset: number): $CancellablePromise<$models.SetupChunk | null> {
     return $Call.ByID(16531906, runID, offset).then(($result: any) => {
-        return $$createType32($result);
+        return $$createType34($result);
     });
 }
 
@@ -184,6 +203,14 @@ export function PollSetupOutput(runID: string, offset: number): $CancellableProm
  */
 export function ResizeSetupTerminal(runID: string, cols: number, rows: number): $CancellablePromise<void> {
     return $Call.ByID(23653932, runID, cols, rows);
+}
+
+/**
+ * RollbackSpannerTransaction rolls back an open read-write transaction and
+ * cleans up the session.
+ */
+export function RollbackSpannerTransaction(sessionName: string, transactionID: string): $CancellablePromise<void> {
+    return $Call.ByID(2482923444, sessionName, transactionID);
 }
 
 /**
@@ -209,36 +236,38 @@ export function WriteSetupInput(runID: string, data: string): $CancellablePromis
 }
 
 // Private type creation functions
-const $$createType0 = $models.GCloudStatus.createFrom;
-const $$createType1 = $models.SpannerDMLResult.createFrom;
-const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = $models.SpannerQueryResult.createFrom;
+const $$createType0 = $models.SpannerRWTxnResult.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.GCloudStatus.createFrom;
+const $$createType3 = $models.SpannerDMLResult.createFrom;
 const $$createType4 = $Create.Nullable($$createType3);
-const $$createType5 = $models.GCSObjectMetadata.createFrom;
+const $$createType5 = $models.SpannerQueryResult.createFrom;
 const $$createType6 = $Create.Nullable($$createType5);
-const $$createType7 = $models.GCSBucket.createFrom;
-const $$createType8 = $Create.Array($$createType7);
-const $$createType9 = $models.CloudRunService.createFrom;
+const $$createType7 = $models.GCSObjectMetadata.createFrom;
+const $$createType8 = $Create.Nullable($$createType7);
+const $$createType9 = $models.GCSBucket.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = $models.LogPage.createFrom;
-const $$createType12 = $models.GCSObjectList.createFrom;
-const $$createType13 = $models.ARPackage.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $models.ARRepository.createFrom;
+const $$createType11 = $models.CloudRunService.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = $models.LogPage.createFrom;
+const $$createType14 = $models.GCSObjectList.createFrom;
+const $$createType15 = $models.ARPackage.createFrom;
 const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.SMSecretVersion.createFrom;
+const $$createType17 = $models.ARRepository.createFrom;
 const $$createType18 = $Create.Array($$createType17);
-const $$createType19 = $models.SMSecret.createFrom;
+const $$createType19 = $models.SMSecretVersion.createFrom;
 const $$createType20 = $Create.Array($$createType19);
-const $$createType21 = $models.SpannerBackup.createFrom;
+const $$createType21 = $models.SMSecret.createFrom;
 const $$createType22 = $Create.Array($$createType21);
-const $$createType23 = $models.SpannerDatabase.createFrom;
+const $$createType23 = $models.SpannerBackup.createFrom;
 const $$createType24 = $Create.Array($$createType23);
-const $$createType25 = $models.SpannerInstance.createFrom;
+const $$createType25 = $models.SpannerDatabase.createFrom;
 const $$createType26 = $Create.Array($$createType25);
-const $$createType27 = $models.SpannerTable.createFrom;
+const $$createType27 = $models.SpannerInstance.createFrom;
 const $$createType28 = $Create.Array($$createType27);
-const $$createType29 = $models.ARVersion.createFrom;
+const $$createType29 = $models.SpannerTable.createFrom;
 const $$createType30 = $Create.Array($$createType29);
-const $$createType31 = $models.SetupChunk.createFrom;
-const $$createType32 = $Create.Nullable($$createType31);
+const $$createType31 = $models.ARVersion.createFrom;
+const $$createType32 = $Create.Array($$createType31);
+const $$createType33 = $models.SetupChunk.createFrom;
+const $$createType34 = $Create.Nullable($$createType33);

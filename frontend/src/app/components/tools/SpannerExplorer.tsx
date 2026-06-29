@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { Loader } from "../Loader";
 import { Button } from "../Button";
@@ -22,6 +22,7 @@ import type {
   SpannerTable,
   SpannerQueryResult,
 } from "../../../../bindings/alis-hub-v3/models";
+import { useLabs } from "../../stores/labs";
 
 interface Props {
   projectID: string;
@@ -32,12 +33,21 @@ interface TableTabInfo {
   dbName: string;
 }
 
+interface PendingRWTxn {
+  sessionName: string;
+  transactionId: string;
+  rowsAffected: number;
+}
+
 interface QueryTabState {
   sql: string;
   queryLoading: boolean;
   queryError: string | null;
   queryResult: SpannerQueryResult | null;
   dmlResult: { rowsAffected: number } | null;
+  dmlMode: "partitioned" | "readwrite";
+  pendingRWTxn: PendingRWTxn | null;
+  txnActionLoading: "commit" | "rollback" | null;
 }
 
 const QUERY_TAB = "__query__";
@@ -48,6 +58,9 @@ const DEFAULT_QUERY_TAB_STATE: QueryTabState = {
   queryError: null,
   queryResult: null,
   dmlResult: null,
+  dmlMode: "partitioned",
+  pendingRWTxn: null,
+  txnActionLoading: null,
 };
 
 function shortName(n: string): string {
@@ -78,6 +91,20 @@ function queryTabLabel(id: string): string {
 }
 
 export function SpannerExplorer({ projectID }: Props) {
+  const { isSuggestionEnabled } = useLabs();
+  const rwTxnLabsEnabled = isSuggestionEnabled("spanner-rw-transaction");
+
+  // Ref tracking all open RW sessions so we can rollback on unmount
+  const openRWTxnsRef = useRef<Map<string, PendingRWTxn>>(new Map());
+
+  useEffect(() => {
+    return () => {
+      openRWTxnsRef.current.forEach((txn) => {
+        GS.RollbackSpannerTransaction(txn.sessionName, txn.transactionId).catch(() => {});
+      });
+    };
+  }, []);
+
   // ── Left pane ──────────────────────────────────────────────────────────────
   const [instances, setInstances] = useState<SpannerInstance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,6 +223,11 @@ export function SpannerExplorer({ projectID }: Props) {
       setEditingTabId(null);
       setEditingName("");
     }
+    const txn = openRWTxnsRef.current.get(tabId);
+    if (txn) {
+      GS.RollbackSpannerTransaction(txn.sessionName, txn.transactionId).catch(() => {});
+      openRWTxnsRef.current.delete(tabId);
+    }
     setTabs((prev) => {
       const next = prev.filter((t) => t !== tabId);
       if (activeTab === tabId) {
@@ -236,6 +268,14 @@ export function SpannerExplorer({ projectID }: Props) {
     const qOutsideRemove = tabs.filter((t) => isQueryTab(t) && !removeSet.has(t));
     if (qOutsideRemove.length === 0 && qInRemove.length > 0)
       removeSet.delete(qInRemove[0]);
+
+    removeSet.forEach((tabId) => {
+      const txn = openRWTxnsRef.current.get(tabId);
+      if (txn) {
+        GS.RollbackSpannerTransaction(txn.sessionName, txn.transactionId).catch(() => {});
+        openRWTxnsRef.current.delete(tabId);
+      }
+    });
 
     const toRemove = tabs.filter((t) => removeSet.has(t));
     const qRemove = toRemove.filter(isQueryTab);
@@ -319,15 +359,39 @@ export function SpannerExplorer({ projectID }: Props) {
 
   function executeQuery(tabId: string) {
     if (!selectedDatabase) return;
-    const sqlTrimmed = (queryTabStates[tabId]?.sql ?? "").trim();
+    const tabState = queryTabStates[tabId] ?? DEFAULT_QUERY_TAB_STATE;
+    const sqlTrimmed = tabState.sql.trim();
+
+    // Rollback any stale open transaction before starting a new query
+    const staleTxn = openRWTxnsRef.current.get(tabId);
+    if (staleTxn) {
+      GS.RollbackSpannerTransaction(staleTxn.sessionName, staleTxn.transactionId).catch(() => {});
+      openRWTxnsRef.current.delete(tabId);
+    }
+
     updateTabQuery(tabId, {
       queryLoading: true,
       queryResult: null,
       dmlResult: null,
+      pendingRWTxn: null,
       queryError: null,
     });
 
-    if (isDMLSQL(sqlTrimmed)) {
+    if (isDMLSQL(sqlTrimmed) && rwTxnLabsEnabled && tabState.dmlMode === "readwrite") {
+      GS.BeginSpannerReadWriteTxn(selectedDatabase, sqlTrimmed)
+        .then((r) => {
+          if (!r) return;
+          const txn: PendingRWTxn = {
+            sessionName: r.sessionName,
+            transactionId: r.transactionId,
+            rowsAffected: Number(r.rowsAffected ?? 0),
+          };
+          openRWTxnsRef.current.set(tabId, txn);
+          updateTabQuery(tabId, { pendingRWTxn: txn });
+        })
+        .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+        .finally(() => updateTabQuery(tabId, { queryLoading: false }));
+    } else if (isDMLSQL(sqlTrimmed)) {
       GS.ExecuteSpannerDML(selectedDatabase, sqlTrimmed)
         .then((r) =>
           updateTabQuery(tabId, {
@@ -350,6 +414,35 @@ export function SpannerExplorer({ projectID }: Props) {
         .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     }
+  }
+
+  function commitTransaction(tabId: string) {
+    const txn = queryTabStates[tabId]?.pendingRWTxn;
+    if (!txn) return;
+    updateTabQuery(tabId, { txnActionLoading: "commit" });
+    GS.CommitSpannerTransaction(txn.sessionName, txn.transactionId)
+      .then(() => {
+        openRWTxnsRef.current.delete(tabId);
+        updateTabQuery(tabId, {
+          pendingRWTxn: null,
+          dmlResult: { rowsAffected: txn.rowsAffected },
+        });
+      })
+      .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+      .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
+  }
+
+  function rollbackTransaction(tabId: string) {
+    const txn = queryTabStates[tabId]?.pendingRWTxn;
+    if (!txn) return;
+    updateTabQuery(tabId, { txnActionLoading: "rollback" });
+    GS.RollbackSpannerTransaction(txn.sessionName, txn.transactionId)
+      .then(() => {
+        openRWTxnsRef.current.delete(tabId);
+        updateTabQuery(tabId, { pendingRWTxn: null, dmlResult: null });
+      })
+      .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+      .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
   }
 
   function handleNavigateToQuery(navSql: string, dbName: string) {
@@ -666,8 +759,17 @@ export function SpannerExplorer({ projectID }: Props) {
           {/* Query tabs */}
           {tabs.filter(isQueryTab).map((tabId) => {
             const tabQuery = queryTabStates[tabId] ?? DEFAULT_QUERY_TAB_STATE;
-            const { sql, queryLoading, queryError, queryResult, dmlResult } =
-              tabQuery;
+            const {
+              sql,
+              queryLoading,
+              queryError,
+              queryResult,
+              dmlResult,
+              dmlMode,
+              pendingRWTxn,
+              txnActionLoading,
+            } = tabQuery;
+            const showModeToggle = rwTxnLabsEnabled && isDMLSQL(sql);
             return (
               <div
                 key={tabId}
@@ -697,9 +799,27 @@ export function SpannerExplorer({ projectID }: Props) {
                               {shortName(selectedDatabase)}
                             </p>
                           </div>
-                          <p className="text-[9px] text-foreground/30 font-mono">
-                            ⌘↩ to run
-                          </p>
+                          <div className="flex items-center gap-[10px]">
+                            {showModeToggle && (
+                              <div className="flex items-center rounded-[4px] border border-border overflow-hidden text-[9px] font-mono">
+                                <button
+                                  onClick={() => updateTabQuery(tabId, { dmlMode: "partitioned" })}
+                                  className={`px-[7px] py-[3px] transition-colors ${dmlMode === "partitioned" ? "bg-foreground/10 text-foreground" : "text-foreground/40 hover:text-foreground/70"}`}
+                                >
+                                  Partitioned
+                                </button>
+                                <button
+                                  onClick={() => updateTabQuery(tabId, { dmlMode: "readwrite" })}
+                                  className={`px-[7px] py-[3px] border-l border-border transition-colors ${dmlMode === "readwrite" ? "bg-[rgba(248,129,169,0.12)] text-brand" : "text-foreground/40 hover:text-foreground/70"}`}
+                                >
+                                  Read-Write
+                                </button>
+                              </div>
+                            )}
+                            <p className="text-[9px] text-foreground/30 font-mono">
+                              ⌘↩ to run
+                            </p>
+                          </div>
                         </div>
 
                         <div
@@ -752,6 +872,45 @@ export function SpannerExplorer({ projectID }: Props) {
                               <p className="text-[10px] text-red-400 font-mono whitespace-pre-wrap">
                                 {queryError}
                               </p>
+                            </div>
+                          )}
+                          {pendingRWTxn && (
+                            <div className="m-[14px] p-[12px] bg-yellow-900/20 border border-yellow-700/50 rounded-[4px]">
+                              <div className="flex items-center gap-[8px] mb-[10px]">
+                                <Icon
+                                  icon="solar:clock-circle-bold"
+                                  className="text-yellow-400 text-sm shrink-0"
+                                />
+                                <p className="text-[10px] text-yellow-400 font-mono flex-1">
+                                  {pendingRWTxn.rowsAffected} row{pendingRWTxn.rowsAffected !== 1 ? "s" : ""} staged — transaction is open
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-[6px]">
+                                <button
+                                  onClick={() => rollbackTransaction(tabId)}
+                                  disabled={txnActionLoading !== null}
+                                  className="flex items-center gap-[5px] px-[10px] py-[4px] rounded-[3px] border border-border text-[10px] font-mono text-foreground/70 hover:text-foreground hover:bg-foreground/[6%] transition-colors disabled:opacity-40"
+                                >
+                                  {txnActionLoading === "rollback" ? (
+                                    <Icon icon="solar:refresh-linear" className="text-xs animate-spin" />
+                                  ) : (
+                                    <Icon icon="solar:close-circle-linear" className="text-xs" />
+                                  )}
+                                  Rollback
+                                </button>
+                                <button
+                                  onClick={() => commitTransaction(tabId)}
+                                  disabled={txnActionLoading !== null}
+                                  className="flex items-center gap-[5px] px-[10px] py-[4px] rounded-[3px] bg-green-700/30 border border-green-700/50 text-[10px] font-mono text-green-400 hover:bg-green-700/50 transition-colors disabled:opacity-40"
+                                >
+                                  {txnActionLoading === "commit" ? (
+                                    <Icon icon="solar:refresh-linear" className="text-xs animate-spin" />
+                                  ) : (
+                                    <Icon icon="solar:check-circle-linear" className="text-xs" />
+                                  )}
+                                  Commit
+                                </button>
+                              </div>
                             </div>
                           )}
                           {dmlResult && (
