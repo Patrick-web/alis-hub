@@ -201,8 +201,12 @@ export function NotificationCenter() {
       <SheetContent
         side="right"
         overlayClassName="bg-black/20"
-        className="border-l border-white/[0.08] text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col"
+        className="border border-white/[0.08] text-foreground w-[360px] max-w-[360px] gap-0 p-0 flex flex-col rounded-[14px] overflow-hidden"
         style={{
+          top: '8px',
+          bottom: '8px',
+          right: '8px',
+          height: 'auto',
           background: 'rgba(18,18,22,0.82)',
           backdropFilter: 'blur(32px) saturate(160%)',
           WebkitBackdropFilter: 'blur(32px) saturate(160%)',
