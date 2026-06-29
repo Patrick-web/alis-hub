@@ -151,7 +151,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   } = useDevelopSettings();
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [availableBranches, setAvailableBranches] = useState<string[]>([]);
-  const { profile, profileError } = useUserProfile();
+  const { profile, profileError, clearProfile } = useUserProfile();
 
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -258,6 +258,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     setLoggingOut(true);
     try {
       await ProductService.Logout();
+      clearProfile();
       onOpenChange(false);
       setPhase('login');
     } catch (e) {
