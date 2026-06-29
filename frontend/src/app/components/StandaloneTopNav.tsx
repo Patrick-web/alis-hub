@@ -32,10 +32,10 @@ export function StandaloneTopNav() {
   return (
     <div
       className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      style={{ '--wails-draggable': 'drag' } as React.CSSProperties}
     >
       {/* Left: Window controls + home */}
-      <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex items-center h-full" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
         {!isWindows && (
           <div className="px-[10px] flex items-center justify-center">
             <MacWindowControls />
@@ -53,7 +53,7 @@ export function StandaloneTopNav() {
       {/* Center: Tabs */}
       <div
         className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
       >
         <div className="flex h-full border-r border-border">
           {standaloneTabs.map((tab) => (
@@ -77,7 +77,7 @@ export function StandaloneTopNav() {
       {/* Right: Profile + Windows controls */}
       <div
         className="flex items-stretch h-full"
-        style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
       >
         <div className="flex items-center h-full px-[10px]">
           <button
