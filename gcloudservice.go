@@ -763,10 +763,6 @@ type spannerMetadata struct {
 	RowType spannerRowType `json:"rowType"`
 }
 
-type spannerExecuteSQLResp struct {
-	Metadata spannerMetadata `json:"metadata"`
-	Rows     [][]interface{} `json:"rows"`
-}
 
 func (g *GCloudService) ListSpannerInstances(projectID string) ([]SpannerInstance, error) {
 	u := fmt.Sprintf("https://spanner.googleapis.com/v1/projects/%s/instances", url.PathEscape(projectID))
@@ -855,9 +851,8 @@ func (g *GCloudService) ListSpannerBackups(instanceResourceName string) ([]Spann
 
 // ExecuteSpannerQuery runs a read-only SQL query against a Spanner database.
 // databaseResourceName is the full name e.g. "projects/{p}/instances/{i}/databases/{d}".
-// Spanner's executeSql is session-scoped: we create a session, run the query, then delete it.
+// Uses executeStreamingSql so result sets larger than 10 MB are handled correctly.
 func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*SpannerQueryResult, error) {
-	// Create a temporary session.
 	sessionURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/sessions", databaseResourceName)
 	var sessionResp struct {
 		Name string `json:"name"`
@@ -868,7 +863,10 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 	sessionName := sessionResp.Name
 	defer g.deleteSpannerSession(sessionName)
 
-	execURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeSql", sessionName)
+	token, err := g.accessToken()
+	if err != nil {
+		return nil, err
+	}
 	payload := map[string]interface{}{
 		"sql": sql,
 		"transaction": map[string]interface{}{
@@ -877,22 +875,96 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 			},
 		},
 	}
-	var resp spannerExecuteSQLResp
-	if err := g.apiPost(execURL, payload, &resp); err != nil {
+	body, _ := json.Marshal(payload)
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeStreamingSql", sessionName),
+		bytes.NewReader(body))
+	if err != nil {
 		return nil, err
 	}
-	columns := make([]string, len(resp.Metadata.RowType.Fields))
-	for i, f := range resp.Metadata.RowType.Fields {
-		columns[i] = f.Name
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
 	}
-	rows := make([][]string, len(resp.Rows))
-	for i, row := range resp.Rows {
-		cells := make([]string, len(row))
-		for j, cell := range row {
-			if cell == nil {
-				cells[j] = "NULL"
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(b))
+	}
+
+	// The streaming endpoint returns a JSON array of PartialResultSet objects.
+	// Values are flat row-major across all chunks. chunkedValue=true means the
+	// last value in this chunk is a partial string continued in the next chunk.
+	type partialResultSet struct {
+		Metadata     spannerMetadata `json:"metadata"`
+		Values       []interface{}   `json:"values"`
+		ChunkedValue bool            `json:"chunkedValue"`
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	// Consume the opening '[' of the array.
+	if t, err := dec.Token(); err != nil {
+		return nil, fmt.Errorf("read stream: %w", err)
+	} else if d, ok := t.(json.Delim); !ok || d != '[' {
+		return nil, fmt.Errorf("unexpected stream format")
+	}
+
+	var columns []string
+	var flat []interface{}
+	var pendingChunk string // tail of a chunked string value
+	hasPending := false
+
+	for dec.More() {
+		var chunk partialResultSet
+		if err := dec.Decode(&chunk); err != nil {
+			return nil, fmt.Errorf("decode chunk: %w", err)
+		}
+		if len(columns) == 0 && len(chunk.Metadata.RowType.Fields) > 0 {
+			columns = make([]string, len(chunk.Metadata.RowType.Fields))
+			for i, f := range chunk.Metadata.RowType.Fields {
+				columns[i] = f.Name
+			}
+		}
+		for i, v := range chunk.Values {
+			isLast := i == len(chunk.Values)-1
+			str := ""
+			if v == nil {
+				str = "NULL"
 			} else {
-				cells[j] = fmt.Sprintf("%v", cell)
+				str = fmt.Sprintf("%v", v)
+			}
+			if hasPending {
+				str = pendingChunk + str
+				hasPending = false
+				pendingChunk = ""
+			}
+			if isLast && chunk.ChunkedValue {
+				pendingChunk = str
+				hasPending = true
+			} else {
+				flat = append(flat, str)
+			}
+		}
+	}
+	// Flush any remaining pending chunk (shouldn't happen in a well-formed response).
+	if hasPending {
+		flat = append(flat, pendingChunk)
+	}
+
+	if len(columns) == 0 {
+		return &SpannerQueryResult{Columns: []string{}, Rows: [][]string{}}, nil
+	}
+	numCols := len(columns)
+	numRows := len(flat) / numCols
+	rows := make([][]string, numRows)
+	for i := range rows {
+		cells := make([]string, numCols)
+		for j := 0; j < numCols; j++ {
+			if s, ok := flat[i*numCols+j].(string); ok {
+				cells[j] = s
 			}
 		}
 		rows[i] = cells
@@ -952,6 +1024,87 @@ func (g *GCloudService) ExecuteSpannerDML(databaseResourceName, sql string) (*Sp
 		fmt.Sscanf(resp.Stats.RowCountExact, "%d", &rowsAffected)
 	}
 	return &SpannerDMLResult{RowsAffected: rowsAffected}, nil
+}
+
+// SpannerRWTxnResult holds the open session and transaction details for a
+// read-write transaction that has been started but not yet committed.
+type SpannerRWTxnResult struct {
+	SessionName   string `json:"sessionName"`
+	TransactionID string `json:"transactionId"`
+	RowsAffected  int64  `json:"rowsAffected"`
+}
+
+// BeginSpannerReadWriteTxn starts a read-write transaction, executes the given
+// DML statement, and returns the open session/transaction so the caller can
+// later commit or rollback. The session is intentionally not deleted here.
+func (g *GCloudService) BeginSpannerReadWriteTxn(databaseResourceName, sql string) (*SpannerRWTxnResult, error) {
+	sessionURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s/sessions", databaseResourceName)
+	var sessionResp struct {
+		Name string `json:"name"`
+	}
+	if err := g.apiPost(sessionURL, map[string]interface{}{}, &sessionResp); err != nil {
+		return nil, fmt.Errorf("create session: %w", err)
+	}
+	sessionName := sessionResp.Name
+
+	beginURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:beginTransaction", sessionName)
+	var txnResp struct {
+		ID string `json:"id"`
+	}
+	if err := g.apiPost(beginURL, map[string]interface{}{
+		"options": map[string]interface{}{
+			"readWrite": map[string]interface{}{},
+		},
+	}, &txnResp); err != nil {
+		g.deleteSpannerSession(sessionName)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	execURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:executeSql", sessionName)
+	var execResp struct {
+		Stats struct {
+			RowCountExact string `json:"rowCountExact"`
+		} `json:"stats"`
+	}
+	if err := g.apiPost(execURL, map[string]interface{}{
+		"sql":         sql,
+		"transaction": map[string]interface{}{"id": txnResp.ID},
+	}, &execResp); err != nil {
+		g.deleteSpannerSession(sessionName)
+		return nil, err
+	}
+
+	var rowsAffected int64
+	if execResp.Stats.RowCountExact != "" {
+		fmt.Sscanf(execResp.Stats.RowCountExact, "%d", &rowsAffected)
+	}
+	return &SpannerRWTxnResult{
+		SessionName:   sessionName,
+		TransactionID: txnResp.ID,
+		RowsAffected:  rowsAffected,
+	}, nil
+}
+
+// CommitSpannerTransaction commits an open read-write transaction and cleans
+// up the session.
+func (g *GCloudService) CommitSpannerTransaction(sessionName, transactionID string) error {
+	defer g.deleteSpannerSession(sessionName)
+	commitURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:commit", sessionName)
+	var out struct{}
+	return g.apiPost(commitURL, map[string]interface{}{
+		"transactionId": transactionID,
+	}, &out)
+}
+
+// RollbackSpannerTransaction rolls back an open read-write transaction and
+// cleans up the session.
+func (g *GCloudService) RollbackSpannerTransaction(sessionName, transactionID string) error {
+	defer g.deleteSpannerSession(sessionName)
+	rollbackURL := fmt.Sprintf("https://spanner.googleapis.com/v1/%s:rollback", sessionName)
+	var out struct{}
+	return g.apiPost(rollbackURL, map[string]interface{}{
+		"transactionId": transactionID,
+	}, &out)
 }
 
 func (g *GCloudService) deleteSpannerSession(sessionName string) {

@@ -121,6 +121,7 @@ export {
     SpannerDatabase,
     SpannerInstance,
     SpannerQueryResult,
+    SpannerRWTxnResult,
     SpannerTable,
     SyncReposResult,
     UserProfile,
