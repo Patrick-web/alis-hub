@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.9.2] - 2026-06-29
+
+### What's New
+- The notifications and suggestions panels can now be detached and float as translucent, rounded windows
+- Windows users now get a proper installer that integrates with the system (Start Menu, desktop shortcut, Add/Remove Programs) instead of a plain zip
+
 ## [v0.9.1] - 2026-06-29
 
 ### What's New
