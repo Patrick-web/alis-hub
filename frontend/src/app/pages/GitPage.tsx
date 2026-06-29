@@ -672,14 +672,14 @@ export function GitPage() {
                   <div className="flex-1 overflow-hidden">
                     <GitGraph
                       commits={activeCommits}
-                      repoPath={activeGraphRepoPath}
+                      repoPath={activeGraphRepoPath || buildPath}
                       selectedHash={graphSelectedHash ?? selectedCommitFile?.hash ?? null}
                       selectedCommitFile={selectedCommitFile ? { hash: selectedCommitFile.hash, path: selectedCommitFile.path } : null}
                       onSelectCommit={(hash) => {
                         setGraphSelectedHash(hash);
                         setSelectedFile(null);
                       }}
-                      onSelectCommitFile={(hash, path) => handleSelectCommitFile(activeGraphRepoPath, hash, path)}
+                      onSelectCommitFile={(hash, path) => handleSelectCommitFile(activeGraphRepoPath || buildPath, hash, path)}
                     />
                   </div>
                 </div>
