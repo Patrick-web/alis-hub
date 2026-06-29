@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.9.0] - 2026-06-29
+
+### What's New
+- You can now refresh the commits list in the Develop panel with a single click
+- Spanner Explorer now supports read-write transaction mode (available in Labs), with improved streaming query reliability
+- Develop settings are now stored per-product, with smart sorting and folder ignore controls
+- Git operation errors now surface as clear, actionable messages in the UI rather than failing silently
+- Commit timestamps in the commit list and git graph now show both date and time
+- Source control has been redesigned with a VSCode-style layout
+
+### Bug Fixes
+- Fixed duplicate branch labels appearing in the git graph, and added push status indicators
+- Fixed flickering console windows when running git operations on Windows
+- Fixed deployment environment variables not loading correctly
+- Fixed git clone failures now showing a clear error message; git credentials are also configured automatically on first launch
+- Fixed git sync logs from one repository appearing in another
+- Fixed an issue where multiple comma-separated service names weren't being handled correctly in the Packages pane
+- Fixed Spanner partitioned DML operations to use the correct transaction type
+
 ## [v0.8.0] - 2026-06-26
 
 ### What's New
