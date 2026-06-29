@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.9.3] - 2026-06-29
+
+### Bug Fixes
+- Fixed an issue where the wrong window controls (macOS-style dots) were shown on the hub screen on Windows
+- Fixed window dragging not working on Windows
+
 ## [v0.9.2] - 2026-06-29
 
 ### What's New
