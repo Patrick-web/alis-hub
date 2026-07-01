@@ -90,7 +90,8 @@ export function GetAheadBehind(repoPath: string): $CancellablePromise<$models.Ah
 
 /**
  * GetBranchCommitCount returns how many commits head has that base does not,
- * comparing origin/head vs origin/base. Returns 0 when refs don't exist or branches are in sync.
+ * comparing the remote tracking refs (origin/head vs origin/base).
+ * Returns 0 when the refs don't exist or the branches are already in sync.
  */
 export function GetBranchCommitCount(repoPath: string, head: string, base: string): $CancellablePromise<number> {
     return $Call.ByID(3871857613, repoPath, head, base);
