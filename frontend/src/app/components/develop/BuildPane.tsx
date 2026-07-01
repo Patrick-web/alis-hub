@@ -213,8 +213,11 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         task: { meta: { operationName: (result as BuildResult).operationName, logsUrl: (result as BuildResult).logsUrl } },
       });
     } catch (e: any) {
-      setProgressMsg(`Failed: ${e?.message || e}`);
-      updateNotification(taskId, { severity: 'error', title: 'Build failed', task: { status: 'error' } });
+      const errMsg = e?.message || String(e) || 'Failed to start build';
+      setStep('result');
+      setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg });
+      termRef.current?.write(`\r\n\x1b[31mBuild failed: ${errMsg}\x1b[0m\r\n`);
+      updateNotification(taskId, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
       taskIdRef.current = null;
     }
   }

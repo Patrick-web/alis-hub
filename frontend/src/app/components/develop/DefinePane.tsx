@@ -32,6 +32,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
   const [progressMsg, setProgressMsg] = useState('Starting...');
   const [glassResult, setGlassResult] = useState<GlassResult | null>(null);
   const [glassLoading, setGlassLoading] = useState(false);
+  const [defineError, setDefineError] = useState<string | null>(null);
   const taskIdRef = useRef<string | null>(null);
 
   // Stable refs for org/product so effects don't re-run on every render
@@ -78,6 +79,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
     if (!selectedCommit) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
     setStep('running');
+    setDefineError(null);
     setProgressMsg('Starting Define...');
     const taskId = addNotification({
       severity: 'info', source: 'define', title: 'Define started', body: neuron, persistent: true,
@@ -90,7 +92,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
       setDefineResult(result as DefineResult);
       updateNotification(taskId, { task: { meta: { operationName: (result as DefineResult).operationName } } });
     } catch (e: any) {
-      setProgressMsg(`Failed: ${e?.message || e}`);
+      setDefineError(e?.message || String(e) || 'Failed to start define');
       updateNotification(taskId, { severity: 'error', title: 'Define failed', task: { status: 'error' } });
       taskIdRef.current = null;
     }
@@ -129,7 +131,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
               setGlassLoading(false);
             }
           } else {
-            setProgressMsg(`Define failed: ${result.error}`);
+            setDefineError(result.error || 'Define failed');
             if (taskIdRef.current) {
               updateNotification(taskIdRef.current, { severity: 'error', title: 'Define failed', task: { status: 'error', step: 'running' } });
               taskIdRef.current = null;
@@ -217,17 +219,33 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
       {step === 'running' && (
         <div className="flex-1 overflow-y-auto px-[16px] py-[24px]">
           <div className="flex flex-col items-center gap-[16px]">
-            <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
-              <Loader size={20} />
-            </div>
+            {defineError ? (
+              <div className="size-[48px] rounded-full bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] flex items-center justify-center">
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-xl" />
+              </div>
+            ) : (
+              <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
+                <Loader size={20} />
+              </div>
+            )}
             <div className="text-center">
-              <p className="text-[12px] font-bold text-foreground mb-[6px]">Running Define</p>
-              <p className="text-[10px] text-foreground/50 leading-[1.5] max-w-[280px] text-center">{progressMsg}</p>
+              <p className="text-[12px] font-bold text-foreground mb-[6px]">
+                {defineError ? 'Define Failed' : 'Running Define'}
+              </p>
+              <p className="text-[10px] text-foreground/50 leading-[1.5] max-w-[280px] text-center">
+                {defineError || progressMsg}
+              </p>
             </div>
-            {defineResult?.version && (
+            {!defineError && defineResult?.version && (
               <div className="bg-card border border-border rounded-[6px] px-[12px] py-[6px]">
                 <span className="text-[9px] font-bold font-mono text-foreground/50">v{defineResult.version}</span>
               </div>
+            )}
+            {defineError && (
+              <button onClick={loadCommits} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
+                <Icon icon="solar:refresh-linear" className="text-sm" />
+                Try again
+              </button>
             )}
           </div>
         </div>
