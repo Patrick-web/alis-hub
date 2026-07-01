@@ -1,7 +1,8 @@
 import { GitBranch } from './types';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, ChevronDown, GitBranch as BranchIcon, Plus, RefreshCw } from 'lucide-react';
+import { ChevronDown, GitBranch as BranchIcon, Plus, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
+import { Icon } from '@iconify/react';
+import { Dialog, DialogContent } from '../ui/dialog';
 
 interface Props {
   currentBranch: string;
@@ -23,6 +24,8 @@ export function GitBranchBar({
 }: Props) {
   const [creating, setCreating] = useState(false);
   const [newBranchName, setNewBranchName] = useState('');
+  const [branchModalOpen, setBranchModalOpen] = useState(false);
+  const [filter, setFilter] = useState('');
 
   function submitCreate() {
     const name = newBranchName.trim();
@@ -32,61 +35,101 @@ export function GitBranchBar({
     setNewBranchName('');
   }
 
+  function handleSelect(name: string) {
+    onCheckout(name);
+    setBranchModalOpen(false);
+  }
+
   const localBranches = branches.filter(b => !b.isRemote);
   const remoteBranches = branches.filter(b => b.isRemote);
+
+  const lowerFilter = filter.toLowerCase();
+  const filteredLocal = localBranches.filter(b => b.name.toLowerCase().includes(lowerFilter));
+  const filteredRemote = remoteBranches.filter(b => b.name.toLowerCase().includes(lowerFilter));
+  const isEmpty = filteredLocal.length === 0 && filteredRemote.length === 0;
 
   return (
     <div className="flex items-center gap-1 px-3 py-2 border-b border-foreground/10">
       <BranchIcon size={13} className="text-foreground/40 shrink-0" />
 
-      <DropdownMenu.Root>
-        <DropdownMenu.Trigger asChild>
-          <button className="flex items-center gap-1 text-xs text-foreground/80 hover:text-foreground transition-colors min-w-0">
-            <span className="truncate max-w-[120px]">{currentBranch || 'HEAD'}</span>
-            <ChevronDown size={11} className="shrink-0 text-foreground/40" />
-          </button>
-        </DropdownMenu.Trigger>
+      <button
+        onClick={() => setBranchModalOpen(true)}
+        className="flex items-center gap-1 text-xs text-foreground/80 hover:text-foreground transition-colors min-w-0"
+      >
+        <span className="truncate max-w-[120px]">{currentBranch || 'HEAD'}</span>
+        <ChevronDown size={11} className="shrink-0 text-foreground/40" />
+      </button>
 
-        <DropdownMenu.Portal>
-          <DropdownMenu.Content
-            className="z-50 min-w-[200px] max-h-[300px] overflow-y-auto rounded-md bg-background border border-foreground/10 shadow-xl py-1 text-xs"
-            sideOffset={4}
-          >
-            {localBranches.length > 0 && (
+      <Dialog open={branchModalOpen} onOpenChange={(o) => { setBranchModalOpen(o); if (!o) setFilter(''); }}>
+        <DialogContent className="text-foreground p-0 max-w-[360px] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
+            <Icon icon="solar:branching-paths-down-linear" className="text-brand text-lg" />
+            <span className="text-[13px] font-bold text-foreground font-mono">Switch Branch</span>
+          </div>
+
+          {/* Filter input */}
+          <div className="px-[16px] py-[10px] border-b border-border">
+            <input
+              autoFocus
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+              onKeyDown={e => e.key === 'Escape' && setBranchModalOpen(false)}
+              placeholder="Filter branches…"
+              className="w-full bg-transparent text-[12px] font-mono text-foreground outline-none placeholder:text-foreground/30"
+            />
+          </div>
+
+          {/* Branch list */}
+          <div className="overflow-y-auto max-h-[300px] py-[6px]">
+            {isEmpty ? (
+              <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No branches found</p>
+            ) : (
               <>
-                <div className="px-3 py-1 text-[10px] text-foreground/30 uppercase tracking-wider">Local</div>
-                {localBranches.map(b => (
-                  <DropdownMenu.Item
-                    key={b.name}
-                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/80"
-                    onSelect={() => onCheckout(b.name)}
-                  >
-                    {b.isCurrent && <Check size={11} className="text-pink-400 shrink-0" />}
-                    <span className={b.isCurrent ? 'text-pink-400' : ''} style={{ marginLeft: b.isCurrent ? 0 : 15 }}>
-                      {b.name}
-                    </span>
-                  </DropdownMenu.Item>
-                ))}
+                {filteredLocal.length > 0 && (
+                  <>
+                    <p className="px-[16px] py-[4px] text-[9px] font-mono uppercase tracking-widest text-foreground/30">Local</p>
+                    {filteredLocal.map(b => (
+                      <button
+                        key={b.name}
+                        onClick={() => handleSelect(b.name)}
+                        className={`w-full flex items-center justify-between px-[16px] py-[9px] transition-colors text-left ${
+                          b.isCurrent
+                            ? 'bg-[rgba(248,129,169,0.08)] text-brand'
+                            : 'text-foreground hover:bg-foreground/[4%]'
+                        }`}
+                      >
+                        <span className="text-[12px] font-mono">{b.name}</span>
+                        {b.isCurrent && <Icon icon="solar:check-circle-bold" className="text-brand text-base shrink-0" />}
+                      </button>
+                    ))}
+                  </>
+                )}
+
+                {filteredRemote.length > 0 && (
+                  <>
+                    {filteredLocal.length > 0 && <div className="my-[4px] border-t border-border" />}
+                    <p className="px-[16px] py-[4px] text-[9px] font-mono uppercase tracking-widest text-foreground/30">Remote</p>
+                    {filteredRemote.map(b => {
+                      const displayName = b.name.replace(/^remotes\/origin\//, '');
+                      const checkoutName = b.name.replace(/^remotes\//, '');
+                      return (
+                        <button
+                          key={b.name}
+                          onClick={() => handleSelect(checkoutName)}
+                          className="w-full flex items-center px-[16px] py-[9px] transition-colors text-left text-foreground/60 hover:bg-foreground/[4%]"
+                        >
+                          <span className="text-[12px] font-mono">{displayName}</span>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
               </>
             )}
-            {remoteBranches.length > 0 && (
-              <>
-                <DropdownMenu.Separator className="my-1 border-t border-foreground/10" />
-                <div className="px-3 py-1 text-[10px] text-foreground/30 uppercase tracking-wider">Remote</div>
-                {remoteBranches.map(b => (
-                  <DropdownMenu.Item
-                    key={b.name}
-                    className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/60"
-                    onSelect={() => onCheckout(b.name.replace(/^remotes\//, ''))}
-                  >
-                    <span style={{ marginLeft: 15 }}>{b.name.replace(/^remotes\/origin\//, '')}</span>
-                  </DropdownMenu.Item>
-                ))}
-              </>
-            )}
-          </DropdownMenu.Content>
-        </DropdownMenu.Portal>
-      </DropdownMenu.Root>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex-1" />
 
@@ -146,7 +189,6 @@ export function GitBranchBar({
       >
         <RefreshCw size={12} />
       </button>
-
     </div>
   );
 }
