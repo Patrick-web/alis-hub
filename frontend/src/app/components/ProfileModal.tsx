@@ -16,6 +16,7 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { useSourceControl } from '../stores/sourceControl';
 import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings';
+import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { useUserProfile } from '../stores/userProfile';
 import { LocalAISetupCard } from './LocalAISetupCard';
@@ -26,7 +27,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop';
+type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop' | 'tools';
 
 interface UpdateInfo {
   available: boolean;
@@ -127,8 +128,18 @@ const SIDEBAR_GROUPS = [
       { id: 'updates' as Tab,        label: 'Updates',        icon: 'solar:refresh-circle-linear',   color: '#3b82f6' },
       { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:git-branch-linear',       color: undefined },
       { id: 'develop' as Tab,        label: 'Develop',        icon: 'solar:code-square-linear',        color: undefined },
+      { id: 'tools' as Tab,          label: 'Tools',          icon: 'solar:cloud-storage-linear',       color: undefined },
     ],
   },
+];
+
+const TOOL_SETTINGS = [
+  { id: 'buckets',         label: 'Buckets' },
+  { id: 'logs',            label: 'Logs' },
+  { id: 'artifactregistry',label: 'Artifact Registry' },
+  { id: 'secrets',         label: 'Secret Manager' },
+  { id: 'spanner',         label: 'Spanner' },
+  { id: 'backups',         label: 'Backups' },
 ];
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
@@ -163,6 +174,20 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [changelogHtml, setChangelogHtml] = useState('');
   const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
+  const [toolDefaults, setToolDefaultsState] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (activeTab !== 'tools' || !state.organisation || !state.product) return;
+    setToolDefaultsState(Object.fromEntries(
+      TOOL_SETTINGS.map(t => [t.id, getToolDefault(state.organisation, state.product, t.id)])
+    ));
+  }, [activeTab, state.organisation, state.product]);
+
+  function handleToolDefaultChange(toolId: string, level: string) {
+    if (!state.organisation || !state.product) return;
+    setToolDefault(state.organisation, state.product, toolId, level);
+    setToolDefaultsState(prev => ({ ...prev, [toolId]: level }));
+  }
 
   async function handleSysNotifToggle() {
     if (!sysNotifications) {
@@ -838,6 +863,47 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                       <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
                         Sorts services by the most recently touched, based on local activity or git history.
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Tools ── */}
+                {activeTab === 'tools' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    {state.organisation && state.product && (
+                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                        Settings for {state.organisation}/{state.product}
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Tool Context Defaults</SectionTitle>
+                      <p className="text-[10px] text-foreground/25 font-mono px-[1px] pb-[2px]">
+                        Set which project level each tool opens at by default.
+                      </p>
+                      <SettingsCard>
+                        {TOOL_SETTINGS.map(tool => {
+                          const current = toolDefaults[tool.id];
+                          return (
+                            <SettingRow key={tool.id} label={tool.label}>
+                              <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                {(['org', 'product', 'env'] as const).map(level => {
+                                  const levelLabel = level === 'org' ? 'Org' : level === 'product' ? 'Product' : 'Env';
+                                  const isActive = current === level;
+                                  return (
+                                    <button
+                                      key={level}
+                                      onClick={() => handleToolDefaultChange(tool.id, level)}
+                                      className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${isActive ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                                    >
+                                      {levelLabel}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </SettingRow>
+                          );
+                        })}
+                      </SettingsCard>
                     </div>
                   </div>
                 )}
