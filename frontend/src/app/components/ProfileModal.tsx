@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useReducer, useMemo } from 'react';
 import { useTheme } from 'next-themes';
 import { marked } from 'marked';
 import { Loader } from './Loader';
@@ -174,19 +174,11 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [changelogHtml, setChangelogHtml] = useState('');
   const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
-  const [toolDefaults, setToolDefaultsState] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (activeTab !== 'tools' || !state.organisation || !state.product) return;
-    setToolDefaultsState(Object.fromEntries(
-      TOOL_SETTINGS.map(t => [t.id, getToolDefault(state.organisation, state.product, t.id)])
-    ));
-  }, [activeTab, state.organisation, state.product]);
+  const [, forceToolDefaultsUpdate] = useReducer(x => x + 1, 0);
 
   function handleToolDefaultChange(toolId: string, level: string) {
-    if (!state.organisation || !state.product) return;
-    setToolDefault(state.organisation, state.product, toolId, level);
-    setToolDefaultsState(prev => ({ ...prev, [toolId]: level }));
+    setToolDefault(state.organisation ?? '', state.product ?? '', toolId, level);
+    forceToolDefaultsUpdate();
   }
 
   async function handleSysNotifToggle() {
@@ -882,7 +874,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                       </p>
                       <SettingsCard>
                         {TOOL_SETTINGS.map(tool => {
-                          const current = toolDefaults[tool.id];
+                          const current = getToolDefault(state.organisation ?? '', state.product ?? '', tool.id);
                           return (
                             <SettingRow key={tool.id} label={tool.label}>
                               <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
