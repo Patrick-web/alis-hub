@@ -700,6 +700,18 @@ func (g *GitService) GetAheadBehind(repoPath string) (*AheadBehind, error) {
 	return &AheadBehind{Ahead: ahead, Behind: behind}, nil
 }
 
+// GetBranchCommitCount returns how many commits head has that base does not,
+// comparing the remote tracking refs (origin/head vs origin/base).
+// Returns 0 when the refs don't exist or the branches are already in sync.
+func (g *GitService) GetBranchCommitCount(repoPath, head, base string) (int, error) {
+	out, err := gitCmd(repoPath, "git", "rev-list", "--count", "origin/"+base+".."+"origin/"+head)
+	if err != nil {
+		return 0, nil
+	}
+	count, _ := strconv.Atoi(strings.TrimSpace(out))
+	return count, nil
+}
+
 // GetFileDiff returns old and new file content plus diff hunks for the diff viewer.
 // staged=true shows index vs HEAD; staged=false shows working tree vs index.
 func (g *GitService) GetFileDiff(repoPath, filePath string, staged bool) (*GitFileDiff, error) {

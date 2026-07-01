@@ -49,7 +49,7 @@ interface RepoSectionProps {
   onSelectFile: (repoPath: string, path: string, staged: boolean) => void;
   onSelectCommitFile: (repoPath: string, hash: string, path: string) => void;
   setCommits: React.Dispatch<React.SetStateAction<GitCommit[]>>;
-  onBranchesUpdated?: (branches: GitBranch[], currentBranch: string) => void;
+  onBranchesUpdated?: (branches: GitBranch[], currentBranch: string, ahead: number) => void;
   isSuggestionEnabled: (id: string) => boolean;
   addSuggestion: (s: any) => void;
   localAIEnabled: boolean;
@@ -98,7 +98,7 @@ function RepoSection({
       if (s) setGitStatus(s);
       setCurrentBranch(branch ?? '');
       setBranches(b ?? []);
-      onBranchesUpdated?.(b ?? [], branch ?? '');
+      onBranchesUpdated?.(b ?? [], branch ?? '', ab?.ahead ?? 0);
       const loadedCommits = log ?? [];
       setLocalCommits(loadedCommits);
       setCommits(loadedCommits);
@@ -404,8 +404,10 @@ export function GitPage() {
   // Branches per repo — fed from RepoSection callbacks, used in PR create form
   const [buildBranches, setBuildBranches] = useState<GitBranch[]>([]);
   const [buildCurrentBranch, setBuildCurrentBranch] = useState('');
+  const [buildAhead, setBuildAhead] = useState(0);
   const [defineBranches, setDefineBranches] = useState<GitBranch[]>([]);
   const [defineCurrentBranch, setDefineCurrentBranch] = useState('');
+  const [defineAhead, setDefineAhead] = useState(0);
 
   // Forgejo capability per repo
   const [buildIsForgejo, setBuildIsForgejo] = useState(false);
@@ -562,6 +564,7 @@ export function GitPage() {
   const prRepoPath = prRepo === 'build' ? buildPath : definePath;
   const prBranches = prRepo === 'build' ? buildBranches : defineBranches;
   const prCurrentBranch = prRepo === 'build' ? buildCurrentBranch : defineCurrentBranch;
+  const prAhead = prRepo === 'build' ? buildAhead : defineAhead;
   const prIsForgejo = prRepo === 'build' ? buildIsForgejo : defineIsForgejo;
 
   // No product selected
@@ -620,7 +623,7 @@ export function GitPage() {
                     onSelectFile={handleSelectFile}
                     onSelectCommitFile={handleSelectCommitFile}
                     setCommits={setBuildCommits}
-                    onBranchesUpdated={(b, branch) => { setBuildBranches(b); setBuildCurrentBranch(branch); }}
+                    onBranchesUpdated={(b, branch, ahead) => { setBuildBranches(b); setBuildCurrentBranch(branch); setBuildAhead(ahead); }}
                     isSuggestionEnabled={isSuggestionEnabled}
                     addSuggestion={addSuggestion}
                     localAIEnabled={localAIState.enabled}
@@ -638,7 +641,7 @@ export function GitPage() {
                     onSelectFile={handleSelectFile}
                     onSelectCommitFile={handleSelectCommitFile}
                     setCommits={setDefineCommits}
-                    onBranchesUpdated={(b, branch) => { setDefineBranches(b); setDefineCurrentBranch(branch); }}
+                    onBranchesUpdated={(b, branch, ahead) => { setDefineBranches(b); setDefineCurrentBranch(branch); setDefineAhead(ahead); }}
                     isSuggestionEnabled={isSuggestionEnabled}
                     addSuggestion={addSuggestion}
                     localAIEnabled={localAIState.enabled}
@@ -782,8 +785,10 @@ export function GitPage() {
               <ResizablePanel defaultSize={70}>
                 {showCreatePR ? (
                   <GitPRCreate
+                    repoPath={prRepoPath}
                     branches={prBranches}
                     currentBranch={prCurrentBranch}
+                    aheadCount={prAhead}
                     creating={creatingPR}
                     onCreate={handleCreatePR}
                     onCancel={() => setShowCreatePR(false)}
