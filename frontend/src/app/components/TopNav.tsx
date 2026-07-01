@@ -21,7 +21,7 @@ const tabs = [
   { id: 'deployments', label: 'Deployments', icon: <Icon icon="solar:cloud-upload-linear" className="text-lg" /> },
   { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
-  { id: 'git', label: 'Source Control', icon: <Icon icon="solar:git-branch-linear" className="text-lg" /> },
+  { id: 'git', label: 'Source Control', icon: <Icon icon="solar:branch-linear" className="text-lg" /> },
 ];
 
 export function TopNav() {
