@@ -4,6 +4,7 @@ import { PageLayout } from '../components/PageLayout';
 import { EmptyState } from '../components/EmptyState';
 import { Loader } from '../components/Loader';
 import { useWorkspace } from '../stores/workspace';
+import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
 import { BucketsExplorer } from '../components/tools/BucketsExplorer';
 import { LogsExplorer } from '../components/tools/LogsExplorer';
 import { ArtifactRegistry } from '../components/tools/ArtifactRegistry';
@@ -36,10 +37,79 @@ function isAuthError(e: unknown): boolean {
   return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
 }
 
+// ─── Settings panel ───────────────────────────────────────────────────────────
+
+type ToolsSettingsPanelProps = {
+  contexts: ProjectContext[];
+  org: string;
+  product: string;
+  onReauth: () => void;
+};
+
+function ToolsSettingsPanel({ contexts, org, product, onReauth }: ToolsSettingsPanelProps) {
+  const [defaults, setDefaults] = useState<Record<string, string>>(() =>
+    Object.fromEntries(TOOLS.map(t => [t.id, getToolDefault(org, product, t.id)]))
+  );
+
+  function handleChange(toolId: string, ctxId: string) {
+    setToolDefault(org, product, toolId, ctxId);
+    setDefaults(prev => ({ ...prev, [toolId]: ctxId }));
+  }
+
+  return (
+    <div className="flex-1 overflow-auto p-[24px]">
+      <div className="max-w-[480px] flex flex-col gap-[28px]">
+
+        <div>
+          <p className="text-[8px] font-bold uppercase font-mono text-foreground/30 mb-[10px]">GCloud Auth</p>
+          <button
+            onClick={onReauth}
+            className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] border border-border hover:bg-foreground/[3%] transition-all"
+          >
+            <Icon icon="solar:restart-linear" className="text-sm text-foreground/40" />
+            <span className="text-[10px] font-mono text-foreground/60">Re-authenticate</span>
+          </button>
+        </div>
+
+        <div>
+          <p className="text-[8px] font-bold uppercase font-mono text-foreground/30 mb-[4px]">Tool Context Defaults</p>
+          <p className="text-[10px] text-foreground/30 font-mono mb-[14px]">
+            Set which project context each tool opens at by default.
+          </p>
+          <div className="flex flex-col">
+            {TOOLS.map(tool => (
+              <div key={tool.id} className="flex items-center justify-between py-[10px] border-b border-border/50 last:border-0">
+                <div>
+                  <p className="text-[10px] font-mono font-bold uppercase text-foreground/70">{tool.label}</p>
+                  <p className="text-[8px] text-foreground/30 uppercase">{tool.subtitle}</p>
+                </div>
+                <select
+                  value={defaults[tool.id]}
+                  onChange={e => handleChange(tool.id, e.target.value)}
+                  className="bg-background border border-border rounded-[3px] text-[10px] font-mono text-foreground/70 px-[8px] py-[4px] cursor-pointer focus:outline-none focus:border-brand"
+                >
+                  <option value="env">Active Environment</option>
+                  {contexts.map(ctx => (
+                    <option key={ctx.id} value={ctx.id}>{ctx.label}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Main panel ───────────────────────────────────────────────────────────────
+
 export function ToolsPanel() {
   const { state, setPhase } = useWorkspace();
   const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
   const [gcloudReady, setGcloudReady] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [contexts, setContexts] = useState<ProjectContext[]>([]);
   const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
@@ -85,13 +155,6 @@ export function ToolsPanel() {
           }
         }
         setContexts(list);
-        setSelectedCtx((prev) => {
-          if (prev) {
-            const still = list.find((c) => c.id === prev.id);
-            return still ?? list[0] ?? null;
-          }
-          return list[0] ?? null;
-        });
       })
       .catch((e: unknown) => {
         if (isAuthError(e)) { setPhase('login'); return; }
@@ -104,12 +167,15 @@ export function ToolsPanel() {
     loadContexts();
   }, [loadContexts]);
 
-  // Auto-select the active environment's GCP project when env picker changes
+  // Resolve and apply the active tool's default context whenever the tab, contexts, or active env changes.
   useEffect(() => {
-    if (!state.activeEnvName || contexts.length === 0) return;
-    const match = contexts.find(c => c.id === state.activeEnvName);
+    if (contexts.length === 0) return;
+    const defaultId = getToolDefault(state.organisation, state.product, activeTab);
+    const match = defaultId === 'env'
+      ? contexts.find(c => c.id === state.activeEnvName)
+      : contexts.find(c => c.id === defaultId);
     if (match) setSelectedCtx(match);
-  }, [state.activeEnvName, contexts]);
+  }, [activeTab, contexts, state.organisation, state.product, state.activeEnvName]);
 
   const projectID = selectedCtx?.projectID ?? '';
   const region = selectedCtx?.region ?? '';
@@ -171,11 +237,11 @@ export function ToolsPanel() {
             {/* Tool list */}
             <div className="flex flex-col gap-[4px] flex-1 p-[12px]">
               {TOOLS.map((tool) => {
-                const isActive = activeTab === tool.id;
+                const isActive = activeTab === tool.id && !settingsOpen;
                 return (
                   <button
                     key={tool.id}
-                    onClick={() => setActiveTab(tool.id)}
+                    onClick={() => { setActiveTab(tool.id); setSettingsOpen(false); }}
                     className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
                       isActive
                         ? 'bg-[rgba(248,129,169,0.1)] border border-brand'
@@ -197,14 +263,18 @@ export function ToolsPanel() {
               })}
             </div>
 
-            {/* Back to setup */}
+            {/* Settings */}
             <div className="px-[12px] pb-[12px]">
               <button
-                onClick={() => setGcloudReady(false)}
-                className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left hover:bg-foreground/[3%] border border-transparent transition-all w-full"
+                onClick={() => setSettingsOpen(o => !o)}
+                className={`flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left border transition-all w-full ${
+                  settingsOpen
+                    ? 'bg-[rgba(248,129,169,0.1)] border-brand'
+                    : 'hover:bg-foreground/[3%] border-transparent'
+                }`}
               >
-                <Icon icon="solar:settings-linear" className="text-sm text-foreground/20" />
-                <span className="text-[9px] text-foreground/30 uppercase font-mono">Setup</span>
+                <Icon icon="solar:settings-linear" className={`text-sm ${settingsOpen ? 'text-brand' : 'text-foreground/20'}`} />
+                <span className={`text-[9px] uppercase font-mono ${settingsOpen ? 'text-foreground' : 'text-foreground/30'}`}>Settings</span>
               </button>
             </div>
           </div>
@@ -214,6 +284,13 @@ export function ToolsPanel() {
         <div className="flex-1 overflow-hidden flex flex-col min-w-0">
           {!gcloudReady ? (
             <GCloudSetup onReady={handleGCloudReady} />
+          ) : settingsOpen ? (
+            <ToolsSettingsPanel
+              contexts={contexts}
+              org={state.organisation}
+              product={state.product}
+              onReauth={() => { setGcloudReady(false); setSettingsOpen(false); }}
+            />
           ) : contextsLoading ? (
             <div className="flex-1 flex items-center justify-center">
               <Loader size={32} />
