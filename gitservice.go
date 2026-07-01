@@ -139,7 +139,7 @@ type LocalMergeResult struct {
 	ErrorMessage  string   `json:"errorMessage"`
 }
 
-// GitSyncResult is returned by PushOrigin and PullOrigin with a classified outcome.
+// GitSyncResult is returned by PushOrigin, PullOrigin, and CheckoutBranch with a classified outcome.
 // Kind values: "ok" | "up_to_date" | "push_rejected" | "pull_conflict" |
 //
 //	"uncommitted_changes" | "network_error" | "auth_error" | "other_error"
@@ -150,6 +150,7 @@ type GitSyncResult struct {
 }
 
 // classifyGitOutput maps combined git stdout+stderr to a typed outcome.
+// Used by PushOrigin/PullOrigin (remote sync) and CheckoutBranch (local checkout failures).
 func classifyGitOutput(output string, err error) (kind, message string) {
 	if err == nil {
 		lower := strings.ToLower(output)
@@ -168,6 +169,8 @@ func classifyGitOutput(output string, err error) (kind, message string) {
 		return "up_to_date", "Already up to date."
 	case strings.Contains(lower, "please commit your changes or stash"):
 		return "uncommitted_changes", "You have local changes that would be overwritten. Commit or stash them first."
+	case strings.Contains(lower, "would be overwritten by checkout"):
+		return "uncommitted_changes", "Local changes would be overwritten by checkout. Commit, stash, or discard them first."
 	case strings.Contains(lower, "could not read from remote") || strings.Contains(lower, "unable to access") || strings.Contains(lower, "failed to connect"):
 		return "network_error", "Could not reach the remote repository. Check your network connection."
 	case strings.Contains(lower, "authentication failed") || strings.Contains(lower, "token has expired") || strings.Contains(output, "403"):
@@ -820,10 +823,11 @@ func (g *GitService) GetCurrentBranch(repoPath string) (string, error) {
 	return strings.TrimSpace(out), err
 }
 
-// CheckoutBranch switches to an existing branch.
-func (g *GitService) CheckoutBranch(repoPath, branchName string) error {
-	_, err := gitCmd(repoPath, "git", "checkout", branchName)
-	return err
+// CheckoutBranch switches to an existing branch and returns a classified result.
+func (g *GitService) CheckoutBranch(repoPath, branchName string) GitSyncResult {
+	output, err := gitCmd(repoPath, "git", "checkout", branchName)
+	kind, message := classifyGitOutput(output, err)
+	return GitSyncResult{Kind: kind, Message: message}
 }
 
 // CreateBranch creates and switches to a new branch.
@@ -848,8 +852,11 @@ func (g *GitService) PushOrigin(repoPath string) GitSyncResult {
 // PullOrigin pulls the current branch from origin and returns a classified result.
 // For pull_conflict, ConflictFiles is populated.
 func (g *GitService) PullOrigin(repoPath string) GitSyncResult {
-	g.emitScmLog(repoPath, "$ git pull\r\n")
-	cmd := g.authedGitCmd("pull")
+	// --no-rebase pins the merge strategy regardless of the user's global pull.rebase
+	// config, so a conflict always leaves a merge (not rebase) in progress — matching
+	// what CompleteMerge/AbortMerge assume.
+	g.emitScmLog(repoPath, "$ git pull --no-rebase\r\n")
+	cmd := g.authedGitCmd("pull", "--no-rebase")
 	cmd.Dir = repoPath
 	output, err := g.streamScm(cmd, repoPath)
 	kind, message := classifyGitOutput(output, err)
