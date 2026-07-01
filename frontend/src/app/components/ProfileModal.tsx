@@ -126,7 +126,7 @@ const SIDEBAR_GROUPS = [
     items: [
       { id: 'labs' as Tab,           label: 'Labs',           icon: 'solar:test-tube-linear',        color: '#bf5af2' },
       { id: 'updates' as Tab,        label: 'Updates',        icon: 'solar:refresh-circle-linear',   color: '#3b82f6' },
-      { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:git-branch-linear',       color: undefined },
+      { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:branching-paths-down-linear', color: undefined },
       { id: 'develop' as Tab,        label: 'Develop',        icon: 'solar:code-square-linear',        color: undefined },
       { id: 'tools' as Tab,          label: 'Tools',          icon: 'solar:cloud-storage-linear',       color: undefined },
     ],
