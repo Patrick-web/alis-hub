@@ -1760,7 +1760,7 @@ export class GitStatus {
 }
 
 /**
- * GitSyncResult is returned by PushOrigin and PullOrigin with a classified outcome.
+ * GitSyncResult is returned by PushOrigin, PullOrigin, and CheckoutBranch with a classified outcome.
  * Kind values: "ok" | "up_to_date" | "push_rejected" | "pull_conflict" |
  * 
  * 	"uncommitted_changes" | "network_error" | "auth_error" | "other_error"

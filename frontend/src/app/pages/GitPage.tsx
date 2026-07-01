@@ -288,8 +288,12 @@ function RepoSection({
       setCheckoutPending(name);
       return;
     }
+    setSyncResult(null);
     try {
-      await GitService.CheckoutBranch(repoPath, name);
+      const result = await GitService.CheckoutBranch(repoPath, name) as any;
+      if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
+        setSyncResult(result);
+      }
       refresh();
     } catch (e: any) {
       setError(String(e));
@@ -299,8 +303,12 @@ function RepoSection({
   async function confirmCheckout() {
     if (!checkoutPending) return;
     setCheckingOut(true);
+    setSyncResult(null);
     try {
-      await GitService.CheckoutBranch(repoPath, checkoutPending);
+      const result = await GitService.CheckoutBranch(repoPath, checkoutPending) as any;
+      if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
+        setSyncResult(result);
+      }
       refresh();
     } catch (e: any) {
       setError(String(e));
