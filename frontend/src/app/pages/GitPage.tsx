@@ -81,6 +81,8 @@ function RepoSection({
   const [showConflictEditor, setShowConflictEditor] = useState(false);
   const [discardPending, setDiscardPending] = useState<string[] | null>(null);
   const [discarding, setDiscarding] = useState(false);
+  const [checkoutPending, setCheckoutPending] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const repoLabel = label;
 
@@ -281,8 +283,31 @@ function RepoSection({
   }
 
   async function handleCheckout(name: string) {
-    await GitService.CheckoutBranch(repoPath, name);
-    refresh();
+    const dirty = gitStatus.staged.length + gitStatus.unstaged.length + gitStatus.untracked.length > 0;
+    if (dirty) {
+      setCheckoutPending(name);
+      return;
+    }
+    try {
+      await GitService.CheckoutBranch(repoPath, name);
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    }
+  }
+
+  async function confirmCheckout() {
+    if (!checkoutPending) return;
+    setCheckingOut(true);
+    try {
+      await GitService.CheckoutBranch(repoPath, checkoutPending);
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setCheckingOut(false);
+      setCheckoutPending(null);
+    }
   }
 
   async function handleCreateBranch(name: string) {
@@ -307,6 +332,17 @@ function RepoSection({
         loadingLabel="Discarding…"
         loading={discarding}
         onConfirm={confirmDiscard}
+      />
+
+      <ConfirmDialog
+        open={checkoutPending !== null}
+        onOpenChange={(o) => { if (!o && !checkingOut) setCheckoutPending(null); }}
+        title="Uncommitted changes"
+        description={<>You have uncommitted changes. Switching to <span className="text-foreground font-semibold">{checkoutPending}</span> may fail or overwrite them. Continue?</>}
+        confirmLabel="Checkout anyway"
+        loadingLabel="Checking out…"
+        loading={checkingOut}
+        onConfirm={confirmCheckout}
       />
 
       {error && (
