@@ -36,7 +36,7 @@ function isAuthError(e: unknown): boolean {
   return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
 }
 
-export function ToolsPage() {
+export function ToolsPanel() {
   const { state, setPhase } = useWorkspace();
   const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
   const [gcloudReady, setGcloudReady] = useState(false);
@@ -252,3 +252,5 @@ export function ToolsPage() {
     setGcloudReady(true);
   }
 }
+
+export function ToolsPage() { return null; }

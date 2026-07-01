@@ -7,6 +7,7 @@ import { StatusStrip } from './components/StatusStrip';
 import { SuggestionsBubble } from './components/SuggestionsBubble';
 import { PackageTerminalPane } from './components/PackageTerminalPane';
 import { DevelopTaskPanel } from './components/develop/DevelopTaskPanel';
+import { ToolsPanel } from './pages/ToolsPage';
 import { LoginPage } from './pages/LoginPage';
 import { HubPage } from './pages/HubPage';
 import { LandingZonesPage } from './pages/LandingZonesPage';
@@ -33,6 +34,7 @@ export function RootLayout() {
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const { fetchProfile } = useUserProfile();
   const isOnDevelop = location.pathname === '/develop';
+  const isOnTools = location.pathname === '/tools';
   const [sessionExpired, setSessionExpired] = useState(false);
   const { toggle } = useCommandPalette();
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -192,6 +194,10 @@ export function RootLayout() {
           {/* Develop task panel — keep-alive at layout level so tabs persist across navigation */}
           <div className="h-full" style={{ display: isOnDevelop ? undefined : 'none' }}>
             <DevelopTaskPanel />
+          </div>
+          {/* Tools panel — keep-alive so selected tool + internal state persists across navigation */}
+          <div className="flex flex-col flex-1 h-full overflow-hidden" style={{ display: isOnTools ? undefined : 'none' }}>
+            <ToolsPanel />
           </div>
         </div>
         {/* Package terminal pane — kept mounted here to preserve PTY across navigation */}
