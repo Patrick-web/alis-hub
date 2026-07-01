@@ -5,6 +5,7 @@ import { GitFileList } from '../components/git/GitFileList';
 import { GitGraph } from '../components/git/GitGraph';
 import { GitPRList } from '../components/git/GitPRList';
 import { GitPRDetail } from '../components/git/GitPRDetail';
+import { GitPRCreate } from '../components/git/GitPRCreate';
 import { GitSyncLog } from '../components/git/GitSyncLog';
 import { GitOperationBanner } from '../components/git/GitOperationBanner';
 import { GitConflictEditor } from '../components/git/GitConflictEditor';
@@ -20,6 +21,9 @@ import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useLocalAI } from '../stores/localai';
+import { GitPullRequest } from 'lucide-react';
+
+type GitTab = 'code' | 'prs';
 
 const LOG_LIMIT = 200;
 
@@ -45,6 +49,7 @@ interface RepoSectionProps {
   onSelectFile: (repoPath: string, path: string, staged: boolean) => void;
   onSelectCommitFile: (repoPath: string, hash: string, path: string) => void;
   setCommits: React.Dispatch<React.SetStateAction<GitCommit[]>>;
+  onBranchesUpdated?: (branches: GitBranch[], currentBranch: string) => void;
   isSuggestionEnabled: (id: string) => boolean;
   addSuggestion: (s: any) => void;
   localAIEnabled: boolean;
@@ -56,6 +61,7 @@ function RepoSection({
   repoPath, label,
   selectedFile, selectedStaged, selectedCommitFile,
   onSelectFile, onSelectCommitFile, setCommits,
+  onBranchesUpdated,
   isSuggestionEnabled, addSuggestion,
   localAIEnabled, localAIModelPulled, localAIModel,
 }: RepoSectionProps) {
@@ -75,15 +81,8 @@ function RepoSection({
   const [showConflictEditor, setShowConflictEditor] = useState(false);
   const [discardPending, setDiscardPending] = useState<string[] | null>(null);
   const [discarding, setDiscarding] = useState(false);
-  const [isForgejo, setIsForgejo] = useState(false);
-  const [showPRPanel, setShowPRPanel] = useState(false);
-  const [prs, setPRs] = useState<ForgejoPR[]>([]);
-  const [loadingPRs, setLoadingPRs] = useState(false);
-  const [creatingPR, setCreatingPR] = useState(false);
-  const [mergingPR, setMergingPR] = useState(false);
-  const [selectedPR, setSelectedPR] = useState<ForgejoPR | null>(null);
 
-  const repoLabel = label; // used in suggestion definitions
+  const repoLabel = label;
 
   const refresh = useCallback(async () => {
     if (!repoPath) return;
@@ -99,6 +98,7 @@ function RepoSection({
       if (s) setGitStatus(s);
       setCurrentBranch(branch ?? '');
       setBranches(b ?? []);
+      onBranchesUpdated?.(b ?? [], branch ?? '');
       const loadedCommits = log ?? [];
       setLocalCommits(loadedCommits);
       setCommits(loadedCommits);
@@ -119,26 +119,9 @@ function RepoSection({
       setAhead(0);
       setBehind(0);
       setCommitMessage('');
-      setShowPRPanel(false);
-      setIsForgejo(false);
-      setPRs([]);
-      setSelectedPR(null);
       refresh();
     }
   }, [repoPath]);
-
-  // Check Forgejo
-  useEffect(() => {
-    if (!repoPath) return;
-    GitService.IsForgejo(repoPath)
-      .then(result => setIsForgejo(result ?? false))
-      .catch(() => setIsForgejo(false));
-  }, [repoPath]);
-
-  // Load PRs when panel opened
-  useEffect(() => {
-    if (showPRPanel && repoPath) fetchPRs();
-  }, [showPRPanel, repoPath]);
 
   // fsnotify watcher
   useEffect(() => {
@@ -156,19 +139,6 @@ function RepoSection({
     document.addEventListener('visibilitychange', handle);
     return () => document.removeEventListener('visibilitychange', handle);
   }, [refresh]);
-
-  async function fetchPRs() {
-    if (!repoPath) return;
-    setLoadingPRs(true);
-    try {
-      const result = await GitService.ListPRs(repoPath, 'open');
-      setPRs((result as any as ForgejoPR[]) ?? []);
-    } catch (e: any) {
-      setError(String(e));
-    } finally {
-      setLoadingPRs(false);
-    }
-  }
 
   async function handleStage(path: string) {
     try { await GitService.StageFile(repoPath, path); refresh(); }
@@ -320,32 +290,6 @@ function RepoSection({
     refresh();
   }
 
-  async function handleCreatePR(title: string, body: string, head: string, base: string) {
-    setCreatingPR(true);
-    try {
-      await GitService.CreatePR(repoPath, title, body, head, base);
-      await fetchPRs();
-    } catch (e: any) {
-      setError(String(e));
-    } finally {
-      setCreatingPR(false);
-    }
-  }
-
-  async function handleMergePR(number: number, style: 'merge' | 'rebase' | 'squash') {
-    setMergingPR(true);
-    try {
-      await GitService.MergePR(repoPath, number, style);
-      setSelectedPR(null);
-      await fetchPRs();
-      refresh();
-    } catch (e: any) {
-      setError(String(e));
-    } finally {
-      setMergingPR(false);
-    }
-  }
-
   const discardDescription = discardPending
     ? discardPending.length === 1
       ? <>Discard changes to <span className="text-foreground font-semibold">{discardPending[0].split('/').pop()}</span>? This cannot be undone.</>
@@ -379,24 +323,19 @@ function RepoSection({
         onDismiss={() => setSyncResult(null)}
       />
 
-      {!showPRPanel && (
-        <GitBranchBar
-          currentBranch={currentBranch}
-          branches={branches}
-          onCheckout={handleCheckout}
-          onCreateBranch={handleCreateBranch}
-          onPush={handlePush}
-          onPull={handlePull}
-          onRefresh={refresh}
-          pushing={pushing}
-          pulling={pulling}
-          ahead={ahead}
-          behind={behind}
-          prCount={isForgejo ? prs.length : undefined}
-          showingPRs={showPRPanel}
-          onTogglePRs={isForgejo ? () => setShowPRPanel(v => !v) : undefined}
-        />
-      )}
+      <GitBranchBar
+        currentBranch={currentBranch}
+        branches={branches}
+        onCheckout={handleCheckout}
+        onCreateBranch={handleCreateBranch}
+        onPush={handlePush}
+        onPull={handlePull}
+        onRefresh={refresh}
+        pushing={pushing}
+        pulling={pulling}
+        ahead={ahead}
+        behind={behind}
+      />
 
       {showConflictEditor && syncResult?.conflictFiles && syncResult.conflictFiles.length > 0 ? (
         <GitConflictEditor
@@ -404,26 +343,6 @@ function RepoSection({
           conflictFiles={syncResult.conflictFiles}
           onComplete={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
           onAbort={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
-        />
-      ) : showPRPanel && selectedPR ? (
-        <GitPRDetail
-          pr={selectedPR}
-          repoPath={repoPath}
-          merging={mergingPR}
-          onMerge={handleMergePR}
-          onClose={() => setSelectedPR(null)}
-        />
-      ) : showPRPanel ? (
-        <GitPRList
-          prs={prs}
-          selectedPR={selectedPR}
-          loading={loadingPRs}
-          creating={creatingPR}
-          branches={branches}
-          currentBranch={currentBranch}
-          onSelect={setSelectedPR}
-          onCreate={handleCreatePR}
-          onRefresh={fetchPRs}
         />
       ) : (
         <GitFileList
@@ -460,17 +379,19 @@ export function GitPage() {
   const { addSuggestion } = useSuggestions();
   const { state: localAIState } = useLocalAI();
 
+  const [activeTab, setActiveTab] = useState<GitTab>('code');
+
   const [buildPath, setBuildPath] = useState('');
   const [definePath, setDefinePath] = useState('');
   const [pathsLoading, setPathsLoading] = useState(true);
 
-  // Lifted diff selection — carries repoPath so we know which repo to load diff from
+  // Lifted diff selection
   const [selectedRepoPath, setSelectedRepoPath] = useState('');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [selectedStaged, setSelectedStaged] = useState(false);
   const [selectedCommitFile, setSelectedCommitFile] = useState<{ repoPath: string; hash: string; path: string } | null>(null);
 
-  // Commits per repo — each section gets a stable setter, no stale-closure issues
+  // Commits per repo
   const [buildCommits, setBuildCommits] = useState<GitCommit[]>([]);
   const [defineCommits, setDefineCommits] = useState<GitCommit[]>([]);
   const [activeGraphRepoPath, setActiveGraphRepoPath] = useState('');
@@ -480,7 +401,26 @@ export function GitPage() {
   const [diffLoading, setDiffLoading] = useState(false);
   const [diffError, setDiffError] = useState('');
 
-  // Fetch build/define paths from the backend whenever the product changes
+  // Branches per repo — fed from RepoSection callbacks, used in PR create form
+  const [buildBranches, setBuildBranches] = useState<GitBranch[]>([]);
+  const [buildCurrentBranch, setBuildCurrentBranch] = useState('');
+  const [defineBranches, setDefineBranches] = useState<GitBranch[]>([]);
+  const [defineCurrentBranch, setDefineCurrentBranch] = useState('');
+
+  // Forgejo capability per repo
+  const [buildIsForgejo, setBuildIsForgejo] = useState(false);
+  const [defineIsForgejo, setDefineIsForgejo] = useState(false);
+
+  // PR tab state
+  const [prRepo, setPrRepo] = useState<'build' | 'define'>('build');
+  const [prs, setPRs] = useState<ForgejoPR[]>([]);
+  const [loadingPRs, setLoadingPRs] = useState(false);
+  const [creatingPR, setCreatingPR] = useState(false);
+  const [mergingPR, setMergingPR] = useState(false);
+  const [selectedPR, setSelectedPR] = useState<ForgejoPR | null>(null);
+  const [showCreatePR, setShowCreatePR] = useState(false);
+
+  // Fetch build/define paths when product changes
   useEffect(() => {
     if (!state.organisation || !state.product) {
       setPathsLoading(false);
@@ -497,6 +437,76 @@ export function GitPage() {
       .catch(() => {})
       .finally(() => setPathsLoading(false));
   }, [state.organisation, state.product]);
+
+  // Check Forgejo capability when paths are known
+  useEffect(() => {
+    if (!buildPath) return;
+    GitService.IsForgejo(buildPath)
+      .then(r => setBuildIsForgejo(r ?? false))
+      .catch(() => setBuildIsForgejo(false));
+  }, [buildPath]);
+
+  useEffect(() => {
+    if (!definePath) return;
+    GitService.IsForgejo(definePath)
+      .then(r => setDefineIsForgejo(r ?? false))
+      .catch(() => setDefineIsForgejo(false));
+  }, [definePath]);
+
+  // Load PRs when PR tab is active or repo selector changes
+  useEffect(() => {
+    if (activeTab !== 'prs') return;
+    const path = prRepo === 'build' ? buildPath : definePath;
+    if (!path) return;
+    setPRs([]);
+    setSelectedPR(null);
+    setShowCreatePR(false);
+    fetchPRs(path);
+  }, [activeTab, prRepo, buildPath, definePath]);
+
+  async function fetchPRs(path?: string) {
+    const repoPath = path ?? (prRepo === 'build' ? buildPath : definePath);
+    if (!repoPath) return;
+    setLoadingPRs(true);
+    try {
+      const result = await GitService.ListPRs(repoPath, 'open');
+      setPRs((result as any as ForgejoPR[]) ?? []);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingPRs(false);
+    }
+  }
+
+  async function handleCreatePR(title: string, body: string, head: string, base: string) {
+    const repoPath = prRepo === 'build' ? buildPath : definePath;
+    if (!repoPath) return;
+    setCreatingPR(true);
+    try {
+      await GitService.CreatePR(repoPath, title, body, head, base);
+      setShowCreatePR(false);
+      await fetchPRs();
+    } catch {
+      // ignore
+    } finally {
+      setCreatingPR(false);
+    }
+  }
+
+  async function handleMergePR(number: number, style: 'merge' | 'rebase' | 'squash') {
+    const repoPath = prRepo === 'build' ? buildPath : definePath;
+    if (!repoPath) return;
+    setMergingPR(true);
+    try {
+      await GitService.MergePR(repoPath, number, style);
+      setSelectedPR(null);
+      await fetchPRs();
+    } catch {
+      // ignore
+    } finally {
+      setMergingPR(false);
+    }
+  }
 
   // Load working-tree diff when a file is selected
   useEffect(() => {
@@ -537,10 +547,8 @@ export function GitPage() {
     setActiveGraphRepoPath(repoPath);
   }
 
-  // Show graph commits for whichever repo was last interacted with; default to build
   const activeCommits = activeGraphRepoPath === definePath ? defineCommits : buildCommits;
 
-  // Determine which selectedFile/selectedCommitFile belongs to the diff panel (for highlight in sections)
   const buildSelectedFile = selectedRepoPath === buildPath ? selectedFile : null;
   const defineSelectedFile = selectedRepoPath === definePath ? selectedFile : null;
   const buildSelectedCommitFile = selectedCommitFile?.repoPath === buildPath
@@ -551,6 +559,11 @@ export function GitPage() {
   const diffFilePath = selectedCommitFile?.path ?? selectedFile;
   const diffStaged = selectedCommitFile ? false : selectedStaged;
 
+  const prRepoPath = prRepo === 'build' ? buildPath : definePath;
+  const prBranches = prRepo === 'build' ? buildBranches : defineBranches;
+  const prCurrentBranch = prRepo === 'build' ? buildCurrentBranch : defineCurrentBranch;
+  const prIsForgejo = prRepo === 'build' ? buildIsForgejo : defineIsForgejo;
+
   // No product selected
   if (!state.organisation || !state.product) {
     return (
@@ -560,7 +573,6 @@ export function GitPage() {
     );
   }
 
-  // Paths loading
   if (pathsLoading) {
     return (
       <div className="flex-1 flex items-center justify-center h-full">
@@ -571,124 +583,230 @@ export function GitPage() {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Left: stacked repo sections */}
-          <ResizablePanel defaultSize={22} minSize={16} maxSize={40}>
-            <div className="flex flex-col h-full overflow-y-auto divide-y divide-foreground/10">
-              {buildPath && (
-                <RepoSection
-                  repoPath={buildPath}
-                  label="Build"
-                  selectedFile={buildSelectedFile}
-                  selectedStaged={selectedStaged}
-                  selectedCommitFile={buildSelectedCommitFile}
-                  onSelectFile={handleSelectFile}
-                  onSelectCommitFile={handleSelectCommitFile}
-                  setCommits={setBuildCommits}
-                  isSuggestionEnabled={isSuggestionEnabled}
-                  addSuggestion={addSuggestion}
-                  localAIEnabled={localAIState.enabled}
-                  localAIModelPulled={localAIState.modelPulled}
-                  localAIModel={localAIState.model}
-                />
-              )}
-              {definePath && (
-                <RepoSection
-                  repoPath={definePath}
-                  label="Define"
-                  selectedFile={defineSelectedFile}
-                  selectedStaged={selectedStaged}
-                  selectedCommitFile={defineSelectedCommitFile}
-                  onSelectFile={handleSelectFile}
-                  onSelectCommitFile={handleSelectCommitFile}
-                  setCommits={setDefineCommits}
-                  isSuggestionEnabled={isSuggestionEnabled}
-                  addSuggestion={addSuggestion}
-                  localAIEnabled={localAIState.enabled}
-                  localAIModelPulled={localAIState.modelPulled}
-                  localAIModel={localAIState.model}
-                />
-              )}
-            </div>
-          </ResizablePanel>
+      {/* Tab bar */}
+      <div className="shrink-0 flex items-center gap-0.5 px-3 border-b border-foreground/10">
+        {([
+          ['code', 'Code'],
+          ['prs', 'Pull Requests'],
+        ] as [GitTab, string][]).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`px-3 py-2 text-xs border-b-2 transition-colors ${
+              activeTab === id
+                ? 'border-pink-500 text-foreground/80'
+                : 'border-transparent text-foreground/40 hover:text-foreground/60'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-          <ResizableHandle />
-
-          {/* Right: diff + graph */}
-          <ResizablePanel defaultSize={78}>
-            <ResizablePanelGroup direction="vertical">
-              <ResizablePanel defaultSize={60} minSize={30}>
-                {diffLoading ? (
-                  <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
-                    Loading diff…
-                  </div>
-                ) : diffError ? (
-                  <div className="flex items-center justify-center h-full px-6">
-                    <p className="text-xs text-red-400 text-center">{diffError}</p>
-                  </div>
-                ) : (
-                  <GitDiffViewer
-                    diff={diff}
-                    filePath={diffFilePath}
-                    staged={diffStaged}
-                    commitHash={selectedCommitFile?.hash ?? null}
+      {/* Code tab */}
+      {activeTab === 'code' && (
+        <div className="flex-1 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Left: stacked repo sections */}
+            <ResizablePanel defaultSize={22} minSize={16} maxSize={40}>
+              <div className="flex flex-col h-full overflow-y-auto divide-y divide-foreground/10">
+                {buildPath && (
+                  <RepoSection
+                    repoPath={buildPath}
+                    label="Build"
+                    selectedFile={buildSelectedFile}
+                    selectedStaged={selectedStaged}
+                    selectedCommitFile={buildSelectedCommitFile}
+                    onSelectFile={handleSelectFile}
+                    onSelectCommitFile={handleSelectCommitFile}
+                    setCommits={setBuildCommits}
+                    onBranchesUpdated={(b, branch) => { setBuildBranches(b); setBuildCurrentBranch(branch); }}
+                    isSuggestionEnabled={isSuggestionEnabled}
+                    addSuggestion={addSuggestion}
+                    localAIEnabled={localAIState.enabled}
+                    localAIModelPulled={localAIState.modelPulled}
+                    localAIModel={localAIState.model}
                   />
                 )}
+                {definePath && (
+                  <RepoSection
+                    repoPath={definePath}
+                    label="Define"
+                    selectedFile={defineSelectedFile}
+                    selectedStaged={selectedStaged}
+                    selectedCommitFile={defineSelectedCommitFile}
+                    onSelectFile={handleSelectFile}
+                    onSelectCommitFile={handleSelectCommitFile}
+                    setCommits={setDefineCommits}
+                    onBranchesUpdated={(b, branch) => { setDefineBranches(b); setDefineCurrentBranch(branch); }}
+                    isSuggestionEnabled={isSuggestionEnabled}
+                    addSuggestion={addSuggestion}
+                    localAIEnabled={localAIState.enabled}
+                    localAIModelPulled={localAIState.modelPulled}
+                    localAIModel={localAIState.model}
+                  />
+                )}
+              </div>
+            </ResizablePanel>
+
+            <ResizableHandle />
+
+            {/* Right: diff + graph */}
+            <ResizablePanel defaultSize={78}>
+              <ResizablePanelGroup direction="vertical">
+                <ResizablePanel defaultSize={60} minSize={30}>
+                  {diffLoading ? (
+                    <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
+                      Loading diff…
+                    </div>
+                  ) : diffError ? (
+                    <div className="flex items-center justify-center h-full px-6">
+                      <p className="text-xs text-red-400 text-center">{diffError}</p>
+                    </div>
+                  ) : (
+                    <GitDiffViewer
+                      diff={diff}
+                      filePath={diffFilePath}
+                      staged={diffStaged}
+                      commitHash={selectedCommitFile?.hash ?? null}
+                    />
+                  )}
+                </ResizablePanel>
+
+                <ResizableHandle />
+
+                <ResizablePanel defaultSize={40} minSize={20}>
+                  <div className="h-full flex flex-col overflow-hidden">
+                    <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-foreground/10">
+                      <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
+                        Git Graph · {activeCommits.length} commits
+                      </span>
+                      <div className="flex items-center rounded overflow-hidden border border-foreground/10">
+                        <button
+                          onClick={() => setActiveGraphRepoPath(buildPath)}
+                          className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                            activeGraphRepoPath !== definePath
+                              ? 'bg-pink-600/30 text-pink-400'
+                              : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
+                          }`}
+                        >
+                          Build
+                        </button>
+                        <div className="w-px h-3 bg-foreground/10" />
+                        <button
+                          onClick={() => setActiveGraphRepoPath(definePath)}
+                          className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                            activeGraphRepoPath === definePath
+                              ? 'bg-pink-600/30 text-pink-400'
+                              : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
+                          }`}
+                        >
+                          Define
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                      <GitGraph
+                        commits={activeCommits}
+                        repoPath={activeGraphRepoPath || buildPath}
+                        selectedHash={graphSelectedHash ?? selectedCommitFile?.hash ?? null}
+                        selectedCommitFile={selectedCommitFile ? { hash: selectedCommitFile.hash, path: selectedCommitFile.path } : null}
+                        onSelectCommit={(hash) => {
+                          setGraphSelectedHash(hash);
+                          setSelectedFile(null);
+                        }}
+                        onSelectCommitFile={(hash, path) => handleSelectCommitFile(activeGraphRepoPath || buildPath, hash, path)}
+                      />
+                    </div>
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+      )}
+
+      {/* Pull Requests tab */}
+      {activeTab === 'prs' && (
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Repo selector */}
+          <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-foreground/10">
+            <span className="text-[10px] text-foreground/30 uppercase tracking-wider font-semibold">Repo</span>
+            <div className="flex items-center rounded overflow-hidden border border-foreground/10">
+              <button
+                onClick={() => setPrRepo('build')}
+                className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  prRepo === 'build'
+                    ? 'bg-pink-600/30 text-pink-400'
+                    : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
+                }`}
+              >
+                Build
+              </button>
+              <div className="w-px h-3 bg-foreground/10" />
+              <button
+                onClick={() => setPrRepo('define')}
+                className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  prRepo === 'define'
+                    ? 'bg-pink-600/30 text-pink-400'
+                    : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
+                }`}
+              >
+                Define
+              </button>
+            </div>
+          </div>
+
+          {!prIsForgejo ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-2">
+              <GitPullRequest size={24} className="text-foreground/15" />
+              <p className="text-sm text-foreground/30">Pull requests not available for this repo.</p>
+            </div>
+          ) : (
+            <ResizablePanelGroup direction="horizontal" className="flex-1">
+              {/* Left: PR list */}
+              <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+                <GitPRList
+                  prs={prs}
+                  selectedPR={selectedPR}
+                  loading={loadingPRs}
+                  onSelect={(pr) => { setSelectedPR(pr); setShowCreatePR(false); }}
+                  onNewPR={() => { setShowCreatePR(true); setSelectedPR(null); }}
+                  onRefresh={() => fetchPRs()}
+                />
               </ResizablePanel>
 
               <ResizableHandle />
 
-              <ResizablePanel defaultSize={40} minSize={20}>
-                <div className="h-full flex flex-col overflow-hidden">
-                  <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-foreground/10">
-                    <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
-                      Git Graph · {activeCommits.length} commits
-                    </span>
-                    <div className="flex items-center rounded overflow-hidden border border-foreground/10">
-                      <button
-                        onClick={() => setActiveGraphRepoPath(buildPath)}
-                        className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                          activeGraphRepoPath !== definePath
-                            ? 'bg-pink-600/30 text-pink-400'
-                            : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
-                        }`}
-                      >
-                        Build
-                      </button>
-                      <div className="w-px h-3 bg-foreground/10" />
-                      <button
-                        onClick={() => setActiveGraphRepoPath(definePath)}
-                        className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
-                          activeGraphRepoPath === definePath
-                            ? 'bg-pink-600/30 text-pink-400'
-                            : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
-                        }`}
-                      >
-                        Define
-                      </button>
-                    </div>
+              {/* Right: PR detail / create / placeholder */}
+              <ResizablePanel defaultSize={70}>
+                {showCreatePR ? (
+                  <GitPRCreate
+                    branches={prBranches}
+                    currentBranch={prCurrentBranch}
+                    creating={creatingPR}
+                    onCreate={handleCreatePR}
+                    onCancel={() => setShowCreatePR(false)}
+                  />
+                ) : selectedPR ? (
+                  <GitPRDetail
+                    pr={selectedPR}
+                    repoPath={prRepoPath}
+                    merging={mergingPR}
+                    onMerge={handleMergePR}
+                    onClose={() => setSelectedPR(null)}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-2">
+                    <GitPullRequest size={24} className="text-foreground/15" />
+                    <p className="text-sm text-foreground/30">Select a pull request</p>
                   </div>
-                  <div className="flex-1 overflow-hidden">
-                    <GitGraph
-                      commits={activeCommits}
-                      repoPath={activeGraphRepoPath || buildPath}
-                      selectedHash={graphSelectedHash ?? selectedCommitFile?.hash ?? null}
-                      selectedCommitFile={selectedCommitFile ? { hash: selectedCommitFile.hash, path: selectedCommitFile.path } : null}
-                      onSelectCommit={(hash) => {
-                        setGraphSelectedHash(hash);
-                        setSelectedFile(null);
-                      }}
-                      onSelectCommitFile={(hash, path) => handleSelectCommitFile(activeGraphRepoPath || buildPath, hash, path)}
-                    />
-                  </div>
-                </div>
+                )}
               </ResizablePanel>
             </ResizablePanelGroup>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
-
