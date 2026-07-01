@@ -642,32 +642,82 @@ func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
 	return parseListProductsResponse(body[5:])
 }
 
-// myAccountIDs parses the JWT access_token to extract the user's account IDs,
+// myAccountIDs fetches the current user's account resource names via RetrieveMyUser,
 // returning a set of "accounts/<id>" strings for O(1) lookup.
+// The JWT tokens do not carry an accounts claim, so an API call is required.
 func (s *ProductService) myAccountIDs() map[string]bool {
-	creds, err := s.tokens.freshCreds()
-	if err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	body, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx, "alis.os.iam.v2.UsersService/RetrieveMyUser", []byte{})
+	if err != nil || grpcStatus != 0 || len(body) < 5 {
 		return nil
 	}
-	parts := strings.Split(creds.AccessToken, ".")
-	if len(parts) != 3 {
-		return nil
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil
-	}
-	var claims struct {
-		Accounts map[string]json.RawMessage `json:"accounts"`
-	}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil
-	}
-	result := make(map[string]bool, len(claims.Accounts))
-	for id := range claims.Accounts {
-		result["accounts/"+id] = true
+	return parseUserAccountIDs(body[5:])
+}
+
+// parseUserAccountIDs extracts the account resource names from a User proto response.
+// User.accounts is map<string, Account> at field 99; proto encodes each entry as a
+// bytes-type sub-message with field 1 = key (account name) and field 2 = value.
+func parseUserAccountIDs(data []byte) map[string]bool {
+	result := make(map[string]bool)
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 99 {
+			key := parseMapEntryKey(b)
+			if key != "" {
+				if !strings.HasPrefix(key, "accounts/") {
+					key = "accounts/" + key
+				}
+				result[key] = true
+			}
+		}
 	}
 	return result
+}
+
+// parseMapEntryKey extracts the string key (field 1) from a proto map entry sub-message.
+func parseMapEntryKey(data []byte) string {
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num == 1 {
+			return string(b)
+		}
+	}
+	return ""
 }
 
 func (s *ProductService) GetProductOverview(org, product string) (*ProductOverview, error) {
