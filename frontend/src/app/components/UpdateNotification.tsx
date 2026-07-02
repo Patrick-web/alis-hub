@@ -1,4 +1,4 @@
-import type { DownloadProgress } from './WailsNotificationBridge';
+import type { DownloadProgress } from '../stores/update';
 
 interface UpdateInfo {
   currentVersion: string;
