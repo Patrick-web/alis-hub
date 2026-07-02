@@ -5,6 +5,7 @@ import App from "./app/App.tsx";
 import { ErrorBoundary } from "./app/components/ErrorBoundary.tsx";
 import { WorkspaceProvider } from "./app/stores/workspace.tsx";
 import { NotificationProvider } from "./app/stores/notifications.tsx";
+import { UpdateProvider } from "./app/stores/update.tsx";
 import { LabsProvider } from "./app/stores/labs.tsx";
 import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
 import { DevelopSettingsProvider } from "./app/stores/developSettings.tsx";
@@ -21,6 +22,7 @@ createRoot(document.getElementById("root")!).render(
   <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
     <ErrorBoundary>
       <NotificationProvider>
+        <UpdateProvider>
         <WorkspaceProvider>
           <LabsProvider>
             <LocalAIProvider>
@@ -41,6 +43,7 @@ createRoot(document.getElementById("root")!).render(
             </LocalAIProvider>
           </LabsProvider>
         </WorkspaceProvider>
+        </UpdateProvider>
       </NotificationProvider>
     </ErrorBoundary>
   </ThemeProvider>

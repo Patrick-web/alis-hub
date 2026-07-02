@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 import { marked } from 'marked';
 import { Loader } from './Loader';
 import { Icon } from '@iconify/react';
-import { Browser, Events } from '@wailsio/runtime';
+import { Browser } from '@wailsio/runtime';
 import { isSystemNotificationsEnabled, setSystemNotificationsEnabled, requestNotificationAuthorization } from '../lib/systemNotify';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
@@ -19,8 +19,8 @@ import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings
 import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { useUserProfile } from '../stores/userProfile';
+import { useUpdate } from '../stores/update';
 import { LocalAISetupCard } from './LocalAISetupCard';
-import { ReleaseNotesModal } from './ReleaseNotesModal';
 
 interface ProfileModalProps {
   open: boolean;
@@ -28,22 +28,6 @@ interface ProfileModalProps {
 }
 
 type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop' | 'tools';
-
-interface UpdateInfo {
-  available: boolean;
-  currentVersion: string;
-  latestVersion: string;
-  releaseUrl: string;
-  releaseNotes: string;
-}
-
-interface DownloadProgress {
-  downloaded: number;
-  total: number;
-  done: boolean;
-  error?: string;
-  path?: string;
-}
 
 interface AppInfo {
   version: string;
@@ -164,13 +148,16 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [availableBranches, setAvailableBranches] = useState<string[]>([]);
   const { profile, profileError, clearProfile } = useUserProfile();
 
+  const {
+    updateInfo,
+    downloadProgress,
+    checkingUpdate,
+    setNotesOpen,
+    checkForUpdate,
+    startDownload,
+  } = useUpdate();
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
-  const [downloadPct, setDownloadPct] = useState(0);
-  const [notesOpen, setNotesOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [changelogHtml, setChangelogHtml] = useState('');
   const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
@@ -209,67 +196,22 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
       if (info) setAppInfo(info as AppInfo);
     }).catch(() => {});
 
-    UpdaterService.CurrentVersion().then((v: string) => {
-      setUpdateInfo(prev => prev ? { ...prev, currentVersion: v } : { available: false, currentVersion: v, latestVersion: '', releaseUrl: '', releaseNotes: '' });
-    }).catch(() => {});
-
     ChangelogService.GetReleaseNotes().then(async (notes: string) => {
       const html = await marked.parse(notes || '');
       setChangelogHtml(html);
     }).catch(() => {});
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const off = Events.On('update:available', (ev: any) => {
-      setUpdateInfo(ev.data as UpdateInfo);
-    });
-    const offProgress = Events.On('update:progress', (ev: any) => {
-      const p = ev.data as DownloadProgress;
-      if (p.error) { setDownloading(false); setUpdateError(p.error); return; }
-      if (p.done) { setDownloading(false); setDownloadPct(0); return; }
-      if (p.total > 0) setDownloadPct(Math.round((p.downloaded / p.total) * 100));
-    });
-    return () => { off(); offProgress(); };
-  }, [open]);
-
   const handleCheckUpdate = async () => {
-    setCheckingUpdate(true);
     setUpdateError(null);
     try {
-      const info = await UpdaterService.CheckForUpdate() as any;
-      setUpdateInfo(info);
+      await checkForUpdate();
     } catch (e) {
-      setUpdateError(String(e));
-    } finally {
-      setCheckingUpdate(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    if (!updateInfo) return;
-    if (navigator.userAgent.includes('Windows')) {
-      Browser.OpenURL(updateInfo.releaseUrl);
-      return;
-    }
-    setDownloading(true);
-    setDownloadPct(0);
-    setUpdateError(null);
-    try {
-      await UpdaterService.DownloadUpdate();
-    } catch (e) {
-      setDownloading(false);
       setUpdateError(String(e));
     }
   };
 
-  const handleApply = async () => {
-    try {
-      await UpdaterService.ApplyUpdate();
-    } catch (e) {
-      setUpdateError(String(e));
-    }
-  };
+  const handleDownload = () => startDownload(updateInfo ?? undefined);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -633,21 +575,17 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                           >
                             Notes
                           </button>
-                          {!downloading ? (
-                            <button
-                              onClick={handleDownload}
-                              className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide"
-                            >
-                              Download
-                            </button>
-                          ) : (
-                            <button
-                              onClick={handleApply}
-                              className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono"
-                            >
-                              {downloadPct < 100 ? `${downloadPct}%` : 'Apply & Restart'}
-                            </button>
-                          )}
+                          <button
+                            onClick={handleDownload}
+                            disabled={downloadProgress !== null && !downloadProgress.done}
+                            className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide disabled:opacity-60"
+                          >
+                            {downloadProgress === null
+                              ? 'Download'
+                              : downloadProgress.done
+                                ? 'Ready to install'
+                                : 'Downloading…'}
+                          </button>
                         </div>
                       </div>
                     )}
@@ -905,17 +843,6 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
-
-      {updateInfo?.available && (
-        <ReleaseNotesModal
-          open={notesOpen}
-          onOpenChange={setNotesOpen}
-          currentVersion={updateInfo.currentVersion}
-          latestVersion={updateInfo.latestVersion}
-          releaseNotes={updateInfo.releaseNotes}
-          releaseUrl={updateInfo.releaseUrl}
-        />
-      )}
     </>
   );
 }
