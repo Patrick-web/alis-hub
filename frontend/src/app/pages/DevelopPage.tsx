@@ -71,9 +71,10 @@ export function DevelopPage() {
           : (devSettings.defaultBranch || 'master');
         commitTimesBranchRef.current = branch as string;
         const times = await BuildService.GetNeuronLastCommitTimes(state.organisation, state.product, branch as string);
+        console.log('[smart-sort] fetched commit times', { branch, defaultBranchSetting: devSettings.defaultBranch, times });
         setCommitTimes((times as Record<string, string>) ?? {});
-      } catch {
-        // leave commitTimes as-is
+      } catch (err) {
+        console.log('[smart-sort] failed to fetch commit times', err);
       } finally {
         setCommitTimesLoading(false);
       }
@@ -98,11 +99,18 @@ export function DevelopPage() {
     };
 
     if (key === 'committed') {
-      return [...visibleNeurons].sort((a, b) => {
+      const sorted = [...visibleNeurons].sort((a, b) => {
         const ta = commitMs(a.name || a.id);
         const tb = commitMs(b.name || b.id);
         return tb - ta;
       });
+      console.log('[smart-sort] key=committed', {
+        neuronNames: visibleNeurons.map(n => n.name || n.id),
+        commitTimeKeys: Object.keys(commitTimes),
+        perNeuron: visibleNeurons.map(n => ({ name: n.name || n.id, ms: commitMs(n.name || n.id) })),
+        sortedOrder: sorted.map(n => n.name || n.id),
+      });
+      return sorted;
     }
 
     // For defined/built/deployed: use notification timestamps as the primary signal,
@@ -116,7 +124,7 @@ export function DevelopPage() {
       }
     }
 
-    return [...visibleNeurons].sort((a, b) => {
+    const sorted = [...visibleNeurons].sort((a, b) => {
       const name_a = a.name || a.id;
       const name_b = b.name || b.id;
       // Prefer notification timestamp; fall back to git commit time.
@@ -124,6 +132,17 @@ export function DevelopPage() {
       const tb = Math.max(notifTimestamps.get(name_b) ?? 0, commitMs(name_b));
       return tb - ta;
     });
+    console.log(`[smart-sort] key=${key} taskType=${taskType}`, {
+      neuronNames: visibleNeurons.map(n => n.name || n.id),
+      notifTimestamps: Object.fromEntries(notifTimestamps),
+      commitTimeKeys: Object.keys(commitTimes),
+      perNeuron: visibleNeurons.map(n => {
+        const name = n.name || n.id;
+        return { name, notifMs: notifTimestamps.get(name) ?? 0, commitMs: commitMs(name) };
+      }),
+      sortedOrder: sorted.map(n => n.name || n.id),
+    });
+    return sorted;
   }, [visibleNeurons, devSettings.smartSortEnabled, devSettings.smartSortKey, notifState.notifications, commitTimes]);
   const allVisibleSelected = sortedNeurons.length > 0 && sortedNeurons.every(n => selectedNeurons.has(n.name || n.id));
   const someVisibleSelected = sortedNeurons.some(n => selectedNeurons.has(n.name || n.id));

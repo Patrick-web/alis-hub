@@ -543,18 +543,26 @@ func (s *BuildService) GetCurrentBranch(org, product string) (string, error) {
 	productDir := filepath.Join(home, "alis.build", org, "build", product)
 	out, err := exec.Command("git", "-C", productDir, "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
+		log.Printf("[build] GetCurrentBranch: rev-parse failed for %s: %v, defaulting to master", productDir, err)
 		return "master", nil
 	}
 	branch := strings.TrimSpace(string(out))
 	if branch == "" || branch == "HEAD" {
+		log.Printf("[build] GetCurrentBranch: detached/empty HEAD in %s, defaulting to master", productDir)
 		return "master", nil
 	}
+	log.Printf("[build] GetCurrentBranch: org=%s product=%s branch=%s", org, product, branch)
 	return branch, nil
 }
 
-// GetNeuronLastCommitTimes returns a map of neuron ID → ISO-8601 timestamp of the last commit
-// that touched that neuron's directory on the given branch. Neurons with no matching commits
-// are omitted from the result.
+var neuronVersionDirRe = regexp.MustCompile(`^v\d+$`)
+
+// GetNeuronLastCommitTimes returns a map of neuron ID (e.g. "bff-v1") → ISO-8601 timestamp of
+// the last commit that touched that neuron's directory on the given branch. Neuron directories
+// on disk are laid out as <base>/<version>/ (e.g. bookings/v1, bookings/v2); this walks each
+// base folder's version subdirectories and keys results as "<base>-<version>" to match the
+// neuron ID convention used elsewhere (e.g. product overview, scanDockerfiles). Neurons with no
+// matching commits are omitted from the result.
 func (s *BuildService) GetNeuronLastCommitTimes(org, product, branch string) (map[string]string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -565,28 +573,52 @@ func (s *BuildService) GetNeuronLastCommitTimes(org, product, branch string) (ma
 		return nil, fmt.Errorf("product build dir not found: %w", err)
 	}
 
-	// Collect immediate subdirectory names (neuron folders).
+	// Collect immediate subdirectory names (neuron base folders).
 	entries, err := os.ReadDir(productDir)
 	if err != nil {
 		return nil, err
 	}
 
+	// Prefer the remote-tracking ref, but fall back to the local branch name
+	// (e.g. a checked-out branch that hasn't been pushed to origin yet).
+	ref := "origin/" + branch
+	fellBack := false
+	if err := exec.Command("git", "-C", productDir, "rev-parse", "--verify", "--quiet", ref).Run(); err != nil {
+		log.Printf("[build] GetNeuronLastCommitTimes: %q did not resolve, falling back to local ref %q", ref, branch)
+		ref = branch
+		fellBack = true
+	}
+	log.Printf("[build] GetNeuronLastCommitTimes: org=%s product=%s requestedBranch=%s ref=%s fellBack=%v dirEntries=%d", org, product, branch, ref, fellBack, len(entries))
+
 	result := make(map[string]string, len(entries))
+	var skipped []string
 	for _, entry := range entries {
 		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
 			continue
 		}
-		neuronID := entry.Name()
-		ref := "origin/" + branch
-		out, err := exec.Command(
-			"git", "-C", productDir,
-			"log", "-1", "--format=%aI", ref, "--", neuronID+"/",
-		).Output()
-		if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+		baseName := entry.Name()
+		versionEntries, err := os.ReadDir(filepath.Join(productDir, baseName))
+		if err != nil {
 			continue
 		}
-		result[neuronID] = strings.TrimSpace(string(out))
+		for _, ve := range versionEntries {
+			if !ve.IsDir() || !neuronVersionDirRe.MatchString(ve.Name()) {
+				continue
+			}
+			neuronID := baseName + "-" + ve.Name()
+			relPath := baseName + "/" + ve.Name() + "/"
+			out, err := exec.Command(
+				"git", "-C", productDir,
+				"log", "-1", "--format=%aI", ref, "--", relPath,
+			).Output()
+			if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+				skipped = append(skipped, neuronID)
+				continue
+			}
+			result[neuronID] = strings.TrimSpace(string(out))
+		}
 	}
+	log.Printf("[build] GetNeuronLastCommitTimes: found=%d skipped=%d skippedNeurons=%v", len(result), len(skipped), skipped)
 	return result, nil
 }
 
