@@ -1,5 +1,22 @@
 # Changelog
 
+## [v0.10.0] - 2026-07-02
+
+### What's New
+- Source Control has been redesigned with GitHub-style tabs separating Code and Pull Requests for a cleaner workflow
+- You can now set per-tool default project context in a new Tools tab in Settings — no more re-selecting context every time
+- Branch switching now uses a searchable modal instead of a dropdown, making it easier to find branches in large repos
+- You'll now see a warning before checking out when you have uncommitted changes
+- PR creation now validates required fields and warns you if you're about to create an empty commit
+
+### Bug Fixes
+- Fixed an issue where the "Download Update" button in Settings now correctly opens the same update overlay as the rest of the app
+- Fixed an issue where Smart Sort commit lookups failed due to a mismatch with the versioned neuron directory layout
+- Fixed an issue where build and define errors only appeared in the status strip instead of the main pane
+- Fixed an issue where tool defaults weren't being read reliably from storage
+- Fixed an issue where checkout conflicts weren't being classified correctly; git pull now uses merge strategy
+- Fixed the Source Control tab icon in the top navigation bar
+
 ## [v0.9.3] - 2026-06-29
 
 ### Bug Fixes
