@@ -4936,92 +4936,16 @@ type BlockRole struct {
 	Title string `json:"title"`
 }
 
-// ListBlockRoles returns the IAM roles available for a block via RolesService/ListRoles.
-// Role proto: field 1 = name, field 5 = title.
+// ListBlockRoles returns the fixed set of IAM roles usable on a block's access policy.
+// Blocks don't sit under an organisations/*/products/* parent, so the generic
+// RolesService/ListRoles RPC (which requires one) can't be used here; the role set
+// mirrors the roles/block.* names recognized by blockRoleLabel.
 func (s *ProductService) ListBlockRoles(blockId string) ([]BlockRole, error) {
-	if err := s.initTokens(); err != nil {
-		return nil, err
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendString(req, "blocks/"+blockId)
-
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.iam.v1.RolesService/ListRoles", req)
-	if err != nil {
-		return nil, fmt.Errorf("ListBlockRoles: %w", err)
-	}
-	if grpcStatus != 0 {
-		return nil, fmt.Errorf("ListBlockRoles: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return nil, fmt.Errorf("ListBlockRoles: response too short")
-	}
-
-	return parseBlockRoles(body[5:]), nil
-}
-
-// parseBlockRoles parses the outer ListRolesResponse (field 1 = repeated Role message).
-// Each Role: field 1 = name (string), field 5 = title (string).
-func parseBlockRoles(data []byte) []BlockRole {
-	var roles []BlockRole
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 {
-				roles = append(roles, parseBlockRole(b))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return roles
-}
-
-func parseBlockRole(data []byte) BlockRole {
-	var r BlockRole
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			switch num {
-			case 1:
-				r.Name = string(b)
-			case 5:
-				r.Title = string(b)
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return r
+	return []BlockRole{
+		{Name: "roles/block.viewer", Title: "Viewer"},
+		{Name: "roles/block.developer", Title: "Developer"},
+		{Name: "roles/block.admin", Title: "Admin"},
+	}, nil
 }
 
 type BlockAccessMember struct {
