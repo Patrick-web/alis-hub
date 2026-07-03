@@ -22,8 +22,13 @@ interface InstallOrg { name: string; displayName: string; }
 interface InstallProduct { name: string; displayName: string; }
 interface InstallNeuron { name: string; displayName: string; package: string; }
 
-type SourceMode = 'scratch' | 'from-neuron';
 type Tab = 'overview' | 'features' | 'architecture' | 'files';
+
+const BLOCK_ID_REGEX = /^[a-z0-9]{2,20}$/;
+
+function deriveBlockId(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+}
 
 const TAB_LABEL: Record<Tab, string> = {
   overview: 'Overview',
@@ -62,10 +67,7 @@ export function CodeblockCreatePage() {
   // Architecture tab
   const [codeArchitecture, setCodeArchitecture] = useState<ArchLayer[]>([{ title: '', description: '' }]);
 
-  // Source mode (create only)
-  const [sourceMode, setSourceMode] = useState<SourceMode>('scratch');
-
-  // Cascade picker state (from-neuron)
+  // Cascade picker state
   const [orgs, setOrgs] = useState<InstallOrg[]>([]);
   const [orgsLoading, setOrgsLoading] = useState(false);
   const [orgsError, setOrgsError] = useState<string | null>(null);
@@ -85,12 +87,19 @@ export function CodeblockCreatePage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blockIdTouched, setBlockIdTouched] = useState(false);
   const highlightInputRef = useRef<HTMLInputElement>(null);
 
-  // Computed tabs list
-  const tabs: Tab[] = (sourceMode === 'from-neuron' && !isEditing)
-    ? ['overview', 'features', 'architecture', 'files']
-    : ['overview', 'features', 'architecture'];
+  const suggestedBlockId = deriveBlockId(displayName);
+  const showSuggestion = !isEditing && suggestedBlockId.length >= 2 && suggestedBlockId !== blockId;
+  const blockIdError = (blockIdTouched && blockId.length > 0 && !BLOCK_ID_REGEX.test(blockId))
+    ? 'Must be 2–20 lowercase letters and numbers only'
+    : null;
+  const blockIdInvalid = !isEditing && !BLOCK_ID_REGEX.test(blockId);
+
+  const tabs: Tab[] = isEditing
+    ? ['overview', 'features', 'architecture']
+    : ['overview', 'features', 'architecture', 'files'];
 
   // Pre-fill in edit mode
   useEffect(() => {
@@ -115,16 +124,16 @@ export function CodeblockCreatePage() {
       .finally(() => setInitLoading(false));
   }, [editId, isEditing]);
 
-  // Load orgs when From Neuron mode is selected
+  // Load orgs on mount (create mode only)
   useEffect(() => {
-    if (sourceMode !== 'from-neuron' || orgs.length > 0) return;
+    if (isEditing || orgs.length > 0) return;
     setOrgsLoading(true);
     setOrgsError(null);
     (ProductService.ListInstallOrgs as () => Promise<InstallOrg[]>)()
       .then(list => setOrgs(list ?? []))
       .catch(e => setOrgsError(String(e)))
       .finally(() => setOrgsLoading(false));
-  }, [sourceMode, orgsLoadAttempt]);
+  }, [orgsLoadAttempt]);
 
   // Load products when org selected
   useEffect(() => {
@@ -179,20 +188,6 @@ export function CodeblockCreatePage() {
       .finally(() => setScanLoading(false));
   }, [selectedNeuron]);
 
-  function switchSourceMode(mode: SourceMode) {
-    setSourceMode(mode);
-    if (mode === 'scratch') {
-      setSelectedOrg('');
-      setSelectedProduct('');
-      setSelectedNeuron(null);
-      setScannedFiles([]);
-      setScanError(null);
-      setOrgsError(null);
-      setOrgsLoadAttempt(0);
-      setActiveTab('overview');
-    }
-  }
-
   function toggleFile(idx: number) {
     setScannedFiles(prev => prev.map((f, i) => i === idx ? { ...f, selected: !f.selected } : f));
   }
@@ -217,7 +212,7 @@ export function CodeblockCreatePage() {
     setCodeArchitecture(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
   }
 
-  function buildCodeblockParams() {
+  function buildUpdateParams() {
     return models.CreateCodeblockParams.createFrom({
       blockId,
       displayName,
@@ -236,13 +231,18 @@ export function CodeblockCreatePage() {
 
   async function handleSubmit() {
     setError(null);
+    if (!isEditing && !BLOCK_ID_REGEX.test(blockId)) {
+      setBlockIdTouched(true);
+      setError('Block ID must be 2–20 lowercase letters and numbers only (a-z, 0-9)');
+      return;
+    }
     setLoading(true);
     try {
       if (isEditing) {
-        const params = buildCodeblockParams();
+        const params = buildUpdateParams();
         await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
         navigate(`/codeblocks/${editId}`);
-      } else if (sourceMode === 'from-neuron') {
+      } else {
         const bParams = models.BootstrapBlockParams.createFrom({
           blockId,
           displayName,
@@ -251,11 +251,6 @@ export function CodeblockCreatePage() {
           files: scannedFiles,
         });
         const name = await (ProductService.BootstrapBlock as (p: typeof bParams) => Promise<string>)(bParams);
-        const id = name.replace('blocks/', '');
-        navigate(id ? `/codeblocks/${id}` : '/codeblocks');
-      } else {
-        const params = buildCodeblockParams();
-        const name = await (ProductService.CreateCodeblock as (p: typeof params) => Promise<string>)(params);
         const id = name.replace('blocks/', '');
         navigate(id ? `/codeblocks/${id}` : '/codeblocks');
       }
@@ -275,19 +270,16 @@ export function CodeblockCreatePage() {
   }
 
   const selectedFileCount = scannedFiles.filter(f => f.selected).length;
-  const fromNeuronSubmitDisabled = sourceMode === 'from-neuron' && (
-    !selectedNeuron || scanLoading || selectedFileCount === 0
-  );
+  const bootstrapSubmitDisabled = !isEditing && (!selectedNeuron || scanLoading || selectedFileCount === 0);
+  const submitDisabled = loading || initLoading || bootstrapSubmitDisabled || blockIdInvalid;
 
   const submitLabel = loading
-    ? (isEditing ? 'Saving...' : sourceMode === 'from-neuron' ? 'Bootstrapping...' : 'Creating...')
-    : (isEditing ? 'Save Changes' : sourceMode === 'from-neuron' ? 'Bootstrap Block' : 'Create Block');
+    ? (isEditing ? 'Saving...' : 'Bootstrapping...')
+    : (isEditing ? 'Save Changes' : 'Bootstrap Block');
 
   const submitIcon = loading
     ? 'solar:spinner-linear'
-    : isEditing ? 'solar:pen-linear'
-    : sourceMode === 'from-neuron' ? 'solar:upload-square-linear'
-    : 'solar:add-square-linear';
+    : isEditing ? 'solar:pen-linear' : 'solar:upload-square-linear';
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-background">
@@ -308,30 +300,8 @@ export function CodeblockCreatePage() {
             <div className="flex items-center justify-center py-[40px]"><Loader /></div>
           ) : (
             <>
-              {/* Source toggle — create mode only */}
+              {/* Neuron cascade picker — create mode only */}
               {!isEditing && (
-                <div>
-                  <p className={labelClass}>Source</p>
-                  <div className="flex gap-[4px] bg-card rounded-[6px] p-[3px]">
-                    {(['scratch', 'from-neuron'] as SourceMode[]).map(mode => (
-                      <button
-                        key={mode}
-                        onClick={() => switchSourceMode(mode)}
-                        className={`flex-1 py-[5px] rounded-[4px] text-[10px] font-bold uppercase tracking-wider transition-colors ${
-                          sourceMode === mode
-                            ? 'bg-brand text-brand-foreground'
-                            : 'text-foreground/50 hover:text-foreground/80'
-                        }`}
-                      >
-                        {mode === 'scratch' ? 'Scratch' : 'From Neuron'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Neuron cascade picker — from-neuron mode only */}
-              {!isEditing && sourceMode === 'from-neuron' && (
                 <div className="flex flex-col gap-[12px]">
                   <div>
                     <p className={labelClass}>Organisation</p>
@@ -400,12 +370,26 @@ export function CodeblockCreatePage() {
                   placeholder="e.g. helloworld"
                   className="w-full"
                   value={blockId}
-                  onChange={e => setBlockId((e.target as HTMLInputElement).value)}
+                  onChange={e => { setBlockId((e.target as HTMLInputElement).value); setBlockIdTouched(true); }}
                   disabled={isEditing}
                   style={isEditing ? { opacity: 0.4 } : undefined}
                 />
-                {!isEditing && (
-                  <p className="text-[10px] text-foreground/30 mt-[6px]">Lowercase letters and numbers only</p>
+                {!isEditing && blockIdError && (
+                  <p className="text-[10px] text-destructive mt-[4px]">{blockIdError}</p>
+                )}
+                {!isEditing && !blockIdError && showSuggestion && (
+                  <div className="flex items-center gap-[6px] mt-[6px]">
+                    <span className="text-[10px] text-foreground/30">Suggested:</span>
+                    <button
+                      onClick={() => { setBlockId(suggestedBlockId); setBlockIdTouched(true); }}
+                      className="text-[10px] font-mono text-brand hover:underline"
+                    >
+                      {suggestedBlockId}
+                    </button>
+                  </div>
+                )}
+                {!isEditing && !blockIdError && !showSuggestion && (
+                  <p className="text-[10px] text-foreground/30 mt-[6px]">Lowercase letters and numbers only, 2–20 chars</p>
                 )}
               </div>
 
@@ -447,7 +431,7 @@ export function CodeblockCreatePage() {
             className="w-full"
             icon={<Icon icon={submitIcon} className={loading ? 'animate-spin' : ''} />}
             onClick={handleSubmit}
-            disabled={loading || initLoading || fromNeuronSubmitDisabled}
+            disabled={submitDisabled}
           >
             {submitLabel}
           </Button>
@@ -630,7 +614,6 @@ export function CodeblockCreatePage() {
                   <p className="text-[12px] text-foreground/40">No files found in this neuron.</p>
                 ) : (
                   <>
-                    {/* Select all controls */}
                     <div className="flex items-center gap-[12px]">
                       <button
                         onClick={() => selectAllFiles(true)}
@@ -650,7 +633,6 @@ export function CodeblockCreatePage() {
                       </span>
                     </div>
 
-                    {/* Files grouped by category */}
                     {(Object.keys(CATEGORY_LABEL) as Array<keyof typeof CATEGORY_LABEL>).map(cat => {
                       const catFiles = scannedFiles
                         .map((f, idx) => ({ ...f, idx }))
