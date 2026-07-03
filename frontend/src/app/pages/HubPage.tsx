@@ -7,6 +7,7 @@ import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
 import { MacWindowControls, WindowsWindowControls } from '../components/WindowControls';
+import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
 const isWindows = System.IsWindows();
 
@@ -69,6 +70,7 @@ export function HubPage() {
       <div
         className="h-[40px] flex items-center justify-between shrink-0 border-b border-border"
         style={{ '--wails-draggable': 'drag' } as React.CSSProperties}
+        onDoubleClick={handleTitleBarDoubleClick}
       >
         <div className="flex items-center gap-[10px] px-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
           {!isWindows && <MacWindowControls />}

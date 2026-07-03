@@ -11,6 +11,7 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
 import { useUserProfile } from '../stores/userProfile';
 import { MacWindowControls, WindowsWindowControls } from './WindowControls';
+import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
 const isWindows = System.IsWindows();
 
@@ -105,6 +106,7 @@ export function TopNav() {
     <div
       className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
       style={{ '--wails-draggable': 'drag' } as React.CSSProperties}
+      onDoubleClick={handleTitleBarDoubleClick}
     >
       {/* Left: Window controls and breadcrumb */}
       <div className="flex items-center h-full pr-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
@@ -148,8 +150,8 @@ export function TopNav() {
       </div>
 
       {/* Center: Tabs */}
-      <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-        <div className="flex h-full border-r border-border">
+      <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar">
+        <div className="flex h-full border-r border-border" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
           {tabs.map((tab) => (
             <Tab
               key={tab.id}
