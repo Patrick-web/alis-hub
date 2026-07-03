@@ -4942,9 +4942,8 @@ type BlockRole struct {
 // mirrors the roles/block.* names recognized by blockRoleLabel.
 func (s *ProductService) ListBlockRoles(blockId string) ([]BlockRole, error) {
 	return []BlockRole{
-		{Name: "roles/block.viewer", Title: "Viewer"},
-		{Name: "roles/block.developer", Title: "Developer"},
 		{Name: "roles/block.admin", Title: "Admin"},
+		{Name: "roles/block.contributor", Title: "Contributor"},
 	}, nil
 }
 
@@ -5090,10 +5089,8 @@ func blockRoleLabel(role string) string {
 	switch role {
 	case "roles/block.admin":
 		return "Admin"
-	case "roles/block.developer":
-		return "Developer"
-	case "roles/block.viewer":
-		return "Viewer"
+	case "roles/block.contributor":
+		return "Contributor"
 	default:
 		r := strings.TrimPrefix(role, "roles/block.")
 		if r == role {
