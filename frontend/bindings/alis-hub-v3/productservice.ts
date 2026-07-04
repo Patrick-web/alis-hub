@@ -252,8 +252,10 @@ export function ListBlockPlans(blockId: string): $CancellablePromise<$models.Blo
 }
 
 /**
- * ListBlockRoles returns the IAM roles available for a block via RolesService/ListRoles.
- * Role proto: field 1 = name, field 5 = title.
+ * ListBlockRoles returns the fixed set of IAM roles usable on a block's access policy.
+ * Blocks don't sit under an organisations/* /products/* parent, so the generic
+ * RolesService/ListRoles RPC (which requires one) can't be used here; the role set
+ * mirrors the roles/block.* names recognized by blockRoleLabel.
  */
 export function ListBlockRoles(blockId: string): $CancellablePromise<$models.BlockRole[]> {
     return $Call.ByID(392865116, blockId).then(($result: any) => {
@@ -387,12 +389,23 @@ export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
 }
 
 /**
+ * ReadNeuronFileContents reads the content of the given selected files off disk for a neuron
+ * package, without publishing anything. Used to materialize file content for preview/diffing
+ * before a codeblock Update is published.
+ */
+export function ReadNeuronFileContents(neuronPackage: string, files: $models.ScannedNeuronFile[]): $CancellablePromise<$models.NeuronFileContents | null> {
+    return $Call.ByID(3333239169, neuronPackage, files).then(($result: any) => {
+        return $$createType50($result);
+    });
+}
+
+/**
  * ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
  * Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
  */
 export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
     return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType52($result);
     });
 }
 
@@ -419,7 +432,7 @@ export function SwitchEnvironment(org: string, product: string, envName: string,
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType54($result);
     });
 }
 
@@ -518,7 +531,9 @@ const $$createType45 = $models.LandingZonesData.createFrom;
 const $$createType46 = $Create.Nullable($$createType45);
 const $$createType47 = $models.ProductSummary.createFrom;
 const $$createType48 = $Create.Array($$createType47);
-const $$createType49 = $models.NeuronScanResult.createFrom;
+const $$createType49 = $models.NeuronFileContents.createFrom;
 const $$createType50 = $Create.Nullable($$createType49);
-const $$createType51 = $models.SyncReposResult.createFrom;
+const $$createType51 = $models.NeuronScanResult.createFrom;
 const $$createType52 = $Create.Nullable($$createType51);
+const $$createType53 = $models.SyncReposResult.createFrom;
+const $$createType54 = $Create.Nullable($$createType53);

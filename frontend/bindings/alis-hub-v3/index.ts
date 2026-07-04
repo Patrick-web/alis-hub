@@ -13,6 +13,7 @@ import * as LocalAIService from "./localaiservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
 import * as ServiceManager from "./servicemanager.js";
+import * as WorkflowService from "./workflowservice.js";
 export {
     BuildKitService,
     BuildService,
@@ -25,7 +26,8 @@ export {
     LocalAIService,
     PackageService,
     ProductService,
-    ServiceManager
+    ServiceManager,
+    WorkflowService
 };
 
 export {
@@ -91,6 +93,7 @@ export {
     LogEntry,
     LogPage,
     LogResource,
+    NeuronFileContents,
     NeuronItem,
     NeuronScanResult,
     NeuronVersionSummary,
@@ -107,6 +110,7 @@ export {
     RunBuildResult,
     RunDefineResult,
     RunDeployResult,
+    RunLogChunk,
     SMSecret,
     SMSecretVersion,
     ScannedNeuronFile,
@@ -123,7 +127,13 @@ export {
     SpannerQueryResult,
     SpannerRWTxnResult,
     SpannerTable,
+    StepRunStatus,
     SyncReposResult,
+    UpsertStepParams,
+    UpsertWorkflowParams,
     UserProfile,
+    Workflow,
+    WorkflowRun,
+    WorkflowStep,
     WorkspaceInfo
 } from "./models.js";

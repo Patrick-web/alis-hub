@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflows — Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --surface2: #222222;
+  --surface3: #2c2c2c;
+  --surface4: #333333;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text-mid: rgba(240,240,240,0.65);
+  --text-dim: rgba(240,240,240,0.35);
+  --text-faint: rgba(240,240,240,0.18);
+  --brand: #f881a9;
+  --brand-dim: rgba(248,129,169,0.12);
+  --brand-dim2: rgba(248,129,169,0.2);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.12);
+  --green: #34c759;
+  --green-dim: rgba(52,199,89,0.12);
+  --yellow: #fac800;
+  --yellow-dim: rgba(250,200,0,0.12);
+  --red: #ff453a;
+  --red-dim: rgba(255,69,58,0.12);
+  --purple: #bf5af2;
+  --purple-dim: rgba(191,90,242,0.12);
+  --orange: #ff9f0a;
+  --orange-dim: rgba(255,159,10,0.12);
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 13px; }
+mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ─── Layout ─── */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* Left panel — workflow list */
+.left-panel {
+  width: 260px;
+  min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+.panel-header {
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; color: var(--text-dim); text-transform: uppercase; }
+.icon-btn {
+  width: 24px; height: 24px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.icon-btn:hover { background: var(--surface3); color: var(--text); }
+.icon-btn svg { width: 14px; height: 14px; }
+
+.workflow-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+.workflow-item {
+  padding: 9px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  transition: background 0.1s;
+  border: 1px solid transparent;
+}
+.workflow-item:hover { background: var(--surface2); }
+.workflow-item.active { background: var(--brand-dim); border-color: rgba(248,129,169,0.15); }
+
+.workflow-item-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.workflow-item.active .workflow-item-name { color: var(--brand); }
+
+.workflow-item-meta { display: flex; align-items: center; gap: 6px; }
+.step-count { font-size: 11px; color: var(--text-dim); }
+.run-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.run-badge.success { background: var(--green-dim); color: var(--green); }
+.run-badge.failed  { background: var(--red-dim); color: var(--red); }
+.run-badge.never   { background: var(--surface3); color: var(--text-dim); }
+.run-badge.running { background: var(--blue-dim); color: var(--blue); }
+
+/* Main area */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Toolbar */
+.toolbar {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+}
+.toolbar-title { font-size: 14px; font-weight: 600; flex: 1; }
+.toolbar-sub { font-size: 12px; color: var(--text-dim); }
+
+.btn {
+  padding: 6px 14px;
+  border-radius: 7px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: all 0.12s;
+  font-family: 'Inter', sans-serif;
+}
+.btn svg { width: 13px; height: 13px; }
+.btn-ghost { background: var(--surface2); color: var(--text-mid); }
+.btn-ghost:hover { background: var(--surface3); color: var(--text); }
+.btn-primary { background: var(--brand); color: #111; font-weight: 600; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-danger { background: var(--red-dim); color: var(--red); }
+.btn-danger:hover { background: rgba(255,69,58,0.2); }
+.btn-blue { background: var(--blue-dim); color: var(--blue); }
+.btn-blue:hover { background: rgba(59,130,246,0.2); }
+
+/* Editor canvas */
+.editor { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* Empty state */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; gap: 12px; color: var(--text-dim); text-align: center;
+}
+.empty-icon { width: 48px; height: 48px; opacity: 0.25; }
+.empty-title { font-size: 14px; font-weight: 500; }
+.empty-sub { font-size: 12px; color: var(--text-faint); }
+
+/* Step list */
+.steps-wrap { max-width: 640px; margin: 0 auto; }
+
+.section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+  color: var(--text-dim); margin-bottom: 12px;
+}
+
+.step-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.step-card:hover { border-color: var(--border2); }
+.step-card.expanded { border-color: var(--border2); }
+.step-card.dragging { opacity: 0.4; }
+.step-card.drag-over { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+
+.step-header {
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.drag-handle {
+  color: var(--text-faint);
+  cursor: grab;
+  display: flex; align-items: center;
+  padding: 2px;
+}
+.drag-handle:active { cursor: grabbing; }
+.drag-handle svg { width: 14px; height: 14px; }
+
+.step-icon {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.step-icon svg { width: 14px; height: 14px; }
+
+.step-info { flex: 1; min-width: 0; }
+.step-name { font-size: 13px; font-weight: 500; }
+.step-summary { font-size: 11px; color: var(--text-dim); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.step-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.1s; }
+.step-header:hover .step-actions { opacity: 1; }
+
+.chevron { color: var(--text-dim); transition: transform 0.15s; }
+.chevron svg { width: 12px; height: 12px; }
+.step-card.expanded .chevron { transform: rotate(90deg); }
+
+.step-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
+  display: none;
+}
+.step-card.expanded .step-body { display: block; }
+
+.field-row { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.field-label { font-size: 11px; font-weight: 500; color: var(--text-dim); }
+.field-input {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.field-input:focus { border-color: var(--brand); }
+.field-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: var(--text);
+  font-size: 12px;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  font-family: 'Inter', sans-serif;
+}
+.field-select:focus { border-color: var(--brand); }
+.field-mono {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--green);
+  width: 100%;
+  outline: none;
+  resize: vertical;
+}
+.field-mono:focus { border-color: var(--brand); }
+.field-row-inline { display: flex; gap: 8px; margin-top: 12px; align-items: flex-end; }
+.field-row-inline .field-row { flex: 1; margin-top: 0; }
+
+.on-failure-row {
+  margin-top: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.on-failure-label { font-size: 11px; color: var(--text-dim); }
+
+/* Connector between steps */
+.step-connector {
+  display: flex; align-items: center; justify-content: center;
+  height: 20px; position: relative;
+}
+.step-connector::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 1px;
+  background: var(--border2);
+  transform: translateX(-50%);
+}
+
+/* Add step area */
+.add-step-area { margin-top: 8px; }
+.add-step-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--border2);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.12s;
+}
+.add-step-btn svg { width: 14px; height: 14px; }
+.add-step-btn:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-dim); }
+
+/* Step type picker (inline dropdown) */
+.step-picker {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 6px;
+  display: none;
+}
+.step-picker.open { display: block; }
+.step-picker-header { padding: 10px 12px 8px; border-bottom: 1px solid var(--border); }
+.step-picker-label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.07em; }
+.step-picker-grid { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+.step-type-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.step-type-row:hover { background: var(--surface3); }
+.step-type-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-type-icon svg { width: 14px; height: 14px; }
+.step-type-info { flex: 1; }
+.step-type-name { font-size: 12px; font-weight: 500; }
+.step-type-desc { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+
+/* ─── Run modal overlay ─── */
+.run-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.run-overlay.open { display: flex; }
+
+.run-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  width: 560px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.6);
+}
+
+.run-modal-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.run-modal-title { font-size: 14px; font-weight: 600; flex: 1; }
+.run-modal-meta { font-size: 11px; color: var(--text-dim); }
+
+.run-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+
+.run-step {
+  display: flex; gap: 14px; margin-bottom: 6px;
+}
+.run-step-left {
+  display: flex; flex-direction: column; align-items: center; width: 28px; flex-shrink: 0;
+}
+.run-step-status {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+}
+.run-step-status svg { width: 13px; height: 13px; }
+.run-step-status.pending  { background: var(--surface3); color: var(--text-dim); }
+.run-step-status.running  { background: var(--blue-dim); color: var(--blue); }
+.run-step-status.success  { background: var(--green-dim); color: var(--green); }
+.run-step-status.failed   { background: var(--red-dim); color: var(--red); }
+.run-step-status.skipped  { background: var(--surface2); color: var(--text-faint); }
+
+.run-step-line {
+  flex: 1;
+  width: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  min-height: 6px;
+}
+
+.run-step-content { flex: 1; padding-bottom: 8px; }
+.run-step-name { font-size: 13px; font-weight: 500; line-height: 28px; }
+.run-step-name.running { color: var(--blue); }
+.run-step-name.success { color: var(--text-mid); }
+.run-step-name.failed  { color: var(--red); }
+.run-step-name.pending { color: var(--text-dim); }
+
+.run-step-log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-mid);
+  line-height: 1.7;
+  max-height: 160px;
+  overflow-y: auto;
+  display: none;
+}
+.run-step-log.visible { display: block; }
+.log-line { display: flex; gap: 8px; }
+.log-ts { color: var(--text-faint); flex-shrink: 0; }
+.log-text.success-text { color: var(--green); }
+.log-text.error-text { color: var(--red); }
+.log-text.dim-text { color: var(--text-dim); }
+
+.run-step-duration { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+.run-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.run-progress-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.run-progress-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* Spinner */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { animation: spin 0.8s linear infinite; }
+
+/* Pulse */
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+.pulse { animation: pulse 1.2s ease infinite; }
+
+/* ─── New workflow modal ─── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  width: 400px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+}
+.modal-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 600; }
+.modal-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Templates */
+.template-grid { display: flex; flex-direction: column; gap: 6px; }
+.template-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.12s;
+  display: flex; align-items: center; gap: 10px;
+}
+.template-card:hover { border-color: var(--border2); background: var(--surface2); }
+.template-card.selected { border-color: var(--brand); background: var(--brand-dim); }
+.template-icon { font-size: 18px; }
+.template-info { flex: 1; }
+.template-name { font-size: 12px; font-weight: 500; }
+.template-desc { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
+
+/* Scroll */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface4); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Left panel -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <span class="panel-title">Workflows</span>
+      <button class="icon-btn" onclick="openNewModal()" title="New workflow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="workflow-list" id="workflowList"></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="toolbar" id="toolbar">
+      <div style="flex:1">
+        <div class="toolbar-title" id="toolbarTitle">Select a workflow</div>
+        <div class="toolbar-sub" id="toolbarSub"></div>
+      </div>
+    </div>
+    <div class="editor" id="editor">
+      <div class="empty-state" id="emptyState">
+        <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M9 12l2 2 4-4"/>
+        </svg>
+        <div class="empty-title">No workflow selected</div>
+        <div class="empty-sub">Pick one from the list or create a new one</div>
+      </div>
+      <div id="stepEditor" style="display:none">
+        <div class="steps-wrap">
+          <div class="section-label">Steps</div>
+          <div id="stepList"></div>
+          <div class="add-step-area">
+            <button class="add-step-btn" onclick="togglePicker()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add step
+            </button>
+            <div class="step-picker" id="stepPicker">
+              <div class="step-picker-header"><span class="step-picker-label">Choose step type</span></div>
+              <div class="step-picker-grid" id="stepPickerGrid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Run overlay -->
+<div class="run-overlay" id="runOverlay">
+  <div class="run-modal">
+    <div class="run-modal-header">
+      <div>
+        <div class="run-modal-title" id="runModalTitle"></div>
+        <div class="run-modal-meta" id="runModalMeta"></div>
+      </div>
+      <button class="btn btn-danger" id="stopBtn" onclick="stopRun()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+        Stop
+      </button>
+      <button class="btn btn-ghost" id="closeRunBtn" onclick="closeRun()" style="display:none">Close</button>
+    </div>
+    <div class="run-body" id="runBody"></div>
+    <div class="run-modal-footer">
+      <div class="run-progress-bar"><div class="run-progress-fill" id="runProgress" style="width:0%"></div></div>
+      <span style="font-size:11px; color:var(--text-dim)" id="runStatus">Starting…</span>
+    </div>
+  </div>
+</div>
+
+<!-- New workflow modal -->
+<div class="modal-overlay" id="newModal">
+  <div class="modal">
+    <div class="modal-header">New Workflow</div>
+    <div class="modal-body">
+      <div class="field-row">
+        <label class="field-label">Name</label>
+        <input class="field-input" id="newWorkflowName" placeholder="e.g. Nightly build & deploy" />
+      </div>
+      <div class="field-row">
+        <label class="field-label">Description (optional)</label>
+        <input class="field-input" id="newWorkflowDesc" placeholder="What does this workflow do?" />
+      </div>
+      <div class="field-row" style="margin-top:4px">
+        <label class="field-label" style="margin-bottom:6px">Start from template</label>
+        <div class="template-grid" id="templateGrid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeNewModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="createWorkflow()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ──────────────────────────────────────────────────────────────────
+
+const STEP_TYPES = [
+  {
+    id: 'sync-repos',
+    name: 'Sync Repos',
+    desc: 'Pull latest changes from remote',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>`,
+    color: '--blue', colorDim: '--blue-dim',
+    fields: [],
+    summary: () => 'Pull latest from remote',
+    logLines: ['Fetching origin…', 'Already up to date.', 'Done in 1.2s'],
+  },
+  {
+    id: 'shell',
+    name: 'Shell Command',
+    desc: 'Run any CLI command (alis define, alis build, git…)',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>`,
+    color: '--green', colorDim: '--green-dim',
+    fields: [
+      { key: 'command', label: 'Command', type: 'mono', placeholder: 'alis define neurons/my.org/product1' },
+      { key: 'workdir', label: 'Working directory', type: 'text', placeholder: '~/workspace/my.org/product1' },
+    ],
+    summary: (s) => s.command || 'No command set',
+    logLines: [
+      '$ alis define neurons/my.org/product1',
+      'Resolving dependencies…',
+      'Generated 3 files.',
+      'Done in 4.7s',
+    ],
+  },
+  {
+    id: 'upgrade-block',
+    name: 'Upgrade Block',
+    desc: 'Upgrade a codeblock instance to a new version',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><polyline points="5 12 12 5 19 12"/></svg>`,
+    color: '--brand', colorDim: '--brand-dim',
+    fields: [
+      { key: 'instanceName', label: 'Instance name', type: 'text', placeholder: 'organisations/my.org/products/product1/neuronInstances/block1' },
+      { key: 'version', label: 'Target version', type: 'text', placeholder: 'latest (leave blank)' },
+    ],
+    summary: (s) => s.instanceName ? `→ ${s.instanceName.split('/').pop()}` : 'No instance set',
+    logLines: [
+      'Fetching latest version…',
+      'Upgrading block1 to v1.4.2…',
+      'Polling LRO…',
+      'Upgrade complete.',
+    ],
+  },
+  {
+    id: 'contribute',
+    name: 'Contribute Block',
+    desc: 'Publish a new version from commits',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M6 9v3a3 3 0 0 0 3 3h9"/></svg>`,
+    color: '--purple', colorDim: '--purple-dim',
+    fields: [
+      { key: 'instanceName', label: 'Instance name', type: 'text', placeholder: 'organisations/my.org/products/product1/neuronInstances/block1' },
+      { key: 'releaseLevel', label: 'Release level', type: 'select', options: ['patch', 'minor', 'major'] },
+      { key: 'notes', label: 'Release notes', type: 'text', placeholder: 'Brief description of changes' },
+    ],
+    summary: (s) => s.instanceName ? `${s.instanceName.split('/').pop()} (${s.releaseLevel || 'patch'})` : 'No instance set',
+    logLines: [
+      'Fetching commits from define repo…',
+      'Fetching commits from build repo…',
+      'Creating version v1.4.3-patch…',
+      'Polling LRO…',
+      'Version published.',
+    ],
+  },
+  {
+    id: 'install-block',
+    name: 'Install Block',
+    desc: 'Install a marketplace codeblock',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+    color: '--orange', colorDim: '--orange-dim',
+    fields: [
+      { key: 'blockId', label: 'Block ID', type: 'text', placeholder: 'some.org/blocks/block-name' },
+      { key: 'neuron', label: 'Target neuron', type: 'text', placeholder: 'organisations/my.org/products/product1/neurons/api1' },
+    ],
+    summary: (s) => s.blockId || 'No block set',
+    logLines: [
+      'Checking entitlements…',
+      'Resolving plan…',
+      'Installing block…',
+      'Polling LRO…',
+      'Merging branch…',
+      'Done.',
+    ],
+  },
+  {
+    id: 'wait',
+    name: 'Wait / Delay',
+    desc: 'Pause before the next step',
+    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    color: '--yellow', colorDim: '--yellow-dim',
+    fields: [
+      { key: 'seconds', label: 'Delay (seconds)', type: 'text', placeholder: '5' },
+    ],
+    summary: (s) => s.seconds ? `Wait ${s.seconds}s` : 'Wait 5s',
+    logLines: ['Waiting 5s…', 'Done.'],
+  },
+];
+
+const TEMPLATES = [
+  {
+    id: 'blank', name: 'Blank', desc: 'Start with no steps', icon: '✦', steps: [],
+  },
+  {
+    id: 'define-build',
+    name: 'Define & Build',
+    desc: 'Sync → define neurons → shell build',
+    icon: '⚙',
+    steps: [
+      { typeId: 'sync-repos', params: {} },
+      { typeId: 'shell', params: { command: 'alis define neurons/my.org/product1', workdir: '' } },
+      { typeId: 'shell', params: { command: 'alis build neurons/my.org/product1', workdir: '' } },
+    ],
+  },
+  {
+    id: 'upgrade-publish',
+    name: 'Upgrade & Publish',
+    desc: 'Upgrade a block then publish a new version',
+    icon: '🚀',
+    steps: [
+      { typeId: 'upgrade-block', params: {} },
+      { typeId: 'contribute', params: { releaseLevel: 'patch' } },
+    ],
+  },
+  {
+    id: 'full-pipeline',
+    name: 'Full Pipeline',
+    desc: 'Sync → define → build → deploy',
+    icon: '🔁',
+    steps: [
+      { typeId: 'sync-repos', params: {} },
+      { typeId: 'shell', params: { command: 'alis define neurons/my.org/product1' } },
+      { typeId: 'shell', params: { command: 'alis build neurons/my.org/product1' } },
+      { typeId: 'upgrade-block', params: {} },
+    ],
+  },
+];
+
+let workflows = [
+  {
+    id: 'wf1',
+    name: 'Nightly Build & Deploy',
+    desc: 'Sync, define, build, then upgrade',
+    lastRun: 'success',
+    lastRunTime: '2m ago',
+    steps: [
+      { id: 's1', typeId: 'sync-repos', params: {} },
+      { id: 's2', typeId: 'shell', params: { command: 'alis define neurons/my.org/product1', workdir: '' } },
+      { id: 's3', typeId: 'shell', params: { command: 'alis build neurons/my.org/product1', workdir: '' } },
+      { id: 's4', typeId: 'upgrade-block', params: { instanceName: 'organisations/my.org/products/product1/neuronInstances/api-block', version: '' } },
+    ],
+  },
+  {
+    id: 'wf2',
+    name: 'Publish New Version',
+    desc: 'Upgrade block then contribute',
+    lastRun: 'never',
+    lastRunTime: null,
+    steps: [
+      { id: 's1', typeId: 'upgrade-block', params: { instanceName: '', version: '' } },
+      { id: 's2', typeId: 'contribute', params: { instanceName: '', releaseLevel: 'patch', notes: '' } },
+    ],
+  },
+  {
+    id: 'wf3',
+    name: 'Install & Activate',
+    desc: 'Install a codeblock, then wait and define',
+    lastRun: 'failed',
+    lastRunTime: '1h ago',
+    steps: [
+      { id: 's1', typeId: 'install-block', params: { blockId: '', neuron: '' } },
+      { id: 's2', typeId: 'wait', params: { seconds: '10' } },
+      { id: 's3', typeId: 'shell', params: { command: 'alis define neurons/my.org/product1', workdir: '' } },
+    ],
+  },
+];
+
+let activeWorkflowId = null;
+let expandedSteps = {};
+let selectedTemplate = 'blank';
+let runTimer = null;
+let stopped = false;
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function getType(typeId) { return STEP_TYPES.find(t => t.id === typeId); }
+function getWorkflow(id) { return workflows.find(w => w.id === id); }
+function uid() { return Math.random().toString(36).slice(2, 8); }
+
+function iconSVG(type, size = 14) {
+  return type.icon.replace('stroke-width="2"', `stroke-width="2" width="${size}" height="${size}"`);
+}
+
+// ─── Render list ───────────────────────────────────────────────────────────
+
+function renderList() {
+  const el = document.getElementById('workflowList');
+  el.innerHTML = workflows.map(w => {
+    const active = w.id === activeWorkflowId;
+    const badge = w.lastRun === 'never'
+      ? `<span class="run-badge never">Never run</span>`
+      : w.lastRun === 'success'
+      ? `<span class="run-badge success">✓ ${w.lastRunTime}</span>`
+      : w.lastRun === 'failed'
+      ? `<span class="run-badge failed">✗ ${w.lastRunTime}</span>`
+      : `<span class="run-badge running">Running…</span>`;
+    return `
+      <div class="workflow-item${active ? ' active' : ''}" onclick="selectWorkflow('${w.id}')">
+        <div class="workflow-item-name">${w.name}</div>
+        <div class="workflow-item-meta">
+          <span class="step-count">${w.steps.length} step${w.steps.length !== 1 ? 's' : ''}</span>
+          ${badge}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Select workflow ────────────────────────────────────────────────────────
+
+function selectWorkflow(id) {
+  activeWorkflowId = id;
+  expandedSteps = {};
+  renderList();
+  renderEditor();
+}
+
+function renderEditor() {
+  const wf = getWorkflow(activeWorkflowId);
+  if (!wf) return;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('stepEditor').style.display = 'block';
+
+  // Toolbar
+  document.getElementById('toolbarTitle').textContent = wf.name;
+  document.getElementById('toolbarSub').textContent = wf.desc;
+
+  // Toolbar buttons
+  const tb = document.getElementById('toolbar');
+  // Remove old action buttons
+  tb.querySelectorAll('.toolbar-btn').forEach(b => b.remove());
+  const runBtn = document.createElement('button');
+  runBtn.className = 'btn btn-primary toolbar-btn';
+  runBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13"><polygon points="5 3 19 12 5 21 5 3"/></svg> Run`;
+  runBtn.onclick = () => openRun(wf);
+  tb.appendChild(runBtn);
+
+  renderSteps(wf);
+}
+
+// ─── Steps ──────────────────────────────────────────────────────────────────
+
+function renderSteps(wf) {
+  const list = document.getElementById('stepList');
+  list.innerHTML = '';
+  wf.steps.forEach((step, i) => {
+    const type = getType(step.typeId);
+    if (!type) return;
+    const expanded = !!expandedSteps[step.id];
+    const card = document.createElement('div');
+    card.className = `step-card${expanded ? ' expanded' : ''}`;
+    card.draggable = true;
+    card.dataset.stepId = step.id;
+    card.dataset.index = i;
+
+    // Summary line
+    const summary = type.summary(step.params);
+
+    card.innerHTML = `
+      <div class="step-header" onclick="toggleStep('${step.id}')">
+        <div class="drag-handle" draggable="false" onmousedown="event.stopPropagation()">
+          <svg viewBox="0 0 24 24" fill="currentColor" opacity="0.4"><circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+        </div>
+        <div class="step-icon" style="background:var(${type.colorDim}); color:var(${type.color})">${type.icon}</div>
+        <div class="step-info">
+          <div class="step-name">${type.name}</div>
+          <div class="step-summary" style="font-family:${step.typeId === 'shell' ? 'JetBrains Mono,monospace' : 'inherit'}">${summary}</div>
+        </div>
+        <div class="step-actions">
+          <button class="icon-btn" onclick="event.stopPropagation(); duplicateStep('${step.id}')" title="Duplicate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <button class="icon-btn" onclick="event.stopPropagation(); deleteStep('${step.id}')" title="Remove" style="color:var(--red)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+        <div class="chevron">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      <div class="step-body">
+        ${renderFields(step)}
+        <div class="on-failure-row">
+          <span class="on-failure-label">On failure:</span>
+          <select class="field-select" style="width:auto;padding:4px 8px;font-size:11px" onchange="updateStepParam('${step.id}', '_onFailure', this.value)">
+            <option value="stop" ${(step.params._onFailure||'stop')==='stop'?'selected':''}>Stop workflow</option>
+            <option value="continue" ${step.params._onFailure==='continue'?'selected':''}>Continue anyway</option>
+          </select>
+        </div>
+      </div>
+    `;
+
+    // Drag events
+    card.addEventListener('dragstart', onDragStart);
+    card.addEventListener('dragover', onDragOver);
+    card.addEventListener('dragleave', onDragLeave);
+    card.addEventListener('drop', onDrop);
+    card.addEventListener('dragend', onDragEnd);
+
+    list.appendChild(card);
+
+    // Add connector between steps
+    if (i < wf.steps.length - 1) {
+      const conn = document.createElement('div');
+      conn.className = 'step-connector';
+      list.appendChild(conn);
+    }
+  });
+}
+
+function renderFields(step) {
+  const type = getType(step.typeId);
+  if (!type.fields.length) return '<div style="padding-top:4px;font-size:11px;color:var(--text-dim)">No configuration needed.</div>';
+  return type.fields.map(f => {
+    const val = step.params[f.key] || '';
+    if (f.type === 'mono') {
+      return `<div class="field-row">
+        <label class="field-label">${f.label}</label>
+        <textarea class="field-mono" rows="2" placeholder="${f.placeholder||''}" oninput="updateStepParam('${step.id}','${f.key}',this.value)">${val}</textarea>
+      </div>`;
+    }
+    if (f.type === 'select') {
+      return `<div class="field-row">
+        <label class="field-label">${f.label}</label>
+        <select class="field-select" onchange="updateStepParam('${step.id}','${f.key}',this.value)">
+          ${(f.options||[]).map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+        </select>
+      </div>`;
+    }
+    return `<div class="field-row">
+      <label class="field-label">${f.label}</label>
+      <input class="field-input" value="${val}" placeholder="${f.placeholder||''}" oninput="updateStepParam('${step.id}','${f.key}',this.value)" />
+    </div>`;
+  }).join('');
+}
+
+function toggleStep(id) {
+  expandedSteps[id] = !expandedSteps[id];
+  const wf = getWorkflow(activeWorkflowId);
+  renderSteps(wf);
+}
+
+function updateStepParam(stepId, key, value) {
+  const wf = getWorkflow(activeWorkflowId);
+  const step = wf.steps.find(s => s.id === stepId);
+  if (step) {
+    step.params[key] = value;
+    // update summary without full re-render
+    const card = document.querySelector(`[data-step-id="${stepId}"]`);
+    if (card) {
+      const type = getType(step.typeId);
+      const summaryEl = card.querySelector('.step-summary');
+      if (summaryEl) summaryEl.textContent = type.summary(step.params);
+    }
+  }
+}
+
+function deleteStep(stepId) {
+  const wf = getWorkflow(activeWorkflowId);
+  wf.steps = wf.steps.filter(s => s.id !== stepId);
+  delete expandedSteps[stepId];
+  renderSteps(wf);
+  renderList();
+}
+
+function duplicateStep(stepId) {
+  const wf = getWorkflow(activeWorkflowId);
+  const idx = wf.steps.findIndex(s => s.id === stepId);
+  const orig = wf.steps[idx];
+  const copy = { ...orig, id: uid(), params: { ...orig.params } };
+  wf.steps.splice(idx + 1, 0, copy);
+  renderSteps(wf);
+  renderList();
+}
+
+// ─── Drag & drop ────────────────────────────────────────────────────────────
+
+let dragSrcIdx = null;
+function onDragStart(e) {
+  dragSrcIdx = +e.currentTarget.dataset.index;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const card = e.currentTarget;
+  if (+card.dataset.index !== dragSrcIdx) card.classList.add('drag-over');
+}
+function onDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  const targetIdx = +e.currentTarget.dataset.index;
+  const wf = getWorkflow(activeWorkflowId);
+  if (dragSrcIdx !== null && targetIdx !== dragSrcIdx) {
+    const moved = wf.steps.splice(dragSrcIdx, 1)[0];
+    wf.steps.splice(targetIdx, 0, moved);
+    renderSteps(wf);
+  }
+}
+function onDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragSrcIdx = null;
+}
+
+// ─── Step picker ────────────────────────────────────────────────────────────
+
+function renderPicker() {
+  const grid = document.getElementById('stepPickerGrid');
+  grid.innerHTML = STEP_TYPES.map(t => `
+    <div class="step-type-row" onclick="addStep('${t.id}')">
+      <div class="step-type-icon" style="background:var(${t.colorDim});color:var(${t.color})">${t.icon}</div>
+      <div class="step-type-info">
+        <div class="step-type-name">${t.name}</div>
+        <div class="step-type-desc">${t.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function togglePicker() {
+  const p = document.getElementById('stepPicker');
+  p.classList.toggle('open');
+}
+
+function addStep(typeId) {
+  const wf = getWorkflow(activeWorkflowId);
+  const type = getType(typeId);
+  const params = {};
+  type.fields.forEach(f => { params[f.key] = f.options ? f.options[0] : ''; });
+  const newStep = { id: uid(), typeId, params };
+  wf.steps.push(newStep);
+  document.getElementById('stepPicker').classList.remove('open');
+  expandedSteps[newStep.id] = true;
+  renderSteps(wf);
+  renderList();
+  // scroll to new step
+  setTimeout(() => {
+    const card = document.querySelector(`[data-step-id="${newStep.id}"]`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+
+// ─── Run simulation ─────────────────────────────────────────────────────────
+
+function openRun(wf) {
+  stopped = false;
+  document.getElementById('runModalTitle').textContent = wf.name;
+  document.getElementById('runModalMeta').textContent = `${wf.steps.length} steps`;
+  document.getElementById('runProgress').style.width = '0%';
+  document.getElementById('runStatus').textContent = 'Starting…';
+  document.getElementById('stopBtn').style.display = '';
+  document.getElementById('closeRunBtn').style.display = 'none';
+
+  const body = document.getElementById('runBody');
+  body.innerHTML = wf.steps.map((step, i) => {
+    const type = getType(step.typeId);
+    const isLast = i === wf.steps.length - 1;
+    return `
+      <div class="run-step" id="rs${step.id}">
+        <div class="run-step-left">
+          <div class="run-step-status pending" id="rst${step.id}">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="10" height="10"><circle cx="12" cy="12" r="6"/></svg>
+          </div>
+          ${!isLast ? '<div class="run-step-line" id="rl'+step.id+'"></div>' : ''}
+        </div>
+        <div class="run-step-content">
+          <div class="run-step-name pending" id="rsn${step.id}">${type.name}${step.params.command ? ': ' + step.params.command : (step.params.instanceName ? ': ' + step.params.instanceName.split('/').pop() : '')}</div>
+          <div class="run-step-log" id="rsl${step.id}"></div>
+          <div class="run-step-duration" id="rsd${step.id}" style="display:none"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('runOverlay').classList.add('open');
+  simulateRun(wf);
+}
+
+function simulateRun(wf) {
+  let stepIdx = 0;
+
+  function runNextStep() {
+    if (stopped) return;
+    if (stepIdx >= wf.steps.length) {
+      // All done
+      document.getElementById('runProgress').style.width = '100%';
+      document.getElementById('runStatus').textContent = `All ${wf.steps.length} steps complete`;
+      document.getElementById('stopBtn').style.display = 'none';
+      document.getElementById('closeRunBtn').style.display = '';
+      wf.lastRun = 'success';
+      wf.lastRunTime = 'just now';
+      renderList();
+      return;
+    }
+
+    const step = wf.steps[stepIdx];
+    const type = getType(step.typeId);
+    const statusEl = document.getElementById(`rst${step.id}`);
+    const nameEl = document.getElementById(`rsn${step.id}`);
+    const logEl = document.getElementById(`rsl${step.id}`);
+    const durEl = document.getElementById(`rsd${step.id}`);
+
+    // Set running
+    statusEl.className = 'run-step-status running';
+    statusEl.innerHTML = `<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`;
+    nameEl.className = 'run-step-name running';
+    logEl.classList.add('visible');
+
+    document.getElementById('runStatus').textContent = `Running: ${type.name}`;
+    document.getElementById('runProgress').style.width = `${Math.round(((stepIdx) / wf.steps.length) * 100)}%`;
+
+    const startTime = Date.now();
+    const lines = type.logLines;
+    let lineIdx = 0;
+
+    function addLine() {
+      if (stopped) return;
+      if (lineIdx >= lines.length) {
+        // Step done
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        statusEl.className = 'run-step-status success';
+        statusEl.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg>`;
+        nameEl.className = 'run-step-name success';
+        durEl.style.display = '';
+        durEl.textContent = `Completed in ${elapsed}s`;
+        stepIdx++;
+        runTimer = setTimeout(runNextStep, 500);
+        return;
+      }
+      const now = new Date();
+      const ts = now.toTimeString().slice(0, 8);
+      const lineText = lines[lineIdx];
+      const isError = lineText.toLowerCase().includes('error') || lineText.toLowerCase().includes('fail');
+      const isDone = lineText.toLowerCase().startsWith('done') || lineText.toLowerCase().includes('complete') || lineText.toLowerCase().includes('published') || lineText.toLowerCase().includes('merged');
+      logEl.innerHTML += `<div class="log-line"><span class="log-ts">${ts}</span><span class="log-text${isError?' error-text':isDone?' success-text':''}">${lineText}</span></div>`;
+      logEl.scrollTop = logEl.scrollHeight;
+      lineIdx++;
+      runTimer = setTimeout(addLine, 600 + Math.random() * 600);
+    }
+
+    addLine();
+  }
+
+  runTimer = setTimeout(runNextStep, 300);
+}
+
+function stopRun() {
+  stopped = true;
+  clearTimeout(runTimer);
+  document.getElementById('runStatus').textContent = 'Stopped by user';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('closeRunBtn').style.display = '';
+  const wf = getWorkflow(activeWorkflowId);
+  if (wf) { wf.lastRun = 'failed'; wf.lastRunTime = 'just now'; renderList(); }
+}
+
+function closeRun() {
+  stopped = true;
+  clearTimeout(runTimer);
+  document.getElementById('runOverlay').classList.remove('open');
+}
+
+// ─── New workflow modal ──────────────────────────────────────────────────────
+
+function renderTemplates() {
+  const grid = document.getElementById('templateGrid');
+  grid.innerHTML = TEMPLATES.map(t => `
+    <div class="template-card${t.id === selectedTemplate ? ' selected' : ''}" onclick="selectTemplate('${t.id}')">
+      <div class="template-icon">${t.icon}</div>
+      <div class="template-info">
+        <div class="template-name">${t.name}</div>
+        <div class="template-desc">${t.desc}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectTemplate(id) {
+  selectedTemplate = id;
+  renderTemplates();
+  // Auto-fill name if blank
+  const nameInput = document.getElementById('newWorkflowName');
+  const tmpl = TEMPLATES.find(t => t.id === id);
+  if (tmpl && tmpl.id !== 'blank' && !nameInput.value) {
+    nameInput.value = tmpl.name;
+  }
+}
+
+function openNewModal() {
+  selectedTemplate = 'blank';
+  document.getElementById('newWorkflowName').value = '';
+  document.getElementById('newWorkflowDesc').value = '';
+  renderTemplates();
+  document.getElementById('newModal').classList.add('open');
+  setTimeout(() => document.getElementById('newWorkflowName').focus(), 50);
+}
+
+function closeNewModal() {
+  document.getElementById('newModal').classList.remove('open');
+}
+
+function createWorkflow() {
+  const name = document.getElementById('newWorkflowName').value.trim();
+  if (!name) { document.getElementById('newWorkflowName').focus(); return; }
+  const desc = document.getElementById('newWorkflowDesc').value.trim();
+  const tmpl = TEMPLATES.find(t => t.id === selectedTemplate);
+  const steps = (tmpl?.steps || []).map(s => ({ ...s, id: uid(), params: { ...s.params } }));
+  const wf = { id: uid(), name, desc, lastRun: 'never', lastRunTime: null, steps };
+  workflows.push(wf);
+  closeNewModal();
+  renderList();
+  selectWorkflow(wf.id);
+}
+
+// ─── Close picker on outside click ──────────────────────────────────────────
+
+document.addEventListener('click', e => {
+  const picker = document.getElementById('stepPicker');
+  const addBtn = document.querySelector('.add-step-btn');
+  if (!picker.contains(e.target) && e.target !== addBtn && !addBtn?.contains(e.target)) {
+    picker.classList.remove('open');
+  }
+});
+
+// Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.getElementById('newModal').classList.remove('open');
+    closeRun();
+    document.getElementById('stepPicker').classList.remove('open');
+  }
+});
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+
+renderPicker();
+renderList();
+selectWorkflow('wf1');
+</script>
+</body>
+</html>

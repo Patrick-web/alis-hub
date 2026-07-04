@@ -52,9 +52,12 @@ export function GetCurrentBranch(org: string, product: string): $CancellableProm
 }
 
 /**
- * GetNeuronLastCommitTimes returns a map of neuron ID → ISO-8601 timestamp of the last commit
- * that touched that neuron's directory on the given branch. Neurons with no matching commits
- * are omitted from the result.
+ * GetNeuronLastCommitTimes returns a map of neuron ID (e.g. "bff-v1") → ISO-8601 timestamp of
+ * the last commit that touched that neuron's directory on the given branch. Neuron directories
+ * on disk are laid out as <base>/<version>/ (e.g. bookings/v1, bookings/v2); this walks each
+ * base folder's version subdirectories and keys results as "<base>-<version>" to match the
+ * neuron ID convention used elsewhere (e.g. product overview, scanDockerfiles). Neurons with no
+ * matching commits are omitted from the result.
  */
 export function GetNeuronLastCommitTimes(org: string, product: string, branch: string): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(2006141021, org, product, branch).then(($result: any) => {
