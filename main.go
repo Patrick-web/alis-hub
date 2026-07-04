@@ -42,6 +42,12 @@ func main() {
 	gitSvc := NewGitService()
 	changelogSvc := NewChangelogService(version)
 	localAISvc := NewLocalAIService()
+	buildSvc := NewBuildService()
+	deploySvc := NewDeployService()
+	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc)
+	if err := workflowSvc.Open(); err != nil {
+		log.Fatal("workflow db:", err)
+	}
 
 	app := application.New(application.Options{
 		Name:        "AlisHub",
@@ -51,8 +57,8 @@ func main() {
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
 			application.NewService(NewDefineService()),
-			application.NewService(NewBuildService()),
-			application.NewService(NewDeployService()),
+			application.NewService(buildSvc),
+			application.NewService(deploySvc),
 			application.NewService(productSvc),
 			application.NewService(NewPackageService()),
 			application.NewService(NewBuildKitService()),
@@ -62,6 +68,7 @@ func main() {
 			application.NewService(gitSvc),
 			application.NewService(changelogSvc),
 			application.NewService(localAISvc),
+			application.NewService(workflowSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),

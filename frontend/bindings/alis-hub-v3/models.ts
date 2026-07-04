@@ -2357,6 +2357,47 @@ export class LogResource {
     }
 }
 
+export class NeuronFileContents {
+    "buildFiles": CodeblockFileItem[];
+    "infraFiles": CodeblockFileItem[];
+    "protoFiles": CodeblockFileItem[];
+
+    /** Creates a new NeuronFileContents instance. */
+    constructor($$source: Partial<NeuronFileContents> = {}) {
+        if (!("buildFiles" in $$source)) {
+            this["buildFiles"] = [];
+        }
+        if (!("infraFiles" in $$source)) {
+            this["infraFiles"] = [];
+        }
+        if (!("protoFiles" in $$source)) {
+            this["protoFiles"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new NeuronFileContents instance from a string or object.
+     */
+    static createFrom($$source: any = {}): NeuronFileContents {
+        const $$createField0_0 = $$createType10;
+        const $$createField1_0 = $$createType10;
+        const $$createField2_0 = $$createType10;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("buildFiles" in $$parsedSource) {
+            $$parsedSource["buildFiles"] = $$createField0_0($$parsedSource["buildFiles"]);
+        }
+        if ("infraFiles" in $$parsedSource) {
+            $$parsedSource["infraFiles"] = $$createField1_0($$parsedSource["infraFiles"]);
+        }
+        if ("protoFiles" in $$parsedSource) {
+            $$parsedSource["protoFiles"] = $$createField2_0($$parsedSource["protoFiles"]);
+        }
+        return new NeuronFileContents($$parsedSource as Partial<NeuronFileContents>);
+    }
+}
+
 export class NeuronItem {
     "id": string;
     "version": string;
@@ -2986,6 +3027,43 @@ export class RunDeployResult {
     }
 }
 
+export class RunLogChunk {
+    "stepRuns": StepRunStatus[];
+    "logText": string;
+    "nextOffset": number;
+    "done": boolean;
+
+    /** Creates a new RunLogChunk instance. */
+    constructor($$source: Partial<RunLogChunk> = {}) {
+        if (!("stepRuns" in $$source)) {
+            this["stepRuns"] = [];
+        }
+        if (!("logText" in $$source)) {
+            this["logText"] = "";
+        }
+        if (!("nextOffset" in $$source)) {
+            this["nextOffset"] = 0;
+        }
+        if (!("done" in $$source)) {
+            this["done"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RunLogChunk instance from a string or object.
+     */
+    static createFrom($$source: any = {}): RunLogChunk {
+        const $$createField0_0 = $$createType44;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("stepRuns" in $$parsedSource) {
+            $$parsedSource["stepRuns"] = $$createField0_0($$parsedSource["stepRuns"]);
+        }
+        return new RunLogChunk($$parsedSource as Partial<RunLogChunk>);
+    }
+}
+
 export class SMSecret {
     "name": string;
     "createTime": string;
@@ -3142,8 +3220,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType44;
-        const $$createField1_0 = $$createType46;
+        const $$createField0_0 = $$createType46;
+        const $$createField1_0 = $$createType48;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -3238,9 +3316,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType48;
-        const $$createField1_0 = $$createType50;
-        const $$createField2_0 = $$createType50;
+        const $$createField0_0 = $$createType50;
+        const $$createField1_0 = $$createType52;
+        const $$createField2_0 = $$createType52;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -3480,7 +3558,7 @@ export class SpannerQueryResult {
      */
     static createFrom($$source: any = {}): SpannerQueryResult {
         const $$createField0_0 = $$createType4;
-        const $$createField1_0 = $$createType51;
+        const $$createField1_0 = $$createType53;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -3546,6 +3624,59 @@ export class SpannerTable {
     }
 }
 
+export class StepRunStatus {
+    "id": string;
+    "stepId": string;
+    "position": number;
+    "type": string;
+    "label": string;
+
+    /**
+     * pending|running|success|failed|skipped
+     */
+    "status": string;
+    "startedAt": number | null;
+    "completedAt": number | null;
+
+    /** Creates a new StepRunStatus instance. */
+    constructor($$source: Partial<StepRunStatus> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("stepId" in $$source)) {
+            this["stepId"] = "";
+        }
+        if (!("position" in $$source)) {
+            this["position"] = 0;
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("label" in $$source)) {
+            this["label"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("startedAt" in $$source)) {
+            this["startedAt"] = null;
+        }
+        if (!("completedAt" in $$source)) {
+            this["completedAt"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new StepRunStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): StepRunStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new StepRunStatus($$parsedSource as Partial<StepRunStatus>);
+    }
+}
+
 export class SyncReposResult {
     "defineDir": string;
     "buildDir": string;
@@ -3580,6 +3711,76 @@ export class SyncReposResult {
     }
 }
 
+export class UpsertStepParams {
+    "id": string;
+    "type": string;
+
+    /**
+     * raw JSON blob
+     */
+    "params": string;
+    "onFailure": string;
+
+    /** Creates a new UpsertStepParams instance. */
+    constructor($$source: Partial<UpsertStepParams> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("params" in $$source)) {
+            this["params"] = "";
+        }
+        if (!("onFailure" in $$source)) {
+            this["onFailure"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpsertStepParams instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpsertStepParams {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpsertStepParams($$parsedSource as Partial<UpsertStepParams>);
+    }
+}
+
+export class UpsertWorkflowParams {
+    "name": string;
+    "description": string;
+    "steps": UpsertStepParams[];
+
+    /** Creates a new UpsertWorkflowParams instance. */
+    constructor($$source: Partial<UpsertWorkflowParams> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("steps" in $$source)) {
+            this["steps"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpsertWorkflowParams instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpsertWorkflowParams {
+        const $$createField2_0 = $$createType55;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("steps" in $$parsedSource) {
+            $$parsedSource["steps"] = $$createField2_0($$parsedSource["steps"]);
+        }
+        return new UpsertWorkflowParams($$parsedSource as Partial<UpsertWorkflowParams>);
+    }
+}
+
 export class UserProfile {
     "email": string;
     "name": string;
@@ -3606,6 +3807,157 @@ export class UserProfile {
     static createFrom($$source: any = {}): UserProfile {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new UserProfile($$parsedSource as Partial<UserProfile>);
+    }
+}
+
+export class Workflow {
+    "id": string;
+    "name": string;
+    "description": string;
+    "isTemplate": boolean;
+    "createdAt": number;
+    "updatedAt": number;
+    "steps": WorkflowStep[];
+
+    /** Creates a new Workflow instance. */
+    constructor($$source: Partial<Workflow> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("isTemplate" in $$source)) {
+            this["isTemplate"] = false;
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = 0;
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = 0;
+        }
+        if (!("steps" in $$source)) {
+            this["steps"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Workflow instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Workflow {
+        const $$createField6_0 = $$createType57;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("steps" in $$parsedSource) {
+            $$parsedSource["steps"] = $$createField6_0($$parsedSource["steps"]);
+        }
+        return new Workflow($$parsedSource as Partial<Workflow>);
+    }
+}
+
+export class WorkflowRun {
+    "id": string;
+    "workflowId": string;
+    "workflowName": string;
+
+    /**
+     * running|success|failed|stopped
+     */
+    "status": string;
+    "startedAt": number;
+    "completedAt": number | null;
+    "stepRuns": StepRunStatus[];
+
+    /** Creates a new WorkflowRun instance. */
+    constructor($$source: Partial<WorkflowRun> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("workflowId" in $$source)) {
+            this["workflowId"] = "";
+        }
+        if (!("workflowName" in $$source)) {
+            this["workflowName"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("startedAt" in $$source)) {
+            this["startedAt"] = 0;
+        }
+        if (!("completedAt" in $$source)) {
+            this["completedAt"] = null;
+        }
+        if (!("stepRuns" in $$source)) {
+            this["stepRuns"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WorkflowRun instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WorkflowRun {
+        const $$createField6_0 = $$createType44;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("stepRuns" in $$parsedSource) {
+            $$parsedSource["stepRuns"] = $$createField6_0($$parsedSource["stepRuns"]);
+        }
+        return new WorkflowRun($$parsedSource as Partial<WorkflowRun>);
+    }
+}
+
+export class WorkflowStep {
+    "id": string;
+    "workflowId": string;
+    "position": number;
+    "type": string;
+
+    /**
+     * raw JSON blob
+     */
+    "params": string;
+
+    /**
+     * "stop" | "continue"
+     */
+    "onFailure": string;
+
+    /** Creates a new WorkflowStep instance. */
+    constructor($$source: Partial<WorkflowStep> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("workflowId" in $$source)) {
+            this["workflowId"] = "";
+        }
+        if (!("position" in $$source)) {
+            this["position"] = 0;
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("params" in $$source)) {
+            this["params"] = "";
+        }
+        if (!("onFailure" in $$source)) {
+            this["onFailure"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WorkflowStep instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WorkflowStep {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WorkflowStep($$parsedSource as Partial<WorkflowStep>);
     }
 }
 
@@ -3706,12 +4058,18 @@ const $$createType39 = $Create.Nullable($$createType38);
 const $$createType40 = DeployItem.createFrom;
 const $$createType41 = $Create.Nullable($$createType40);
 const $$createType42 = $Create.Array($$createType41);
-const $$createType43 = NeuronItem.createFrom;
+const $$createType43 = StepRunStatus.createFrom;
 const $$createType44 = $Create.Array($$createType43);
-const $$createType45 = EnvDeployments.createFrom;
+const $$createType45 = NeuronItem.createFrom;
 const $$createType46 = $Create.Array($$createType45);
-const $$createType47 = SharePerson.createFrom;
+const $$createType47 = EnvDeployments.createFrom;
 const $$createType48 = $Create.Array($$createType47);
-const $$createType49 = ShareAccount.createFrom;
+const $$createType49 = SharePerson.createFrom;
 const $$createType50 = $Create.Array($$createType49);
-const $$createType51 = $Create.Array($$createType4);
+const $$createType51 = ShareAccount.createFrom;
+const $$createType52 = $Create.Array($$createType51);
+const $$createType53 = $Create.Array($$createType4);
+const $$createType54 = UpsertStepParams.createFrom;
+const $$createType55 = $Create.Array($$createType54);
+const $$createType56 = WorkflowStep.createFrom;
+const $$createType57 = $Create.Array($$createType56);
