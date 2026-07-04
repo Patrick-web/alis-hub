@@ -10,6 +10,7 @@ import { CodeblocksPage } from "./pages/CodeblocksPage";
 import { CodeblockCreatePage } from "./pages/CodeblockCreatePage";
 import { CodeblockDetailsPage } from "./pages/CodeblockDetailsPage";
 import { CodeblockContributePage } from "./pages/CodeblockContributePage";
+import { CodeblockUpdatePage } from "./pages/CodeblockUpdatePage";
 import { AgentsPage } from "./pages/AgentsPage";
 import { ToolsPage } from "./pages/ToolsPage";
 import { SharePage } from "./pages/SharePage";
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: "codeblocks/:id", Component: CodeblockDetailsPage },
       { path: "codeblocks/:id/edit", Component: CodeblockCreatePage },
       { path: "codeblocks/:id/contribute", Component: CodeblockContributePage },
+      { path: "codeblocks/:id/update", Component: CodeblockUpdatePage },
       { path: "codeblocks/:id/:tab", Component: CodeblockDetailsPage },
       { path: "buildkit", Component: BuildKitPage },
       { path: "buildkit/custom-apis", Component: BuildKitCustomApisPage },

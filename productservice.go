@@ -249,6 +249,12 @@ type NeuronScanResult struct {
 	Error   string              `json:"error,omitempty"` // soft error — caller checks, not throws
 }
 
+type NeuronFileContents struct {
+	BuildFiles []CodeblockFileItem `json:"buildFiles"`
+	InfraFiles []CodeblockFileItem `json:"infraFiles"`
+	ProtoFiles []CodeblockFileItem `json:"protoFiles"`
+}
+
 type BootstrapBlockParams struct {
 	BlockID     string              `json:"blockId"`
 	DisplayName string              `json:"displayName"`
@@ -2841,50 +2847,49 @@ func (s *ProductService) ScanNeuronFiles(neuronPackage string) (*NeuronScanResul
 	return &NeuronScanResult{Package: neuronPackage, Files: files}, nil
 }
 
-func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([]byte, error) {
-	versionRoot, err := neuronVersionRoot(p.Package)
+// ReadNeuronFileContents reads the content of the given selected files off disk for a neuron
+// package, without publishing anything. Used to materialize file content for preview/diffing
+// before a codeblock Update is published.
+func (s *ProductService) ReadNeuronFileContents(neuronPackage string, files []ScannedNeuronFile) (*NeuronFileContents, error) {
+	build, infra, proto, err := readSelectedNeuronFiles(neuronPackage, files)
 	if err != nil {
 		return nil, err
 	}
-	defineRoot, err := neuronDefineRoot(p.Package)
+	return &NeuronFileContents{BuildFiles: build, InfraFiles: infra, ProtoFiles: proto}, nil
+}
+
+// readSelectedNeuronFiles reads the selected build/infra/proto files for a neuron package
+// off disk, categorizing each by its repo of origin (build/define repo, infra subfolder).
+// Paths that escape their repo root are silently skipped.
+func readSelectedNeuronFiles(pkg string, files []ScannedNeuronFile) (build, infra, proto []CodeblockFileItem, err error) {
+	versionRoot, err := neuronVersionRoot(pkg)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
+	}
+	defineRoot, err := neuronDefineRoot(pkg)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 	infraDir := filepath.Join(versionRoot, "infra")
 	buildPrefix := filepath.Clean(versionRoot) + string(filepath.Separator)
 	infraPrefix := filepath.Clean(infraDir) + string(filepath.Separator)
 	definePrefix := filepath.Clean(defineRoot) + string(filepath.Separator)
 
-	marshalFile := func(relPath string, content []byte) []byte {
-		var f []byte
-		f = protowire.AppendTag(f, 1, protowire.BytesType)
-		f = protowire.AppendString(f, relPath)
-		f = protowire.AppendTag(f, 2, protowire.BytesType)
-		f = protowire.AppendBytes(f, content)
-		return f
-	}
-
-	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
-	var content []byte
-	for _, file := range p.Files {
+	for _, file := range files {
 		if !file.Selected {
 			continue
 		}
 		var absPath, containmentPrefix string
-		var fieldNum protowire.Number
 		switch file.Category {
 		case "build":
 			absPath = filepath.Join(versionRoot, file.Path)
 			containmentPrefix = buildPrefix
-			fieldNum = 1
 		case "infra":
 			absPath = filepath.Join(infraDir, file.Path)
 			containmentPrefix = infraPrefix
-			fieldNum = 2
 		case "proto":
 			absPath = filepath.Join(defineRoot, file.Path)
 			containmentPrefix = definePrefix
-			fieldNum = 3
 		default:
 			continue
 		}
@@ -2893,11 +2898,49 @@ func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([
 		}
 		data, err := os.ReadFile(absPath)
 		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", file.Path, err)
+			return nil, nil, nil, fmt.Errorf("read %s: %w", file.Path, err)
 		}
-		fileBytes := marshalFile(file.Path, data)
-		content = protowire.AppendTag(content, fieldNum, protowire.BytesType)
-		content = protowire.AppendBytes(content, fileBytes)
+		item := CodeblockFileItem{Name: file.Path, Content: string(data)}
+		switch file.Category {
+		case "build":
+			build = append(build, item)
+		case "infra":
+			infra = append(infra, item)
+		case "proto":
+			proto = append(proto, item)
+		}
+	}
+	return build, infra, proto, nil
+}
+
+func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([]byte, error) {
+	build, infra, proto, err := readSelectedNeuronFiles(p.Package, p.Files)
+	if err != nil {
+		return nil, err
+	}
+
+	marshalFile := func(f CodeblockFileItem) []byte {
+		var b []byte
+		b = protowire.AppendTag(b, 1, protowire.BytesType)
+		b = protowire.AppendString(b, f.Name)
+		b = protowire.AppendTag(b, 2, protowire.BytesType)
+		b = protowire.AppendBytes(b, []byte(f.Content))
+		return b
+	}
+
+	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
+	var content []byte
+	for _, f := range build {
+		content = protowire.AppendTag(content, 1, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
+	}
+	for _, f := range infra {
+		content = protowire.AppendTag(content, 2, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
+	}
+	for _, f := range proto {
+		content = protowire.AppendTag(content, 3, protowire.BytesType)
+		content = protowire.AppendBytes(content, marshalFile(f))
 	}
 
 	// Publisher sub-message: f1=account
