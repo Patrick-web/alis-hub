@@ -120,14 +120,16 @@ type WorkflowService struct {
 	buildService  *BuildService
 	gitService    *GitService
 	deployService *DeployService
+	defineService *DefineService
 	activeRuns    sync.Map // runId → *activeRun
 }
 
-func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService) *WorkflowService {
+func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService, def *DefineService) *WorkflowService {
 	return &WorkflowService{
 		buildService:  bs,
 		gitService:    gs,
 		deployService: ds,
+		defineService: def,
 	}
 }
 
@@ -758,8 +760,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 			return fmt.Errorf("define step: neuron param is required")
 		}
 		stepVars["last_define_neuron"] = neuron
-		stepVars["last_define_workdir"] = str("workdir")
-		return s.runShell(ctx, "alis define "+neuron, str("workdir"), w)
+		return s.executeDefine(ctx, neuron, str("commit"), w)
 
 	case "build-cloud":
 		neuron := str("neuron")
@@ -922,6 +923,47 @@ func parseNeuronResource(name string) (org, product, neuronID, version string) {
 		neuronID, version = raw, "v1"
 	}
 	return
+}
+
+func (s *WorkflowService) executeDefine(ctx context.Context, neuron, commit string, w io.Writer) error {
+	if commit == "" {
+		org, product, neuronID, version := parseNeuronResource(neuron)
+		commits, err := s.defineService.GetDefineCommits(org, product, neuronID, version, 1)
+		if err != nil || len(commits) == 0 {
+			return fmt.Errorf("resolve latest define commit: %w", err)
+		}
+		commit = commits[0].SHA
+		fmt.Fprintf(w, "Resolved latest commit: %s\n", commit[:min(8, len(commit))])
+	}
+	fmt.Fprintf(w, "Starting define: %s\n", neuron)
+	result, err := s.defineService.RunDefine(neuron, commit, "")
+	if err != nil {
+		return fmt.Errorf("start define: %w", err)
+	}
+	if result.Error != "" {
+		return fmt.Errorf("define: %s", result.Error)
+	}
+	fmt.Fprintf(w, "Operation: %s\n", result.OperationName)
+	for !result.Done {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(3 * time.Second):
+		}
+		result, err = s.defineService.PollDefineOperation(result.OperationName)
+		if err != nil {
+			return fmt.Errorf("poll define: %w", err)
+		}
+		if result.Error != "" {
+			return fmt.Errorf("define failed: %s", result.Error)
+		}
+	}
+	if result.Version != "" {
+		fmt.Fprintf(w, "Define complete. Version: %s\n", result.Version)
+	} else {
+		fmt.Fprintf(w, "Define complete.\n")
+	}
+	return nil
 }
 
 func (s *WorkflowService) executeBuildCloud(ctx context.Context, neuron, commit string, w io.Writer) (string, error) {

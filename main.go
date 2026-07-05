@@ -44,7 +44,8 @@ func main() {
 	localAISvc := NewLocalAIService()
 	buildSvc := NewBuildService()
 	deploySvc := NewDeployService()
-	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc)
+	defineSvc := NewDefineService()
+	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc, defineSvc)
 	if err := workflowSvc.Open(); err != nil {
 		log.Fatal("workflow db:", err)
 	}
@@ -56,7 +57,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
-			application.NewService(NewDefineService()),
+			application.NewService(defineSvc),
 			application.NewService(buildSvc),
 			application.NewService(deploySvc),
 			application.NewService(productSvc),
