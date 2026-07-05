@@ -133,6 +133,7 @@ export {
     UpsertWorkflowParams,
     UserProfile,
     Workflow,
+    WorkflowArg,
     WorkflowRun,
     WorkflowStep,
     WorkspaceInfo

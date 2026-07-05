@@ -3777,7 +3777,7 @@ export class UpsertWorkflowParams {
      */
     static createFrom($$source: any = {}): UpsertWorkflowParams {
         const $$createField2_0 = $$createType55;
-        const $$createField3_0 = $$createType59;
+        const $$createField3_0 = $$createType57;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField2_0($$parsedSource["steps"]);
@@ -3815,31 +3815,6 @@ export class UserProfile {
     static createFrom($$source: any = {}): UserProfile {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new UserProfile($$parsedSource as Partial<UserProfile>);
-    }
-}
-
-export class WorkflowArg {
-    "key": string;
-    "label": string;
-
-    /** Creates a new WorkflowArg instance. */
-    constructor($$source: Partial<WorkflowArg> = {}) {
-        if (!("key" in $$source)) {
-            this["key"] = "";
-        }
-        if (!("label" in $$source)) {
-            this["label"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new WorkflowArg instance from a string or object.
-     */
-    static createFrom($$source: any = {}): WorkflowArg {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new WorkflowArg($$parsedSource as Partial<WorkflowArg>);
     }
 }
 
@@ -3887,8 +3862,8 @@ export class Workflow {
      * Creates a new Workflow instance from a string or object.
      */
     static createFrom($$source: any = {}): Workflow {
-        const $$createField6_0 = $$createType57;
-        const $$createField7_0 = $$createType59;
+        const $$createField6_0 = $$createType59;
+        const $$createField7_0 = $$createType57;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField6_0($$parsedSource["steps"]);
@@ -3897,6 +3872,31 @@ export class Workflow {
             $$parsedSource["args"] = $$createField7_0($$parsedSource["args"]);
         }
         return new Workflow($$parsedSource as Partial<Workflow>);
+    }
+}
+
+export class WorkflowArg {
+    "key": string;
+    "label": string;
+
+    /** Creates a new WorkflowArg instance. */
+    constructor($$source: Partial<WorkflowArg> = {}) {
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("label" in $$source)) {
+            this["label"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WorkflowArg instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WorkflowArg {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WorkflowArg($$parsedSource as Partial<WorkflowArg>);
     }
 }
 
@@ -4112,7 +4112,7 @@ const $$createType52 = $Create.Array($$createType51);
 const $$createType53 = $Create.Array($$createType4);
 const $$createType54 = UpsertStepParams.createFrom;
 const $$createType55 = $Create.Array($$createType54);
-const $$createType56 = WorkflowStep.createFrom;
+const $$createType56 = WorkflowArg.createFrom;
 const $$createType57 = $Create.Array($$createType56);
-const $$createType58 = WorkflowArg.createFrom;
+const $$createType58 = WorkflowStep.createFrom;
 const $$createType59 = $Create.Array($$createType58);
