@@ -36,7 +36,21 @@ function StatusDot({ status }: { status: string }): ReactNode {
 
 export function DevelopTaskPanel() {
   const { tabs, activeTabId, closeTab, closeMultiple, activateTab } = useDevelopTabs();
-  const { state: notifState } = useNotifications();
+  const { state: notifState, dismiss } = useNotifications();
+
+  function handleCloseTab(id: string) {
+    const tab = tabs.find(t => t.id === id);
+    closeTab(id);
+    if (tab?.notificationId) dismiss(tab.notificationId);
+  }
+
+  function handleCloseMultiple(ids: string[]) {
+    const notifIds = tabs
+      .filter(t => ids.includes(t.id) && t.notificationId)
+      .map(t => t.notificationId!);
+    closeMultiple(ids);
+    notifIds.forEach(dismiss);
+  }
 
   const [paneWidth, setPaneWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);
@@ -107,8 +121,8 @@ export function DevelopTaskPanel() {
         }))}
         activeId={activeTabId ?? ''}
         onActivate={activateTab}
-        onClose={closeTab}
-        onCloseMultiple={closeMultiple}
+        onClose={handleCloseTab}
+        onCloseMultiple={handleCloseMultiple}
         variant="filled"
         size="md"
       />
@@ -124,7 +138,7 @@ export function DevelopTaskPanel() {
               <p className="text-[13px] font-bold text-foreground font-mono truncate">{tab.neuron}</p>
             </div>
             <button
-              onClick={() => closeTab(tab.id)}
+              onClick={() => handleCloseTab(tab.id)}
               className="size-[24px] flex items-center justify-center rounded-[3px] text-foreground/40 hover:text-foreground hover:bg-accent transition-colors"
             >
               <Icon icon="solar:close-circle-linear" className="text-sm" />

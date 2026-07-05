@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { useNotifications } from '../stores/notifications';
-import type { TaskType } from '../stores/notifications';
+import type { TaskType, TaskStatus } from '../stores/notifications';
 import { NotificationCenter } from './NotificationCenter';
+import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
 
 const TASK_ICON: Record<TaskType, string> = {
   define: 'solar:magic-stick-linear',
@@ -17,6 +18,12 @@ const TASK_LABEL: Record<TaskType, string> = {
   build: 'Build',
   deploy: 'Deploy',
   packages: 'Packages',
+};
+
+const STATUS_LABEL: Record<TaskStatus, string> = {
+  running: 'Running',
+  done: 'Done',
+  error: 'Failed',
 };
 
 function formatElapsed(startedAt: number): string {
@@ -60,49 +67,65 @@ export function StatusStrip() {
           const isRunning = task.status === 'running';
           const isDone = task.status === 'done';
           return (
-            <div
-              key={n.id}
-              className="flex items-center gap-[5px] pl-[7px] pr-[4px] h-[22px] rounded-[3px] border border-border bg-muted shrink-0 group/chip"
-            >
-              {/* Status indicator */}
-              {isRunning ? (
-                <span className="w-[5px] h-[5px] rounded-full bg-brand animate-pulse shrink-0" />
-              ) : isDone ? (
-                <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400 shrink-0" />
-              ) : (
-                <Icon icon="solar:close-circle-bold" className="text-[10px] text-red-400 shrink-0" />
-              )}
+            <HoverCard key={n.id} openDelay={300}>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center gap-[5px] pl-[7px] pr-[4px] h-[22px] rounded-[3px] border border-border bg-muted shrink-0 group/chip">
+                  {/* Status indicator */}
+                  {isRunning ? (
+                    <span className="w-[5px] h-[5px] rounded-full bg-brand animate-pulse shrink-0" />
+                  ) : isDone ? (
+                    <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400 shrink-0" />
+                  ) : (
+                    <Icon icon="solar:close-circle-bold" className="text-[10px] text-red-400 shrink-0" />
+                  )}
 
-              {/* Clickable label area */}
-              <button
-                onClick={() => handleChipClick(n.id)}
-                className="flex items-center gap-[4px] focus:outline-none"
-              >
-                <Icon
-                  icon={TASK_ICON[task.type]}
-                  className="text-[10px] text-foreground/40 shrink-0"
-                />
-                <span className="text-[9px] font-mono text-foreground/70 truncate max-w-[120px]">
-                  {n.body || TASK_LABEL[task.type]}
-                </span>
-                {isRunning && (
-                  <span className="text-[9px] font-mono text-foreground/30 shrink-0">
-                    {/* tick is used to re-render elapsed time */}
-                    {formatElapsed(task.startedAt)}
-                    {tick > -1 ? '' : ''}
-                  </span>
+                  {/* Clickable label area */}
+                  <button
+                    onClick={() => handleChipClick(n.id)}
+                    className="flex items-center gap-[4px] focus:outline-none"
+                  >
+                    <Icon
+                      icon={TASK_ICON[task.type]}
+                      className="text-[10px] text-foreground/40 shrink-0"
+                    />
+                    <span className="text-[9px] font-mono text-foreground/70 truncate max-w-[120px]">
+                      {n.body || TASK_LABEL[task.type]}
+                    </span>
+                    {isRunning && (
+                      <span className="text-[9px] font-mono text-foreground/30 shrink-0">
+                        {/* tick is used to re-render elapsed time */}
+                        {formatElapsed(task.startedAt)}
+                        {tick > -1 ? '' : ''}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dismiss */}
+                  <button
+                    onClick={() => dismiss(n.id)}
+                    className="w-[14px] h-[14px] flex items-center justify-center rounded-[2px] text-foreground/20 hover:text-foreground hover:bg-accent transition-colors shrink-0 opacity-0 group-hover/chip:opacity-100"
+                    title="Dismiss"
+                  >
+                    <Icon icon="solar:close-circle-linear" className="text-[9px]" />
+                  </button>
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent side="top" align="start" className="w-72 font-mono text-[11px] space-y-1.5">
+                <p className="font-bold text-foreground flex items-center gap-[6px]">
+                  <Icon icon={TASK_ICON[task.type]} className="text-[11px] text-foreground/50 shrink-0" />
+                  {TASK_LABEL[task.type]} · {task.neuronId}
+                </p>
+                <p className="text-foreground/60 truncate">{task.step || n.body}</p>
+                <p className="text-foreground/40">
+                  {isRunning ? `Running · ${formatElapsed(task.startedAt)}` : STATUS_LABEL[task.status]}
+                </p>
+                {task.logBuffer.length > 0 && (
+                  <pre className="max-h-24 overflow-y-auto whitespace-pre-wrap break-all text-[10px] text-foreground/50 bg-muted rounded-[3px] p-[6px]">
+                    {task.logBuffer.slice(-5).join('\n')}
+                  </pre>
                 )}
-              </button>
-
-              {/* Dismiss */}
-              <button
-                onClick={() => dismiss(n.id)}
-                className="w-[14px] h-[14px] flex items-center justify-center rounded-[2px] text-foreground/20 hover:text-foreground hover:bg-accent transition-colors shrink-0 opacity-0 group-hover/chip:opacity-100"
-                title="Dismiss"
-              >
-                <Icon icon="solar:close-circle-linear" className="text-[9px]" />
-              </button>
-            </div>
+              </HoverCardContent>
+            </HoverCard>
           );
         })}
       </div>
