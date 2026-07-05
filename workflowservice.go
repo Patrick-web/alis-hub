@@ -757,6 +757,8 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if neuron == "" {
 			return fmt.Errorf("define step: neuron param is required")
 		}
+		stepVars["last_define_neuron"] = neuron
+		stepVars["last_define_workdir"] = str("workdir")
 		return s.runShell(ctx, "alis define "+neuron, str("workdir"), w)
 
 	case "build-cloud":
@@ -764,11 +766,38 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if neuron == "" {
 			return fmt.Errorf("build-cloud step: neuron param is required")
 		}
+		stepVars["last_build_neuron"] = neuron
 		builtVersion, err := s.executeBuildCloud(ctx, neuron, str("commit"), w)
 		if err == nil && builtVersion != "" {
 			stepVars["last_build_version"] = builtVersion
 		}
 		return err
+
+	case "upgrade-packages":
+		var neurons []string
+		if ns, ok := params["neurons"].([]interface{}); ok {
+			for _, n := range ns {
+				if nv, ok := n.(string); ok && nv != "" {
+					neurons = append(neurons, nv)
+				}
+			}
+		}
+		if len(neurons) == 0 {
+			return fmt.Errorf("upgrade-packages step: no neurons specified")
+		}
+		repoPath := str("repoPath")
+		if repoPath == "" {
+			repoPath = stepVars["last_upgrade_repo"]
+		}
+		for _, neuron := range neurons {
+			fmt.Fprintf(w, "━━ Upgrading packages for %s\n", neuron)
+			if err := s.runShell(ctx, "alis upgrade packages "+neuron, repoPath, w); err != nil {
+				return err
+			}
+		}
+		stepVars["last_upgrade_repo"] = repoPath
+		stepVars["upgraded_neurons"] = strings.Join(neurons, ", ")
+		return nil
 
 	case "deploy":
 		neuron := str("neuron")
@@ -791,12 +820,18 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	case "git-stage-all":
 		repoPath := str("repoPath")
+		if repoPath == "" {
+			repoPath = stepVars["last_upgrade_repo"]
+		}
 		fmt.Fprintf(w, "Staging all changes in %s\n", repoPath)
 		return s.gitService.StageAll(repoPath)
 
 	case "git-commit":
 		repoPath := str("repoPath")
-		message := str("message")
+		if repoPath == "" {
+			repoPath = stepVars["last_upgrade_repo"]
+		}
+		message := expandVars(str("message"), stepVars)
 		if message == "" {
 			return fmt.Errorf("git-commit step: message param is required")
 		}
@@ -805,6 +840,9 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	case "git-push":
 		repoPath := str("repoPath")
+		if repoPath == "" {
+			repoPath = stepVars["last_upgrade_repo"]
+		}
 		fmt.Fprintf(w, "Pushing to origin...\n")
 		result := s.gitService.PushOrigin(repoPath)
 		if result.Kind == "error" || result.Kind == "push_rejected" {
@@ -817,6 +855,9 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	case "git-pull":
 		repoPath := str("repoPath")
+		if repoPath == "" {
+			repoPath = stepVars["last_upgrade_repo"]
+		}
 		fmt.Fprintf(w, "Pulling from origin...\n")
 		result := s.gitService.PullOrigin(repoPath)
 		if result.Kind == "error" {
@@ -978,6 +1019,13 @@ func (s *WorkflowService) executeDeploy(ctx context.Context, neuron, version str
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+func expandVars(tmpl string, vars map[string]string) string {
+	for k, v := range vars {
+		tmpl = strings.ReplaceAll(tmpl, "{{"+k+"}}", v)
+	}
+	return tmpl
+}
+
 func stepLabel(step WorkflowStep) string {
 	var params map[string]interface{}
 	_ = json.Unmarshal([]byte(step.Params), &params)
@@ -1005,6 +1053,11 @@ func stepLabel(step WorkflowStep) string {
 			return "Deploy: " + n
 		}
 		return "Deploy"
+	case "upgrade-packages":
+		if ns, ok := params["neurons"].([]interface{}); ok && len(ns) > 0 {
+			return fmt.Sprintf("Upgrade Packages (%d)", len(ns))
+		}
+		return "Upgrade Packages"
 	case "git-stage-all":
 		return "Git: Stage All"
 	case "git-commit":

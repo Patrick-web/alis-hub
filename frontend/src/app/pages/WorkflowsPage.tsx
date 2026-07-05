@@ -37,13 +37,14 @@ type StepType = {
   color: string;
   defaultParams: object;
   fields: StepField[];
-  summary: (params: Record<string, string>) => string;
+  summary: (params: Record<string, any>) => string;
+  computeDefaults?: (priorSteps: WorkflowStep[]) => Partial<Record<string, any>>;
 };
 
 type StepField = {
   key: string;
   label: string;
-  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'commit' | 'env-multi';
+  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'env-multi';
   placeholder?: string;
   options?: string[];
 };
@@ -65,6 +66,33 @@ type RunLogChunk = {
   nextOffset: number;
   done: boolean;
 };
+
+// ─── Step type helpers ────────────────────────────────────────────────────────
+
+function lastParamFrom(steps: WorkflowStep[], types: string[], key: string): string {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (types.includes(steps[i].type)) {
+      try {
+        const p = JSON.parse(steps[i].params || '{}');
+        if (p[key]) return p[key];
+      } catch { /**/ }
+    }
+  }
+  return '';
+}
+
+function lastNeuronsFrom(steps: WorkflowStep[], types: string[]): string[] {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (types.includes(steps[i].type)) {
+      try {
+        const p = JSON.parse(steps[i].params || '{}');
+        if (p.neuron) return [p.neuron];
+        if (Array.isArray(p.neurons) && p.neurons.length > 0) return p.neurons;
+      } catch { /**/ }
+    }
+  }
+  return [];
+}
 
 // ─── Step type definitions ────────────────────────────────────────────────────
 
@@ -104,6 +132,20 @@ const STEP_TYPES: StepType[] = [
       { key: 'environments', label: 'Environments', type: 'env-multi' },
     ],
     summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
+    computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['build-cloud'], 'neuron') }),
+  },
+  {
+    id: 'upgrade-packages',
+    label: 'Upgrade Packages',
+    icon: 'solar:refresh-circle-linear',
+    color: 'text-cyan-400',
+    defaultParams: { neurons: [], repoPath: '' },
+    fields: [
+      { key: 'neurons', label: 'Neurons', type: 'neuron-multi' },
+      { key: 'repoPath', label: 'Build repo path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+    ],
+    summary: (p) => Array.isArray(p.neurons) && p.neurons.length > 0 ? `${p.neurons.length} neuron(s)` : 'No neurons set',
+    computeDefaults: (priorSteps) => ({ neurons: lastNeuronsFrom(priorSteps, ['build-cloud', 'define']) }),
   },
   {
     id: 'git-stage-all',
@@ -112,9 +154,10 @@ const STEP_TYPES: StepType[] = [
     color: 'text-green-400',
     defaultParams: { repoPath: '' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/define/product' },
+      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
+    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages'], 'repoPath') }),
   },
   {
     id: 'git-commit',
@@ -123,10 +166,15 @@ const STEP_TYPES: StepType[] = [
     color: 'text-green-400',
     defaultParams: { repoPath: '', message: '' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/define/product' },
-      { key: 'message', label: 'Commit message', type: 'text', placeholder: 'chore: update definitions' },
+      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'message', label: 'Commit message', type: 'text', placeholder: 'chore: update' },
     ],
     summary: (p) => p.message || 'No message set',
+    computeDefaults: (priorSteps) => {
+      const repoPath = lastParamFrom(priorSteps, ['upgrade-packages'], 'repoPath');
+      const hasUpgrade = priorSteps.some((s) => s.type === 'upgrade-packages');
+      return { repoPath, ...(hasUpgrade ? { message: 'chore: upgrade packages' } : {}) };
+    },
   },
   {
     id: 'git-push',
@@ -135,9 +183,10 @@ const STEP_TYPES: StepType[] = [
     color: 'text-green-400',
     defaultParams: { repoPath: '' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/define/product' },
+      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
+    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages', 'git-stage-all', 'git-commit'], 'repoPath') }),
   },
   {
     id: 'git-pull',
@@ -146,9 +195,10 @@ const STEP_TYPES: StepType[] = [
     color: 'text-green-400',
     defaultParams: { repoPath: '' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/define/product' },
+      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
+    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages', 'git-stage-all', 'git-commit'], 'repoPath') }),
   },
   {
     id: 'shell',
@@ -462,12 +512,13 @@ export function WorkflowsPage() {
 
   const addStep = (typeId: string) => {
     const type = getStepType(typeId);
+    const smartParams = { ...type.defaultParams, ...(type.computeDefaults?.(editedWorkflow!.steps) ?? {}) };
     const newStep: WorkflowStep = {
       id: uid(),
       workflowId: editedWorkflow!.id,
       position: editedWorkflow!.steps.length,
       type: typeId,
-      params: JSON.stringify(type.defaultParams),
+      params: JSON.stringify(smartParams),
       onFailure: 'stop',
     };
     const newId = newStep.id;
@@ -1096,6 +1147,48 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                       <NeuronPickerModal
                         format={f.type === 'neuron' ? 'short' : 'full'}
                         onSelect={(val) => { onParamChange(f.key, val); setNeuronPickerKey(null); }}
+                        onClose={() => setNeuronPickerKey(null)}
+                      />
+                    )}
+                  </>
+                ) : f.type === 'neuron-multi' ? (
+                  <>
+                    <div className="space-y-1.5 mb-2">
+                      {(Array.isArray(params[f.key]) ? params[f.key] : []).map((n: string, i: number) => (
+                        <div key={i} className="flex items-center gap-2 bg-background border border-border rounded-md px-2.5 py-1.5">
+                          <span className="flex-1 text-xs font-mono truncate text-foreground">{n.split('/').pop()}</span>
+                          {!isTemplate && (
+                            <button
+                              onClick={() => {
+                                const arr = [...params[f.key]];
+                                arr.splice(i, 1);
+                                onParamChange(f.key, arr);
+                              }}
+                              className="text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
+                            >
+                              <Icon icon="solar:close-circle-linear" className="text-sm" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {!isTemplate && (
+                      <button
+                        onClick={() => setNeuronPickerKey(f.key)}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-border rounded-md text-xs text-foreground/40 hover:text-brand hover:border-brand transition-colors"
+                      >
+                        <Icon icon="solar:add-circle-linear" className="text-sm" />
+                        Add neuron
+                      </button>
+                    )}
+                    {neuronPickerKey === f.key && (
+                      <NeuronPickerModal
+                        format="full"
+                        onSelect={(val) => {
+                          const current = Array.isArray(params[f.key]) ? params[f.key] : [];
+                          onParamChange(f.key, [...current, val]);
+                          setNeuronPickerKey(null);
+                        }}
                         onClose={() => setNeuronPickerKey(null)}
                       />
                     )}
