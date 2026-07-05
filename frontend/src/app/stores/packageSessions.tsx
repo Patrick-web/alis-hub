@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type { TerminalSession, PackageTerminalPaneHandle } from '../components/PackageTerminalPane';
 import { useNotifications } from './notifications';
+import { completeTaskNotification } from '../lib/taskNotify';
 import { useLabs } from './labs';
 import { useSuggestions } from './suggestions';
 import { useLocalAI } from './localai';
@@ -112,10 +113,12 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
     const allDone = sessions.every(s => s.done || s.error);
     if (!allDone) return;
     const hasErrors = sessions.some(s => s.error);
-    updateNotification(taskIdRef.current, {
+    completeTaskNotification(updateNotification, {
+      id: taskIdRef.current,
       severity: hasErrors ? 'error' : 'success',
       title: hasErrors ? 'Packages failed' : 'Packages complete',
-      task: { status: hasErrors ? 'error' : 'done' },
+      body: sessions.map(s => s.title).join(', '),
+      taskStatus: hasErrors ? 'error' : 'done',
     });
     if (!hasErrors && isSuggestionEnabled('build-success-deploy')) {
       addSuggestion({

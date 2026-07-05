@@ -11,6 +11,7 @@ import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
 import type { DeployEnv, DeployStep, EnvRunState } from './types';
 import { isAuthError, formatRelativeTime } from './types';
+import { completeTaskNotification } from '../../lib/taskNotify';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 
@@ -239,10 +240,10 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       taskIdRef.current = null;
       const hasError = envRuns.some(r => r.error);
       if (hasError) {
-        updateNotification(doneId, { severity: 'error', title: 'Deploy failed', task: { status: 'error', step: 'result' } });
+        completeTaskNotification(updateNotification, { id: doneId, severity: 'error', title: 'Deploy failed', taskStatus: 'error', taskPatch: { step: 'result' } });
       } else {
-        updateNotification(doneId, {
-          severity: 'success', title: 'Deploy complete', task: { status: 'done', step: 'result' },
+        completeTaskNotification(updateNotification, {
+          id: doneId, severity: 'success', title: 'Deploy complete', body: neuron, taskStatus: 'done', taskPatch: { step: 'result' },
           actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
         });
       }

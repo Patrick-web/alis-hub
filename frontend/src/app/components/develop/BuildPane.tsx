@@ -12,8 +12,7 @@ import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
 import type { DefineCommit, BuildResult, BuildStep, BuildMode, DeployEnv, EnvRunState } from './types';
 import { parseNeuron, formatTimestamp } from './types';
-import { notify } from '../../lib/notify';
-import { systemNotify } from '../../lib/systemNotify';
+import { completeTaskNotification } from '../../lib/taskNotify';
 import * as BuildService from '../../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
@@ -188,9 +187,10 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         const result = await BuildService.StartLocalBuild(neuronResource, selectedCommit.sha);
         if (result) setLocalBuildId(result.buildId);
       } catch (e: any) {
+        const errMsg = e?.message || 'Failed to start local build';
         setStep('result');
-        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: e?.message || 'Failed to start local build' });
-        updateNotification(taskId, { severity: 'error', title: 'Local build failed', task: { status: 'error', step: 'result' } });
+        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg });
+        completeTaskNotification(updateNotification, { id: taskId, severity: 'error', title: 'Local build failed', body: errMsg, taskStatus: 'error', taskPatch: { step: 'result' } });
         taskIdRef.current = null;
       }
       return;
@@ -217,7 +217,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       setStep('result');
       setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg });
       termRef.current?.write(`\r\n\x1b[31mBuild failed: ${errMsg}\x1b[0m\r\n`);
-      updateNotification(taskId, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
+      completeTaskNotification(updateNotification, { id: taskId, severity: 'error', title: 'Build failed', body: errMsg, taskStatus: 'error', taskPatch: { step: 'result' } });
       taskIdRef.current = null;
     }
   }
@@ -280,23 +280,17 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
               const version = result.neuronVersion || result.version;
               const body = version ? `${neuron} · ${version}` : neuron;
               if (taskIdRef.current) {
-                updateNotification(taskIdRef.current, {
-                  severity: 'success', title: 'Build complete', body,
-                  task: { status: 'done', step: 'result' },
+                completeTaskNotification(updateNotification, {
+                  id: taskIdRef.current, severity: 'success', title: 'Build complete', body, taskStatus: 'done', taskPatch: { step: 'result' },
                   actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } }],
                 });
                 taskIdRef.current = null;
               }
-              notify.success('Build complete', {
-                description: body,
-                action: { label: 'Deploy', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } },
-              });
-              systemNotify('Build complete', body);
             }
           } else {
             setStep('result');
             if (taskIdRef.current) {
-              updateNotification(taskIdRef.current, { severity: 'error', title: 'Build failed', task: { status: 'error', step: 'result' } });
+              completeTaskNotification(updateNotification, { id: taskIdRef.current, severity: 'error', title: 'Build failed', body: result.error, taskStatus: 'error', taskPatch: { step: 'result' } });
               taskIdRef.current = null;
             }
           }
@@ -348,20 +342,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: chunk.error || undefined });
           if (!chunk.error) {
             if (taskIdRef.current) {
-              updateNotification(taskIdRef.current, {
-                severity: 'success', title: 'Local build complete',
-                task: { status: 'done', step: 'result' },
+              completeTaskNotification(updateNotification, {
+                id: taskIdRef.current, severity: 'success', title: 'Local build complete', body: neuron, taskStatus: 'done', taskPatch: { step: 'result' },
                 actions: [{ label: 'Deploy', variant: 'primary', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } }],
               });
               taskIdRef.current = null;
             }
-            notify.success('Local build complete', {
-              description: neuron,
-              action: { label: 'Deploy', onClick: () => { openTab('deploy', neuron); navigate('/develop'); } },
-            });
-            systemNotify('Local build complete', neuron);
           } else if (taskIdRef.current) {
-            updateNotification(taskIdRef.current, { severity: 'error', title: 'Local build failed', task: { status: 'error', step: 'result' } });
+            completeTaskNotification(updateNotification, { id: taskIdRef.current, severity: 'error', title: 'Local build failed', body: chunk.error, taskStatus: 'error', taskPatch: { step: 'result' } });
             taskIdRef.current = null;
           }
         }
@@ -451,9 +439,11 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       const doneId = taskIdRef.current;
       taskIdRef.current = null;
       const hasError = deployRuns.some(r => r.error);
-      updateNotification(doneId, hasError
-        ? { severity: 'error', title: 'Build & Deploy failed', task: { status: 'error', step: 'result' } }
-        : { severity: 'success', title: 'Build & Deploy complete', body: neuron, task: { status: 'done', step: 'result' } });
+      if (hasError) {
+        completeTaskNotification(updateNotification, { id: doneId, severity: 'error', title: 'Build & Deploy failed', taskStatus: 'error', taskPatch: { step: 'result' } });
+      } else {
+        completeTaskNotification(updateNotification, { id: doneId, severity: 'success', title: 'Build & Deploy complete', body: neuron, taskStatus: 'done', taskPatch: { step: 'result' } });
+      }
     }
   }, [deployRuns, step, buildPhase]);
 
