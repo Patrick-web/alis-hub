@@ -65,8 +65,8 @@ export function PollRunLogs(runID: string, offset: number): $CancellablePromise<
     });
 }
 
-export function RunWorkflow(id: string): $CancellablePromise<string> {
-    return $Call.ByID(45429760, id);
+export function RunWorkflow(id: string, argValues: Record<string, string>): $CancellablePromise<string> {
+    return $Call.ByID(45429760, id, argValues);
 }
 
 export function StopRun(runID: string): $CancellablePromise<void> {

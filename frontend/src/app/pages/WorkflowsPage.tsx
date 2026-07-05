@@ -11,6 +11,11 @@ import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type WorkflowArg = {
+  key: string;
+  label: string;
+};
+
 type Workflow = {
   id: string;
   name: string;
@@ -19,6 +24,7 @@ type Workflow = {
   createdAt: number;
   updatedAt: number;
   steps: WorkflowStep[];
+  args: WorkflowArg[];
 };
 
 type WorkflowStep = {
@@ -307,6 +313,9 @@ export function WorkflowsPage() {
   const [runError, setRunError] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
 
+  const [runArgsOpen, setRunArgsOpen] = useState(false);
+  const [runArgValues, setRunArgValues] = useState<Record<string, string>>({});
+
   const runOffsetRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentStepRunIdRef = useRef<string | null>(null);
@@ -430,7 +439,7 @@ export function WorkflowsPage() {
 
   // ── Run actions ─────────────────────────────────────────────────────────────
 
-  const handleRun = async () => {
+  const startRun = async (argValues: Record<string, string>) => {
     stopPolling();
     setRunId(null); setStepRuns([]); setLogSegments({});
     setCollapsedSections({}); setRunDone(false); setRunFinalStatus('running');
@@ -438,11 +447,23 @@ export function WorkflowsPage() {
     runOffsetRef.current = 0; currentStepRunIdRef.current = null;
     setActiveTab('run');
     try {
-      const id = await WorkflowService.RunWorkflow(editedWorkflow!.id) as string;
+      const id = await WorkflowService.RunWorkflow(editedWorkflow!.id, argValues) as string;
       setRunId(id);
       pollRef.current = setInterval(() => pollRun(id), 500);
     } catch (e: any) {
       setRunError(e?.message ?? String(e));
+    }
+  };
+
+  const handleRun = () => {
+    const args = editedWorkflow?.args ?? [];
+    if (args.length === 0) {
+      startRun({});
+    } else {
+      const defaults: Record<string, string> = {};
+      for (const a of args) defaults[a.key] = '';
+      setRunArgValues(defaults);
+      setRunArgsOpen(true);
     }
   };
 
@@ -465,6 +486,7 @@ export function WorkflowsPage() {
       await WorkflowService.UpdateWorkflow(editedWorkflow.id, {
         name: editedWorkflow.name,
         description: editedWorkflow.description,
+        args: editedWorkflow.args ?? [],
         steps: editedWorkflow.steps.map((s, i) => ({
           id: s.id,
           type: s.type,
@@ -498,6 +520,7 @@ export function WorkflowsPage() {
       name: newName.trim(),
       description: newDesc.trim(),
       steps: [],
+      args: [],
     }) as Workflow;
     setNewName('');
     setNewDesc('');
@@ -535,6 +558,7 @@ export function WorkflowsPage() {
       const created = await WorkflowService.CreateWorkflow({
         name: data.name,
         description: data.description ?? '',
+        args: Array.isArray(data.args) ? data.args.filter((a: any) => a.key && a.label) : [],
         steps: (data.steps as any[]).map((s, i) => ({
           id: uid(),
           type: s.type ?? '',
@@ -811,6 +835,68 @@ export function WorkflowsPage() {
               )}
               <div className="flex-1 overflow-y-auto px-5 py-5">
                 <div className="max-w-[600px] mx-auto">
+                  {/* Inputs panel */}
+                  {!editedWorkflow.isTemplate && (
+                    <div className="mb-5 bg-card border border-border rounded-lg overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                        <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Inputs</span>
+                        <button
+                          onClick={() => setEditedWorkflow((wf) => wf ? {
+                            ...wf,
+                            args: [...(wf.args ?? []), { key: '', label: '' }],
+                          } : wf)}
+                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-foreground transition-colors"
+                          title="Add input"
+                        >
+                          <Icon icon="solar:add-circle-linear" className="text-xs" />
+                        </button>
+                      </div>
+                      {(editedWorkflow.args ?? []).length === 0 ? (
+                        <p className="px-3 py-2 text-[11px] text-foreground/30">
+                          No inputs. Add one to prompt for values at run time (e.g. target neuron).
+                        </p>
+                      ) : (
+                        <div className="px-3 py-2 flex flex-col gap-2">
+                          {(editedWorkflow.args ?? []).map((arg, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <Input
+                                value={arg.label}
+                                placeholder="Label (e.g. Target neuron)"
+                                className="flex-1 h-7 text-xs"
+                                onChange={(e) => {
+                                  const label = e.target.value;
+                                  const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+                                  setEditedWorkflow((wf) => {
+                                    if (!wf) return wf;
+                                    const args = [...(wf.args ?? [])];
+                                    args[i] = { key, label };
+                                    return { ...wf, args };
+                                  });
+                                }}
+                              />
+                              <span className="text-[10px] font-mono text-foreground/40 flex-shrink-0">
+                                {`{{${arg.key || '…'}}}`}
+                              </span>
+                              <button
+                                onClick={() => setEditedWorkflow((wf) => {
+                                  if (!wf) return wf;
+                                  const args = (wf.args ?? []).filter((_, j) => j !== i);
+                                  return { ...wf, args };
+                                })}
+                                className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-400/10 text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
+                              >
+                                <Icon icon="solar:close-circle-linear" className="text-xs" />
+                              </button>
+                            </div>
+                          ))}
+                          <p className="text-[10px] text-foreground/30">
+                            Use <span className="font-mono">{`{{key}}`}</span> in step fields to reference an input.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {editedWorkflow.steps.length === 0 && (
                     <div className="text-center py-10 text-foreground/30">
                       <Icon icon="solar:playlist-2-linear" className="text-3xl mx-auto mb-2 opacity-30" />
@@ -891,6 +977,47 @@ export function WorkflowsPage() {
           </>
         )}
       </div>
+
+      {/* Run args dialog */}
+      {runArgsOpen && editedWorkflow && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-card border border-border rounded-xl w-[380px] shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <h2 className="text-sm font-semibold">Run: {editedWorkflow.name}</h2>
+              <p className="text-xs text-foreground/40 mt-0.5">Fill in the inputs for this run.</p>
+            </div>
+            <div className="px-5 py-4 flex flex-col gap-3">
+              {(editedWorkflow.args ?? []).map((arg) => (
+                <div key={arg.key}>
+                  <label className="text-xs text-foreground/50 mb-1 block">{arg.label}</label>
+                  <Input
+                    value={runArgValues[arg.key] ?? ''}
+                    onChange={(e) => setRunArgValues((v) => ({ ...v, [arg.key]: e.target.value }))}
+                    placeholder={`{{${arg.key}}}`}
+                    autoFocus={arg === editedWorkflow.args[0]}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setRunArgsOpen(false);
+                        startRun(runArgValues);
+                      }
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setRunArgsOpen(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={() => { setRunArgsOpen(false); startRun(runArgValues); }}
+              >
+                <Icon icon="solar:play-linear" className="text-base" />
+                Run
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New workflow modal */}
       {showNewModal && (
