@@ -139,10 +139,10 @@ const STEP_TYPES: StepType[] = [
     label: 'Upgrade Packages',
     icon: 'solar:refresh-circle-linear',
     color: 'text-cyan-400',
-    defaultParams: { neurons: [], repoPath: '' },
+    defaultParams: { neurons: [], action: 'upgrade_defined' },
     fields: [
       { key: 'neurons', label: 'Neurons', type: 'neuron-multi' },
-      { key: 'repoPath', label: 'Build repo path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'action', label: 'Action', type: 'select', options: ['upgrade_defined', 'upgrade', 'install', 'add'] },
     ],
     summary: (p) => Array.isArray(p.neurons) && p.neurons.length > 0 ? `${p.neurons.length} neuron(s)` : 'No neurons set',
     computeDefaults: (priorSteps) => ({ neurons: lastNeuronsFrom(priorSteps, ['build-cloud', 'define']) }),
@@ -157,7 +157,6 @@ const STEP_TYPES: StepType[] = [
       { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
-    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages'], 'repoPath') }),
   },
   {
     id: 'git-commit',
@@ -171,9 +170,8 @@ const STEP_TYPES: StepType[] = [
     ],
     summary: (p) => p.message || 'No message set',
     computeDefaults: (priorSteps) => {
-      const repoPath = lastParamFrom(priorSteps, ['upgrade-packages'], 'repoPath');
       const hasUpgrade = priorSteps.some((s) => s.type === 'upgrade-packages');
-      return { repoPath, ...(hasUpgrade ? { message: 'chore: upgrade packages' } : {}) };
+      return hasUpgrade ? { message: 'chore: upgrade packages' } : {};
     },
   },
   {
@@ -186,7 +184,6 @@ const STEP_TYPES: StepType[] = [
       { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
-    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages', 'git-stage-all', 'git-commit'], 'repoPath') }),
   },
   {
     id: 'git-pull',
@@ -198,7 +195,6 @@ const STEP_TYPES: StepType[] = [
       { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
     ],
     summary: (p) => p.repoPath || 'No repo set',
-    computeDefaults: (priorSteps) => ({ repoPath: lastParamFrom(priorSteps, ['upgrade-packages', 'git-stage-all', 'git-commit'], 'repoPath') }),
   },
   {
     id: 'shell',
