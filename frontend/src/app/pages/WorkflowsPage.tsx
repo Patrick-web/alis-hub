@@ -1353,6 +1353,32 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
 
 // ─── LogLine ──────────────────────────────────────────────────────────────────
 
+type SubTab = { id: string; label: string; text: string };
+
+function parseSubTabs(logText: string): SubTab[] | null {
+  if (!logText.includes('\x1fTAB:')) return null;
+  const tabMap = new Map<string, SubTab>();
+  const tabOrder: string[] = [];
+  let currentId: string | null = null;
+  for (const line of logText.split('\n')) {
+    if (line.startsWith('\x1fTAB:')) {
+      const rest = line.slice(5);
+      const sep = rest.indexOf('\x1f');
+      const id = sep >= 0 ? rest.slice(0, sep) : rest;
+      const label = sep >= 0 ? rest.slice(sep + 1) : rest;
+      currentId = id;
+      if (!tabMap.has(id)) {
+        tabMap.set(id, { id, label, text: '' });
+        tabOrder.push(id);
+      }
+    } else if (currentId) {
+      tabMap.get(currentId)!.text += line + '\n';
+    }
+  }
+  const tabs = tabOrder.map((id) => tabMap.get(id)!);
+  return tabs.length > 0 ? tabs : null;
+}
+
 function LogLine({ text }: { text: string }) {
   let cls = 'text-foreground/50';
   if (text.startsWith('━━━')) cls = 'text-brand';
@@ -1391,6 +1417,7 @@ function WorkflowRunView({
   logBodyRef: React.RefObject<HTMLDivElement>;
 }) {
   const isRunning = runId !== null && !done;
+  const [activeSub, setActiveSub] = useState<Record<string, string>>({});
 
   // No run started yet
   if (!runId && !error) {
@@ -1520,8 +1547,14 @@ function WorkflowRunView({
           {stepRuns.map((sr) => {
             const isOpen = !collapsedSections[sr.id];
             const logText = logSegments[sr.id] ?? '';
-            const lines = logText.split('\n').filter(Boolean);
+            const tabs = parseSubTabs(logText);
+            const lines = tabs ? [] : logText.split('\n').filter(Boolean);
             const duration = formatDuration(sr.startedAt, sr.completedAt);
+            // Active sub-tab: user selection or last tab (auto-follows newest)
+            const activeTabId = tabs
+              ? (activeSub[sr.id] ?? tabs[tabs.length - 1]?.id)
+              : null;
+            const activeTabText = tabs?.find((t) => t.id === activeTabId)?.text ?? '';
 
             return (
               <div key={sr.id} className="border-b border-border/30 last:border-0">
@@ -1554,12 +1587,47 @@ function WorkflowRunView({
 
                 {/* Section body */}
                 {isOpen && (
-                  <div className="bg-background px-5 pb-3 pt-1">
-                    {lines.length > 0 ? (
-                      lines.map((line, i) => <LogLine key={i} text={line} />)
+                  <div className="bg-background">
+                    {tabs ? (
+                      <>
+                        {/* Sub-tab bar */}
+                        <div className="flex border-b border-border/40 overflow-x-auto">
+                          {tabs.map((tab) => (
+                            <button
+                              key={tab.id}
+                              onClick={() => setActiveSub((s) => ({ ...s, [sr.id]: tab.id }))}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono shrink-0 border-r border-border/30 transition-colors ${
+                                activeTabId === tab.id
+                                  ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
+                                  : 'text-foreground/40 hover:text-foreground/70'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+                        {/* Active tab content */}
+                        <div className="px-5 pb-3 pt-1">
+                          {activeTabText.split('\n').filter(Boolean).length > 0 ? (
+                            activeTabText.split('\n').filter(Boolean).map((line, i) => (
+                              <LogLine key={i} text={line} />
+                            ))
+                          ) : (
+                            <div className="text-[11px] text-foreground/20 font-mono py-1">
+                              {sr.status === 'pending' ? 'Waiting to start…' : 'No output yet.'}
+                            </div>
+                          )}
+                        </div>
+                      </>
                     ) : (
-                      <div className="text-[11px] text-foreground/20 font-mono py-1">
-                        {sr.status === 'pending' ? 'Waiting to start…' : 'No output.'}
+                      <div className="px-5 pb-3 pt-1">
+                        {lines.length > 0 ? (
+                          lines.map((line, i) => <LogLine key={i} text={line} />)
+                        ) : (
+                          <div className="text-[11px] text-foreground/20 font-mono py-1">
+                            {sr.status === 'pending' ? 'Waiting to start…' : 'No output.'}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
