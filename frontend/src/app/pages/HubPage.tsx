@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
-import { System } from '@wailsio/runtime';
 import { useWorkspace } from '../stores/workspace';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
+import { usePlatform } from '../stores/platform';
 import { MacWindowControls, WindowsWindowControls } from '../components/WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
-
-const isWindows = System.IsWindows();
 
 export function HubPage() {
   const navigate = useNavigate();
   const { state, setPhase, setProduct } = useWorkspace();
+  const { effective } = usePlatform();
+  const isWindows = effective === 'windows';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
 

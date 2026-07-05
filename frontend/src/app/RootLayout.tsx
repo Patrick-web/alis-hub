@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
@@ -14,9 +14,11 @@ import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { ReloginModal } from './components/ReloginModal';
 import { CommandPalette } from './components/CommandPalette';
+import { DevSettingsModal } from './components/DevSettingsModal';
 import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
 import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
 import { useCommandPalette } from './stores/commandPalette';
+import { useDevSettingsModal } from './stores/devSettingsModal';
 import { Events } from '@wailsio/runtime';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
@@ -29,7 +31,6 @@ const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function RootLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { state, setPhase } = useWorkspace();
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const { fetchProfile } = useUserProfile();
@@ -37,6 +38,7 @@ export function RootLayout() {
   const isOnTools = location.pathname === '/tools';
   const [sessionExpired, setSessionExpired] = useState(false);
   const { toggle } = useCommandPalette();
+  const { toggle: toggleDevSettings } = useDevSettingsModal();
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { initAccentColor(); }, []);
@@ -48,14 +50,14 @@ export function RootLayout() {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyN') {
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
         e.preventDefault();
-        navigate('/debug/notifications');
+        toggleDevSettings();
       }
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [navigate]);
+  }, [toggleDevSettings]);
 
   useEffect(() => {
     const off = Events.On('menu:command-palette', () => toggle());
@@ -137,7 +139,7 @@ export function RootLayout() {
     : null;
 
   if (state.phase === 'hub') {
-    return <>{<HubPage />}{reloginModal}</>;
+    return <>{<HubPage />}{reloginModal}<DevSettingsModal /></>;
   }
 
   if (state.phase === 'picking-org') {
@@ -145,6 +147,7 @@ export function RootLayout() {
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <LandingZonesPage />
         {reloginModal}
+        <DevSettingsModal />
       </div>
     );
   }
@@ -154,6 +157,7 @@ export function RootLayout() {
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <ProductPickerPage />
         {reloginModal}
+        <DevSettingsModal />
       </div>
     );
   }
@@ -174,6 +178,7 @@ export function RootLayout() {
         <SuggestionsBubble />
         <StatusStrip />
         {reloginModal}
+        <DevSettingsModal />
       </div>
     );
   }
@@ -219,6 +224,7 @@ export function RootLayout() {
       <SuggestionsBubble />
       <StatusStrip />
       <CommandPalette />
+      <DevSettingsModal />
       <DevelopCommandsExtension />
       <GCloudCommandsExtension />
       {reloginModal}

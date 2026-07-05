@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
-import { System } from '@wailsio/runtime';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
 import { ProfileModal } from './ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
+import { usePlatform } from '../stores/platform';
 import { MacWindowControls, WindowsWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
-
-const isWindows = System.IsWindows();
 
 const standaloneTabs = [
   { id: 'buildkit', label: 'Build Kit', icon: <Icon icon="solar:rocket-2-linear" className="text-lg" />, route: '/buildkit' },
@@ -21,6 +19,8 @@ export function StandaloneTopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setPhase } = useWorkspace();
+  const { effective } = usePlatform();
+  const isWindows = effective === 'windows';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
 

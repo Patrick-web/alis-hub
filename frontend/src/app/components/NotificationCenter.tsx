@@ -10,7 +10,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '../stores/notifications';
 import type { AppNotification, NotificationSource } from '../stores/notifications';
 import { NotificationItem } from './NotificationItem';
-import { useWorkspace } from '../stores/workspace';
+import { useDevSettingsModal } from '../stores/devSettingsModal';
 
 const SOURCE_ICON: Record<NotificationSource, string> = {
   build: 'solar:box-linear',
@@ -163,14 +163,13 @@ function DateSection({
 
 export function NotificationCenter() {
   const { state, unreadCount, markRead, markAllRead, dismiss, clearAll, setFocusTaskId } = useNotifications();
-  const { state: wsState, setPhase } = useWorkspace();
+  const { open: openDevSettings } = useDevSettingsModal();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   function openDebugPage() {
     setOpen(false);
-    if (wsState.phase === 'hub') setPhase('standalone');
-    navigate('/debug/notifications');
+    openDevSettings('notifications');
   }
 
   function handleTaskClick(id: string) {
