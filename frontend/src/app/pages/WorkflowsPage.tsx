@@ -126,6 +126,7 @@ const STEP_TYPES: StepType[] = [
       { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: 'Latest build' },
     ],
     summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
+    computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['define'], 'neuron') }),
   },
   {
     id: 'deploy',
@@ -291,6 +292,9 @@ export function WorkflowsPage() {
   const [newDesc, setNewDesc] = useState('');
   const [dragSrc, setDragSrc] = useState<number | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // ── Run tab state ──────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
@@ -488,6 +492,52 @@ export function WorkflowsPage() {
     if (created) setActiveId(created.id);
   };
 
+  const handleExport = async (workflowId: string) => {
+    const wf = await WorkflowService.GetWorkflow(workflowId) as Workflow;
+    if (!wf) return;
+    const { id: _id, createdAt: _c, updatedAt: _u, ...exportData } = wf;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${wf.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.workflow.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    setImportError(null);
+    try {
+      const text = await file.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch { throw new Error('Invalid JSON file'); }
+      if (!data.name || !Array.isArray(data.steps)) throw new Error('Invalid workflow file: missing name or steps');
+      const created = await WorkflowService.CreateWorkflow({
+        name: data.name,
+        description: data.description ?? '',
+        steps: (data.steps as any[]).map((s, i) => ({
+          id: uid(),
+          type: s.type ?? '',
+          params: typeof s.params === 'string' ? s.params : JSON.stringify(s.params ?? {}),
+          onFailure: s.onFailure ?? 'stop',
+          position: i,
+        })),
+      }) as Workflow;
+      await load();
+      if (created) setActiveId(created.id);
+    } catch (err: any) {
+      setImportError(err?.message ?? 'Failed to import workflow');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // ── Step editing ─────────────────────────────────────────────────────────────
 
   const updateStep = (stepId: string, patch: Partial<WorkflowStep>) => {
@@ -572,14 +622,30 @@ export function WorkflowsPage() {
       <div className="w-[240px] flex-shrink-0 border-r border-border flex flex-col bg-card">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest font-mono">Workflows</span>
-          <button
-            onClick={() => setShowNewModal(true)}
-            className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors text-foreground/40 hover:text-foreground"
-            title="New workflow"
-          >
-            <Icon icon="solar:add-circle-linear" className="text-base" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => importFileRef.current?.click()}
+              disabled={importing}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors text-foreground/40 hover:text-foreground disabled:opacity-40"
+              title="Import workflow"
+            >
+              <Icon icon="solar:import-linear" className="text-base" />
+            </button>
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-accent transition-colors text-foreground/40 hover:text-foreground"
+              title="New workflow"
+            >
+              <Icon icon="solar:add-circle-linear" className="text-base" />
+            </button>
+          </div>
         </div>
+        <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+        {importError && (
+          <div className="mx-3 mt-1 px-2 py-1.5 bg-red-400/10 rounded text-[10px] text-red-400 leading-snug">
+            {importError}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto py-2">
           {loading ? (
@@ -597,6 +663,7 @@ export function WorkflowsPage() {
                       workflow={wf}
                       active={activeId === wf.id}
                       onClick={() => setActiveId(wf.id)}
+                      onExport={() => handleExport(wf.id)}
                     />
                   ))}
                   {userWorkflows.length > 0 && (
@@ -612,6 +679,7 @@ export function WorkflowsPage() {
                   workflow={wf}
                   active={activeId === wf.id}
                   onClick={() => setActiveId(wf.id)}
+                  onExport={() => handleExport(wf.id)}
                 />
               ))}
               {workflows.length === 0 && (
@@ -1011,31 +1079,40 @@ function CommitPickerModal({ neuron, onSelect, onClose }: {
 
 // ─── WorkflowListItem ─────────────────────────────────────────────────────────
 
-function WorkflowListItem({ workflow, active, onClick }: {
+function WorkflowListItem({ workflow, active, onClick, onExport }: {
   workflow: Workflow;
   active: boolean;
   onClick: () => void;
+  onExport: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-3 py-2 mx-1 rounded-lg transition-colors text-sm ${
+    <div
+      className={`relative group flex items-stretch mx-1 rounded-lg transition-colors text-sm ${
         active ? 'bg-brand/10 text-brand' : 'text-foreground hover:bg-accent'
       }`}
       style={{ width: 'calc(100% - 8px)' }}
     >
-      <div className="flex items-center gap-1.5">
-        {workflow.isTemplate && (
-          <Icon icon="solar:lock-linear" className="text-[10px] text-foreground/30 flex-shrink-0" />
-        )}
-        <span className="font-medium truncate text-xs">{workflow.name}</span>
-      </div>
-      <div className="flex items-center gap-1.5 mt-0.5">
-        <span className="text-[10px] text-foreground/30">
-          {workflow.steps.length} step{workflow.steps.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-    </button>
+      <button onClick={onClick} className="flex-1 text-left px-3 py-2 min-w-0">
+        <div className="flex items-center gap-1.5">
+          {workflow.isTemplate && (
+            <Icon icon="solar:lock-linear" className="text-[10px] text-foreground/30 flex-shrink-0" />
+          )}
+          <span className="font-medium truncate text-xs">{workflow.name}</span>
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] text-foreground/30">
+            {workflow.steps.length} step{workflow.steps.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onExport(); }}
+        className="opacity-0 group-hover:opacity-100 w-6 flex items-center justify-center text-foreground/40 hover:text-foreground transition-opacity flex-shrink-0 pr-1"
+        title="Export workflow"
+      >
+        <Icon icon="solar:export-linear" className="text-xs" />
+      </button>
+    </div>
   );
 }
 
