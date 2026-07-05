@@ -925,7 +925,11 @@ func (s *WorkflowService) runShell(ctx context.Context, command, workdir string,
 		return fmt.Errorf("shell step: command is empty")
 	}
 	fmt.Fprintf(w, "$ %s\n", command)
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	shell := os.Getenv("SHELL")
+	if shell == "" {
+		shell = "/bin/sh"
+	}
+	cmd := exec.CommandContext(ctx, shell, "-l", "-i", "-c", command)
 	if workdir != "" {
 		cmd.Dir = workdir
 	}
