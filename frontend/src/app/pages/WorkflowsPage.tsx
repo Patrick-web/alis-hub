@@ -5,7 +5,6 @@ import { Input } from '../components/Input';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { MultiSelect } from '../components/ui/multi-select';
-import { WorkflowRunModal } from '../components/WorkflowRunModal';
 import { useWorkspace } from '../stores/workspace';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
@@ -27,7 +26,7 @@ type WorkflowStep = {
   workflowId: string;
   position: number;
   type: string;
-  params: string; // raw JSON
+  params: string;
   onFailure: string;
 };
 
@@ -47,6 +46,24 @@ type StepField = {
   type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'commit' | 'env-multi';
   placeholder?: string;
   options?: string[];
+};
+
+type StepRunStatus = {
+  id: string;
+  stepId: string;
+  position: number;
+  type: string;
+  label: string;
+  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+  startedAt?: number;
+  completedAt?: number;
+};
+
+type RunLogChunk = {
+  stepRuns: StepRunStatus[];
+  logText: string;
+  nextOffset: number;
+  done: boolean;
 };
 
 // ─── Step type definitions ────────────────────────────────────────────────────
@@ -183,6 +200,30 @@ function uid(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function formatDuration(startedAt?: number, completedAt?: number): string {
+  if (!startedAt) return '';
+  const end = completedAt ?? Math.floor(Date.now() / 1000);
+  const s = end - startedAt;
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+const STATUS_ICON: Record<string, string> = {
+  pending: 'solar:circle-linear',
+  running: 'solar:spinner-linear',
+  success: 'solar:check-circle-bold',
+  failed: 'solar:close-circle-bold',
+  skipped: 'solar:minus-circle-linear',
+};
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: 'text-foreground/20',
+  running: 'text-blue-400',
+  success: 'text-green-400',
+  failed: 'text-red-400',
+  skipped: 'text-foreground/20',
+};
+
 // ─── WorkflowsPage ────────────────────────────────────────────────────────────
 
 export function WorkflowsPage() {
@@ -196,9 +237,24 @@ export function WorkflowsPage() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
-  const [runModalId, setRunModalId] = useState<string | null>(null);
   const [dragSrc, setDragSrc] = useState<number | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+
+  // ── Run tab state ──────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
+  const [runId, setRunId] = useState<string | null>(null);
+  const [stepRuns, setStepRuns] = useState<StepRunStatus[]>([]);
+  const [logSegments, setLogSegments] = useState<Record<string, string>>({});
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [runDone, setRunDone] = useState(false);
+  const [runFinalStatus, setRunFinalStatus] = useState<string>('running');
+  const [runError, setRunError] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+
+  const runOffsetRef = useRef(0);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentStepRunIdRef = useRef<string | null>(null);
+  const logBodyRef = useRef<HTMLDivElement>(null);
 
   const active = workflows.find((w) => w.id === activeId) ?? null;
 
@@ -214,7 +270,6 @@ export function WorkflowsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Keep editedWorkflow in sync when a different workflow is selected
   useEffect(() => {
     if (activeId) {
       const wf = workflows.find((w) => w.id === activeId);
@@ -226,6 +281,20 @@ export function WorkflowsPage() {
     }
   }, [activeId, workflows]);
 
+  // Reset run state when switching to a different workflow
+  const prevActiveIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeId !== prevActiveIdRef.current) {
+      prevActiveIdRef.current = activeId;
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+      setActiveTab('steps');
+      setRunId(null); setStepRuns([]); setLogSegments({});
+      setCollapsedSections({}); setRunDone(false); setRunFinalStatus('running');
+      setRunError(null); setStopping(false);
+      runOffsetRef.current = 0; currentStepRunIdRef.current = null;
+    }
+  }, [activeId]);
+
   // Close picker on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -236,6 +305,85 @@ export function WorkflowsPage() {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  // Auto-scroll log feed when new text arrives (while running)
+  useEffect(() => {
+    if (!runDone && logBodyRef.current) {
+      logBodyRef.current.scrollTop = logBodyRef.current.scrollHeight;
+    }
+  }, [logSegments, runDone]);
+
+  // ── Polling ─────────────────────────────────────────────────────────────────
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+  }, []);
+
+  const pollRun = useCallback(async (id: string) => {
+    try {
+      const chunk = await WorkflowService.PollRunLogs(id, runOffsetRef.current) as RunLogChunk;
+      if (!chunk) return;
+      runOffsetRef.current = chunk.nextOffset;
+
+      if (chunk.stepRuns) {
+        setStepRuns(chunk.stepRuns);
+        const running = chunk.stepRuns.find((s) => s.status === 'running');
+        if (running && running.id !== currentStepRunIdRef.current) {
+          const prev = currentStepRunIdRef.current;
+          if (prev) setCollapsedSections((c) => ({ ...c, [prev]: true }));
+          currentStepRunIdRef.current = running.id;
+        }
+      }
+
+      if (chunk.logText) {
+        const key = currentStepRunIdRef.current ?? chunk.stepRuns?.[0]?.id;
+        if (key) {
+          setLogSegments((prev) => ({ ...prev, [key]: (prev[key] ?? '') + chunk.logText }));
+        }
+      }
+
+      if (chunk.done) {
+        stopPolling();
+        setRunDone(true);
+        const failed = chunk.stepRuns?.some((s) => s.status === 'failed');
+        setRunFinalStatus(failed ? 'failed' : 'success');
+      }
+    } catch (e) {
+      console.error('PollRunLogs error:', e);
+    }
+  }, [stopPolling]);
+
+  // ── Run actions ─────────────────────────────────────────────────────────────
+
+  const handleRun = async () => {
+    stopPolling();
+    setRunId(null); setStepRuns([]); setLogSegments({});
+    setCollapsedSections({}); setRunDone(false); setRunFinalStatus('running');
+    setRunError(null); setStopping(false);
+    runOffsetRef.current = 0; currentStepRunIdRef.current = null;
+    setActiveTab('run');
+    try {
+      const id = await WorkflowService.RunWorkflow(editedWorkflow!.id) as string;
+      setRunId(id);
+      pollRef.current = setInterval(() => pollRun(id), 500);
+    } catch (e: any) {
+      setRunError(e?.message ?? String(e));
+    }
+  };
+
+  const handleStop = async () => {
+    if (!runId || stopping) return;
+    setStopping(true);
+    try { await WorkflowService.StopRun(runId); } catch { /* ignore */ }
+    finally { setStopping(false); }
+  };
+
+  // ── Workflow actions ─────────────────────────────────────────────────────────
 
   const isDirty = editedWorkflow && active &&
     JSON.stringify(editedWorkflow) !== JSON.stringify(active);
@@ -288,7 +436,7 @@ export function WorkflowsPage() {
     if (created) setActiveId(created.id);
   };
 
-  // ── Step editing ────────────────────────────────────────────────────────────
+  // ── Step editing ─────────────────────────────────────────────────────────────
 
   const updateStep = (stepId: string, patch: Partial<WorkflowStep>) => {
     setEditedWorkflow((wf) => {
@@ -344,7 +492,6 @@ export function WorkflowsPage() {
     });
   };
 
-  // Drag-and-drop reorder
   const onDragStart = (i: number) => setDragSrc(i);
   const onDrop = (i: number) => {
     if (dragSrc === null || dragSrc === i) return;
@@ -358,10 +505,13 @@ export function WorkflowsPage() {
     setDragSrc(null);
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────────
 
   const templates = workflows.filter((w) => w.isTemplate);
   const userWorkflows = workflows.filter((w) => !w.isTemplate);
+  const isRunning = runId !== null && !runDone;
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -449,10 +599,7 @@ export function WorkflowsPage() {
               </div>
 
               {editedWorkflow.isTemplate ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => handleClone(editedWorkflow.id)}
-                >
+                <Button variant="secondary" onClick={() => handleClone(editedWorkflow.id)}>
                   <Icon icon="solar:copy-linear" className="text-base" />
                   Clone to Edit
                 </Button>
@@ -475,93 +622,140 @@ export function WorkflowsPage() {
 
               <Button
                 variant="primary"
-                onClick={() => setRunModalId(editedWorkflow.id)}
-                disabled={editedWorkflow.steps.length === 0}
+                onClick={handleRun}
+                disabled={editedWorkflow.steps.length === 0 || isRunning}
               >
-                <Icon icon="solar:play-linear" className="text-base" />
-                Run
+                <Icon icon={isRunning ? 'solar:spinner-linear' : 'solar:play-linear'} className={`text-base ${isRunning ? 'animate-spin' : ''}`} />
+                {isRunning ? 'Running…' : 'Run'}
               </Button>
             </div>
 
-            {/* Template clone banner */}
-            {editedWorkflow.isTemplate && (
-              <div className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/5 border-b border-blue-500/10 text-blue-400 text-xs">
-                <Icon icon="solar:info-circle-linear" className="text-sm flex-shrink-0" />
-                This is a read-only template. Clone it to create an editable copy.
-              </div>
-            )}
-
-            {/* Step editor */}
-            <div className="flex-1 overflow-y-auto px-5 py-5">
-              <div className="max-w-[600px] mx-auto">
-                {editedWorkflow.steps.length === 0 && (
-                  <div className="text-center py-10 text-foreground/30">
-                    <Icon icon="solar:playlist-2-linear" className="text-3xl mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No steps yet. Add a step to get started.</p>
-                  </div>
+            {/* Tab strip */}
+            <div className="flex items-center border-b border-border bg-card px-5">
+              <button
+                onClick={() => setActiveTab('steps')}
+                className={`h-9 px-1 mr-4 text-xs font-medium border-b-2 transition-colors ${
+                  activeTab === 'steps'
+                    ? 'border-brand text-brand'
+                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                }`}
+              >
+                Steps
+              </button>
+              <button
+                onClick={() => setActiveTab('run')}
+                className={`h-9 px-1 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'run'
+                    ? 'border-brand text-brand'
+                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                }`}
+              >
+                Run
+                {isRunning && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
                 )}
-
-                {editedWorkflow.steps.map((step, idx) => (
-                  <StepCard
-                    key={step.id}
-                    step={step}
-                    index={idx}
-                    expanded={!!expandedSteps[step.id]}
-                    isTemplate={editedWorkflow.isTemplate}
-                    onToggle={() => setExpandedSteps((e) => ({ ...e, [step.id]: !e[step.id] }))}
-                    onParamChange={(key, val) => updateStepParam(step.id, key, val)}
-                    onFailureChange={(val) => updateStep(step.id, { onFailure: val })}
-                    onDuplicate={() => duplicateStep(step.id)}
-                    onRemove={() => removeStep(step.id)}
-                    onDragStart={() => onDragStart(idx)}
-                    onDrop={() => onDrop(idx)}
-                  />
-                ))}
-
-                {!editedWorkflow.isTemplate && (
-                  <div className="relative mt-2" ref={pickerRef}>
-                    <button
-                      onClick={() => setShowPicker((v) => !v)}
-                      className="w-full py-2.5 border border-dashed border-border rounded-lg text-xs text-foreground/30 hover:border-brand hover:text-brand flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Icon icon="solar:add-circle-linear" className="text-sm" />
-                      Add step
-                    </button>
-                    {showPicker && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
-                        <div className="px-3 py-2 border-b border-border">
-                          <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider">Choose step type</span>
-                        </div>
-                        <div className="py-1 max-h-64 overflow-y-auto">
-                          {STEP_TYPES.map((t) => (
-                            <button
-                              key={t.id}
-                              onClick={() => addStep(t.id)}
-                              className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors"
-                            >
-                              <Icon icon={t.icon} className={`text-base ${t.color} flex-shrink-0`} />
-                              <span className="text-sm">{t.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                {runDone && runFinalStatus === 'success' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
                 )}
+                {runDone && runFinalStatus === 'failed' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
+                )}
+              </button>
+            </div>
+
+            {/* Steps tab — kept mounted to preserve scroll position */}
+            <div
+              className="flex-1 flex flex-col overflow-hidden"
+              style={{ display: activeTab === 'steps' ? undefined : 'none' }}
+            >
+              {editedWorkflow.isTemplate && (
+                <div className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/5 border-b border-blue-500/10 text-blue-400 text-xs">
+                  <Icon icon="solar:info-circle-linear" className="text-sm flex-shrink-0" />
+                  This is a read-only template. Clone it to create an editable copy.
+                </div>
+              )}
+              <div className="flex-1 overflow-y-auto px-5 py-5">
+                <div className="max-w-[600px] mx-auto">
+                  {editedWorkflow.steps.length === 0 && (
+                    <div className="text-center py-10 text-foreground/30">
+                      <Icon icon="solar:playlist-2-linear" className="text-3xl mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No steps yet. Add a step to get started.</p>
+                    </div>
+                  )}
+
+                  {editedWorkflow.steps.map((step, idx) => (
+                    <StepCard
+                      key={step.id}
+                      step={step}
+                      index={idx}
+                      expanded={!!expandedSteps[step.id]}
+                      isTemplate={editedWorkflow.isTemplate}
+                      onToggle={() => setExpandedSteps((e) => ({ ...e, [step.id]: !e[step.id] }))}
+                      onParamChange={(key, val) => updateStepParam(step.id, key, val)}
+                      onFailureChange={(val) => updateStep(step.id, { onFailure: val })}
+                      onDuplicate={() => duplicateStep(step.id)}
+                      onRemove={() => removeStep(step.id)}
+                      onDragStart={() => onDragStart(idx)}
+                      onDrop={() => onDrop(idx)}
+                    />
+                  ))}
+
+                  {!editedWorkflow.isTemplate && (
+                    <div className="relative mt-2" ref={pickerRef}>
+                      <button
+                        onClick={() => setShowPicker((v) => !v)}
+                        className="w-full py-2.5 border border-dashed border-border rounded-lg text-xs text-foreground/30 hover:border-brand hover:text-brand flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Icon icon="solar:add-circle-linear" className="text-sm" />
+                        Add step
+                      </button>
+                      {showPicker && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
+                          <div className="px-3 py-2 border-b border-border">
+                            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider">Choose step type</span>
+                          </div>
+                          <div className="py-1 max-h-64 overflow-y-auto">
+                            {STEP_TYPES.map((t) => (
+                              <button
+                                key={t.id}
+                                onClick={() => addStep(t.id)}
+                                className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors"
+                              >
+                                <Icon icon={t.icon} className={`text-base ${t.color} flex-shrink-0`} />
+                                <span className="text-sm">{t.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+            </div>
+
+            {/* Run tab — kept mounted to preserve log scroll position */}
+            <div
+              className="flex-1 flex flex-col overflow-hidden"
+              style={{ display: activeTab === 'run' ? undefined : 'none' }}
+            >
+              <WorkflowRunView
+                stepRuns={stepRuns}
+                logSegments={logSegments}
+                collapsedSections={collapsedSections}
+                onToggleSection={(id) => setCollapsedSections((c) => ({ ...c, [id]: !c[id] }))}
+                done={runDone}
+                finalStatus={runFinalStatus}
+                error={runError}
+                runId={runId}
+                onStop={handleStop}
+                stopping={stopping}
+                logBodyRef={logBodyRef}
+              />
             </div>
           </>
         )}
       </div>
-
-      {/* Run modal */}
-      {runModalId && (
-        <WorkflowRunModal
-          workflowId={runModalId}
-          workflowName={workflows.find((w) => w.id === runModalId)?.name ?? ''}
-          onClose={() => { setRunModalId(null); load(); }}
-        />
-      )}
 
       {/* New workflow modal */}
       {showNewModal && (
@@ -824,7 +1018,6 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
       onDrop={onDrop}
       className="mb-2 bg-card border border-border rounded-lg overflow-hidden hover:border-border/80 transition-colors"
     >
-      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none group" onClick={onToggle}>
         {!isTemplate && (
           <Icon
@@ -861,7 +1054,6 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
         />
       </div>
 
-      {/* Expanded body */}
       {expanded && (
         <div className="border-t border-border px-3 pb-3">
           {type.fields.length === 0 ? (
@@ -965,6 +1157,228 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── LogLine ──────────────────────────────────────────────────────────────────
+
+function LogLine({ text }: { text: string }) {
+  let cls = 'text-foreground/50';
+  if (text.startsWith('━━━')) cls = 'text-brand';
+  else if (text.startsWith('✓') || text.endsWith('s') && text.includes('done in')) cls = 'text-green-400';
+  else if (text.startsWith('✗') || text.includes('failed:') || text.includes('error')) cls = 'text-red-400';
+  else if (text.startsWith('#') || text.startsWith('Operation:')) cls = 'text-foreground/30';
+  else if (text.startsWith('Resolved') || text.startsWith('Starting') || text.startsWith('Build complete') || text.startsWith('Deploy complete')) cls = 'text-foreground/80';
+  return <div className={`${cls} font-mono text-[11px] leading-relaxed`}>{text || ' '}</div>;
+}
+
+// ─── WorkflowRunView ──────────────────────────────────────────────────────────
+
+function WorkflowRunView({
+  stepRuns,
+  logSegments,
+  collapsedSections,
+  onToggleSection,
+  done,
+  finalStatus,
+  error,
+  runId,
+  onStop,
+  stopping,
+  logBodyRef,
+}: {
+  stepRuns: StepRunStatus[];
+  logSegments: Record<string, string>;
+  collapsedSections: Record<string, boolean>;
+  onToggleSection: (id: string) => void;
+  done: boolean;
+  finalStatus: string;
+  error: string | null;
+  runId: string | null;
+  onStop: () => void;
+  stopping: boolean;
+  logBodyRef: React.RefObject<HTMLDivElement>;
+}) {
+  const isRunning = runId !== null && !done;
+
+  // No run started yet
+  if (!runId && !error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-foreground/25">
+        <Icon icon="solar:play-circle-linear" className="text-4xl opacity-30" />
+        <p className="text-sm">Click Run to execute this workflow</p>
+      </div>
+    );
+  }
+
+  // Error starting the run
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
+        <Icon icon="solar:danger-triangle-linear" className="text-red-400 text-4xl" />
+        <p className="text-sm text-red-400 font-medium">Failed to start workflow</p>
+        <p className="text-xs text-foreground/40 text-center max-w-xs">{error}</p>
+      </div>
+    );
+  }
+
+  // Waiting for first poll result
+  if (runId && stepRuns.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-foreground/30">
+        <Icon icon="solar:spinner-linear" className="text-2xl animate-spin" />
+        <p className="text-xs">Starting…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Run sub-header */}
+      <div className="flex items-center gap-3 px-5 py-2 border-b border-border bg-card flex-shrink-0">
+        <div className="flex items-center gap-2">
+          {isRunning ? (
+            <>
+              <Icon icon="solar:spinner-linear" className="text-blue-400 text-sm animate-spin" />
+              <span className="text-xs text-foreground/50">Running…</span>
+            </>
+          ) : finalStatus === 'success' ? (
+            <>
+              <Icon icon="solar:check-circle-bold" className="text-green-400 text-sm" />
+              <span className="text-xs text-foreground/50">Completed successfully</span>
+            </>
+          ) : (
+            <>
+              <Icon icon="solar:close-circle-bold" className="text-red-400 text-sm" />
+              <span className="text-xs text-foreground/50">Completed with errors</span>
+            </>
+          )}
+        </div>
+        <div className="flex-1 h-px bg-border mx-2" />
+        {isRunning && (
+          <Button
+            variant="ghost"
+            onClick={onStop}
+            disabled={stopping}
+            className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-xs h-7 px-2"
+          >
+            <Icon icon="solar:stop-circle-linear" className="text-sm" />
+            Stop
+          </Button>
+        )}
+      </div>
+
+      {/* Split layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: timeline spine */}
+        <div className="w-[220px] flex-shrink-0 border-r border-border overflow-y-auto py-5 px-4">
+          {stepRuns.map((sr, idx) => {
+            const dotBase = 'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 text-[9px] font-mono transition-all';
+            const dotCls = sr.status === 'running'
+              ? `${dotBase} border-blue-400 bg-blue-400/10 text-blue-400`
+              : sr.status === 'success'
+              ? `${dotBase} border-green-400/50 bg-green-400/10 text-green-400`
+              : sr.status === 'failed'
+              ? `${dotBase} border-red-400/50 bg-red-400/10 text-red-400`
+              : `${dotBase} border-border bg-card text-foreground/20`;
+
+            const lineCls = sr.status === 'success'
+              ? 'w-px min-h-[20px] flex-1 bg-green-400/20 mx-auto mt-1'
+              : sr.status === 'failed'
+              ? 'w-px min-h-[20px] flex-1 bg-red-400/20 mx-auto mt-1'
+              : 'w-px min-h-[20px] flex-1 bg-border mx-auto mt-1';
+
+            const duration = formatDuration(sr.startedAt, sr.completedAt);
+
+            return (
+              <div key={sr.id} className="flex gap-2.5">
+                <div className="flex flex-col items-center" style={{ width: 20 }}>
+                  <div className={dotCls}>
+                    {sr.status === 'running' ? (
+                      <Icon icon="solar:spinner-linear" className="animate-spin text-[10px]" />
+                    ) : sr.status === 'success' ? (
+                      '✓'
+                    ) : sr.status === 'failed' ? (
+                      '✗'
+                    ) : sr.status === 'skipped' ? (
+                      '—'
+                    ) : (
+                      idx + 1
+                    )}
+                  </div>
+                  {idx < stepRuns.length - 1 && <div className={lineCls} />}
+                </div>
+                <div className="flex-1 min-w-0 pb-5">
+                  <div className={`text-xs font-medium truncate ${sr.status === 'running' ? 'text-foreground' : sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
+                    {sr.label}
+                  </div>
+                  {duration && (
+                    <div className="text-[10px] text-foreground/30 font-mono mt-0.5">{duration}</div>
+                  )}
+                  {sr.status === 'running' && !duration && (
+                    <div className="text-[10px] text-blue-400/50 mt-0.5">running…</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right: log feed */}
+        <div ref={logBodyRef} className="flex-1 overflow-y-auto">
+          {stepRuns.map((sr) => {
+            const isOpen = !collapsedSections[sr.id];
+            const logText = logSegments[sr.id] ?? '';
+            const lines = logText.split('\n').filter(Boolean);
+            const duration = formatDuration(sr.startedAt, sr.completedAt);
+
+            return (
+              <div key={sr.id} className="border-b border-border/30 last:border-0">
+                {/* Section header */}
+                <button
+                  onClick={() => onToggleSection(sr.id)}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-foreground/[2%] transition-colors select-none"
+                >
+                  <Icon
+                    icon="solar:alt-arrow-right-linear"
+                    className={`text-foreground/25 text-[10px] flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                  />
+                  <Icon
+                    icon={STATUS_ICON[sr.status] ?? STATUS_ICON.pending}
+                    className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ''} ${sr.status === 'running' ? 'animate-spin' : ''}`}
+                  />
+                  <span className={`text-xs font-medium flex-1 truncate ${sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
+                    {sr.label}
+                  </span>
+                  {sr.status === 'running' && (
+                    <span className="text-[10px] text-blue-400/60 flex-shrink-0">running…</span>
+                  )}
+                  {sr.status === 'skipped' && (
+                    <span className="text-[10px] text-foreground/20 flex-shrink-0">skipped</span>
+                  )}
+                  {duration && (sr.status === 'success' || sr.status === 'failed') && (
+                    <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">{duration}</span>
+                  )}
+                </button>
+
+                {/* Section body */}
+                {isOpen && (
+                  <div className="bg-background px-5 pb-3 pt-1">
+                    {lines.length > 0 ? (
+                      lines.map((line, i) => <LogLine key={i} text={line} />)
+                    ) : (
+                      <div className="text-[11px] text-foreground/20 font-mono py-1">
+                        {sr.status === 'pending' ? 'Waiting to start…' : 'No output.'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
