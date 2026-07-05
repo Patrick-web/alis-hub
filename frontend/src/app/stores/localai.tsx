@@ -35,6 +35,8 @@ interface LocalAIState {
   pulling: boolean;
   pullProgress: PullProgress | null;
   pullError: string | null;
+  // Generation phase
+  activeRequests: number;
 }
 
 type LocalAIAction =
@@ -51,7 +53,9 @@ type LocalAIAction =
   | { type: 'PULL_START' }
   | { type: 'PULL_PROGRESS'; payload: PullProgress }
   | { type: 'PULL_DONE' }
-  | { type: 'PULL_ERROR'; payload: string };
+  | { type: 'PULL_ERROR'; payload: string }
+  | { type: 'GENERATE_START' }
+  | { type: 'GENERATE_END' };
 
 interface LocalAIContextValue {
   state: LocalAIState;
@@ -61,6 +65,8 @@ interface LocalAIContextValue {
   startOllama: () => Promise<void>;
   startPull: () => void;
   refresh: () => Promise<void>;
+  generate: (model: string, systemPrompt: string, userPrompt: string) => Promise<string>;
+  generateCommitMessage: (repoPath: string, model: string) => Promise<string>;
 }
 
 const STORAGE_KEY = 'alis:localai';
@@ -94,6 +100,7 @@ function getInitialState(): LocalAIState {
     pulling: false,
     pullProgress: null,
     pullError: null,
+    activeRequests: 0,
   };
 }
 
@@ -132,6 +139,10 @@ function reducer(state: LocalAIState, action: LocalAIAction): LocalAIState {
       return { ...state, pulling: false, pullProgress: null, modelPulled: true };
     case 'PULL_ERROR':
       return { ...state, pulling: false, pullError: action.payload };
+    case 'GENERATE_START':
+      return { ...state, activeRequests: state.activeRequests + 1 };
+    case 'GENERATE_END':
+      return { ...state, activeRequests: Math.max(0, state.activeRequests - 1) };
     default:
       return state;
   }
@@ -240,8 +251,26 @@ export function LocalAIProvider({ children }: { children: ReactNode }) {
     LocalAIService.PullModel(state.model);
   }, [state.model]);
 
+  const generate = useCallback(async (model: string, systemPrompt: string, userPrompt: string) => {
+    dispatch({ type: 'GENERATE_START' });
+    try {
+      return await LocalAIService.Generate(model, systemPrompt, userPrompt);
+    } finally {
+      dispatch({ type: 'GENERATE_END' });
+    }
+  }, []);
+
+  const generateCommitMessage = useCallback(async (repoPath: string, model: string) => {
+    dispatch({ type: 'GENERATE_START' });
+    try {
+      return await LocalAIService.GenerateCommitMessage(repoPath, model);
+    } finally {
+      dispatch({ type: 'GENERATE_END' });
+    }
+  }, []);
+
   return (
-    <LocalAIContext.Provider value={{ state, setEnabled, setModel, startDownloadBinary, startOllama, startPull, refresh }}>
+    <LocalAIContext.Provider value={{ state, setEnabled, setModel, startDownloadBinary, startOllama, startPull, refresh, generate, generateCommitMessage }}>
       {children}
     </LocalAIContext.Provider>
   );

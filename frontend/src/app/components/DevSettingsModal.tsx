@@ -1,14 +1,18 @@
+import { useState } from 'react';
 import { Icon } from '@iconify/react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
 import { useDevSettingsModal, type DevSettingsTab } from '../stores/devSettingsModal';
 import { usePlatform, type PlatformOverride } from '../stores/platform';
+import { useLocalAI } from '../stores/localai';
 import { SettingRow, SectionTitle, SettingsCard } from './ProfileModal';
 import { NotificationsDebugPage } from '../pages/NotificationsDebugPage';
+import { Loader } from './Loader';
 
 const SIDEBAR_ITEMS: { id: DevSettingsTab; label: string; icon: string }[] = [
   { id: 'platform', label: 'Title Bar', icon: 'solar:window-frame-linear' },
   { id: 'notifications', label: 'Notifications', icon: 'solar:bell-bing-linear' },
+  { id: 'ai', label: 'Local AI', icon: 'solar:cpu-bolt-linear' },
 ];
 
 const OVERRIDE_OPTIONS: { id: PlatformOverride; label: string }[] = [
@@ -49,6 +53,106 @@ function WindowsControlsPreview() {
           <path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1.1" />
         </svg>
       </div>
+    </div>
+  );
+}
+
+function LocalAITestTab() {
+  const { state, generate } = useLocalAI();
+  const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
+  const [userPrompt, setUserPrompt] = useState('');
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [response, setResponse] = useState<string | null>(null);
+  const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+
+  const ready = state.ollamaRunning && state.modelPulled;
+
+  async function handleRun() {
+    setRunning(true);
+    setError(null);
+    setResponse(null);
+    setElapsedMs(null);
+    const start = performance.now();
+    try {
+      const result = await generate(state.model, systemPrompt, userPrompt);
+      setResponse(result);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setElapsedMs(Math.round(performance.now() - start));
+      setRunning(false);
+    }
+  }
+
+  return (
+    <div className="p-[14px] flex flex-col gap-[12px]">
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>Status</SectionTitle>
+        <SettingsCard>
+          <SettingRow label="Enabled" value={state.enabled ? 'Yes' : 'No'} />
+          <SettingRow label="Model" value={state.model} />
+          <SettingRow label="Ollama running" value={state.ollamaRunning ? 'Yes' : 'No'} />
+          <SettingRow label="Model pulled" value={state.modelPulled ? 'Yes' : 'No'} />
+        </SettingsCard>
+        {!ready && (
+          <p className="text-[10px] text-warning font-mono leading-relaxed">
+            Local AI isn't ready — set it up in Settings → Labs first.
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>System prompt</SectionTitle>
+        <SettingsCard>
+          <textarea
+            value={systemPrompt}
+            onChange={e => setSystemPrompt(e.target.value)}
+            rows={2}
+            spellCheck={false}
+            className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
+          />
+        </SettingsCard>
+      </div>
+
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>User prompt</SectionTitle>
+        <SettingsCard>
+          <textarea
+            value={userPrompt}
+            onChange={e => setUserPrompt(e.target.value)}
+            placeholder="Ask something…"
+            rows={3}
+            spellCheck={false}
+            className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
+          />
+        </SettingsCard>
+      </div>
+
+      <button
+        onClick={handleRun}
+        disabled={!ready || running || !userPrompt.trim()}
+        className="flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono"
+      >
+        {running ? <Loader size={14} /> : <Icon icon="solar:play-circle-linear" className="text-sm" />}
+        {running ? 'Running…' : 'Run'}
+      </button>
+
+      {(response || error) && (
+        <div className="flex flex-col gap-[5px]">
+          <div className="flex items-center justify-between">
+            <SectionTitle>{error ? 'Error' : 'Response'}</SectionTitle>
+            {elapsedMs !== null && (
+              <span className="text-[9px] text-foreground/25 font-mono">{elapsedMs}ms</span>
+            )}
+          </div>
+          <SettingsCard>
+            <pre className={`whitespace-pre-wrap break-words text-[11px] font-mono px-[12px] py-[9px] max-h-[200px] overflow-y-auto ${error ? 'text-destructive' : 'text-foreground/75'}`}>
+              {error || response}
+            </pre>
+          </SettingsCard>
+        </div>
+      )}
     </div>
   );
 }
@@ -167,6 +271,9 @@ export function DevSettingsModal() {
               {activeTab === 'notifications' && (
                 <NotificationsDebugPage />
               )}
+
+              {/* ── Local AI ── */}
+              {activeTab === 'ai' && <LocalAITestTab />}
 
             </div>
           </div>

@@ -16,7 +16,6 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs } from '../stores/labs';
 import { useSuggestions } from '../stores/suggestions';
 import * as GitService from '../../../bindings/alis-hub-v3/gitservice';
-import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
 import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
@@ -65,6 +64,7 @@ function RepoSection({
   isSuggestionEnabled, addSuggestion,
   localAIEnabled, localAIModelPulled, localAIModel,
 }: RepoSectionProps) {
+  const { generate, generateCommitMessage } = useLocalAI();
   const [gitStatus, setGitStatus] = useState<GitStatus>({ staged: [], unstaged: [], untracked: [] });
   const [currentBranch, setCurrentBranch] = useState('');
   const [branches, setBranches] = useState<GitBranch[]>([]);
@@ -193,7 +193,7 @@ function RepoSection({
     if (!repoPath) return;
     setGeneratingCommitMsg(true);
     try {
-      const msg = await LocalAIService.GenerateCommitMessage(repoPath, localAIModel);
+      const msg = await generateCommitMessage(repoPath, localAIModel);
       if (msg) setCommitMessage(msg);
     } catch (e: any) {
       setError(String(e));
@@ -261,7 +261,7 @@ function RepoSection({
         }
         if (localAIEnabled && localAIModelPulled && isSuggestionEnabled('ai-contextual-insight')) {
           const context = `A git pull just completed on the ${repoLabel} repo. New commits were pulled.`;
-          LocalAIService.Generate(
+          generate(
             localAIModel,
             'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
             context,
