@@ -45,7 +45,8 @@ func main() {
 	buildSvc := NewBuildService()
 	deploySvc := NewDeployService()
 	defineSvc := NewDefineService()
-	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc, defineSvc)
+	packageSvc := NewPackageService()
+	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
 	if err := workflowSvc.Open(); err != nil {
 		log.Fatal("workflow db:", err)
 	}
@@ -61,7 +62,7 @@ func main() {
 			application.NewService(buildSvc),
 			application.NewService(deploySvc),
 			application.NewService(productSvc),
-			application.NewService(NewPackageService()),
+			application.NewService(packageSvc),
 			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
 			application.NewService(notifSvc),

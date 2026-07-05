@@ -116,20 +116,22 @@ func (r *activeRun) len() int {
 // ─── WorkflowService ──────────────────────────────────────────────────────────
 
 type WorkflowService struct {
-	db            *sql.DB
-	buildService  *BuildService
-	gitService    *GitService
-	deployService *DeployService
-	defineService *DefineService
-	activeRuns    sync.Map // runId → *activeRun
+	db             *sql.DB
+	buildService   *BuildService
+	gitService     *GitService
+	deployService  *DeployService
+	defineService  *DefineService
+	packageService *PackageService
+	activeRuns     sync.Map // runId → *activeRun
 }
 
-func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService, def *DefineService) *WorkflowService {
+func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService, def *DefineService, pkg *PackageService) *WorkflowService {
 	return &WorkflowService{
-		buildService:  bs,
-		gitService:    gs,
-		deployService: ds,
-		defineService: def,
+		buildService:   bs,
+		gitService:     gs,
+		deployService:  ds,
+		defineService:  def,
+		packageService: pkg,
 	}
 }
 
@@ -786,17 +788,45 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if len(neurons) == 0 {
 			return fmt.Errorf("upgrade-packages step: no neurons specified")
 		}
-		repoPath := str("repoPath")
-		if repoPath == "" {
-			repoPath = stepVars["last_upgrade_repo"]
+		action := str("action")
+		if action == "" {
+			action = "upgrade_defined"
 		}
+		home, _ := os.UserHomeDir()
+		var lastProductDir string
 		for _, neuron := range neurons {
-			fmt.Fprintf(w, "━━ Upgrading packages for %s\n", neuron)
-			if err := s.runShell(ctx, "alis upgrade packages "+neuron, repoPath, w); err != nil {
-				return err
+			org, product, neuronID, version := parseNeuronResource(neuron)
+			fmt.Fprintf(w, "━━ Preparing packages for %s\n", neuron)
+			scripts, err := s.packageService.PreparePackageScripts(org, product, neuronID, version, false, nil)
+			if err != nil {
+				return fmt.Errorf("prepare packages for %s: %w", neuron, err)
+			}
+			if lastProductDir == "" {
+				lastProductDir = filepath.Join(home, "alis.build", org, "build", product)
+			}
+			for _, script := range scripts {
+				var cmd string
+				switch action {
+				case "upgrade_defined":
+					cmd = script.UpgradeDefined
+				case "upgrade":
+					cmd = script.Upgrade
+				case "install":
+					cmd = script.Install
+				case "add":
+					cmd = script.Add
+				}
+				if cmd == "" {
+					fmt.Fprintf(w, "  No %s command for %s, skipping\n", action, script.Name)
+					continue
+				}
+				fmt.Fprintf(w, "  Running in %s\n", script.Name)
+				if err := s.runShell(ctx, cmd, script.WorkDir, w); err != nil {
+					return fmt.Errorf("package script %s: %w", script.Name, err)
+				}
 			}
 		}
-		stepVars["last_upgrade_repo"] = repoPath
+		stepVars["last_upgrade_repo"] = lastProductDir
 		stepVars["upgraded_neurons"] = strings.Join(neurons, ", ")
 		return nil
 
