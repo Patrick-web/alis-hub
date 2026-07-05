@@ -102,12 +102,12 @@ const STEP_TYPES: StepType[] = [
     label: 'Define Neuron',
     icon: 'solar:code-square-linear',
     color: 'text-blue-400',
-    defaultParams: { neuron: '', workdir: '' },
+    defaultParams: { neuron: '', commit: '' },
     fields: [
-      { key: 'neuron', label: 'Neuron path', type: 'neuron', placeholder: 'neurons/bff-v1' },
-      { key: 'workdir', label: 'Working directory', type: 'text', placeholder: '~/alis.build/org/define/product' },
+      { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
+      { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: '' },
     ],
-    summary: (p) => p.neuron || 'No neuron set',
+    summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
   },
   {
     id: 'build-cloud',
