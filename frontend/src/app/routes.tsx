@@ -32,7 +32,6 @@ import { BuildKitMcpServerPage } from "./pages/BuildKitMcpServerPage";
 import { BuildKitGlassModePage } from "./pages/BuildKitGlassModePage";
 import { GitPage } from "./pages/GitPage";
 import { LearnPage } from "./pages/LearnPage";
-import { NotificationsDebugPage } from "./pages/NotificationsDebugPage";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
 
 export const router = createBrowserRouter([
@@ -77,7 +76,6 @@ export const router = createBrowserRouter([
       { path: "workflows", Component: WorkflowsPage },
       { path: "git", Component: GitPage },
       { path: "learn", Component: LearnPage },
-      { path: "debug/notifications", Component: NotificationsDebugPage },
     ],
   },
 ]);

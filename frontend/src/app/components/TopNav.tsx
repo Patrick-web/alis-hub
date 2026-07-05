@@ -3,17 +3,16 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
-import { Call, System } from '@wailsio/runtime';
+import { Call } from '@wailsio/runtime';
 import { ProfileModal } from './ProfileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import { useCommandPalette } from '../stores/commandPalette';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
 import { useUserProfile } from '../stores/userProfile';
+import { usePlatform } from '../stores/platform';
 import { MacWindowControls, WindowsWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
-
-const isWindows = System.IsWindows();
 
 const tabs = [
   { id: 'about', label: 'About', icon: <Icon icon="solar:info-circle-linear" className="text-lg" /> },
@@ -30,6 +29,8 @@ export function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
+  const { effective } = usePlatform();
+  const isWindows = effective === 'windows';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);

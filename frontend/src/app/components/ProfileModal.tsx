@@ -70,7 +70,7 @@ function Avatar({ name, picture, size = 48 }: { name: string; picture: string; s
   );
 }
 
-function SettingRow({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+export function SettingRow({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0">
       <span className="text-[12px] text-foreground/70 font-medium">{label}</span>
@@ -80,7 +80,7 @@ function SettingRow({ label, value, children }: { label: string; value?: string;
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px] pb-[2px]">
       {children}
@@ -88,7 +88,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SettingsCard({ children }: { children: React.ReactNode }) {
+export function SettingsCard({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-foreground/[0.04] rounded-[9px] border border-border overflow-hidden">
       {children}

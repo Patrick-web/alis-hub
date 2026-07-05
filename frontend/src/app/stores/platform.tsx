@@ -1,0 +1,84 @@
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  type ReactNode,
+} from 'react';
+import { System } from '@wailsio/runtime';
+
+export type RealPlatform = 'darwin' | 'windows';
+export type PlatformOverride = 'auto' | RealPlatform;
+
+interface EnvironmentInfo {
+  OS?: string;
+  Arch?: string;
+}
+
+interface PlatformContextValue {
+  real: RealPlatform;
+  envInfo: EnvironmentInfo | null;
+  override: PlatformOverride;
+  effective: RealPlatform;
+  setOverride: (v: PlatformOverride) => void;
+}
+
+const STORAGE_KEY = 'alis:platform-override';
+
+function loadOverride(): PlatformOverride {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === 'darwin' || raw === 'windows' || raw === 'auto') return raw;
+    return 'auto';
+  } catch {
+    return 'auto';
+  }
+}
+
+function saveOverride(v: PlatformOverride) {
+  try {
+    localStorage.setItem(STORAGE_KEY, v);
+  } catch {}
+}
+
+const PlatformContext = createContext<PlatformContextValue | null>(null);
+
+export function PlatformProvider({ children }: { children: ReactNode }) {
+  const [real, setReal] = useState<RealPlatform>(() => (System.IsWindows() ? 'windows' : 'darwin'));
+  const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
+  const [override, setOverrideState] = useState<PlatformOverride>(loadOverride);
+
+  // Self-heal: System.IsWindows() reads a global injected into the webview,
+  // which can lose the race on first module/mount evaluation. Environment()
+  // is an async round-trip to the Go backend, so it's an authoritative
+  // correction if the two ever disagree.
+  useEffect(() => {
+    System.Environment()
+      .then((env) => {
+        setEnvInfo(env);
+        if (env?.OS === 'windows') setReal('windows');
+        else if (env?.OS) setReal('darwin');
+      })
+      .catch(() => {});
+  }, []);
+
+  const setOverride = useCallback((v: PlatformOverride) => {
+    setOverrideState(v);
+    saveOverride(v);
+  }, []);
+
+  const effective: RealPlatform = override === 'auto' ? real : override;
+
+  return (
+    <PlatformContext.Provider value={{ real, envInfo, override, effective, setOverride }}>
+      {children}
+    </PlatformContext.Provider>
+  );
+}
+
+export function usePlatform(): PlatformContextValue {
+  const ctx = useContext(PlatformContext);
+  if (!ctx) throw new Error('usePlatform must be used within PlatformProvider');
+  return ctx;
+}
