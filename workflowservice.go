@@ -803,6 +803,8 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		home, _ := os.UserHomeDir()
 		var lastProductDir string
 		for _, neuron := range neurons {
+			shortName := neuron[strings.LastIndex(neuron, "/")+1:]
+			writeSubTab(w, shortName, shortName)
 			org, product, neuronID, version := parseNeuronResource(neuron)
 			fmt.Fprintf(w, "━━ Preparing packages for %s\n", neuron)
 			scripts, err := s.packageService.PreparePackageScripts(org, product, neuronID, version, false, nil)
@@ -1059,18 +1061,31 @@ func (s *WorkflowService) executeDeploy(ctx context.Context, neuron, version str
 	}
 	fmt.Fprintf(w, "Operation: %s\n", result.OperationName)
 
-	var logOffset int64
+	// Emit sub-tabs for all environments upfront so they appear immediately.
+	for _, env := range environments {
+		label := env[strings.LastIndex(env, "/")+1:]
+		writeSubTab(w, label, label)
+	}
+
+	logOffsets := make([]int64, len(environments))
 	for !result.Done {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-time.After(3 * time.Second):
 		}
-		if len(result.Deployments) > 0 && result.Deployments[0].LogsURL != "" {
-			if lr, err := s.deployService.FetchDeployLogs(result.Deployments[0].LogsURL, logOffset); err == nil && lr.Content != "" {
-				fmt.Fprint(w, lr.Content)
-				logOffset = lr.NextOffset
+		for i, dep := range result.Deployments {
+			if i >= len(environments) || dep.LogsURL == "" {
+				continue
 			}
+			lr, lErr := s.deployService.FetchDeployLogs(dep.LogsURL, logOffsets[i])
+			if lErr != nil || lr.Content == "" {
+				continue
+			}
+			label := environments[i][strings.LastIndex(environments[i], "/")+1:]
+			writeSubTab(w, label, label) // switch context to this env's tab
+			fmt.Fprint(w, lr.Content)
+			logOffsets[i] = lr.NextOffset
 		}
 		result, err = s.deployService.PollDeployOperation(result.OperationName)
 		if err != nil {
@@ -1080,17 +1095,28 @@ func (s *WorkflowService) executeDeploy(ctx context.Context, neuron, version str
 			return fmt.Errorf("deploy failed: %s", result.Error)
 		}
 	}
-	// Drain remaining logs
-	if len(result.Deployments) > 0 && result.Deployments[0].LogsURL != "" {
-		if lr, err := s.deployService.FetchDeployLogs(result.Deployments[0].LogsURL, logOffset); err == nil && lr.Content != "" {
-			fmt.Fprint(w, lr.Content)
+	// Drain remaining logs per environment
+	for i, dep := range result.Deployments {
+		if i >= len(environments) || dep.LogsURL == "" {
+			continue
 		}
+		lr, lErr := s.deployService.FetchDeployLogs(dep.LogsURL, logOffsets[i])
+		if lErr != nil || lr.Content == "" {
+			continue
+		}
+		label := environments[i][strings.LastIndex(environments[i], "/")+1:]
+		writeSubTab(w, label, label)
+		fmt.Fprint(w, lr.Content)
 	}
-	fmt.Fprintf(w, "Deploy complete. Version: %s\n", result.Version)
+	fmt.Fprintf(w, "\nDeploy complete. Version: %s\n", result.Version)
 	return nil
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+func writeSubTab(w io.Writer, id, label string) {
+	fmt.Fprintf(w, "\x1fTAB:%s\x1f%s\n", id, label)
+}
 
 func resolveRepoPath(val string, stepVars map[string]string) string {
 	switch val {
