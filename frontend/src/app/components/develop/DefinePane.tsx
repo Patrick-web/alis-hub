@@ -10,6 +10,7 @@ import { useDevelopTabs } from '../../stores/developTabs';
 import type { AppNotification } from '../../stores/notifications';
 import type { DefineCommit, DefineResult, DefineStep, GlassArtifact, GlassResult } from './types';
 import { parseNeuron, formatTimestamp } from './types';
+import { completeTaskNotification } from '../../lib/taskNotify';
 import * as DefineService from '../../../../bindings/alis-hub-v3/defineservice';
 
 interface DefinePaneProps {
@@ -92,8 +93,9 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
       setDefineResult(result as DefineResult);
       updateNotification(taskId, { task: { meta: { operationName: (result as DefineResult).operationName } } });
     } catch (e: any) {
-      setDefineError(e?.message || String(e) || 'Failed to start define');
-      updateNotification(taskId, { severity: 'error', title: 'Define failed', task: { status: 'error' } });
+      const errMsg = e?.message || String(e) || 'Failed to start define';
+      setDefineError(errMsg);
+      completeTaskNotification(updateNotification, { id: taskId, severity: 'error', title: 'Define failed', body: errMsg, taskStatus: 'error' });
       taskIdRef.current = null;
     }
   }
@@ -114,8 +116,8 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
             setProgressMsg('Define complete — loading Glass...');
             if (taskIdRef.current) {
               const doneId = taskIdRef.current;
-              updateNotification(doneId, {
-                severity: 'success', title: 'Define complete', task: { status: 'done', step: 'glass' },
+              completeTaskNotification(updateNotification, {
+                id: doneId, severity: 'success', title: 'Define complete', taskStatus: 'done', taskPatch: { step: 'glass' },
                 actions: [{ label: 'Open in Develop', variant: 'primary', onClick: () => { setFocusTaskId(doneId); navigate('/develop'); } }],
               });
               taskIdRef.current = null;
@@ -131,9 +133,10 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
               setGlassLoading(false);
             }
           } else {
-            setDefineError(result.error || 'Define failed');
+            const errMsg = result.error || 'Define failed';
+            setDefineError(errMsg);
             if (taskIdRef.current) {
-              updateNotification(taskIdRef.current, { severity: 'error', title: 'Define failed', task: { status: 'error', step: 'running' } });
+              completeTaskNotification(updateNotification, { id: taskIdRef.current, severity: 'error', title: 'Define failed', body: errMsg, taskStatus: 'error', taskPatch: { step: 'running' } });
               taskIdRef.current = null;
             }
           }
