@@ -272,9 +272,9 @@ var defaultTemplates = []templateSeed{
 		name: "Git: Commit & Push",
 		desc: "Stage all, commit with a message, and push to origin",
 		steps: []templateStepSeed{
-			{id: "tpl-git-s1", typ: "git-stage-all", params: `{"repoPath":""}`, onFailure: "stop"},
-			{id: "tpl-git-s2", typ: "git-commit", params: `{"repoPath":"","message":""}`, onFailure: "stop"},
-			{id: "tpl-git-s3", typ: "git-push", params: `{"repoPath":""}`, onFailure: "stop"},
+			{id: "tpl-git-s1", typ: "git-stage-all", params: `{"repoPath":"build-repo"}`, onFailure: "stop"},
+			{id: "tpl-git-s2", typ: "git-commit", params: `{"repoPath":"build-repo","message":""}`, onFailure: "stop"},
+			{id: "tpl-git-s3", typ: "git-push", params: `{"repoPath":"build-repo"}`, onFailure: "stop"},
 		},
 	},
 	{
@@ -762,6 +762,10 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 			return fmt.Errorf("define step: neuron param is required")
 		}
 		stepVars["last_define_neuron"] = neuron
+		org, _, _, _ := parseNeuronResource(neuron)
+		if home, err := os.UserHomeDir(); err == nil {
+			stepVars["last_define_repo"] = filepath.Join(home, "alis.build", org, "define")
+		}
 		return s.executeDefine(ctx, neuron, str("commit"), w)
 
 	case "build-cloud":
@@ -770,6 +774,10 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 			return fmt.Errorf("build-cloud step: neuron param is required")
 		}
 		stepVars["last_build_neuron"] = neuron
+		bOrg, bProduct, _, _ := parseNeuronResource(neuron)
+		if home, err := os.UserHomeDir(); err == nil {
+			stepVars["last_build_repo"] = filepath.Join(home, "alis.build", bOrg, "build", bProduct)
+		}
 		builtVersion, err := s.executeBuildCloud(ctx, neuron, str("commit"), w)
 		if err == nil && builtVersion != "" {
 			stepVars["last_build_version"] = builtVersion
@@ -850,18 +858,12 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		return s.executeDeploy(ctx, neuron, version, environments, w)
 
 	case "git-stage-all":
-		repoPath := str("repoPath")
-		if repoPath == "" {
-			repoPath = stepVars["last_upgrade_repo"]
-		}
+		repoPath := resolveRepoPath(str("repoPath"), stepVars)
 		fmt.Fprintf(w, "Staging all changes in %s\n", repoPath)
 		return s.gitService.StageAll(repoPath)
 
 	case "git-commit":
-		repoPath := str("repoPath")
-		if repoPath == "" {
-			repoPath = stepVars["last_upgrade_repo"]
-		}
+		repoPath := resolveRepoPath(str("repoPath"), stepVars)
 		message := expandVars(str("message"), stepVars)
 		if message == "" {
 			return fmt.Errorf("git-commit step: message param is required")
@@ -870,10 +872,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		return s.gitService.Commit(repoPath, message)
 
 	case "git-push":
-		repoPath := str("repoPath")
-		if repoPath == "" {
-			repoPath = stepVars["last_upgrade_repo"]
-		}
+		repoPath := resolveRepoPath(str("repoPath"), stepVars)
 		fmt.Fprintf(w, "Pushing to origin...\n")
 		result := s.gitService.PushOrigin(repoPath)
 		if result.Kind == "error" || result.Kind == "push_rejected" {
@@ -885,10 +884,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		return nil
 
 	case "git-pull":
-		repoPath := str("repoPath")
-		if repoPath == "" {
-			repoPath = stepVars["last_upgrade_repo"]
-		}
+		repoPath := resolveRepoPath(str("repoPath"), stepVars)
 		fmt.Fprintf(w, "Pulling from origin...\n")
 		result := s.gitService.PullOrigin(repoPath)
 		if result.Kind == "error" {
@@ -1090,6 +1086,20 @@ func (s *WorkflowService) executeDeploy(ctx context.Context, neuron, version str
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+func resolveRepoPath(val string, stepVars map[string]string) string {
+	switch val {
+	case "define-repo":
+		return stepVars["last_define_repo"]
+	case "build-repo":
+		if p := stepVars["last_build_repo"]; p != "" {
+			return p
+		}
+		return stepVars["last_upgrade_repo"]
+	default:
+		return val
+	}
+}
 
 func expandVars(tmpl string, vars map[string]string) string {
 	for k, v := range vars {

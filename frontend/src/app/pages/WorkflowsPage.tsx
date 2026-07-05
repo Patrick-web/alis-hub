@@ -44,7 +44,7 @@ type StepType = {
 type StepField = {
   key: string;
   label: string;
-  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'env-multi';
+  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'env-multi' | 'repo-select';
   placeholder?: string;
   options?: string[];
 };
@@ -68,6 +68,12 @@ type RunLogChunk = {
 };
 
 // ─── Step type helpers ────────────────────────────────────────────────────────
+
+function repoLabel(val: string): string {
+  if (val === 'define-repo') return 'Define repo';
+  if (val === 'build-repo') return 'Build repo';
+  return val || 'No repo set';
+}
 
 function lastParamFrom(steps: WorkflowStep[], types: string[], key: string): string {
   for (let i = steps.length - 1; i >= 0; i--) {
@@ -117,7 +123,7 @@ const STEP_TYPES: StepType[] = [
     defaultParams: { neuron: '', commit: '' },
     fields: [
       { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
-      { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: '' },
+      { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: 'Latest build' },
     ],
     summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
   },
@@ -152,20 +158,20 @@ const STEP_TYPES: StepType[] = [
     label: 'Git: Stage All',
     icon: 'solar:file-add-linear',
     color: 'text-green-400',
-    defaultParams: { repoPath: '' },
+    defaultParams: { repoPath: 'build-repo' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
     ],
-    summary: (p) => p.repoPath || 'No repo set',
+    summary: (p) => repoLabel(p.repoPath),
   },
   {
     id: 'git-commit',
     label: 'Git: Commit',
     icon: 'solar:check-circle-linear',
     color: 'text-green-400',
-    defaultParams: { repoPath: '', message: '' },
+    defaultParams: { repoPath: 'build-repo', message: '' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
       { key: 'message', label: 'Commit message', type: 'text', placeholder: 'chore: update' },
     ],
     summary: (p) => p.message || 'No message set',
@@ -179,22 +185,22 @@ const STEP_TYPES: StepType[] = [
     label: 'Git: Push',
     icon: 'solar:upload-linear',
     color: 'text-green-400',
-    defaultParams: { repoPath: '' },
+    defaultParams: { repoPath: 'build-repo' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
     ],
-    summary: (p) => p.repoPath || 'No repo set',
+    summary: (p) => repoLabel(p.repoPath),
   },
   {
     id: 'git-pull',
     label: 'Git: Pull',
     icon: 'solar:download-linear',
     color: 'text-green-400',
-    defaultParams: { repoPath: '' },
+    defaultParams: { repoPath: 'build-repo' },
     fields: [
-      { key: 'repoPath', label: 'Repository path', type: 'text', placeholder: '~/alis.build/org/build/product' },
+      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
     ],
-    summary: (p) => p.repoPath || 'No repo set',
+    summary: (p) => repoLabel(p.repoPath),
   },
   {
     id: 'shell',
@@ -1119,14 +1125,18 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                     disabled={isTemplate}
                   />
                 ) : f.type === 'select' ? (
-                  <select
-                    className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs focus:outline-none focus:border-brand"
+                  <Select
                     value={params[f.key] ?? f.options?.[0] ?? ''}
-                    onChange={(e) => onParamChange(f.key, e.target.value)}
+                    onValueChange={(v) => onParamChange(f.key, v)}
                     disabled={isTemplate}
                   >
-                    {f.options?.map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
+                    <SelectTrigger size="sm" className="h-8 text-xs w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 ) : (f.type === 'neuron' || f.type === 'neuron-full') ? (
                   <>
                     <button
@@ -1197,7 +1207,7 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                       className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
                     >
                       <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
-                        {params[f.key] ? params[f.key].slice(0, 12) : 'Latest build'}
+                        {params[f.key] ? params[f.key].slice(0, 12) : (f.placeholder || 'Latest commit')}
                       </span>
                       <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
                     </button>
@@ -1209,6 +1219,20 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                       />
                     )}
                   </>
+                ) : f.type === 'repo-select' ? (
+                  <Select
+                    value={params[f.key] ?? 'build-repo'}
+                    onValueChange={(v) => onParamChange(f.key, v)}
+                    disabled={isTemplate}
+                  >
+                    <SelectTrigger size="sm" className="h-8 text-xs w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="build-repo">Build repo</SelectItem>
+                      <SelectItem value="define-repo">Define repo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : f.type === 'env-multi' ? (
                   <MultiSelect
                     options={state.loadedEnvs.map((e) => ({ value: e.name, label: e.displayName }))}
