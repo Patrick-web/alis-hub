@@ -102,7 +102,7 @@ export function WorkflowRunModal({
     let cancelled = false;
     async function start() {
       try {
-        const id = await WorkflowService.RunWorkflow(workflowId) as string;
+        const id = await WorkflowService.RunWorkflow(workflowId, {}) as string;
         if (cancelled) return;
         setRunId(id);
         offsetRef.current = 0;

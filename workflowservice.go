@@ -30,6 +30,11 @@ type WorkflowStep struct {
 	OnFailure  string `json:"onFailure"` // "stop" | "continue"
 }
 
+type WorkflowArg struct {
+	Key   string `json:"key"`
+	Label string `json:"label"`
+}
+
 type Workflow struct {
 	ID          string         `json:"id"`
 	Name        string         `json:"name"`
@@ -38,6 +43,7 @@ type Workflow struct {
 	CreatedAt   int64          `json:"createdAt"`
 	UpdatedAt   int64          `json:"updatedAt"`
 	Steps       []WorkflowStep `json:"steps"`
+	Args        []WorkflowArg  `json:"args"`
 }
 
 type WorkflowRun struct {
@@ -72,6 +78,7 @@ type UpsertWorkflowParams struct {
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
 	Steps       []UpsertStepParams `json:"steps"`
+	Args        []WorkflowArg      `json:"args"`
 }
 
 type UpsertStepParams struct {
@@ -201,6 +208,8 @@ var migrations = []string{
 		started_at   INTEGER,
 		completed_at INTEGER
 	);`,
+	// v2 — workflow-level input arguments
+	`ALTER TABLE workflows ADD COLUMN args TEXT NOT NULL DEFAULT '[]'`,
 }
 
 func (s *WorkflowService) migrate() error {
@@ -320,7 +329,7 @@ func (s *WorkflowService) seedTemplates() error {
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
 
 func (s *WorkflowService) ListWorkflows() ([]Workflow, error) {
-	rows, err := s.db.Query(`SELECT id,name,description,is_template,created_at,updated_at FROM workflows ORDER BY is_template DESC, created_at ASC`)
+	rows, err := s.db.Query(`SELECT id,name,description,is_template,created_at,updated_at,args FROM workflows ORDER BY is_template DESC, created_at ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -329,11 +338,16 @@ func (s *WorkflowService) ListWorkflows() ([]Workflow, error) {
 	for rows.Next() {
 		var w Workflow
 		var isT int
-		if err := rows.Scan(&w.ID, &w.Name, &w.Description, &isT, &w.CreatedAt, &w.UpdatedAt); err != nil {
+		var argsJSON string
+		if err := rows.Scan(&w.ID, &w.Name, &w.Description, &isT, &w.CreatedAt, &w.UpdatedAt, &argsJSON); err != nil {
 			rows.Close()
 			return nil, err
 		}
 		w.IsTemplate = isT == 1
+		_ = json.Unmarshal([]byte(argsJSON), &w.Args)
+		if w.Args == nil {
+			w.Args = []WorkflowArg{}
+		}
 		out = append(out, w)
 	}
 	if err := rows.Err(); err != nil {
@@ -354,9 +368,10 @@ func (s *WorkflowService) ListWorkflows() ([]Workflow, error) {
 func (s *WorkflowService) GetWorkflow(id string) (*Workflow, error) {
 	var w Workflow
 	var isT int
+	var argsJSON string
 	err := s.db.QueryRow(
-		`SELECT id,name,description,is_template,created_at,updated_at FROM workflows WHERE id=?`, id,
-	).Scan(&w.ID, &w.Name, &w.Description, &isT, &w.CreatedAt, &w.UpdatedAt)
+		`SELECT id,name,description,is_template,created_at,updated_at,args FROM workflows WHERE id=?`, id,
+	).Scan(&w.ID, &w.Name, &w.Description, &isT, &w.CreatedAt, &w.UpdatedAt, &argsJSON)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("workflow not found: %s", id)
 	}
@@ -364,6 +379,10 @@ func (s *WorkflowService) GetWorkflow(id string) (*Workflow, error) {
 		return nil, err
 	}
 	w.IsTemplate = isT == 1
+	_ = json.Unmarshal([]byte(argsJSON), &w.Args)
+	if w.Args == nil {
+		w.Args = []WorkflowArg{}
+	}
 	w.Steps, err = s.loadSteps(id)
 	return &w, err
 }
@@ -396,9 +415,13 @@ func (s *WorkflowService) CreateWorkflow(params UpsertWorkflowParams) (*Workflow
 		return nil, err
 	}
 	defer tx.Rollback()
+	argsJSON, _ := json.Marshal(params.Args)
+	if argsJSON == nil {
+		argsJSON = []byte("[]")
+	}
 	if _, err := tx.Exec(
-		`INSERT INTO workflows (id,name,description,is_template,created_at,updated_at) VALUES (?,?,?,0,?,?)`,
-		id, params.Name, params.Description, now, now,
+		`INSERT INTO workflows (id,name,description,is_template,created_at,updated_at,args) VALUES (?,?,?,0,?,?,?)`,
+		id, params.Name, params.Description, now, now, string(argsJSON),
 	); err != nil {
 		return nil, err
 	}
@@ -442,9 +465,13 @@ func (s *WorkflowService) UpdateWorkflow(id string, params UpsertWorkflowParams)
 		return err
 	}
 	defer tx.Rollback()
+	argsJSONUp, _ := json.Marshal(params.Args)
+	if argsJSONUp == nil {
+		argsJSONUp = []byte("[]")
+	}
 	if _, err := tx.Exec(
-		`UPDATE workflows SET name=?,description=?,updated_at=? WHERE id=?`,
-		params.Name, params.Description, now, id,
+		`UPDATE workflows SET name=?,description=?,updated_at=?,args=? WHERE id=?`,
+		params.Name, params.Description, now, string(argsJSONUp), id,
 	); err != nil {
 		return err
 	}
@@ -500,12 +527,13 @@ func (s *WorkflowService) CloneWorkflow(id string) (*Workflow, error) {
 		Name:        wf.Name + " (copy)",
 		Description: wf.Description,
 		Steps:       steps,
+		Args:        wf.Args,
 	})
 }
 
 // ─── Execution ────────────────────────────────────────────────────────────────
 
-func (s *WorkflowService) RunWorkflow(id string) (string, error) {
+func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string) (string, error) {
 	wf, err := s.GetWorkflow(id)
 	if err != nil {
 		return "", err
@@ -544,7 +572,7 @@ func (s *WorkflowService) RunWorkflow(id string) (string, error) {
 	ar := &activeRun{cancel: cancel}
 	s.activeRuns.Store(runID, ar)
 
-	go s.executeRun(ctx, runID, wf, ar)
+	go s.executeRun(ctx, runID, wf, ar, argValues)
 	return runID, nil
 }
 
@@ -668,7 +696,7 @@ func (s *WorkflowService) loadStepRuns(runID string) ([]StepRunStatus, error) {
 
 // ─── Execution engine ─────────────────────────────────────────────────────────
 
-func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Workflow, ar *activeRun) {
+func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Workflow, ar *activeRun, argValues map[string]string) {
 	defer func() {
 		s.activeRuns.Delete(runID)
 		ar.cancel()
@@ -677,6 +705,9 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 	finalStatus := "success"
 	stopped := false
 	stepVars := make(map[string]string) // shared state passed between steps (e.g. build version → deploy)
+	for k, v := range argValues {
+		stepVars[k] = v
+	}
 
 	for _, step := range wf.Steps {
 		var stepRunID string
@@ -749,7 +780,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	str := func(key string) string {
 		v, _ := params[key].(string)
-		return v
+		return expandVars(v, stepVars)
 	}
 
 	switch step.Type {
@@ -866,7 +897,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	case "git-commit":
 		repoPath := resolveRepoPath(str("repoPath"), stepVars)
-		message := expandVars(str("message"), stepVars)
+		message := str("message")
 		if message == "" {
 			return fmt.Errorf("git-commit step: message param is required")
 		}
