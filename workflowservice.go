@@ -969,21 +969,26 @@ func (s *WorkflowService) executeDefine(ctx context.Context, neuron, commit stri
 	if result.Error != "" {
 		return fmt.Errorf("define: %s", result.Error)
 	}
-	fmt.Fprintf(w, "Operation: %s\n", result.OperationName)
+	fmt.Fprintf(w, "Operation: %s\nWaiting", result.OperationName)
 	for !result.Done {
 		select {
 		case <-ctx.Done():
+			fmt.Fprintf(w, "\n")
 			return ctx.Err()
 		case <-time.After(3 * time.Second):
 		}
+		fmt.Fprintf(w, ".")
 		result, err = s.defineService.PollDefineOperation(result.OperationName)
 		if err != nil {
+			fmt.Fprintf(w, "\n")
 			return fmt.Errorf("poll define: %w", err)
 		}
 		if result.Error != "" {
+			fmt.Fprintf(w, "\n")
 			return fmt.Errorf("define failed: %s", result.Error)
 		}
 	}
+	fmt.Fprintf(w, "\n")
 	if result.Version != "" {
 		fmt.Fprintf(w, "Define complete. Version: %s\n", result.Version)
 	} else {
