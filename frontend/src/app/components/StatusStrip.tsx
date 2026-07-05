@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { useNotifications } from '../stores/notifications';
 import type { TaskType, TaskStatus } from '../stores/notifications';
+import { useLocalAI } from '../stores/localai';
 import { NotificationCenter } from './NotificationCenter';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
 
@@ -38,11 +39,14 @@ function formatElapsed(startedAt: number): string {
 
 export function StatusStrip() {
   const { state, dismiss, setFocusTaskId } = useNotifications();
+  const { state: localAIState } = useLocalAI();
   const navigate = useNavigate();
   const [tick, setTick] = useState(0);
 
   const taskNotifs = state.notifications.filter(n => n.task);
   const hasRunning = taskNotifs.some(n => n.task?.status === 'running');
+  const aiGenerating = localAIState.activeRequests > 0;
+  const hasContent = taskNotifs.length > 0 || aiGenerating;
 
   useEffect(() => {
     if (!hasRunning) return;
@@ -58,10 +62,30 @@ export function StatusStrip() {
   return (
     <div
       className="shrink-0 flex items-center border-t border-border bg-background"
-      style={{ height: taskNotifs.length > 0 ? '36px' : '22px' }}
+      style={{ height: hasContent ? '36px' : '22px' }}
     >
       {/* Task chips */}
       <div className="flex items-center gap-[4px] px-[8px] flex-1 min-w-0 overflow-x-auto">
+        {aiGenerating && (
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger asChild>
+              <div className="flex items-center gap-[5px] pl-[7px] pr-[7px] h-[22px] rounded-[3px] border border-purple-500/20 bg-purple-500/[0.08] shrink-0">
+                <span className="w-[5px] h-[5px] rounded-full bg-purple-400 animate-pulse shrink-0" />
+                <Icon icon="solar:cpu-bolt-linear" className="text-[10px] text-purple-300/80 shrink-0" />
+                <span className="text-[9px] font-mono text-purple-300/80">Local AI</span>
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent side="top" align="start" className="w-64 font-mono text-[11px] space-y-1.5">
+              <p className="font-bold text-foreground flex items-center gap-[6px]">
+                <Icon icon="solar:cpu-bolt-linear" className="text-[11px] text-purple-300/80 shrink-0" />
+                Local AI generating
+              </p>
+              <p className="text-foreground/50">
+                Generating a response — this can use significant RAM/CPU.
+              </p>
+            </HoverCardContent>
+          </HoverCard>
+        )}
         {taskNotifs.map(n => {
           const task = n.task!;
           const isRunning = task.status === 'running';

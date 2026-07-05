@@ -15,7 +15,6 @@ import { useLabs } from './labs';
 import { useSuggestions } from './suggestions';
 import { useLocalAI } from './localai';
 import * as PackageService from '../../../bindings/alis-hub-v3/packageservice';
-import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
 
 interface PackageSessionsContextValue {
   sessions: TerminalSession[];
@@ -40,7 +39,7 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
   const { updateNotification } = useNotifications();
   const { isSuggestionEnabled } = useLabs();
   const { addSuggestion } = useSuggestions();
-  const { state: localAIState } = useLocalAI();
+  const { state: localAIState, generate } = useLocalAI();
 
   // Polling loop — stays alive regardless of which page is mounted
   useEffect(() => {
@@ -150,7 +149,7 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
     // AI contextual suggestion (fire-and-forget)
     if (localAIState.enabled && localAIState.modelPulled && isSuggestionEnabled('ai-contextual-insight')) {
       const outcome = hasErrors ? 'failed with errors' : 'completed successfully';
-      LocalAIService.Generate(
+      generate(
         localAIState.model,
         'You are a helpful development assistant. Given a development event, suggest one concise actionable next step in 1-2 sentences. Be specific and practical.',
         `A package build just ${outcome}.`,
