@@ -389,9 +389,19 @@ export function WorkflowsPage() {
       if (chunk.stepRuns) {
         setStepRuns(chunk.stepRuns);
         const running = chunk.stepRuns.find((s) => s.status === 'running');
-        if (running && running.id !== currentStepRunIdRef.current) {
+        if (currentStepRunIdRef.current === null && chunk.stepRuns.length > 0) {
+          // First poll: collapse everything, expand only the running step.
+          const initial: Record<string, boolean> = {};
+          for (const sr of chunk.stepRuns) initial[sr.id] = sr.status !== 'running';
+          setCollapsedSections(initial);
+          if (running) currentStepRunIdRef.current = running.id;
+        } else if (running && running.id !== currentStepRunIdRef.current) {
           const prev = currentStepRunIdRef.current;
-          if (prev) setCollapsedSections((c) => ({ ...c, [prev]: true }));
+          setCollapsedSections((c) => ({
+            ...c,
+            ...(prev ? { [prev]: true } : {}),
+            [running.id]: false,
+          }));
           currentStepRunIdRef.current = running.id;
         }
       }
@@ -408,6 +418,10 @@ export function WorkflowsPage() {
         setRunDone(true);
         const failed = chunk.stepRuns?.some((s) => s.status === 'failed');
         setRunFinalStatus(failed ? 'failed' : 'success');
+        if (currentStepRunIdRef.current) {
+          const lastId = currentStepRunIdRef.current;
+          setCollapsedSections((c) => ({ ...c, [lastId]: true }));
+        }
       }
     } catch (e) {
       console.error('PollRunLogs error:', e);
