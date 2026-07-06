@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { useNotifications } from '../stores/notifications';
-import type { TaskType, TaskStatus } from '../stores/notifications';
+import type { TaskType, TaskStatus, AppNotification } from '../stores/notifications';
 import { useLocalAI } from '../stores/localai';
 import { NotificationCenter } from './NotificationCenter';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
@@ -12,6 +12,7 @@ const TASK_ICON: Record<TaskType, string> = {
   build: 'solar:box-linear',
   deploy: 'solar:cloud-upload-linear',
   packages: 'solar:folder-with-files-linear',
+  workflow: 'solar:playlist-2-linear',
 };
 
 const TASK_LABEL: Record<TaskType, string> = {
@@ -19,6 +20,7 @@ const TASK_LABEL: Record<TaskType, string> = {
   build: 'Build',
   deploy: 'Deploy',
   packages: 'Packages',
+  workflow: 'Workflow',
 };
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -54,9 +56,9 @@ export function StatusStrip() {
     return () => clearInterval(id);
   }, [hasRunning]);
 
-  function handleChipClick(notifId: string) {
-    setFocusTaskId(notifId);
-    navigate('/develop');
+  function handleChipClick(n: AppNotification) {
+    setFocusTaskId(n.id);
+    navigate(n.task?.type === 'workflow' ? '/workflows' : '/develop');
   }
 
   return (
@@ -105,7 +107,7 @@ export function StatusStrip() {
 
                   {/* Clickable label area */}
                   <button
-                    onClick={() => handleChipClick(n.id)}
+                    onClick={() => handleChipClick(n)}
                     className="flex items-center gap-[4px] focus:outline-none"
                   >
                     <Icon

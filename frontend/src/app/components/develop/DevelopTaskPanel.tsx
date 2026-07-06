@@ -13,11 +13,14 @@ const MIN_WIDTH = 320;
 const MAX_WIDTH = 1200;
 const DEFAULT_WIDTH = 400;
 
+// 'workflow' tasks never open a Develop tab (they live on the Workflows page),
+// but these maps are keyed on the full TaskType union so TS stays exhaustive.
 const TYPE_ICONS: Record<TaskType, string> = {
   define: 'solar:document-text-linear',
   build: 'solar:code-linear',
   deploy: 'solar:cloud-upload-linear',
   packages: 'solar:box-linear',
+  workflow: 'solar:playlist-2-linear',
 };
 
 const TYPE_LABELS: Record<TaskType, string> = {
@@ -25,6 +28,7 @@ const TYPE_LABELS: Record<TaskType, string> = {
   build: 'Build',
   deploy: 'Deploy',
   packages: 'Packages',
+  workflow: 'Workflow',
 };
 
 function StatusDot({ status }: { status: string }): ReactNode {

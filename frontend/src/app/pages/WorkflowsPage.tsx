@@ -6,6 +6,8 @@ import { Dialog, DialogContent } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { MultiSelect } from '../components/ui/multi-select';
 import { useWorkspace } from '../stores/workspace';
+import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
+import { useNotifications } from '../stores/notifications';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
@@ -54,25 +56,6 @@ type StepField = {
   type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'build-version' | 'env-multi' | 'repo-select';
   placeholder?: string;
   options?: string[];
-};
-
-type StepRunStatus = {
-  id: string;
-  stepId: string;
-  position: number;
-  type: string;
-  label: string;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
-  startedAt?: number;
-  completedAt?: number;
-  log?: string;
-};
-
-type RunLogChunk = {
-  stepRuns: StepRunStatus[];
-  logText: string;
-  nextOffset: number;
-  done: boolean;
 };
 
 // ─── Step type helpers ────────────────────────────────────────────────────────
@@ -306,25 +289,20 @@ export function WorkflowsPage() {
   const [importError, setImportError] = useState<string | null>(null);
 
   // ── Run tab state ──────────────────────────────────────────────────────────
+  // Run/poll state itself lives in WorkflowRunsProvider so it survives navigating
+  // away from this page — see frontend/src/app/stores/workflowRuns.tsx.
+  const { runs, startRun: storeStartRun, stopRun: storeStopRun, toggleSection } = useWorkflowRuns();
+  const { state: notifState, focusTaskId, setFocusTaskId } = useNotifications();
   const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
-  const [runId, setRunId] = useState<string | null>(null);
-  const [stepRuns, setStepRuns] = useState<StepRunStatus[]>([]);
-  const [logSegments, setLogSegments] = useState<Record<string, string>>({});
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const [runDone, setRunDone] = useState(false);
-  const [runFinalStatus, setRunFinalStatus] = useState<string>('running');
-  const [runError, setRunError] = useState<string | null>(null);
-  const [stopping, setStopping] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const [runArgsOpen, setRunArgsOpen] = useState(false);
   const [runArgValues, setRunArgValues] = useState<Record<string, string>>({});
 
-  const runOffsetRef = useRef(0);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const currentStepRunIdRef = useRef<string | null>(null);
   const logBodyRef = useRef<HTMLDivElement>(null);
 
   const active = workflows.find((w) => w.id === activeId) ?? null;
+  const runEntry = activeId ? runs[activeId] : undefined;
 
   const load = useCallback(async () => {
     try {
@@ -349,19 +327,39 @@ export function WorkflowsPage() {
     }
   }, [activeId, workflows]);
 
-  // Reset run state when switching to a different workflow
-  const prevActiveIdRef = useRef<string | null>(null);
+  // Switch tabs when the selected workflow changes: jump straight to the Run tab
+  // if that workflow has an in-progress run, otherwise show its steps.
   useEffect(() => {
-    if (activeId !== prevActiveIdRef.current) {
-      prevActiveIdRef.current = activeId;
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      setActiveTab('steps');
-      setRunId(null); setStepRuns([]); setLogSegments({});
-      setCollapsedSections({}); setRunDone(false); setRunFinalStatus('running');
-      setRunError(null); setStopping(false);
-      runOffsetRef.current = 0; currentStepRunIdRef.current = null;
-    }
+    setStartError(null);
+    const entry = activeId ? runs[activeId] : undefined;
+    setActiveTab(entry && !entry.done ? 'run' : 'steps');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
+
+  // On first load, if some workflow has a run in progress in the background,
+  // jump straight to it instead of showing the empty "select a workflow" state.
+  const didAutoSelectRef = useRef(false);
+  useEffect(() => {
+    if (didAutoSelectRef.current || activeId || workflows.length === 0) return;
+    const runningEntries = Object.entries(runs).filter(([, r]) => !r.done);
+    if (runningEntries.length === 0) return;
+    didAutoSelectRef.current = true;
+    runningEntries.sort((a, b) => b[1].startedAt - a[1].startedAt);
+    setActiveId(runningEntries[0][0]);
+    setActiveTab('run');
+  }, [runs, activeId, workflows]);
+
+  // Clicking a workflow-run chip in the status strip jumps back here.
+  useEffect(() => {
+    if (!focusTaskId) return;
+    const n = notifState.notifications.find((x) => x.id === focusTaskId);
+    setFocusTaskId(null);
+    const workflowId = n?.task?.type === 'workflow' ? (n.task.meta?.workflowId as string | undefined) : undefined;
+    if (workflowId) {
+      setActiveId(workflowId);
+      setActiveTab('run');
+    }
+  }, [focusTaskId, notifState.notifications, setFocusTaskId]);
 
   // Close picker on outside click
   useEffect(() => {
@@ -374,94 +372,33 @@ export function WorkflowsPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
   // Auto-scroll log feed when new text arrives (while running)
   useEffect(() => {
-    if (!runDone && logBodyRef.current) {
+    if (runEntry && !runEntry.done && logBodyRef.current) {
       logBodyRef.current.scrollTop = logBodyRef.current.scrollHeight;
     }
-  }, [logSegments, runDone]);
-
-  // ── Polling ─────────────────────────────────────────────────────────────────
-
-  const stopPolling = useCallback(() => {
-    if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-  }, []);
-
-  const pollRun = useCallback(async (id: string) => {
-    try {
-      const chunk = await WorkflowService.PollRunLogs(id, runOffsetRef.current) as RunLogChunk;
-      if (!chunk) return;
-      runOffsetRef.current = chunk.nextOffset;
-
-      if (chunk.stepRuns) {
-        setStepRuns(chunk.stepRuns);
-        const running = chunk.stepRuns.find((s) => s.status === 'running');
-        if (currentStepRunIdRef.current === null && chunk.stepRuns.length > 0) {
-          // First poll: collapse everything, expand only the running step.
-          const initial: Record<string, boolean> = {};
-          for (const sr of chunk.stepRuns) initial[sr.id] = sr.status !== 'running';
-          setCollapsedSections(initial);
-          if (running) currentStepRunIdRef.current = running.id;
-        } else if (running && running.id !== currentStepRunIdRef.current) {
-          const prev = currentStepRunIdRef.current;
-          setCollapsedSections((c) => ({
-            ...c,
-            ...(prev ? { [prev]: true } : {}),
-            [running.id]: false,
-          }));
-          currentStepRunIdRef.current = running.id;
-        }
-      }
-
-      if (chunk.logText) {
-        const key = currentStepRunIdRef.current ?? chunk.stepRuns?.[0]?.id;
-        if (key) {
-          setLogSegments((prev) => ({ ...prev, [key]: (prev[key] ?? '') + chunk.logText }));
-        }
-      }
-
-      if (chunk.done) {
-        stopPolling();
-        setRunDone(true);
-        const failed = chunk.stepRuns?.some((s) => s.status === 'failed');
-        setRunFinalStatus(failed ? 'failed' : 'success');
-        if (currentStepRunIdRef.current) {
-          const lastId = currentStepRunIdRef.current;
-          setCollapsedSections((c) => ({ ...c, [lastId]: true }));
-        }
-      }
-    } catch (e) {
-      console.error('PollRunLogs error:', e);
-    }
-  }, [stopPolling]);
+  }, [runEntry?.logSegments, runEntry?.done]);
 
   // ── Run actions ─────────────────────────────────────────────────────────────
 
-  const startRun = async (argValues: Record<string, string>) => {
-    stopPolling();
-    setRunId(null); setStepRuns([]); setLogSegments({});
-    setCollapsedSections({}); setRunDone(false); setRunFinalStatus('running');
-    setRunError(null); setStopping(false);
-    runOffsetRef.current = 0; currentStepRunIdRef.current = null;
+  const [pendingStartPosition, setPendingStartPosition] = useState(0);
+
+  const doStartRun = async (argValues: Record<string, string>, startPosition: number = 0) => {
+    if (!editedWorkflow) return;
+    setStartError(null);
     setActiveTab('run');
     try {
-      const id = await WorkflowService.RunWorkflow(editedWorkflow!.id, argValues) as string;
-      setRunId(id);
-      pollRef.current = setInterval(() => pollRun(id), 500);
+      await storeStartRun(editedWorkflow.id, editedWorkflow.name, argValues, startPosition);
     } catch (e: any) {
-      setRunError(e?.message ?? String(e));
+      setStartError(e?.message ?? String(e));
     }
   };
 
-  const handleRun = () => {
+  const handleRun = (startPosition: number = 0) => {
+    setPendingStartPosition(startPosition);
     const args = editedWorkflow?.args ?? [];
     if (args.length === 0) {
-      startRun({});
+      doStartRun({}, startPosition);
     } else {
       const defaults: Record<string, string> = {};
       for (const a of args) defaults[a.key] = '';
@@ -471,10 +408,8 @@ export function WorkflowsPage() {
   };
 
   const handleStop = async () => {
-    if (!runId || stopping) return;
-    setStopping(true);
-    try { await WorkflowService.StopRun(runId); } catch { /* ignore */ }
-    finally { setStopping(false); }
+    if (!activeId || !runEntry?.runId || runEntry.stopping) return;
+    await storeStopRun(activeId);
   };
 
   // ── Workflow actions ─────────────────────────────────────────────────────────
@@ -653,7 +588,7 @@ export function WorkflowsPage() {
 
   const templates = workflows.filter((w) => w.isTemplate);
   const userWorkflows = workflows.filter((w) => !w.isTemplate);
-  const isRunning = runId !== null && !runDone;
+  const isRunning = !!runEntry && !runEntry.done;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -802,7 +737,7 @@ export function WorkflowsPage() {
 
               <Button
                 variant="primary"
-                onClick={handleRun}
+                onClick={() => handleRun()}
                 disabled={editedWorkflow.steps.length === 0 || isRunning}
               >
                 <Icon icon={isRunning ? 'solar:spinner-linear' : 'solar:play-linear'} className={`text-base ${isRunning ? 'animate-spin' : ''}`} />
@@ -834,10 +769,10 @@ export function WorkflowsPage() {
                 {isRunning && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
                 )}
-                {runDone && runFinalStatus === 'success' && (
+                {runEntry?.done && runEntry.finalStatus === 'success' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
                 )}
-                {runDone && runFinalStatus === 'failed' && (
+                {runEntry?.done && runEntry.finalStatus === 'failed' && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                 )}
               </button>
@@ -937,6 +872,8 @@ export function WorkflowsPage() {
                       onFailureChange={(val) => updateStep(step.id, { onFailure: val })}
                       onDuplicate={() => duplicateStep(step.id)}
                       onRemove={() => removeStep(step.id)}
+                      onRunFromHere={() => handleRun(idx)}
+                      runDisabled={isRunning}
                       onDragStart={() => onDragStart(idx)}
                       onDrop={() => onDrop(idx)}
                     />
@@ -982,16 +919,16 @@ export function WorkflowsPage() {
               style={{ display: activeTab === 'run' ? undefined : 'none' }}
             >
               <WorkflowRunView
-                stepRuns={stepRuns}
-                logSegments={logSegments}
-                collapsedSections={collapsedSections}
-                onToggleSection={(id) => setCollapsedSections((c) => ({ ...c, [id]: !c[id] }))}
-                done={runDone}
-                finalStatus={runFinalStatus}
-                error={runError}
-                runId={runId}
+                stepRuns={runEntry?.stepRuns ?? []}
+                logSegments={runEntry?.logSegments ?? {}}
+                collapsedSections={runEntry?.collapsedSections ?? {}}
+                onToggleSection={(id) => activeId && toggleSection(activeId, id)}
+                done={runEntry?.done ?? false}
+                finalStatus={runEntry?.finalStatus ?? 'running'}
+                error={startError}
+                runId={runEntry?.runId ?? null}
                 onStop={handleStop}
-                stopping={stopping}
+                stopping={runEntry?.stopping ?? false}
                 logBodyRef={logBodyRef}
               />
             </div>
@@ -1005,7 +942,11 @@ export function WorkflowsPage() {
           <div className="bg-card border border-border rounded-xl w-[380px] shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h2 className="text-sm font-semibold">Run: {editedWorkflow.name}</h2>
-              <p className="text-xs text-foreground/40 mt-0.5">Fill in the inputs for this run.</p>
+              <p className="text-xs text-foreground/40 mt-0.5">
+                {pendingStartPosition > 0 && editedWorkflow.steps[pendingStartPosition]
+                  ? `Fill in the inputs for this run — starting from "${getStepType(editedWorkflow.steps[pendingStartPosition].type).label}".`
+                  : 'Fill in the inputs for this run.'}
+              </p>
             </div>
             <div className="px-5 py-4 flex flex-col gap-3">
               {(editedWorkflow.args ?? []).map((arg) => (
@@ -1019,7 +960,7 @@ export function WorkflowsPage() {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         setRunArgsOpen(false);
-                        startRun(runArgValues);
+                        doStartRun(runArgValues, pendingStartPosition);
                       }
                     }}
                   />
@@ -1030,7 +971,7 @@ export function WorkflowsPage() {
               <Button variant="ghost" onClick={() => setRunArgsOpen(false)}>Cancel</Button>
               <Button
                 variant="primary"
-                onClick={() => { setRunArgsOpen(false); startRun(runArgValues); }}
+                onClick={() => { setRunArgsOpen(false); doStartRun(runArgValues, pendingStartPosition); }}
               >
                 <Icon icon="solar:play-linear" className="text-base" />
                 Run
@@ -1355,7 +1296,7 @@ function WorkflowListItem({ workflow, active, onClick, onExport }: {
 
 // ─── StepCard ─────────────────────────────────────────────────────────────────
 
-function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, onFailureChange, onDuplicate, onRemove, onDragStart, onDrop }: {
+function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, onFailureChange, onDuplicate, onRemove, onRunFromHere, runDisabled, onDragStart, onDrop }: {
   step: WorkflowStep;
   index: number;
   expanded: boolean;
@@ -1365,6 +1306,8 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
   onFailureChange: (val: string) => void;
   onDuplicate: () => void;
   onRemove: () => void;
+  onRunFromHere: () => void;
+  runDisabled: boolean;
   onDragStart: () => void;
   onDrop: () => void;
 }) {
@@ -1400,6 +1343,14 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
         </div>
         {!isTemplate && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => { e.stopPropagation(); if (!runDisabled) onRunFromHere(); }}
+              disabled={runDisabled}
+              className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-brand disabled:opacity-40 disabled:hover:text-foreground/40 transition-colors"
+              title="Run from this step"
+            >
+              <Icon icon="solar:play-linear" className="text-xs" />
+            </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-foreground transition-colors"
@@ -1676,6 +1627,13 @@ function WorkflowRunView({
 }) {
   const isRunning = runId !== null && !done;
   const [activeSub, setActiveSub] = useState<Record<string, string>>({});
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyLog(id: string, text: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((cur) => (cur === id ? null : cur)), 1500);
+  }
 
   // No run started yet
   if (!runId && !error) {
@@ -1822,9 +1780,12 @@ function WorkflowRunView({
             return (
               <div key={sr.id} className="border-b border-border/30 last:border-0">
                 {/* Section header */}
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onToggleSection(sr.id)}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-foreground/[2%] transition-colors select-none"
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggleSection(sr.id); }}
+                  className="group w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-foreground/[2%] transition-colors select-none cursor-pointer"
                 >
                   <Icon
                     icon="solar:alt-arrow-right-linear"
@@ -1846,7 +1807,16 @@ function WorkflowRunView({
                   {duration && (sr.status === 'success' || sr.status === 'failed') && (
                     <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">{duration}</span>
                   )}
-                </button>
+                  {logText && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); copyLog(sr.id, tabs ? activeTabText : logText); }}
+                      title="Copy log"
+                      className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-foreground/30 hover:text-foreground transition-colors flex-shrink-0"
+                    >
+                      <Icon icon={copiedId === sr.id ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-xs" />
+                    </button>
+                  )}
+                </div>
 
                 {/* Section body */}
                 {isOpen && (

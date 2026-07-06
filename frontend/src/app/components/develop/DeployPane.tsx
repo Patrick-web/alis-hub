@@ -45,6 +45,13 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const logBufferRefs = useRef<Record<string, string[]>>({});
   const taskIdRef = useRef<string | null>(null);
 
+  const [copiedEnv, setCopiedEnv] = useState<string | null>(null);
+  function copyLog(env: string) {
+    navigator.clipboard.writeText(logBufferRefs.current[env]?.join('') ?? '');
+    setCopiedEnv(env);
+    setTimeout(() => setCopiedEnv((cur) => (cur === env ? null : cur)), 1500);
+  }
+
   const orgRef = useRef(state.organisation);
   const productRef = useRef(state.product);
   const activeEnvRef = useRef(state.activeEnvName);
@@ -458,6 +465,9 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                     <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Planning' : 'Deploying'} · {run.version || version}</p>
                     <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{run.progressMsg}</p>
                   </div>
+                  <button onClick={() => copyLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
+                    <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
+                  </button>
                 </div>
               )}
               {(step === 'result' || run.done) && (
@@ -465,7 +475,10 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                   {run.error ? (
                     <div className="flex items-start gap-[8px]">
                       <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                      <p className="text-[10px] text-foreground/70 leading-relaxed">{run.error}</p>
+                      <p className="text-[10px] text-foreground/70 leading-relaxed flex-1">{run.error}</p>
+                      <button onClick={() => copyLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
+                        <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
+                      </button>
                     </div>
                   ) : (
                     <div className="flex items-center gap-[8px]">
@@ -476,11 +489,16 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                           <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{run.version || version}</p>
                         )}
                       </div>
-                      {run.logsUrl && (
-                        <button onClick={() => Browser.OpenURL(run.logsUrl)} className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
-                          <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                      <div className="ml-auto flex items-center gap-[10px] shrink-0">
+                        <button onClick={() => copyLog(run.env)} className="text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
+                          <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
                         </button>
-                      )}
+                        {run.logsUrl && (
+                          <button onClick={() => Browser.OpenURL(run.logsUrl)} className="text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
+                            <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

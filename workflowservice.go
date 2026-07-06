@@ -467,7 +467,12 @@ func (s *WorkflowService) CloneWorkflow(id string) (*Workflow, error) {
 
 // ─── Execution ────────────────────────────────────────────────────────────────
 
-func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string) (string, error) {
+// RunWorkflow starts a run of workflow id. startPosition lets the run begin
+// partway through: steps whose Position is below it are recorded as
+// 'skipped' up front and never executed, so a failed/edited step can be
+// re-run without repeating earlier side-effecting steps. Pass 0 to run the
+// whole workflow from the beginning.
+func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string, startPosition int) (string, error) {
 	wf, err := s.GetWorkflow(id)
 	if err != nil {
 		return "", err
@@ -491,6 +496,15 @@ func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string) (s
 		return "", err
 	}
 	for _, step := range wf.Steps {
+		if step.Position < startPosition {
+			if _, err := tx.Exec(
+				`INSERT INTO workflow_step_runs (id,run_id,step_id,position,type,label,status,started_at,completed_at) VALUES (?,?,?,?,?,?,'skipped',?,?)`,
+				newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step), now, now,
+			); err != nil {
+				return "", err
+			}
+			continue
+		}
 		if _, err := tx.Exec(
 			`INSERT INTO workflow_step_runs (id,run_id,step_id,position,type,label,status) VALUES (?,?,?,?,?,?,'pending')`,
 			newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step),
@@ -506,7 +520,7 @@ func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string) (s
 	ar := &activeRun{cancel: cancel}
 	s.activeRuns.Store(runID, ar)
 
-	go s.executeRun(ctx, runID, wf, ar, argValues)
+	go s.executeRun(ctx, runID, wf, ar, argValues, startPosition)
 	return runID, nil
 }
 
@@ -640,7 +654,7 @@ func (s *WorkflowService) loadStepRuns(runID string) ([]StepRunStatus, error) {
 
 // ─── Execution engine ─────────────────────────────────────────────────────────
 
-func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Workflow, ar *activeRun, argValues map[string]string) {
+func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Workflow, ar *activeRun, argValues map[string]string, startPosition int) {
 	defer func() {
 		s.activeRuns.Delete(runID)
 		ar.cancel()
@@ -654,6 +668,11 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 	}
 
 	for _, step := range wf.Steps {
+		if step.Position < startPosition {
+			// Pre-recorded as 'skipped' by RunWorkflow; nothing to execute or update.
+			continue
+		}
+
 		var stepRunID string
 		err := s.db.QueryRow(`SELECT id FROM workflow_step_runs WHERE run_id=? AND step_id=?`, runID, step.ID).Scan(&stepRunID)
 		if err != nil {

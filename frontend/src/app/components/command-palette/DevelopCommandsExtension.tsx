@@ -8,11 +8,14 @@ import type { TaskType } from '../../stores/notifications';
 
 const TASK_TYPES: TaskType[] = ['define', 'build', 'deploy', 'packages'];
 
+// 'workflow' is excluded from TASK_TYPES below (workflows aren't opened as Develop
+// tabs), but TYPE_META is keyed on the full TaskType union so TS stays exhaustive.
 const TYPE_META: Record<TaskType, { label: string; groupOrder: number; icon: React.ComponentType<{ className?: string }> }> = {
   define:   { label: 'Define',   groupOrder: 10, icon: FileCodeIcon },
   build:    { label: 'Build',    groupOrder: 11, icon: HammerIcon },
   deploy:   { label: 'Deploy',   groupOrder: 12, icon: RocketIcon },
   packages: { label: 'Packages', groupOrder: 13, icon: PackageIcon },
+  workflow: { label: 'Workflow', groupOrder: 14, icon: FileCodeIcon },
 };
 
 export function DevelopCommandsExtension() {
