@@ -8,6 +8,7 @@ import { MultiSelect } from '../components/ui/multi-select';
 import { useWorkspace } from '../stores/workspace';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
+import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,7 +51,7 @@ type StepType = {
 type StepField = {
   key: string;
   label: string;
-  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'env-multi' | 'repo-select';
+  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'build-version' | 'env-multi' | 'repo-select';
   placeholder?: string;
   options?: string[];
 };
@@ -140,12 +141,13 @@ const STEP_TYPES: StepType[] = [
     label: 'Deploy',
     icon: 'solar:rocket-linear',
     color: 'text-purple-400',
-    defaultParams: { neuron: '', environments: [] },
+    defaultParams: { neuron: '', version: '', environments: [] },
     fields: [
       { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
+      { key: 'version', label: 'Build version', type: 'build-version', placeholder: 'Latest build' },
       { key: 'environments', label: 'Environments', type: 'env-multi' },
     ],
-    summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
+    summary: (p) => p.neuron ? `${p.neuron.split('/').slice(-1)[0]} @ ${p.version || 'latest'}` : 'No neuron set',
     computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['build-cloud'], 'neuron') }),
   },
   {
@@ -1237,6 +1239,81 @@ function CommitPickerModal({ neuron, onSelect, onClose }: {
   );
 }
 
+// ─── VersionPickerModal ───────────────────────────────────────────────────────
+
+type VersionEntry = { name: string; version: string; createTime: number; buildCommit: string; logsUrl: string; state: number };
+
+function VersionPickerModal({ neuron, onSelect, onClose }: {
+  neuron: string;
+  onSelect: (version: string) => void;
+  onClose: () => void;
+}) {
+  const [filter, setFilter] = useState('');
+  const [versions, setVersions] = useState<VersionEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!neuron) {
+      setError('Set the Neuron field first.');
+      setLoading(false);
+      return;
+    }
+    DeployService.ListNeuronVersions(neuron)
+      .then((res) => setVersions((res ?? []).filter((v): v is VersionEntry => v !== null)))
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, [neuron]);
+
+  const filtered = versions.filter((v) => v.version.includes(filter));
+
+  return (
+    <Dialog open={true} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="text-foreground p-0 max-w-[440px] overflow-hidden">
+        <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
+          <Icon icon="solar:box-linear" className="text-brand text-lg" />
+          <span className="text-[13px] font-bold text-foreground font-mono">Select Build Version</span>
+        </div>
+        <div className="px-[16px] py-[10px] border-b border-border">
+          <input
+            autoFocus
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={(e) => e.key === 'Escape' && onClose()}
+            placeholder="Filter by version…"
+            className="w-full bg-transparent text-[12px] font-mono text-foreground outline-none placeholder:text-foreground/30"
+          />
+        </div>
+        <div className="overflow-y-auto max-h-[360px] py-[6px]">
+          <button
+            onClick={() => onSelect('')}
+            className="w-full flex items-center gap-3 px-[16px] py-[10px] transition-colors text-left hover:bg-foreground/[4%]"
+          >
+            <span className="text-[12px] text-brand font-mono">Latest build (default)</span>
+          </button>
+          {loading ? (
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">Loading versions…</p>
+          ) : error ? (
+            <p className="px-[16px] py-[12px] text-[11px] text-red-400/70 font-mono">{error}</p>
+          ) : filtered.length === 0 ? (
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No built versions found</p>
+          ) : (
+            filtered.map((v) => (
+              <button
+                key={v.name}
+                onClick={() => onSelect(v.version)}
+                className="w-full flex items-center gap-3 px-[16px] py-[10px] transition-colors text-left hover:bg-foreground/[4%]"
+              >
+                <span className="text-[12px] font-mono text-foreground truncate">{v.version}</span>
+              </button>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── WorkflowListItem ─────────────────────────────────────────────────────────
 
 function WorkflowListItem({ workflow, active, onClick, onExport }: {
@@ -1293,6 +1370,7 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
 }) {
   const [neuronPickerKey, setNeuronPickerKey] = useState<string | null>(null);
   const [commitPickerOpen, setCommitPickerOpen] = useState(false);
+  const [versionPickerOpen, setVersionPickerOpen] = useState(false);
   const { state } = useWorkspace();
 
   const type = getStepType(step.type);
@@ -1453,6 +1531,26 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                         neuron={params['neuron'] ?? ''}
                         onSelect={(sha) => { onParamChange('commit', sha); setCommitPickerOpen(false); }}
                         onClose={() => setCommitPickerOpen(false)}
+                      />
+                    )}
+                  </>
+                ) : f.type === 'build-version' ? (
+                  <>
+                    <button
+                      onClick={() => !isTemplate && setVersionPickerOpen(true)}
+                      disabled={isTemplate}
+                      className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
+                    >
+                      <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
+                        {params[f.key] || (f.placeholder || 'Latest build')}
+                      </span>
+                      <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
+                    </button>
+                    {versionPickerOpen && (
+                      <VersionPickerModal
+                        neuron={params['neuron'] ?? ''}
+                        onSelect={(version) => { onParamChange(f.key, version); setVersionPickerOpen(false); }}
+                        onClose={() => setVersionPickerOpen(false)}
                       />
                     )}
                   </>

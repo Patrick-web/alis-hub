@@ -53,7 +53,7 @@ export function ListWorkflows(): $CancellablePromise<$models.Workflow[]> {
 }
 
 /**
- * Open opens (or creates) the SQLite database, runs migrations, and seeds default templates.
+ * Open opens (or creates) the SQLite database and runs migrations.
  */
 export function Open(): $CancellablePromise<void> {
     return $Call.ByID(814639472);
