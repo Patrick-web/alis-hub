@@ -11,6 +11,7 @@ import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
 import { DevelopSettingsProvider } from "./app/stores/developSettings.tsx";
 import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
+import { WorkflowRunsProvider } from "./app/stores/workflowRuns.tsx";
 import { CommandPaletteProvider } from "./app/stores/commandPalette.tsx";
 import { PlatformProvider } from "./app/stores/platform.tsx";
 import { DevSettingsModalProvider } from "./app/stores/devSettingsModal.tsx";
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
             <DevelopSettingsProvider>
             <SuggestionsProvider>
               <PackageSessionsProvider>
+                <WorkflowRunsProvider>
                 <CommandPaletteProvider>
                   <PlatformProvider>
                   <DevSettingsModalProvider>
@@ -42,6 +44,7 @@ createRoot(document.getElementById("root")!).render(
                   </DevSettingsModalProvider>
                   </PlatformProvider>
                 </CommandPaletteProvider>
+                </WorkflowRunsProvider>
               </PackageSessionsProvider>
             </SuggestionsProvider>
             </DevelopSettingsProvider>

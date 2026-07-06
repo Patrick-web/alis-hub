@@ -20,7 +20,7 @@ export type NotificationSource =
   | 'update'
   | 'general';
 
-export type TaskType = 'define' | 'build' | 'deploy' | 'packages';
+export type TaskType = 'define' | 'build' | 'deploy' | 'packages' | 'workflow';
 export type TaskStatus = 'running' | 'done' | 'error';
 
 export interface TaskProgress {

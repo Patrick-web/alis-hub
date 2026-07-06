@@ -65,8 +65,15 @@ export function PollRunLogs(runID: string, offset: number): $CancellablePromise<
     });
 }
 
-export function RunWorkflow(id: string, argValues: { [_ in string]?: string }): $CancellablePromise<string> {
-    return $Call.ByID(45429760, id, argValues);
+/**
+ * RunWorkflow starts a run of workflow id. startPosition lets the run begin
+ * partway through: steps whose Position is below it are recorded as
+ * 'skipped' up front and never executed, so a failed/edited step can be
+ * re-run without repeating earlier side-effecting steps. Pass 0 to run the
+ * whole workflow from the beginning.
+ */
+export function RunWorkflow(id: string, argValues: { [_ in string]?: string }, startPosition: number): $CancellablePromise<string> {
+    return $Call.ByID(45429760, id, argValues, startPosition);
 }
 
 /**
