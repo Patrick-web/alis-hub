@@ -64,6 +64,7 @@ type StepRunStatus = {
   status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
   startedAt?: number;
   completedAt?: number;
+  log?: string;
 };
 
 type RunLogChunk = {
@@ -1687,7 +1688,12 @@ function WorkflowRunView({
         <div ref={logBodyRef} className="flex-1 overflow-y-auto">
           {stepRuns.map((sr) => {
             const isOpen = !collapsedSections[sr.id];
-            const logText = logSegments[sr.id] ?? '';
+            // Prefer the persisted per-step log once the backend has written it (i.e. the
+            // step has finished) — the live `logSegments` reconstruction is a best-effort
+            // heuristic based on which step polling observed as "running", and can
+            // misattribute fast/non-streaming steps (e.g. git commit/push) to the wrong
+            // section or leave them empty. Fall back to the live segment while running.
+            const logText = sr.log || logSegments[sr.id] || '';
             const tabs = parseSubTabs(logText);
             const lines = tabs ? [] : logText.split('\n').filter(Boolean);
             const duration = formatDuration(sr.startedAt, sr.completedAt);

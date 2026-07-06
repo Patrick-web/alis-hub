@@ -779,14 +779,31 @@ func (g *GitService) DiscardFile(repoPath, filePath string) error {
 
 // StageAll stages all changes.
 func (g *GitService) StageAll(repoPath string) error {
-	_, err := gitCmd(repoPath, "git", "add", "-A")
-	return err
+	out, err := gitCmd(repoPath, "git", "add", "-A")
+	if err != nil {
+		return gitOutputError(out, err)
+	}
+	return nil
 }
 
 // Commit creates a commit with the given message.
 func (g *GitService) Commit(repoPath, message string) error {
-	_, err := gitCmd(repoPath, "git", "commit", "-m", message)
-	return err
+	out, err := gitCmd(repoPath, "git", "commit", "-m", message)
+	if err != nil {
+		return gitOutputError(out, err)
+	}
+	return nil
+}
+
+// gitOutputError builds an error from a failed git command's combined
+// output, falling back to the raw exec error (e.g. "exit status 1") only
+// when git produced no output at all.
+func gitOutputError(output string, err error) error {
+	msg := strings.TrimSpace(output)
+	if msg == "" {
+		return err
+	}
+	return fmt.Errorf("%s", msg)
 }
 
 // GetBranches returns all local and remote branches.

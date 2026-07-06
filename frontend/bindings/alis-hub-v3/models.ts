@@ -3638,6 +3638,11 @@ export class StepRunStatus {
     "startedAt": number | null;
     "completedAt": number | null;
 
+    /**
+     * persisted once the step completes; empty while running/pending
+     */
+    "log": string;
+
     /** Creates a new StepRunStatus instance. */
     constructor($$source: Partial<StepRunStatus> = {}) {
         if (!("id" in $$source)) {
@@ -3663,6 +3668,9 @@ export class StepRunStatus {
         }
         if (!("completedAt" in $$source)) {
             this["completedAt"] = null;
+        }
+        if (!("log" in $$source)) {
+            this["log"] = "";
         }
 
         Object.assign(this, $$source);
