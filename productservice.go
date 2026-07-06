@@ -490,6 +490,13 @@ func (s *ProductService) Login() error {
 		s.mu.Lock()
 		s.tokens = nil
 		s.mu.Unlock()
+
+		// Refresh the on-disk git-auth.gitconfig with the new token. Without
+		// this, repos keep the stale extraHeader from app launch (or an
+		// earlier login) and git commands fail auth even after logging in.
+		if syncErr := SyncGitAuth(); syncErr != nil {
+			fmt.Fprintf(os.Stderr, "alis-hub: sync git auth after login: %v\n", syncErr)
+		}
 	}
 	return err
 }
