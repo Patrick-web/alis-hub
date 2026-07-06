@@ -81,6 +81,17 @@ export function DiscardFile(repoPath: string, filePath: string): $CancellablePro
 }
 
 /**
+ * FetchOrigin fetches from origin (updating remote-tracking refs and ahead/behind
+ * state) without touching the working tree or local branch. Used both for manual
+ * refresh and periodic background polling.
+ */
+export function FetchOrigin(repoPath: string): $CancellablePromise<$models.GitSyncResult> {
+    return $Call.ByID(3365636253, repoPath).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+/**
  * GetAheadBehind returns how many commits the current branch is ahead/behind its upstream.
  * Returns zeros when no upstream is configured or when the comparison fails.
  */
@@ -296,6 +307,15 @@ export function StageFile(repoPath: string, filePath: string): $CancellablePromi
 }
 
 /**
+ * StageFiles stages multiple files in a single git invocation, avoiding the
+ * .git/index.lock race that firing one StageFile call per path concurrently
+ * would cause.
+ */
+export function StageFiles(repoPath: string, paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(3980930040, repoPath, paths);
+}
+
+/**
  * StartLocalMerge runs: git fetch, checkout master, pull, then merge origin/{branchName}.
  * Returns conflict file list if exit code 1 (conflicts detected).
  * Git command output is streamed via "git:log" Wails events.
@@ -307,10 +327,29 @@ export function StartLocalMerge(repoPath: string, branchName: string): $Cancella
 }
 
 /**
+ * UndoLastCommit soft-resets HEAD by one commit, leaving the undone commit's
+ * changes staged. Purely local — callers are expected to only allow this when
+ * the commit hasn't been pushed yet (see GetAheadBehind).
+ */
+export function UndoLastCommit(repoPath: string): $CancellablePromise<$models.GitSyncResult> {
+    return $Call.ByID(3830717270, repoPath).then(($result: any) => {
+        return $$createType2($result);
+    });
+}
+
+/**
  * UnstageFile removes a file from the staging area.
  */
 export function UnstageFile(repoPath: string, filePath: string): $CancellablePromise<void> {
     return $Call.ByID(3130933074, repoPath, filePath);
+}
+
+/**
+ * UnstageFiles removes multiple files from the staging area in a single git
+ * invocation, avoiding the .git/index.lock race of concurrent per-file calls.
+ */
+export function UnstageFiles(repoPath: string, paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(3894239475, repoPath, paths);
 }
 
 /**

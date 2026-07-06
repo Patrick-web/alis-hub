@@ -10,16 +10,19 @@ import {
 interface SourceControlState {
   fileListView: 'list' | 'tree';
   diffView: 'unified' | 'split';
+  fetchIntervalMinutes: number;
 }
 
 type SourceControlAction =
   | { type: 'SET_FILE_LIST_VIEW'; payload: 'list' | 'tree' }
-  | { type: 'SET_DIFF_VIEW'; payload: 'unified' | 'split' };
+  | { type: 'SET_DIFF_VIEW'; payload: 'unified' | 'split' }
+  | { type: 'SET_FETCH_INTERVAL'; payload: number };
 
 interface SourceControlContextValue {
   state: SourceControlState;
   setFileListView: (view: 'list' | 'tree') => void;
   setDiffView: (view: 'unified' | 'split') => void;
+  setFetchIntervalMinutes: (minutes: number) => void;
 }
 
 const STORAGE_KEY = 'alis:source-control';
@@ -27,6 +30,7 @@ const STORAGE_KEY = 'alis:source-control';
 const DEFAULT_STATE: SourceControlState = {
   fileListView: 'list',
   diffView: 'unified',
+  fetchIntervalMinutes: 5,
 };
 
 function loadFromStorage(): SourceControlState {
@@ -51,6 +55,8 @@ function reducer(state: SourceControlState, action: SourceControlAction): Source
       return { ...state, fileListView: action.payload };
     case 'SET_DIFF_VIEW':
       return { ...state, diffView: action.payload };
+    case 'SET_FETCH_INTERVAL':
+      return { ...state, fetchIntervalMinutes: action.payload };
     default:
       return state;
   }
@@ -73,8 +79,12 @@ export function SourceControlProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_DIFF_VIEW', payload: view });
   }, []);
 
+  const setFetchIntervalMinutes = useCallback((minutes: number) => {
+    dispatch({ type: 'SET_FETCH_INTERVAL', payload: minutes });
+  }, []);
+
   return (
-    <SourceControlContext.Provider value={{ state, setFileListView, setDiffView }}>
+    <SourceControlContext.Provider value={{ state, setFileListView, setDiffView, setFetchIntervalMinutes }}>
       {children}
     </SourceControlContext.Provider>
   );

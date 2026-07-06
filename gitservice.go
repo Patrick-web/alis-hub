@@ -762,9 +762,32 @@ func (g *GitService) StageFile(repoPath, filePath string) error {
 	return nil
 }
 
+// StageFiles stages multiple files in a single git invocation, avoiding the
+// .git/index.lock race that firing one StageFile call per path concurrently
+// would cause.
+func (g *GitService) StageFiles(repoPath string, paths []string) error {
+	args := append([]string{"git", "add", "--"}, paths...)
+	out, err := gitCmd(repoPath, args...)
+	if err != nil {
+		return fmt.Errorf("git add: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
+}
+
 // UnstageFile removes a file from the staging area.
 func (g *GitService) UnstageFile(repoPath, filePath string) error {
 	out, err := gitCmd(repoPath, "git", "restore", "--staged", "--", filePath)
+	if err != nil {
+		return fmt.Errorf("git restore: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// UnstageFiles removes multiple files from the staging area in a single git
+// invocation, avoiding the .git/index.lock race of concurrent per-file calls.
+func (g *GitService) UnstageFiles(repoPath string, paths []string) error {
+	args := append([]string{"git", "restore", "--staged", "--"}, paths...)
+	out, err := gitCmd(repoPath, args...)
 	if err != nil {
 		return fmt.Errorf("git restore: %w\n%s", err, strings.TrimSpace(out))
 	}
@@ -853,6 +876,15 @@ func (g *GitService) CreateBranch(repoPath, branchName string) error {
 	return err
 }
 
+// UndoLastCommit soft-resets HEAD by one commit, leaving the undone commit's
+// changes staged. Purely local — callers are expected to only allow this when
+// the commit hasn't been pushed yet (see GetAheadBehind).
+func (g *GitService) UndoLastCommit(repoPath string) GitSyncResult {
+	output, err := gitCmd(repoPath, "git", "reset", "--soft", "HEAD~1")
+	kind, message := classifyGitOutput(output, err)
+	return GitSyncResult{Kind: kind, Message: message}
+}
+
 // PushOrigin pushes the current branch to origin and returns a classified result.
 func (g *GitService) PushOrigin(repoPath string) GitSyncResult {
 	g.emitScmLog(repoPath, "$ git push origin HEAD\r\n")
@@ -885,6 +917,20 @@ func (g *GitService) PullOrigin(repoPath string) GitSyncResult {
 		result.ConflictFiles, _ = g.GetConflictFiles(repoPath)
 	}
 	return result
+}
+
+// FetchOrigin fetches from origin (updating remote-tracking refs and ahead/behind
+// state) without touching the working tree or local branch. Used both for manual
+// refresh and periodic background polling.
+func (g *GitService) FetchOrigin(repoPath string) GitSyncResult {
+	cmd := g.authedGitCmd("fetch", "--prune")
+	cmd.Dir = repoPath
+	output, err := g.streamScm(cmd, repoPath)
+	kind, message := classifyGitOutput(output, err)
+	if kind == "auth_error" {
+		g.emitAuthExpired()
+	}
+	return GitSyncResult{Kind: kind, Message: message}
 }
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer

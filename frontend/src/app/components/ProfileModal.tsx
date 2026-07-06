@@ -135,7 +135,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff';
   };
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
-  const { state: scState, setFileListView, setDiffView } = useSourceControl();
+  const { state: scState, setFileListView, setDiffView, setFetchIntervalMinutes } = useSourceControl();
   const {
     settings: devSettings,
     setIgnoreHiddenFolders,
@@ -677,6 +677,31 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                             >
                               Split
                             </button>
+                          </div>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Background Fetch</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Check for changes">
+                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                            {[
+                              { value: 0, label: 'Off' },
+                              { value: 1, label: '1m' },
+                              { value: 5, label: '5m' },
+                              { value: 15, label: '15m' },
+                              { value: 30, label: '30m' },
+                            ].map(opt => (
+                              <button
+                                key={opt.value}
+                                onClick={() => setFetchIntervalMinutes(opt.value)}
+                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fetchIntervalMinutes === opt.value ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
                           </div>
                         </SettingRow>
                       </SettingsCard>
