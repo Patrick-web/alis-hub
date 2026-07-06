@@ -751,10 +751,28 @@ export function WorkflowsPage() {
                   {editedWorkflow.isTemplate && (
                     <Icon icon="solar:lock-linear" className="text-foreground/30 text-sm flex-shrink-0" />
                   )}
-                  <span className="font-semibold text-sm truncate">{editedWorkflow.name}</span>
+                  {editedWorkflow.isTemplate ? (
+                    <span className="font-semibold text-sm truncate">{editedWorkflow.name}</span>
+                  ) : (
+                    <input
+                      value={editedWorkflow.name}
+                      onChange={(e) => setEditedWorkflow((wf) => wf ? { ...wf, name: e.target.value } : wf)}
+                      placeholder="Workflow name"
+                      className="flex-1 min-w-0 bg-transparent font-semibold text-sm rounded px-1 -mx-1 outline-none focus:bg-accent"
+                    />
+                  )}
                 </div>
-                {editedWorkflow.description && (
-                  <p className="text-xs text-foreground/40 mt-0.5 truncate">{editedWorkflow.description}</p>
+                {editedWorkflow.isTemplate ? (
+                  editedWorkflow.description && (
+                    <p className="text-xs text-foreground/40 mt-0.5 truncate">{editedWorkflow.description}</p>
+                  )
+                ) : (
+                  <input
+                    value={editedWorkflow.description}
+                    onChange={(e) => setEditedWorkflow((wf) => wf ? { ...wf, description: e.target.value } : wf)}
+                    placeholder="Add a description…"
+                    className="w-full bg-transparent text-xs text-foreground/40 mt-0.5 rounded px-1 -mx-1 outline-none focus:bg-accent focus:text-foreground/70"
+                  />
                 )}
               </div>
 
@@ -766,7 +784,7 @@ export function WorkflowsPage() {
               ) : (
                 <>
                   {isDirty && (
-                    <Button variant="secondary" onClick={handleSave} disabled={saving}>
+                    <Button variant="secondary" onClick={handleSave} disabled={saving || !editedWorkflow.name.trim()}>
                       {saving ? 'Saving…' : 'Save'}
                     </Button>
                   )}
