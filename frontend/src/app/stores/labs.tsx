@@ -87,28 +87,33 @@ export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
 interface LabsState {
   masterEnabled: boolean;
   enabledMap: Record<string, boolean>;
+  workflowsEnabled: boolean;
 }
 
 type LabsAction =
   | { type: 'SET_MASTER'; payload: boolean }
-  | { type: 'SET_SUGGESTION'; payload: { id: string; enabled: boolean } };
+  | { type: 'SET_SUGGESTION'; payload: { id: string; enabled: boolean } }
+  | { type: 'SET_WORKFLOWS'; payload: boolean };
 
 interface LabsContextValue {
   state: LabsState;
   isSuggestionEnabled: (id: string) => boolean;
   setSuggestionEnabled: (id: string, enabled: boolean) => void;
   setMasterEnabled: (enabled: boolean) => void;
+  setWorkflowsEnabled: (enabled: boolean) => void;
 }
 
 const STORAGE_KEY = 'alis:labs';
 
+const DEFAULT_STATE: LabsState = { masterEnabled: true, enabledMap: {}, workflowsEnabled: false };
+
 function loadFromStorage(): LabsState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { masterEnabled: true, enabledMap: {} };
-    return JSON.parse(raw);
+    if (!raw) return DEFAULT_STATE;
+    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
   } catch {
-    return { masterEnabled: true, enabledMap: {} };
+    return DEFAULT_STATE;
   }
 }
 
@@ -127,6 +132,8 @@ function reducer(state: LabsState, action: LabsAction): LabsState {
         ...state,
         enabledMap: { ...state.enabledMap, [action.payload.id]: action.payload.enabled },
       };
+    case 'SET_WORKFLOWS':
+      return { ...state, workflowsEnabled: action.payload };
     default:
       return state;
   }
@@ -159,8 +166,12 @@ export function LabsProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_MASTER', payload: enabled });
   }, []);
 
+  const setWorkflowsEnabled = useCallback((enabled: boolean) => {
+    dispatch({ type: 'SET_WORKFLOWS', payload: enabled });
+  }, []);
+
   return (
-    <LabsContext.Provider value={{ state, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled }}>
+    <LabsContext.Provider value={{ state, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled, setWorkflowsEnabled }}>
       {children}
     </LabsContext.Provider>
   );

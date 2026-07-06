@@ -11,6 +11,7 @@ import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { notify } from '../lib/notify';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
+import { useLabs } from '../stores/labs';
 import { MacWindowControls, WindowsWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
@@ -22,8 +23,9 @@ const tabs = [
   { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
   { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
   { id: 'git', label: 'Source Control', icon: <Icon icon="solar:code-scan-linear" className="text-lg" /> },
-  { id: 'workflows', label: 'Workflows', icon: <Icon icon="solar:playlist-2-linear" className="text-lg" /> },
 ];
+
+const workflowsTab = { id: 'workflows', label: 'Workflows', icon: <Icon icon="solar:playlist-2-linear" className="text-lg" /> };
 
 export function TopNav() {
   const navigate = useNavigate();
@@ -38,6 +40,8 @@ export function TopNav() {
 
   const { profile } = useUserProfile();
   const avatarUrl = profile?.picture ?? '';
+  const { state: labsState } = useLabs();
+  const visibleTabs = labsState.workflowsEnabled ? [...tabs, workflowsTab] : tabs;
   const avatarName = profile?.name ?? '';
 
   const [envsLoading, setEnvsLoading] = useState(false);
@@ -154,7 +158,7 @@ export function TopNav() {
       {/* Center: Tabs */}
       <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar">
         <div className="flex h-full border-r border-border" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <Tab
               key={tab.id}
               label={tab.label}

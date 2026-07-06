@@ -143,7 +143,7 @@ func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService, def
 	}
 }
 
-// Open opens (or creates) the SQLite database, runs migrations, and seeds default templates.
+// Open opens (or creates) the SQLite database and runs migrations.
 func (s *WorkflowService) Open() error {
 	dir, err := os.UserConfigDir()
 	if err != nil {
@@ -165,7 +165,7 @@ func (s *WorkflowService) Open() error {
 	if err := s.migrate(); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
-	return s.seedTemplates()
+	return nil
 }
 
 // ─── Migrations ───────────────────────────────────────────────────────────────
@@ -211,6 +211,8 @@ var migrations = []string{
 	);`,
 	// v2 — workflow-level input arguments
 	`ALTER TABLE workflows ADD COLUMN args TEXT NOT NULL DEFAULT '[]'`,
+	// v3 — remove built-in workflow templates (feature removed); cascades to their steps
+	`DELETE FROM workflows WHERE id IN ('tpl-define','tpl-build','tpl-define-build','tpl-git-commit-push','tpl-build-deploy')`,
 }
 
 func (s *WorkflowService) migrate() error {
@@ -231,98 +233,6 @@ func (s *WorkflowService) migrate() error {
 			return fmt.Errorf("bump schema_version: %w", err)
 		}
 		log.Printf("[workflow] applied migration v%d", v)
-	}
-	return nil
-}
-
-// ─── Default templates ────────────────────────────────────────────────────────
-
-type templateSeed struct {
-	id    string
-	name  string
-	desc  string
-	steps []templateStepSeed
-}
-
-type templateStepSeed struct {
-	id        string
-	typ       string
-	params    string
-	onFailure string
-}
-
-var defaultTemplates = []templateSeed{
-	{
-		id:   "tpl-define",
-		name: "Define Neurons",
-		desc: "Run alis define on a neuron to regenerate its definition",
-		steps: []templateStepSeed{
-			{id: "tpl-define-s1", typ: "define", params: `{"neuron":"","workdir":""}`, onFailure: "stop"},
-		},
-	},
-	{
-		id:   "tpl-build",
-		name: "Build Neurons",
-		desc: "Trigger a cloud build for a neuron",
-		steps: []templateStepSeed{
-			{id: "tpl-build-s1", typ: "build-cloud", params: `{"neuron":"","commit":""}`, onFailure: "stop"},
-		},
-	},
-	{
-		id:   "tpl-define-build",
-		name: "Define → Build",
-		desc: "Define then build a neuron in sequence",
-		steps: []templateStepSeed{
-			{id: "tpl-db-s1", typ: "define", params: `{"neuron":"","workdir":""}`, onFailure: "stop"},
-			{id: "tpl-db-s2", typ: "build-cloud", params: `{"neuron":"","commit":""}`, onFailure: "stop"},
-		},
-	},
-	{
-		id:   "tpl-git-commit-push",
-		name: "Git: Commit & Push",
-		desc: "Stage all, commit with a message, and push to origin",
-		steps: []templateStepSeed{
-			{id: "tpl-git-s1", typ: "git-stage-all", params: `{"repoPath":"build-repo"}`, onFailure: "stop"},
-			{id: "tpl-git-s2", typ: "git-commit", params: `{"repoPath":"build-repo","message":""}`, onFailure: "stop"},
-			{id: "tpl-git-s3", typ: "git-push", params: `{"repoPath":"build-repo"}`, onFailure: "stop"},
-		},
-	},
-	{
-		id:   "tpl-build-deploy",
-		name: "Build & Deploy (Sequential)",
-		desc: "Build a neuron then deploy it to one or more environments",
-		steps: []templateStepSeed{
-			{id: "tpl-bd-s1", typ: "build-cloud", params: `{"neuron":"","commit":""}`, onFailure: "stop"},
-			{id: "tpl-bd-s2", typ: "deploy", params: `{"neuron":"","environments":[]}`, onFailure: "stop"},
-		},
-	},
-}
-
-func (s *WorkflowService) seedTemplates() error {
-	now := time.Now().Unix()
-	for _, t := range defaultTemplates {
-		// Upsert the workflow row (INSERT OR IGNORE — never overwrite user edits)
-		_, err := s.db.Exec(
-			`INSERT OR IGNORE INTO workflows (id,name,description,is_template,created_at,updated_at) VALUES (?,?,?,1,?,?)`,
-			t.id, t.name, t.desc, now, now,
-		)
-		if err != nil {
-			return fmt.Errorf("seed template %s: %w", t.id, err)
-		}
-		// Upsert steps (replace to pick up step additions in new app versions)
-		for i, st := range t.steps {
-			onFail := st.onFailure
-			if onFail == "" {
-				onFail = "stop"
-			}
-			_, err = s.db.Exec(
-				`INSERT OR REPLACE INTO workflow_steps (id,workflow_id,position,type,params,on_failure) VALUES (?,?,?,?,?,?)`,
-				st.id, t.id, i, st.typ, st.params, onFail,
-			)
-			if err != nil {
-				return fmt.Errorf("seed step %s: %w", st.id, err)
-			}
-		}
 	}
 	return nil
 }
