@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -14,9 +16,12 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
+
+	"alis-hub-v3/internal/terminal"
 )
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -95,6 +100,7 @@ type activeRun struct {
 	cancel context.CancelFunc
 	mu     sync.Mutex
 	buf    bytes.Buffer
+	ptmx   terminal.PTY // set while a step's shell is running and interactive input can be sent
 }
 
 func (r *activeRun) Write(p []byte) (n int, err error) {
@@ -119,6 +125,23 @@ func (r *activeRun) len() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.buf.Len()
+}
+
+func (r *activeRun) setPTY(p terminal.PTY) {
+	r.mu.Lock()
+	r.ptmx = p
+	r.mu.Unlock()
+}
+
+func (r *activeRun) writeInput(data string) error {
+	r.mu.Lock()
+	p := r.ptmx
+	r.mu.Unlock()
+	if p == nil {
+		return fmt.Errorf("run has no interactive shell running")
+	}
+	_, err := p.Write([]byte(data))
+	return err
 }
 
 // ─── WorkflowService ──────────────────────────────────────────────────────────
@@ -496,6 +519,16 @@ func (s *WorkflowService) StopRun(runID string) error {
 	return nil
 }
 
+// SendRunInput writes user-typed input to the currently running step's shell,
+// e.g. to answer an interactive prompt (like corepack's download confirmation).
+func (s *WorkflowService) SendRunInput(runID, data string) error {
+	val, ok := s.activeRuns.Load(runID)
+	if !ok {
+		return fmt.Errorf("run not active: %s", runID)
+	}
+	return val.(*activeRun).writeInput(data)
+}
+
 func (s *WorkflowService) GetRun(runID string) (*WorkflowRun, error) {
 	var r WorkflowRun
 	var completedAt sql.NullInt64
@@ -644,7 +677,7 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 		w := io.MultiWriter(ar, stepBuf)
 
 		start := time.Now()
-		execErr := s.executeStep(ctx, step, stepVars, w)
+		execErr := s.executeStep(ctx, step, stepVars, ar, w)
 		elapsed := time.Since(start)
 		completedAt := time.Now().Unix()
 
@@ -683,7 +716,7 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 	s.db.Exec(`UPDATE workflow_runs SET status=?,log=?,completed_at=? WHERE id=?`, finalStatus, fullLog, now, runID)
 }
 
-func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, stepVars map[string]string, w io.Writer) error {
+func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, stepVars map[string]string, ar *activeRun, w io.Writer) error {
 	var params map[string]interface{}
 	if err := json.Unmarshal([]byte(step.Params), &params); err != nil {
 		return fmt.Errorf("invalid step params: %w", err)
@@ -696,7 +729,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	switch step.Type {
 	case "shell":
-		return s.runShell(ctx, str("command"), str("workdir"), w)
+		return s.runShell(ctx, ar, str("command"), str("workdir"), w)
 
 	case "define":
 		neuron := str("neuron")
@@ -773,7 +806,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 					continue
 				}
 				fmt.Fprintf(w, "  Running in %s\n", script.Name)
-				if err := s.runShell(ctx, cmd, script.WorkDir, w); err != nil {
+				if err := s.runShell(ctx, ar, cmd, script.WorkDir, w); err != nil {
 					return fmt.Errorf("package script %s: %w", script.Name, err)
 				}
 			}
@@ -787,9 +820,20 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if neuron == "" {
 			return fmt.Errorf("deploy step: neuron param is required")
 		}
-		version := stepVars["last_build_version"]
+		version := str("version")
 		if version == "" {
-			return fmt.Errorf("deploy step: no build version available — add a Cloud Build step before Deploy")
+			version = stepVars["last_build_version"]
+		}
+		if version == "" {
+			latest, err := s.deployService.ListNeuronVersions(neuron)
+			if err != nil {
+				return fmt.Errorf("deploy step: no build version specified and could not look up latest build: %w", err)
+			}
+			if len(latest) == 0 {
+				return fmt.Errorf("deploy step: no build version specified and neuron has no built versions — run a Cloud Build first")
+			}
+			version = latest[0].Version
+			fmt.Fprintf(w, "No build version specified, using latest build: %s\n", version)
 		}
 		var environments []string
 		if envs, ok := params["environments"].([]interface{}); ok {
@@ -862,22 +906,58 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 	}
 }
 
-func (s *WorkflowService) runShell(ctx context.Context, command, workdir string, w io.Writer) error {
+// runShell runs command in a PTY-backed login shell, matching the Develop tab
+// (StartPackageScript in packageservice.go) so rc-file PATH setup (nvm, pnpm, etc.)
+// is sourced the same way. A plain exec.Command with -c would skip that sourcing
+// since many rc-file PATH snippets are gated on a real interactive terminal.
+//
+// The PTY is registered on ar for the duration of the command so SendRunInput
+// can forward keystrokes to it — some commands (e.g. corepack's download
+// confirmation) prompt interactively and would otherwise hang forever.
+func (s *WorkflowService) runShell(ctx context.Context, ar *activeRun, command, workdir string, w io.Writer) error {
 	if command == "" {
 		return fmt.Errorf("shell step: command is empty")
 	}
 	fmt.Fprintf(w, "$ %s\n", command)
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/sh"
-	}
-	cmd := exec.CommandContext(ctx, shell, "-l", "-i", "-c", command)
+
+	shellBin, shellArgs := platformShell()
+	cmd := exec.CommandContext(ctx, shellBin, shellArgs...)
 	if workdir != "" {
 		cmd.Dir = workdir
 	}
-	cmd.Stdout = w
-	cmd.Stderr = w
-	return cmd.Run()
+
+	ptmx, err := terminal.Start(cmd, 24, 220)
+	if err != nil {
+		return err
+	}
+	if ar != nil {
+		ar.setPTY(ptmx)
+		defer ar.setPTY(nil)
+	}
+
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		ptmx.Write([]byte(command + platformShellExitSuffix() + "\n"))
+	}()
+
+	exitErrCh := make(chan error, 1)
+	go func() {
+		exitErrCh <- cmd.Wait()
+		ptmx.Close()
+	}()
+
+	buf := make([]byte, 4096)
+	for {
+		n, rerr := ptmx.Read(buf)
+		if n > 0 {
+			w.Write(buf[:n])
+		}
+		if rerr != nil {
+			break
+		}
+	}
+
+	return <-exitErrCh
 }
 
 // parseNeuronResource splits "organisations/o/products/p/neurons/svc-v1" into
@@ -1138,9 +1218,18 @@ func stepLabel(step WorkflowStep) string {
 }
 
 func newWFID() string {
+	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
+	var raw [8]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		// crypto/rand failure is effectively unheard of; fall back to a
+		// timestamp+counter mix so IDs stay unique even in that case.
+		binary.BigEndian.PutUint64(raw[:], uint64(time.Now().UnixNano())+atomic.AddUint64(&wfIDCounter, 1))
+	}
 	b := make([]byte, 8)
-	for i := range b {
-		b[i] = "abcdefghijklmnopqrstuvwxyz0123456789"[time.Now().UnixNano()>>uint(i*5)&35]
+	for i, v := range raw {
+		b[i] = alphabet[v%byte(len(alphabet))]
 	}
 	return string(b)
 }
+
+var wfIDCounter uint64

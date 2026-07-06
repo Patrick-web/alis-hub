@@ -65,6 +65,15 @@ export function WorkflowRunModal({
   const termRef = useRef<BuildTerminalHandle>(null);
   const offsetRef = useRef(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const runIdRef = useRef<string | null>(null);
+
+  // Stable identity (empty deps) so BuildTerminal's onData listener, wired once
+  // at mount, always forwards to whichever run is currently active via the ref.
+  const handleTerminalInput = useCallback((data: string) => {
+    if (runIdRef.current) {
+      WorkflowService.SendRunInput(runIdRef.current, data).catch(() => {});
+    }
+  }, []);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -105,6 +114,7 @@ export function WorkflowRunModal({
         const id = await WorkflowService.RunWorkflow(workflowId, {}) as string;
         if (cancelled) return;
         setRunId(id);
+        runIdRef.current = id;
         offsetRef.current = 0;
         pollRef.current = setInterval(() => poll(id), 500);
       } catch (e: any) {
@@ -209,7 +219,7 @@ export function WorkflowRunModal({
         {/* Log terminal */}
         {!error && (
           <div className="flex-1 overflow-hidden" style={{ minHeight: 200 }}>
-            <BuildTerminal ref={termRef} className="h-full" />
+            <BuildTerminal ref={termRef} className="h-full" onInput={handleTerminalInput} />
           </div>
         )}
 
