@@ -134,7 +134,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff';
   };
-  const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled } = useLabs();
+  const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled, setWorkflowsEnabled } = useLabs();
   const { state: scState, setFileListView, setDiffView, setFetchIntervalMinutes } = useSourceControl();
   const {
     settings: devSettings,
@@ -491,6 +491,20 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
                           >
                             <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
+                          </button>
+                        </SettingRow>
+                      </SettingsCard>
+                    </div>
+
+                    <div className="flex flex-col gap-[5px]">
+                      <SectionTitle>Workflows</SectionTitle>
+                      <SettingsCard>
+                        <SettingRow label="Workflows tab">
+                          <button
+                            onClick={() => setWorkflowsEnabled(!labsState.workflowsEnabled)}
+                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.workflowsEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                          >
+                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.workflowsEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
                           </button>
                         </SettingRow>
                       </SettingsCard>
