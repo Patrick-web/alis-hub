@@ -103,13 +103,11 @@ interface Props {
   onSelectCommitFile?: (hash: string, filePath: string) => void;
   selectedHash?: string | null;
   selectedCommitFile?: { hash: string; path: string } | null;
+  showLocalOnly?: boolean;
 }
 
-export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile, selectedHash, selectedCommitFile }: Props) {
+export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile, selectedHash, selectedCommitFile, showLocalOnly }: Props) {
   const parentRef = useRef<HTMLDivElement>(null);
-  const graphRows = useMemo(() => assignLanes(commits), [commits]);
-  const maxLane = useMemo(() => Math.max(0, ...graphRows.map(r => r.lane)), [graphRows]);
-  const svgWidth = (maxLane + 2) * GRAPH_W;
 
   const unpushedHashes = useMemo((): Set<string> => {
     const headCommit = commits.find(c => c.refNames.some(r => r.startsWith('HEAD -> ')));
@@ -131,6 +129,14 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
     }
     return unpushed;
   }, [commits]);
+
+  const visibleCommits = useMemo(
+    () => (showLocalOnly ? commits.filter(c => unpushedHashes.has(c.hash)) : commits),
+    [commits, showLocalOnly, unpushedHashes],
+  );
+  const graphRows = useMemo(() => assignLanes(visibleCommits), [visibleCommits]);
+  const maxLane = useMemo(() => Math.max(0, ...graphRows.map(r => r.lane)), [graphRows]);
+  const svgWidth = (maxLane + 2) * GRAPH_W;
 
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [commitFilesCache, setCommitFilesCache] = useState<Record<string, CommitFile[]>>({});
@@ -180,10 +186,10 @@ export function GitGraph({ commits, repoPath, onSelectCommit, onSelectCommitFile
     }
   }, [repoPath, expandedHash, commitFilesCache, onSelectCommit]);
 
-  if (commits.length === 0) {
+  if (visibleCommits.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-foreground/20 text-sm">
-        No commits
+        {showLocalOnly ? 'No local commits' : 'No commits'}
       </div>
     );
   }

@@ -20,7 +20,7 @@ import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useLocalAI } from '../stores/localai';
-import { GitPullRequest } from 'lucide-react';
+import { GitPullRequest, GitCommitVertical, Undo2 } from 'lucide-react';
 
 type GitTab = 'code' | 'prs';
 
@@ -149,6 +149,18 @@ function RepoSection({
 
   async function handleUnstage(path: string) {
     try { await GitService.UnstageFile(repoPath, path); refresh(); }
+    catch (e: any) { setError(String(e)); }
+  }
+
+  async function handleStageMany(paths: string[]) {
+    if (paths.length === 0) return;
+    try { await GitService.StageFiles(repoPath, paths); refresh(); }
+    catch (e: any) { setError(String(e)); }
+  }
+
+  async function handleUnstageMany(paths: string[]) {
+    if (paths.length === 0) return;
+    try { await GitService.UnstageFiles(repoPath, paths); refresh(); }
     catch (e: any) { setError(String(e)); }
   }
 
@@ -401,6 +413,8 @@ function RepoSection({
           onSelectFile={(path, staged) => onSelectFile(repoPath, path, staged)}
           onStage={handleStage}
           onUnstage={handleUnstage}
+          onStageMany={handleStageMany}
+          onUnstageMany={handleUnstageMany}
           onDiscard={handleDiscard}
           onStageAll={handleStageAll}
           onCommit={handleCommit}
@@ -440,6 +454,10 @@ export function GitPage() {
   const [defineCommits, setDefineCommits] = useState<GitCommit[]>([]);
   const [activeGraphRepoPath, setActiveGraphRepoPath] = useState('');
   const [graphSelectedHash, setGraphSelectedHash] = useState<string | null>(null);
+  const [localOnly, setLocalOnly] = useState(false);
+  const [undoPending, setUndoPending] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const [undoError, setUndoError] = useState('');
 
   const [diff, setDiff] = useState<GitFileDiff | null>(null);
   const [diffLoading, setDiffLoading] = useState(false);
@@ -594,6 +612,41 @@ export function GitPage() {
   }
 
   const activeCommits = activeGraphRepoPath === definePath ? defineCommits : buildCommits;
+  const activeAhead = activeGraphRepoPath === definePath ? defineAhead : buildAhead;
+
+  // Re-fetches log + ahead/behind for a single repo at the parent level, bypassing
+  // RepoSection (which doesn't expose its own refresh()) — used after actions
+  // triggered from the Git Graph toolbar (e.g. undo last commit).
+  async function refreshGraphRepo(repoPath: string) {
+    if (!repoPath) return;
+    const [log, ab] = await Promise.all([
+      GitService.GetLog(repoPath, LOG_LIMIT),
+      GitService.GetAheadBehind(repoPath),
+    ]);
+    if (repoPath === definePath) {
+      setDefineCommits(log ?? []);
+      setDefineAhead(ab?.ahead ?? 0);
+    } else {
+      setBuildCommits(log ?? []);
+      setBuildAhead(ab?.ahead ?? 0);
+    }
+  }
+
+  async function confirmUndo() {
+    if (!activeGraphRepoPath) return;
+    setUndoing(true);
+    setUndoError('');
+    try {
+      const result = await GitService.UndoLastCommit(activeGraphRepoPath) as any;
+      if (result && result.kind !== 'ok') setUndoError(result.message || 'Undo failed.');
+      await refreshGraphRepo(activeGraphRepoPath);
+    } catch (e: any) {
+      setUndoError(String(e));
+    } finally {
+      setUndoing(false);
+      setUndoPending(false);
+    }
+  }
 
   const buildSelectedFile = selectedRepoPath === buildPath ? selectedFile : null;
   const defineSelectedFile = selectedRepoPath === definePath ? selectedFile : null;
@@ -728,6 +781,25 @@ export function GitPage() {
                       <span className="text-[11px] text-foreground/40 uppercase tracking-wider font-semibold flex-1">
                         Git Graph · {activeCommits.length} commits
                       </span>
+                      <button
+                        onClick={() => setLocalOnly(v => !v)}
+                        title="Show only local commits"
+                        className={`p-1 rounded transition-colors ${
+                          localOnly
+                            ? 'bg-pink-600/30 text-pink-400'
+                            : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5'
+                        }`}
+                      >
+                        <GitCommitVertical size={12} />
+                      </button>
+                      <button
+                        onClick={() => setUndoPending(true)}
+                        disabled={activeAhead === 0 || activeCommits.length === 0}
+                        title={activeAhead === 0 ? 'No unpushed commit to undo' : 'Undo last commit'}
+                        className="p-1 rounded transition-colors text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground/40"
+                      >
+                        <Undo2 size={12} />
+                      </button>
                       <div className="flex items-center rounded overflow-hidden border border-foreground/10">
                         <button
                           onClick={() => setActiveGraphRepoPath(buildPath)}
@@ -752,12 +824,18 @@ export function GitPage() {
                         </button>
                       </div>
                     </div>
+                    {undoError && (
+                      <div className="shrink-0 px-3 py-1.5 bg-red-500/10 border-b border-red-500/20 text-xs text-red-400 truncate">
+                        {undoError}
+                      </div>
+                    )}
                     <div className="flex-1 overflow-hidden">
                       <GitGraph
                         commits={activeCommits}
                         repoPath={activeGraphRepoPath || buildPath}
                         selectedHash={graphSelectedHash ?? selectedCommitFile?.hash ?? null}
                         selectedCommitFile={selectedCommitFile ? { hash: selectedCommitFile.hash, path: selectedCommitFile.path } : null}
+                        showLocalOnly={localOnly}
                         onSelectCommit={(hash) => {
                           setGraphSelectedHash(hash);
                           setSelectedFile(null);
@@ -856,6 +934,18 @@ export function GitPage() {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={undoPending}
+        onOpenChange={(open) => { if (!open) setUndoPending(false); }}
+        title="Undo last commit"
+        description={
+          <>Undo <span className="text-foreground font-semibold">{activeCommits[0]?.subject ?? 'the last commit'}</span>? Its changes will be moved back to staged.</>
+        }
+        confirmLabel="Undo"
+        loading={undoing}
+        onConfirm={confirmUndo}
+      />
     </div>
   );
 }

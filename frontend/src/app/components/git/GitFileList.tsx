@@ -19,6 +19,8 @@ interface Props {
   onSelectFile: (path: string, staged: boolean) => void;
   onStage: (path: string) => void;
   onUnstage: (path: string) => void;
+  onStageMany: (paths: string[]) => void;
+  onUnstageMany: (paths: string[]) => void;
   onDiscard: (paths: string[]) => void;
   onStageAll: () => void;
   onCommit: () => void;
@@ -272,7 +274,7 @@ function Section({
 export function GitFileList({
   status, selectedFile, selectedStaged, commitMessage, committing, generatingCommitMsg,
   ahead, behind,
-  onSelectFile, onStage, onUnstage, onDiscard, onStageAll, onCommit, onCommitMessageChange, onGenerateCommitMessage,
+  onSelectFile, onStage, onUnstage, onStageMany, onUnstageMany, onDiscard, onStageAll, onCommit, onCommitMessageChange, onGenerateCommitMessage,
   onSync,
 }: Props) {
   const { state: scState, setFileListView } = useSourceControl();
@@ -355,7 +357,7 @@ export function GitFileList({
             status.staged.length > 0 ? (
               <button
                 title="Unstage all"
-                onClick={() => status.staged.forEach(f => onUnstage(f.path))}
+                onClick={() => onUnstageMany(status.staged.map(f => f.path))}
                 className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
               >
                 <Minus size={11} />
@@ -374,7 +376,7 @@ export function GitFileList({
               onAction1={onUnstage}
               action1Icon={<Minus size={11} />}
               action1Title="Unstage"
-              onFolderAction1={(paths) => paths.forEach(p => onUnstage(p))}
+              onFolderAction1={onUnstageMany}
             />
           ) : (
             status.staged.map(f => (
@@ -425,7 +427,7 @@ export function GitFileList({
               action2Icon={<RotateCcw size={11} />}
               action1Title="Stage"
               action2Title="Discard changes"
-              onFolderAction1={(paths) => paths.forEach(p => onStage(p))}
+              onFolderAction1={onStageMany}
               onFolderAction2={onDiscard}
             />
           ) : (
@@ -464,7 +466,7 @@ export function GitFileList({
                 onAction1={onStage}
                 action1Icon={<Plus size={11} />}
                 action1Title="Stage file"
-                onFolderAction1={(paths) => paths.forEach(p => onStage(p))}
+                onFolderAction1={onStageMany}
               />
             ) : (
               status.untracked.map(p => (

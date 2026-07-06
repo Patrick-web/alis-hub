@@ -24,7 +24,9 @@ import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
 import { initAccentColor } from './stores/accent';
 import { useUserProfile } from './stores/userProfile';
+import { useSourceControl } from './stores/sourceControl';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
+import * as GitService from '../../bindings/alis-hub-v3/gitservice';
 import { Loader } from './components/Loader';
 
 const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
@@ -39,7 +41,10 @@ export function RootLayout() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const { toggle } = useCommandPalette();
   const { toggle: toggleDevSettings } = useDevSettingsModal();
+  const { state: scState } = useSourceControl();
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fetchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [repoPaths, setRepoPaths] = useState<{ buildDir: string; defineDir: string } | null>(null);
 
   useEffect(() => { initAccentColor(); }, []);
 
@@ -116,6 +121,37 @@ export function RootLayout() {
       offAuthExpired();
     };
   }, [state.phase]);
+
+  // Resolve the current product's repo paths, independent of whether the
+  // Source Control tab is mounted, so background fetch can run regardless
+  // of which tab is active.
+  useEffect(() => {
+    if (!state.organisation || !state.product) { setRepoPaths(null); return; }
+    GitService.GetProductRepoPaths(state.organisation, state.product)
+      .then(paths => setRepoPaths(paths ? { buildDir: paths.buildDir, defineDir: paths.defineDir } : null))
+      .catch(() => setRepoPaths(null));
+  }, [state.organisation, state.product]);
+
+  // Periodically fetch from origin so ahead/behind state is fresh even
+  // without a manual pull, per the "Background Fetch" setting.
+  useEffect(() => {
+    const unauthPhases: AppPhase[] = ['init', 'login'];
+    if (unauthPhases.includes(state.phase)) return;
+    if (!repoPaths || scState.fetchIntervalMinutes <= 0) return;
+
+    async function fetchAll() {
+      if (!repoPaths) return;
+      await Promise.all([
+        GitService.FetchOrigin(repoPaths.buildDir).catch(() => {}),
+        GitService.FetchOrigin(repoPaths.defineDir).catch(() => {}),
+      ]);
+    }
+
+    fetchPollRef.current = setInterval(fetchAll, scState.fetchIntervalMinutes * 60 * 1000);
+    return () => {
+      if (fetchPollRef.current) clearInterval(fetchPollRef.current);
+    };
+  }, [state.phase, repoPaths, scState.fetchIntervalMinutes]);
 
   // Pre-workspace phases render fullscreen without nav chrome
   if (state.phase === 'init') {
