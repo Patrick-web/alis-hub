@@ -1,5 +1,35 @@
 # Changelog
 
+## [v0.11.0] - 2026-07-07
+
+### What's New
+- Introduced Workflows: build multi-step automations (define, build, upgrade packages, git actions, deploy) with a visual step editor, live run logs, and named input arguments you fill in at run time
+- Workflow runs now continue in the background — navigate away and come back, and a status strip chip shows live progress with a log preview
+- You can now start a workflow run from any step, skipping the ones before it
+- Deploy steps can specify a build version (or default to the latest) and no longer require a Cloud Build step to run first
+- Added copy-to-clipboard buttons to workflow, build, and deploy logs
+- Workflow titles and descriptions can now be edited inline
+- Interactive shell steps (like package upgrades) can now receive input while running, so prompts don't hang the workflow
+- Workflows are now gated behind Labs, with built-in default templates removed in favor of your own
+- Added a Local AI test tab, with a status strip indicator while it's generating
+- Build, Deploy, and Define actions in the Develop tab now show toast and native OS notifications
+- Added a developer settings modal with a title-bar override option
+- Git: periodic background fetch, batched folder staging, a local-only graph toggle, and the ability to undo a commit
+- Status strip chips now close along with their tab and show details on hover
+- Codeblocks: added an "Update" flow for publishing new versions without needing a running instance
+- Window chrome now feels more native, with thinner scrollbars, fixed title-bar dragging, and double-click to maximize
+
+### Bug Fixes
+- Fixed an issue where git auth configuration could go stale immediately after logging in
+- Fixed an issue where workflow runs didn't surface real git errors or per-step logs
+- Fixed an issue where shell-based workflow steps didn't load your shell's PATH setup
+- Fixed an issue where all workflow steps expanded at once instead of just the active one
+- Fixed an issue where the Define step's log stream could appear to stall
+- Fixed an issue where package upgrade steps ran as raw shell commands instead of using the proper package service
+- Fixed an issue where the Define step used a shell command instead of the dedicated Define service
+- Fixed an issue where codeblock access roles didn't match production role behavior
+- Fixed an issue where fetching block roles used a broken API call
+
 ## [v0.10.0] - 2026-07-02
 
 ### What's New
