@@ -65,6 +65,7 @@ type StepRunStatus struct {
 	Status      string `json:"status"` // pending|running|success|failed|skipped
 	StartedAt   *int64 `json:"startedAt"`
 	CompletedAt *int64 `json:"completedAt"`
+	Log         string `json:"log"` // persisted once the step completes; empty while running/pending
 }
 
 type RunLogChunk struct {
@@ -669,7 +670,7 @@ func (s *WorkflowService) PollRunLogs(runID string, offset int) (*RunLogChunk, e
 
 func (s *WorkflowService) loadStepRuns(runID string) ([]StepRunStatus, error) {
 	rows, err := s.db.Query(
-		`SELECT id,step_id,position,type,label,status,started_at,completed_at FROM workflow_step_runs WHERE run_id=? ORDER BY position`,
+		`SELECT id,step_id,position,type,label,status,started_at,completed_at,log FROM workflow_step_runs WHERE run_id=? ORDER BY position`,
 		runID,
 	)
 	if err != nil {
@@ -680,7 +681,7 @@ func (s *WorkflowService) loadStepRuns(runID string) ([]StepRunStatus, error) {
 	for rows.Next() {
 		var sr StepRunStatus
 		var startedAt, completedAt sql.NullInt64
-		if err := rows.Scan(&sr.ID, &sr.StepID, &sr.Position, &sr.Type, &sr.Label, &sr.Status, &startedAt, &completedAt); err != nil {
+		if err := rows.Scan(&sr.ID, &sr.StepID, &sr.Position, &sr.Type, &sr.Label, &sr.Status, &startedAt, &completedAt, &sr.Log); err != nil {
 			return nil, err
 		}
 		if startedAt.Valid {
@@ -746,11 +747,11 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 			} else {
 				stepStatus = "failed"
 				finalStatus = "failed"
-				fmt.Fprintf(ar, "\n✗ failed: %v\n", execErr)
+				fmt.Fprintf(w, "\n✗ failed: %v\n", execErr)
 			}
 		} else {
 			stepStatus = "success"
-			fmt.Fprintf(ar, "\n✓ done in %.1fs\n", elapsed.Seconds())
+			fmt.Fprintf(w, "\n✓ done in %.1fs\n", elapsed.Seconds())
 		}
 
 		s.db.Exec(

@@ -69,6 +69,14 @@ export function RunWorkflow(id: string, argValues: { [_ in string]?: string }): 
     return $Call.ByID(45429760, id, argValues);
 }
 
+/**
+ * SendRunInput writes user-typed input to the currently running step's shell,
+ * e.g. to answer an interactive prompt (like corepack's download confirmation).
+ */
+export function SendRunInput(runID: string, data: string): $CancellablePromise<void> {
+    return $Call.ByID(3127346285, runID, data);
+}
+
 export function StopRun(runID: string): $CancellablePromise<void> {
     return $Call.ByID(4293969093, runID);
 }
