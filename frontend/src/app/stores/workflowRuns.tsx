@@ -55,12 +55,18 @@ interface WorkflowRunsContextValue {
   ) => Promise<void>;
   stopRun: (workflowId: string) => Promise<void>;
   toggleSection: (workflowId: string, stepRunId: string) => void;
+  // Which workflow is selected in the Workflows page list. Lives here (above
+  // the router) rather than as local page state so it survives navigating
+  // away from and back to the Workflows page.
+  selectedWorkflowId: string | null;
+  setSelectedWorkflowId: (id: string | null) => void;
 }
 
 const WorkflowRunsContext = createContext<WorkflowRunsContextValue | null>(null);
 
 export function WorkflowRunsProvider({ children }: { children: ReactNode }) {
   const [runs, setRuns] = useState<Record<string, WorkflowRunEntry>>({});
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const { addNotification, updateNotification } = useNotifications();
 
   // Polling loop — stays alive regardless of which page is mounted
@@ -232,7 +238,9 @@ export function WorkflowRunsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <WorkflowRunsContext.Provider value={{ runs, startRun, stopRun, toggleSection }}>
+    <WorkflowRunsContext.Provider
+      value={{ runs, startRun, stopRun, toggleSection, selectedWorkflowId, setSelectedWorkflowId }}
+    >
       {children}
     </WorkflowRunsContext.Provider>
   );
