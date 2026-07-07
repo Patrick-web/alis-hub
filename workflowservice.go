@@ -886,7 +886,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if envs, ok := params["environments"].([]interface{}); ok {
 			for _, e := range envs {
 				if es, ok := e.(string); ok && es != "" {
-					environments = append(environments, es)
+					environments = append(environments, expandVars(es, stepVars))
 				}
 			}
 		}

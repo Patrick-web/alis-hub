@@ -6,6 +6,8 @@ import { Input } from '../components/Input';
 import { Dialog, DialogContent } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { MultiSelect } from '../components/ui/multi-select';
+import { SearchableSelect } from '../components/ui/searchable-select';
+import { Switch } from '../components/ui/switch';
 import { useWorkspace } from '../stores/workspace';
 import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
 import { useNotifications } from '../stores/notifications';
@@ -20,6 +22,11 @@ type WorkflowArg = {
   key: string;
   label: string;
 };
+
+const ARG_DEFS: WorkflowArg[] = [
+  { key: 'environment', label: 'Environment' },
+  { key: 'neuron', label: 'Neuron' },
+];
 
 type Workflow = {
   id: string;
@@ -234,6 +241,41 @@ function getStepType(id: string): StepType {
   };
 }
 
+// Sentinel values a step field is set to when it's bound to a workflow
+// argument instead of holding an explicit value. Resolved at run time via
+// the same {{key}} templating used for freeform inputs.
+const NEURON_ARG_SENTINEL = '{{neuron}}';
+const ENV_ARG_SENTINEL = ['{{environment}}'];
+
+function isNeuronBound(v: any): boolean {
+  return v === NEURON_ARG_SENTINEL;
+}
+
+function isEnvBound(v: any): boolean {
+  return Array.isArray(v) && v.length === 1 && v[0] === ENV_ARG_SENTINEL[0];
+}
+
+// When a workflow argument is disabled, un-bind any step fields that were
+// referencing it so they don't silently keep pointing at a removed input.
+function clearArgBinding(steps: WorkflowStep[], argKey: string): WorkflowStep[] {
+  return steps.map((s) => {
+    let params: Record<string, any> = {};
+    try { params = JSON.parse(s.params || '{}'); } catch { return s; }
+    let changed = false;
+    for (const f of getStepType(s.type).fields) {
+      if (argKey === 'neuron' && f.type === 'neuron-full' && isNeuronBound(params[f.key])) {
+        params[f.key] = '';
+        changed = true;
+      }
+      if (argKey === 'environment' && f.type === 'env-multi' && isEnvBound(params[f.key])) {
+        params[f.key] = [];
+        changed = true;
+      }
+    }
+    return changed ? { ...s, params: JSON.stringify(params) } : s;
+  });
+}
+
 function stepSummary(step: WorkflowStep): string {
   try {
     const p = JSON.parse(step.params);
@@ -275,7 +317,6 @@ const STATUS_COLOR: Record<string, string> = {
 
 export function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editedWorkflow, setEditedWorkflow] = useState<Workflow | null>(null);
@@ -293,8 +334,16 @@ export function WorkflowsPage() {
   // ── Run tab state ──────────────────────────────────────────────────────────
   // Run/poll state itself lives in WorkflowRunsProvider so it survives navigating
   // away from this page — see frontend/src/app/stores/workflowRuns.tsx.
-  const { runs, startRun: storeStartRun, stopRun: storeStopRun, toggleSection } = useWorkflowRuns();
+  const {
+    runs,
+    startRun: storeStartRun,
+    stopRun: storeStopRun,
+    toggleSection,
+    selectedWorkflowId: activeId,
+    setSelectedWorkflowId: setActiveId,
+  } = useWorkflowRuns();
   const { state: notifState, focusTaskId, setFocusTaskId } = useNotifications();
+  const { state: workspaceState } = useWorkspace();
   const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -405,6 +454,7 @@ export function WorkflowsPage() {
       const defaults: Record<string, string> = {};
       for (const a of args) defaults[a.key] = '';
       setRunArgValues(defaults);
+      setActiveTab('run');
       setRunArgsOpen(true);
     }
   };
@@ -502,7 +552,7 @@ export function WorkflowsPage() {
       const created = await WorkflowService.CreateWorkflow({
         name: data.name,
         description: data.description ?? '',
-        args: Array.isArray(data.args) ? data.args.filter((a: any) => a.key && a.label) : [],
+        args: Array.isArray(data.args) ? data.args.filter((a: any) => ARG_DEFS.some((d) => d.key === a.key)) : [],
         steps: (data.steps as any[]).map((s, i) => ({
           id: uid(),
           type: s.type ?? '',
@@ -719,9 +769,21 @@ export function WorkflowsPage() {
                 )}
               </div>
 
+              <Button
+                variant="ghost"
+                onClick={() => handleExport(editedWorkflow.id)}
+                icon={<Icon icon="solar:export-linear" className="text-base" />}
+                title="Export workflow"
+              >
+                Export
+              </Button>
+
               {editedWorkflow.isTemplate ? (
-                <Button variant="secondary" onClick={() => handleClone(editedWorkflow.id)}>
-                  <Icon icon="solar:copy-linear" className="text-base" />
+                <Button
+                  variant="secondary"
+                  onClick={() => handleClone(editedWorkflow.id)}
+                  icon={<Icon icon="solar:copy-linear" className="text-base" />}
+                >
                   Clone to Edit
                 </Button>
               ) : (
@@ -735,8 +797,9 @@ export function WorkflowsPage() {
                     variant="ghost"
                     onClick={() => handleDelete(editedWorkflow.id)}
                     className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                    icon={<Icon icon="solar:trash-bin-trash-linear" className="text-base" />}
                   >
-                    <Icon icon="solar:trash-bin-trash-linear" className="text-base" />
+                    Delete
                   </Button>
                 </>
               )}
@@ -745,8 +808,8 @@ export function WorkflowsPage() {
                 variant="primary"
                 onClick={() => handleRun()}
                 disabled={editedWorkflow.steps.length === 0 || isRunning}
+                icon={<Icon icon={isRunning ? 'solar:spinner-linear' : 'solar:play-linear'} className={`text-base ${isRunning ? 'animate-spin' : ''}`} />}
               >
-                <Icon icon={isRunning ? 'solar:spinner-linear' : 'solar:play-linear'} className={`text-base ${isRunning ? 'animate-spin' : ''}`} />
                 {isRunning ? 'Running…' : 'Run'}
               </Button>
             </div>
@@ -800,62 +863,33 @@ export function WorkflowsPage() {
                   {/* Inputs panel */}
                   {!editedWorkflow.isTemplate && (
                     <div className="mb-5 bg-card border border-border rounded-lg overflow-hidden">
-                      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                      <div className="px-3 py-2 border-b border-border">
                         <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Inputs</span>
-                        <button
-                          onClick={() => setEditedWorkflow((wf) => wf ? {
-                            ...wf,
-                            args: [...(wf.args ?? []), { key: '', label: '' }],
-                          } : wf)}
-                          className="w-5 h-5 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-foreground transition-colors"
-                          title="Add input"
-                        >
-                          <Icon icon="solar:add-circle-linear" className="text-xs" />
-                        </button>
                       </div>
-                      {(editedWorkflow.args ?? []).length === 0 ? (
-                        <p className="px-3 py-2 text-[11px] text-foreground/30">
-                          No inputs. Add one to prompt for values at run time (e.g. target neuron).
-                        </p>
-                      ) : (
-                        <div className="px-3 py-2 flex flex-col gap-2">
-                          {(editedWorkflow.args ?? []).map((arg, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <Input
-                                value={arg.label}
-                                placeholder="Label (e.g. Target neuron)"
-                                className="flex-1 h-7 text-xs"
-                                onChange={(e) => {
-                                  const label = e.target.value;
-                                  const key = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-                                  setEditedWorkflow((wf) => {
-                                    if (!wf) return wf;
-                                    const args = [...(wf.args ?? [])];
-                                    args[i] = { key, label };
-                                    return { ...wf, args };
-                                  });
-                                }}
-                              />
-                              <span className="text-[10px] font-mono text-foreground/40 flex-shrink-0">
-                                {`{{${arg.key || '…'}}}`}
-                              </span>
-                              <button
-                                onClick={() => setEditedWorkflow((wf) => {
+                      <div className="px-3 py-2 flex flex-col gap-2">
+                        {ARG_DEFS.map((def) => {
+                          const enabled = (editedWorkflow.args ?? []).some((a) => a.key === def.key);
+                          return (
+                            <div key={def.key} className="flex items-center justify-between gap-2">
+                              <span className="text-xs">{def.label}</span>
+                              <Switch
+                                checked={enabled}
+                                onCheckedChange={(checked) => setEditedWorkflow((wf) => {
                                   if (!wf) return wf;
-                                  const args = (wf.args ?? []).filter((_, j) => j !== i);
-                                  return { ...wf, args };
+                                  const args = checked
+                                    ? [...(wf.args ?? []), def]
+                                    : (wf.args ?? []).filter((a) => a.key !== def.key);
+                                  const steps = checked ? wf.steps : clearArgBinding(wf.steps, def.key);
+                                  return { ...wf, args, steps };
                                 })}
-                                className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-400/10 text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
-                              >
-                                <Icon icon="solar:close-circle-linear" className="text-xs" />
-                              </button>
+                              />
                             </div>
-                          ))}
-                          <p className="text-[10px] text-foreground/30">
-                            Use <span className="font-mono">{`{{key}}`}</span> in step fields to reference an input.
-                          </p>
-                        </div>
-                      )}
+                          );
+                        })}
+                        <p className="text-[10px] text-foreground/30 pt-1">
+                          Prompted for at run time. Enable a step field's "Use workflow argument" toggle to bind it.
+                        </p>
+                      </div>
                     </div>
                   )}
 
@@ -873,6 +907,7 @@ export function WorkflowsPage() {
                       index={idx}
                       expanded={!!expandedSteps[step.id]}
                       isTemplate={editedWorkflow.isTemplate}
+                      workflowArgs={editedWorkflow.args ?? []}
                       onToggle={() => setExpandedSteps((e) => ({ ...e, [step.id]: !e[step.id] }))}
                       onParamChange={(key, val) => updateStepParam(step.id, key, val)}
                       onFailureChange={(val) => updateStep(step.id, { onFailure: val })}
@@ -958,18 +993,31 @@ export function WorkflowsPage() {
               {(editedWorkflow.args ?? []).map((arg) => (
                 <div key={arg.key}>
                   <label className="text-xs text-foreground/50 mb-1 block">{arg.label}</label>
-                  <Input
-                    value={runArgValues[arg.key] ?? ''}
-                    onChange={(e) => setRunArgValues((v) => ({ ...v, [arg.key]: e.target.value }))}
-                    placeholder={`{{${arg.key}}}`}
-                    autoFocus={arg === editedWorkflow.args[0]}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        setRunArgsOpen(false);
-                        doStartRun(runArgValues, pendingStartPosition);
-                      }
-                    }}
-                  />
+                  {arg.key === 'environment' ? (
+                    <Select
+                      value={runArgValues.environment ?? ''}
+                      onValueChange={(v) => setRunArgValues((vals) => ({ ...vals, environment: v }))}
+                    >
+                      <SelectTrigger size="sm" className="h-8 text-xs w-full">
+                        <SelectValue placeholder="Select environment…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {workspaceState.loadedEnvs.map((e) => (
+                          <SelectItem key={e.name} value={e.name}>{e.displayName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : arg.key === 'neuron' ? (
+                    <SearchableSelect
+                      value={runArgValues.neuron ?? ''}
+                      options={workspaceState.neurons.map((n) => ({
+                        label: n.id,
+                        value: `organisations/${workspaceState.organisation}/products/${workspaceState.product}/neurons/${n.id}`,
+                      }))}
+                      onChange={(v) => setRunArgValues((vals) => ({ ...vals, neuron: v }))}
+                      placeholder="Select neuron…"
+                    />
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -977,6 +1025,7 @@ export function WorkflowsPage() {
               <Button variant="ghost" onClick={() => setRunArgsOpen(false)}>Cancel</Button>
               <Button
                 variant="primary"
+                disabled={(editedWorkflow.args ?? []).some((a) => !runArgValues[a.key])}
                 onClick={() => { setRunArgsOpen(false); doStartRun(runArgValues, pendingStartPosition); }}
               >
                 <Icon icon="solar:play-linear" className="text-base" />
@@ -1302,11 +1351,12 @@ function WorkflowListItem({ workflow, active, onClick, onExport }: {
 
 // ─── StepCard ─────────────────────────────────────────────────────────────────
 
-function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, onFailureChange, onDuplicate, onRemove, onRunFromHere, runDisabled, onDragStart, onDrop }: {
+function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, onParamChange, onFailureChange, onDuplicate, onRemove, onRunFromHere, runDisabled, onDragStart, onDrop }: {
   step: WorkflowStep;
   index: number;
   expanded: boolean;
   isTemplate: boolean;
+  workflowArgs: WorkflowArg[];
   onToggle: () => void;
   onParamChange: (key: string, val: string | string[]) => void;
   onFailureChange: (val: string) => void;
@@ -1411,22 +1461,40 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                   </Select>
                 ) : (f.type === 'neuron' || f.type === 'neuron-full') ? (
                   <>
-                    <button
-                      onClick={() => !isTemplate && setNeuronPickerKey(f.key)}
-                      disabled={isTemplate}
-                      className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
-                    >
-                      <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
-                        {params[f.key] ? params[f.key].split('/').pop() : 'Select neuron…'}
-                      </span>
-                      <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
-                    </button>
-                    {neuronPickerKey === f.key && (
-                      <NeuronPickerModal
-                        format={f.type === 'neuron' ? 'short' : 'full'}
-                        onSelect={(val) => { onParamChange(f.key, val); setNeuronPickerKey(null); }}
-                        onClose={() => setNeuronPickerKey(null)}
-                      />
+                    {f.type === 'neuron-full' && workflowArgs.some((a) => a.key === 'neuron') && (
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <Switch
+                          checked={isNeuronBound(params[f.key])}
+                          onCheckedChange={(checked) => onParamChange(f.key, checked ? NEURON_ARG_SENTINEL : '')}
+                          disabled={isTemplate}
+                        />
+                      </div>
+                    )}
+                    {isNeuronBound(params[f.key]) ? (
+                      <div className="w-full bg-background border border-dashed border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
+                        {NEURON_ARG_SENTINEL}
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => !isTemplate && setNeuronPickerKey(f.key)}
+                          disabled={isTemplate}
+                          className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
+                        >
+                          <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
+                            {params[f.key] ? params[f.key].split('/').pop() : 'Select neuron…'}
+                          </span>
+                          <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
+                        </button>
+                        {neuronPickerKey === f.key && (
+                          <NeuronPickerModal
+                            format={f.type === 'neuron' ? 'short' : 'full'}
+                            onSelect={(val) => { onParamChange(f.key, val); setNeuronPickerKey(null); }}
+                            onClose={() => setNeuronPickerKey(null)}
+                          />
+                        )}
+                      </>
                     )}
                   </>
                 ) : f.type === 'neuron-multi' ? (
@@ -1526,13 +1594,31 @@ function StepCard({ step, index, expanded, isTemplate, onToggle, onParamChange, 
                     </SelectContent>
                   </Select>
                 ) : f.type === 'env-multi' ? (
-                  <MultiSelect
-                    options={state.loadedEnvs.map((e) => ({ value: e.name, label: e.displayName }))}
-                    value={Array.isArray(params[f.key]) ? params[f.key] : []}
-                    onChange={(vals) => onParamChange(f.key, vals)}
-                    placeholder="Select environments…"
-                    disabled={isTemplate}
-                  />
+                  <>
+                    {workflowArgs.some((a) => a.key === 'environment') && (
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <Switch
+                          checked={isEnvBound(params[f.key])}
+                          onCheckedChange={(checked) => onParamChange(f.key, checked ? ENV_ARG_SENTINEL : [])}
+                          disabled={isTemplate}
+                        />
+                      </div>
+                    )}
+                    {isEnvBound(params[f.key]) ? (
+                      <div className="w-full bg-background border border-dashed border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
+                        {ENV_ARG_SENTINEL[0]}
+                      </div>
+                    ) : (
+                      <MultiSelect
+                        options={state.loadedEnvs.map((e) => ({ value: e.name, label: e.displayName }))}
+                        value={Array.isArray(params[f.key]) ? params[f.key] : []}
+                        onChange={(vals) => onParamChange(f.key, vals)}
+                        placeholder="Select environments…"
+                        disabled={isTemplate}
+                      />
+                    )}
+                  </>
                 ) : (
                   <input
                     className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs focus:outline-none focus:border-brand"
