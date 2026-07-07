@@ -38,16 +38,29 @@ type ConsoleTokenSource struct {
 	mu   sync.Mutex
 }
 
+var (
+	consoleTokenSourceOnce sync.Once
+	consoleTokenSourceInst *ConsoleTokenSource
+	consoleTokenSourceErr  error
+)
+
+// NewConsoleTokenSource returns the process-wide ConsoleTokenSource singleton.
+// GitService, ProductService, AlisClient, etc. all call this, so they must
+// share one instance: a refresh triggered by, say, a git push and the 5-minute
+// CheckAuth poll firing around the same time both go through the same mutex
+// instead of racing to redeem the same refresh token independently (which,
+// if the identity server rotates refresh tokens on use, makes the loser's
+// refresh fail and surface as a spurious session-expired).
 func NewConsoleTokenSource() (*ConsoleTokenSource, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("home dir: %w", err)
-	}
-	p := filepath.Join(home, alisConsoleCredentialsPath)
-	if _, err := os.Stat(p); err != nil {
-		return nil, fmt.Errorf("console credentials not found — run Login() first")
-	}
-	return &ConsoleTokenSource{path: p}, nil
+	consoleTokenSourceOnce.Do(func() {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			consoleTokenSourceErr = fmt.Errorf("home dir: %w", err)
+			return
+		}
+		consoleTokenSourceInst = &ConsoleTokenSource{path: filepath.Join(home, alisConsoleCredentialsPath)}
+	})
+	return consoleTokenSourceInst, consoleTokenSourceErr
 }
 
 func (s *ConsoleTokenSource) Token() (string, error) {
@@ -87,6 +100,10 @@ func (s *ConsoleTokenSource) CookieHeader() (string, error) {
 func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if _, err := os.Stat(s.path); err != nil {
+		return nil, fmt.Errorf("console credentials not found — run Login() first")
+	}
 
 	creds, err := s.read()
 	if err != nil {
