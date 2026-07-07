@@ -217,9 +217,40 @@ function RepoSection({
   async function handlePush() {
     setPushing(true);
     setSyncResult(null);
+    const pushedCommits = commits.slice(0, ahead);
     const result = await GitService.PushOrigin(repoPath) as any;
     if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
       setSyncResult(result);
+    } else if (
+      result?.kind === 'ok' &&
+      repoLabel === 'Define' &&
+      isSuggestionEnabled('push-define-run-service') &&
+      pushedCommits.length > 0
+    ) {
+      try {
+        const fileResults = await Promise.all(
+          pushedCommits.map(c => GitService.GetCommitFiles(repoPath, c.hash))
+        );
+        const protoFiles = fileResults.flat().filter((f: any) =>
+          f.path.toLowerCase().endsWith('.proto') && f.statusCode !== 'D'
+        );
+        const services = new Map<string, string>();
+        for (const f of protoFiles) {
+          const parts = f.path.split('/');
+          if (parts.length >= 4) services.set(parts[2], parts[3]);
+        }
+        for (const [neuron, version] of services) {
+          addSuggestion({
+            definitionId: `push-define-run-service:${neuron}`,
+            category: 'Define',
+            title: `Run Define for ${neuron}?`,
+            body: `Proto changes for ${neuron} (${version}) were pushed. Run Define to regenerate code.`,
+            priority: 'passive',
+          });
+        }
+      } catch {
+        // suggestion detection is best-effort
+      }
     }
     setPushing(false);
     refresh();

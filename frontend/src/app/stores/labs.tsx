@@ -60,6 +60,13 @@ export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
     enabled: true,
   },
   {
+    id: 'push-define-run-service',
+    category: 'Define',
+    title: 'Suggest running Define after proto push',
+    description: "When you push the define repo, detect which service's protos changed and suggest running Define for it.",
+    enabled: true,
+  },
+  {
     id: 'ai-contextual-insight',
     category: 'AI Insights',
     title: 'AI contextual suggestions',

@@ -6,6 +6,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { useSuggestions, type Suggestion } from '../stores/suggestions';
 import type { SuggestionCategory } from '../stores/labs';
 import { SUGGESTION_CATEGORY_ORDER } from '../stores/labs';
+import { useDevelopTabs } from '../stores/developTabs';
 
 interface SuggestionAction {
   label: string;
@@ -40,6 +41,17 @@ const ACTION_FACTORIES: Record<string, ActionFactory> = {
     { label: 'Install Packages', variant: 'primary', onClick: () => { navigate('/develop'); dismiss(s.id); } },
     { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
   ],
+  'push-define-run-service': (s, navigate, dismiss) => {
+    const neuron = s.definitionId.split(':')[1];
+    return [
+      { label: 'Run Define', variant: 'primary', onClick: () => {
+          navigate('/develop');
+          useDevelopTabs.getState().openTab('define', neuron);
+          dismiss(s.id);
+        } },
+      { label: 'Dismiss', variant: 'ghost', onClick: () => dismiss(s.id) },
+    ];
+  },
 };
 
 function SuggestionCard({ suggestion, actions }: { suggestion: Suggestion; actions: SuggestionAction[] }) {
@@ -137,7 +149,8 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
                   </span>
                 </div>
                 {grouped[category]!.map(s => {
-                  const actions = ACTION_FACTORIES[s.definitionId]?.(s, navigate, dismiss) ?? [];
+                  const baseId = s.definitionId.split(':')[0];
+                  const actions = ACTION_FACTORIES[baseId]?.(s, navigate, dismiss) ?? [];
                   return <SuggestionCard key={s.id} suggestion={s} actions={actions} />;
                 })}
               </div>
