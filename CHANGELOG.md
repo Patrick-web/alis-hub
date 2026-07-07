@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.12.0] - 2026-07-07
+
+### What's New
+- After pushing to the Define repo, you'll now get a suggestion to run Define for any service whose protos changed
+- Workflow inputs are now simplified to two fixed argument types — Environment and Neuron — with real select pickers instead of free-text boxes, and Deploy steps can bind their Neuron/Environments fields to those inputs
+- Added a live streaming toggle to the Logs tool
+- The workflow you had selected is now remembered when you navigate away from and back to the Workflows page
+
+### Bug Fixes
+- Fixed an issue where concurrent auth token refreshes (e.g. a git push landing near the periodic session check) could race and cause a spurious "session expired" prompt
+- Fixed an issue where exporting a workflow silently did nothing — it now uses a native save dialog
+- Fixed an issue where some buttons' icons were misaligned due to being placed in the label area instead of the icon slot
+- Fixed gcloud auto-install on Windows to use a silent installer instead of a command that only works on Unix shells
+
 ## [v0.11.0] - 2026-07-07
 
 ### What's New
