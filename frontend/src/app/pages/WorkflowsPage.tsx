@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
+import { Dialogs } from '@wailsio/runtime';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Dialog, DialogContent } from '../components/ui/dialog';
@@ -8,6 +9,7 @@ import { MultiSelect } from '../components/ui/multi-select';
 import { useWorkspace } from '../stores/workspace';
 import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
 import { useNotifications } from '../stores/notifications';
+import { notify } from '../lib/notify';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
@@ -468,18 +470,22 @@ export function WorkflowsPage() {
   };
 
   const handleExport = async (workflowId: string) => {
-    const wf = await WorkflowService.GetWorkflow(workflowId) as Workflow;
-    if (!wf) return;
-    const { id: _id, createdAt: _c, updatedAt: _u, ...exportData } = wf;
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${wf.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.workflow.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const wf = workflows.find((w) => w.id === workflowId);
+    const defaultName = `${(wf?.name ?? 'workflow').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.workflow.json`;
+    try {
+      // A browser blob+<a download> doesn't reliably trigger a save in the
+      // Wails webview, so we ask the OS for a path and write the file from Go.
+      const path = await Dialogs.SaveFile({
+        Filename: defaultName,
+        Title: 'Export workflow',
+        Filters: [{ DisplayName: 'Workflow JSON', Pattern: '*.json' }],
+      });
+      if (!path) return;
+      await WorkflowService.ExportWorkflow(workflowId, path);
+      notify.success('Workflow exported');
+    } catch (e: any) {
+      notify.error('Failed to export workflow', { description: e?.message ?? String(e) });
+    }
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {

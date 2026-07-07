@@ -465,6 +465,34 @@ func (s *WorkflowService) CloneWorkflow(id string) (*Workflow, error) {
 	})
 }
 
+// ExportWorkflow writes workflow id to path as JSON, matching the shape
+// ImportWorkflow-style frontend logic expects (name/description/args/steps).
+// Writing via a Go-side file write (rather than a browser blob download,
+// which WKWebView/WebView2 don't reliably support) is what lets this work
+// inside the Wails webview.
+func (s *WorkflowService) ExportWorkflow(id, path string) error {
+	wf, err := s.GetWorkflow(id)
+	if err != nil {
+		return err
+	}
+	export := struct {
+		Name        string         `json:"name"`
+		Description string         `json:"description"`
+		Args        []WorkflowArg  `json:"args"`
+		Steps       []WorkflowStep `json:"steps"`
+	}{
+		Name:        wf.Name,
+		Description: wf.Description,
+		Args:        wf.Args,
+		Steps:       wf.Steps,
+	}
+	data, err := json.MarshalIndent(export, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
 // ─── Execution ────────────────────────────────────────────────────────────────
 
 // RunWorkflow starts a run of workflow id. startPosition lets the run begin
