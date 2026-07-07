@@ -28,6 +28,17 @@ export function DeleteWorkflow(id: string): $CancellablePromise<void> {
     return $Call.ByID(3132870458, id);
 }
 
+/**
+ * ExportWorkflow writes workflow id to path as JSON, matching the shape
+ * ImportWorkflow-style frontend logic expects (name/description/args/steps).
+ * Writing via a Go-side file write (rather than a browser blob download,
+ * which WKWebView/WebView2 don't reliably support) is what lets this work
+ * inside the Wails webview.
+ */
+export function ExportWorkflow(id: string, path: string): $CancellablePromise<void> {
+    return $Call.ByID(2565138159, id, path);
+}
+
 export function GetRun(runID: string): $CancellablePromise<$models.WorkflowRun | null> {
     return $Call.ByID(694511473, runID).then(($result: any) => {
         return $$createType3($result);
