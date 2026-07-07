@@ -6,6 +6,7 @@ import { Loader } from "../Loader";
 import { Browser } from "@wailsio/runtime";
 import * as GS from "../../../../bindings/alis-hub-v3/gcloudservice";
 import type { GCloudStatus } from "../../../../bindings/alis-hub-v3/models";
+import { usePlatform } from "../../stores/platform";
 
 interface Props {
   onReady: () => void;
@@ -13,8 +14,22 @@ interface Props {
 
 const INSTALL_URL = "https://cloud.google.com/sdk/docs/install";
 
-const INSTALL_COMMAND =
+const UNIX_INSTALL_COMMAND =
   "curl https://sdk.cloud.google.com | bash && exec -l $SHELL";
+
+// The setup terminal on Windows is PowerShell (see platformShell in
+// platform.go), so the Unix curl|bash one-liner can't run there. Google
+// doesn't publish a piped installer for Windows; the documented silent
+// install is the NSIS installer run with /S (see
+// https://cloud.google.com/sdk/docs/downloads-interactive). It installs to
+// %LOCALAPPDATA%\Google\Cloud SDK by default, which gcloudBin() already
+// probes. The installer prints nothing when silent, so we echo a line that
+// matches INSTALL_SUCCESS below to trigger the status recheck.
+const WINDOWS_INSTALL_COMMAND =
+  '$installer = "$env:Temp\\GoogleCloudSDKInstaller.exe"; ' +
+  '(New-Object Net.WebClient).DownloadFile("https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe", $installer); ' +
+  "Start-Process -FilePath $installer -ArgumentList '/S','/noreporting' -Wait; " +
+  'Write-Host "Installation complete"';
 
 const SESSION_ID = "gcloud-setup";
 
@@ -66,6 +81,10 @@ function StepCard({
 }
 
 export function GCloudSetup({ onReady }: Props) {
+  const { effective } = usePlatform();
+  const INSTALL_COMMAND =
+    effective === "windows" ? WINDOWS_INSTALL_COMMAND : UNIX_INSTALL_COMMAND;
+
   const [status, setStatus] = useState<GCloudStatus | null>(null);
   const [checking, setChecking] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(false);
