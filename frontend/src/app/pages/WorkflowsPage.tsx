@@ -1027,8 +1027,8 @@ export function WorkflowsPage() {
                 variant="primary"
                 disabled={(editedWorkflow.args ?? []).some((a) => !runArgValues[a.key])}
                 onClick={() => { setRunArgsOpen(false); doStartRun(runArgValues, pendingStartPosition); }}
+                icon={<Icon icon="solar:play-linear" className="text-base" />}
               >
-                <Icon icon="solar:play-linear" className="text-base" />
                 Run
               </Button>
             </div>
@@ -1787,9 +1787,9 @@ function WorkflowRunView({
             onClick={onStop}
             disabled={stopping}
             className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-xs h-7 px-2"
+            icon={<Icon icon="solar:stop-circle-linear" className="text-sm" />}
           >
-            <Icon icon="solar:stop-circle-linear" className="text-sm" />
-            Stop
+            {stopping ? 'Stopping…' : 'Stop'}
           </Button>
         )}
       </div>
