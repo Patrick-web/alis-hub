@@ -14,6 +14,7 @@ interface Props {
 }
 
 const MAX_ENTRIES = 500;
+const POLL_INTERVAL_MS = 5000;
 
 const SEVERITY_STYLES: Record<string, string> = {
   ERROR: 'text-red-400 bg-red-400/10',
@@ -71,17 +72,16 @@ const TIME_OPTIONS: FilterSelectOption[] = [
 ];
 
 function buildFilter(
+  since: string,
+  inclusive: boolean,
   severity: string,
-  minutes: number,
   text: string,
   resourceType: string,
   cloudRunService: string,
   logName: string,
   projectID: string,
 ): string {
-  const parts: string[] = [];
-  const since = new Date(Date.now() - minutes * 60 * 1000).toISOString();
-  parts.push(`timestamp>="${since}"`);
+  const parts: string[] = [`timestamp${inclusive ? '>=' : '>'}"${since}"`];
   if (severity !== 'DEFAULT') parts.push(`severity>=${severity}`);
   // Cloud Run service implies resource type — takes precedence over the resource dropdown
   if (cloudRunService) {
@@ -123,6 +123,10 @@ export function LogsExplorer({ projectID }: Props) {
   const [logName, setLogName] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const [isStreaming, setIsStreaming] = useState(false);
+  const latestTimestampRef = useRef<string | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+
   // Cloud Run services list
   const [crServices, setCrServices] = useState<FilterSelectOption[]>([]);
   const [crServiceList, setCrServiceList] = useState<CloudRunService[]>([]);
@@ -160,7 +164,8 @@ export function LogsExplorer({ projectID }: Props) {
 
   const load = useCallback((append = false, serviceOverride?: string) => {
     const svc = serviceOverride ?? cloudRunService;
-    const filter = buildFilter(severity, Number(timeRange), searchText, resourceType, svc, logName, projectID);
+    const since = new Date(Date.now() - Number(timeRange) * 60 * 1000).toISOString();
+    const filter = buildFilter(since, true, severity, searchText, resourceType, svc, logName, projectID);
     setLoading(true);
     setError(null);
     GS.ListLogEntries(projectID, filter, append ? nextPageToken : '')
@@ -181,6 +186,52 @@ export function LogsExplorer({ projectID }: Props) {
       .catch((e: unknown) => setError(String(e)))
       .finally(() => setLoading(false));
   }, [projectID, severity, timeRange, searchText, resourceType, cloudRunService, logName, nextPageToken]);
+
+  const pollStream = useCallback(() => {
+    if (!latestTimestampRef.current) return;
+    const filter = buildFilter(latestTimestampRef.current, false, severity, searchText, resourceType, cloudRunService, logName, projectID);
+    GS.ListLogEntries(projectID, filter, '')
+      .then((page) => {
+        const incoming = (page.entries ?? []).filter((e) => !seenIdsRef.current.has(e.insertId ?? ''));
+        if (incoming.length === 0) return;
+        setEntries((prev) => {
+          const combined = [...incoming, ...prev];
+          const result = combined.length > MAX_ENTRIES ? combined.slice(0, MAX_ENTRIES) : combined;
+          if (combined.length > MAX_ENTRIES) setCapped(true);
+          seenIdsRef.current = new Set(result.map((e) => e.insertId ?? ''));
+          return result;
+        });
+        latestTimestampRef.current = incoming[0].timestamp || latestTimestampRef.current;
+      })
+      .catch((e: unknown) => setError(String(e)));
+  }, [projectID, severity, searchText, resourceType, cloudRunService, logName]);
+
+  const pollStreamRef = useRef(pollStream);
+  useEffect(() => { pollStreamRef.current = pollStream; }, [pollStream]);
+
+  useEffect(() => {
+    if (!isStreaming) return;
+    pollStreamRef.current();
+    const id = setInterval(() => pollStreamRef.current(), POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isStreaming]);
+
+  const isFirstFilterRender = useRef(true);
+  useEffect(() => {
+    if (isFirstFilterRender.current) { isFirstFilterRender.current = false; return; }
+    setIsStreaming(false);
+  }, [severity, timeRange, searchText, resourceType, cloudRunService, logName]);
+
+  const toggleStreaming = useCallback(() => {
+    setIsStreaming((prev) => {
+      const next = !prev;
+      if (next) {
+        latestTimestampRef.current = entries[0]?.timestamp ?? new Date().toISOString();
+        seenIdsRef.current = new Set(entries.map((e) => e.insertId ?? ''));
+      }
+      return next;
+    });
+  }, [entries]);
 
   const handleSelectService = useCallback((serviceName: string) => {
     setCloudRunService(serviceName);
@@ -269,10 +320,18 @@ export function LogsExplorer({ projectID }: Props) {
         <Button
           variant="primary"
           onClick={() => { setCapped(false); load(false); }}
-          disabled={loading}
+          disabled={loading || isStreaming}
           icon={<Icon icon="solar:magnifer-linear" className="text-xs" />}
         >
           Fetch
+        </Button>
+
+        <Button
+          variant={isStreaming ? 'primary' : 'secondary'}
+          onClick={toggleStreaming}
+          icon={<Icon icon={isStreaming ? 'solar:pause-circle-linear' : 'solar:play-circle-linear'} className="text-xs" />}
+        >
+          {isStreaming ? 'Streaming' : 'Live'}
         </Button>
 
         <div className="flex-1" />
@@ -374,7 +433,7 @@ export function LogsExplorer({ projectID }: Props) {
 
         {entries.length > 0 && nextPageToken && (
           <div className="flex justify-center py-[16px]">
-            <Button variant="secondary" onClick={() => load(true)} disabled={loading}>
+            <Button variant="secondary" onClick={() => load(true)} disabled={loading || isStreaming}>
               {loading ? 'Loading…' : 'Load more'}
             </Button>
           </div>
