@@ -3,9 +3,11 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Icon } from '@iconify/react';
 import { Loader } from '../Loader';
 import { Button } from '../Button';
+import { Tab } from '../Tab';
 import { FilterSelect, type FilterSelectOption } from '../FilterSelect';
+import { LogsServicesTab } from './LogsServicesTab';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
-import type { LogEntry } from '../../../../bindings/alis-hub-v3/models';
+import type { LogEntry, CloudRunService } from '../../../../bindings/alis-hub-v3/models';
 
 interface Props {
   projectID: string;
@@ -104,6 +106,8 @@ function entryMessage(entry: LogEntry): string {
 }
 
 export function LogsExplorer({ projectID }: Props) {
+  const [tab, setTab] = useState<'services' | 'filters'>('services');
+
   const [entries, setEntries] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,7 +116,7 @@ export function LogsExplorer({ projectID }: Props) {
   const [capped, setCapped] = useState(false);
 
   const [severity, setSeverity] = useState('DEFAULT');
-  const [timeRange, setTimeRange] = useState('60');
+  const [timeRange, setTimeRange] = useState('1440');
   const [searchText, setSearchText] = useState('');
   const [resourceType, setResourceType] = useState('');
   const [cloudRunService, setCloudRunService] = useState('');
@@ -121,10 +125,13 @@ export function LogsExplorer({ projectID }: Props) {
 
   // Cloud Run services list
   const [crServices, setCrServices] = useState<FilterSelectOption[]>([]);
+  const [crServiceList, setCrServiceList] = useState<CloudRunService[]>([]);
   const [crLoading, setCrLoading] = useState(false);
+  const [crError, setCrError] = useState<string | null>(null);
 
   useEffect(() => {
     setCrLoading(true);
+    setCrError(null);
     GS.ListCloudRunServices(projectID)
       .then((svcs) => {
         const opts: FilterSelectOption[] = [{ label: 'All services', value: '' }];
@@ -132,8 +139,13 @@ export function LogsExplorer({ projectID }: Props) {
           if (s.serviceName) opts.push({ label: s.serviceName, value: s.serviceName });
         }
         setCrServices(opts);
+        setCrServiceList(svcs.filter((s) => s.serviceName));
       })
-      .catch(() => setCrServices([{ label: 'All services', value: '' }]))
+      .catch((e: unknown) => {
+        setCrServices([{ label: 'All services', value: '' }]);
+        setCrServiceList([]);
+        setCrError(String(e));
+      })
       .finally(() => setCrLoading(false));
   }, [projectID]);
 
@@ -146,8 +158,9 @@ export function LogsExplorer({ projectID }: Props) {
     overscan: 10,
   });
 
-  const load = useCallback((append = false) => {
-    const filter = buildFilter(severity, Number(timeRange), searchText, resourceType, cloudRunService, logName, projectID);
+  const load = useCallback((append = false, serviceOverride?: string) => {
+    const svc = serviceOverride ?? cloudRunService;
+    const filter = buildFilter(severity, Number(timeRange), searchText, resourceType, svc, logName, projectID);
     setLoading(true);
     setError(null);
     GS.ListLogEntries(projectID, filter, append ? nextPageToken : '')
@@ -169,10 +182,55 @@ export function LogsExplorer({ projectID }: Props) {
       .finally(() => setLoading(false));
   }, [projectID, severity, timeRange, searchText, resourceType, cloudRunService, logName, nextPageToken]);
 
+  const handleSelectService = useCallback((serviceName: string) => {
+    setCloudRunService(serviceName);
+    setCapped(false);
+    setExpandedId(null);
+    setTab('filters');
+    load(false, serviceName);
+  }, [load]);
+
+  const handleViewAllLogs = useCallback(() => {
+    setCloudRunService('');
+    setCapped(false);
+    setExpandedId(null);
+    setTab('filters');
+    load(false, '');
+  }, [load]);
+
   const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <div className="flex flex-col h-full">
+      {/* Tab header */}
+      <div className="flex h-[36px] border-b border-border shrink-0">
+        <Tab
+          label="Services"
+          icon={<Icon icon="solar:server-minimalistic-linear" className="text-sm" />}
+          active={tab === 'services'}
+          onClick={() => setTab('services')}
+        />
+        <Tab
+          label="Filters"
+          icon={<Icon icon="solar:tuning-2-linear" className="text-sm" />}
+          active={tab === 'filters'}
+          onClick={() => setTab('filters')}
+        />
+      </div>
+
+      {tab === 'services' && (
+        <LogsServicesTab
+          services={crServiceList}
+          loading={crLoading}
+          error={crError}
+          selectedService={cloudRunService}
+          onSelectService={handleSelectService}
+          onViewAll={handleViewAllLogs}
+        />
+      )}
+
+      {tab === 'filters' && (
+      <>
       {/* Filter bar */}
       <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-border flex-wrap">
         <FilterSelect
@@ -322,6 +380,8 @@ export function LogsExplorer({ projectID }: Props) {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
