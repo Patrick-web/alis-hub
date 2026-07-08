@@ -16,6 +16,7 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
 import { useSourceControl } from '../stores/sourceControl';
 import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings';
+import { useProtectedEnvironments } from '../stores/protectedEnvironments';
 import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
 import { getAccessibleForeground } from '../lib/colorContrast';
@@ -28,7 +29,7 @@ interface ProfileModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop' | 'tools';
+type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop' | 'tools' | 'environments';
 
 interface AppInfo {
   version: string;
@@ -71,9 +72,12 @@ function Avatar({ name, picture, size = 48 }: { name: string; picture: string; s
   );
 }
 
-export function SettingRow({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+export function SettingRow({ id, label, value, children, highlighted }: { id?: string; label: string; value?: string; children?: React.ReactNode; highlighted?: boolean }) {
   return (
-    <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0">
+    <div
+      id={id}
+      className={`flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0 transition-colors duration-500 ${highlighted ? 'bg-brand/[0.12] ring-1 ring-inset ring-brand/40 rounded-[6px]' : ''}`}
+    >
       <span className="text-[12px] text-foreground/70 font-medium">{label}</span>
       {value && <span className="text-[11px] text-foreground/45 font-mono">{value}</span>}
       {children}
@@ -114,6 +118,7 @@ const SIDEBAR_GROUPS = [
       { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:branching-paths-down-linear', color: undefined },
       { id: 'develop' as Tab,        label: 'Develop',        icon: 'solar:code-square-linear',        color: undefined },
       { id: 'tools' as Tab,          label: 'Tools',          icon: 'solar:cloud-storage-linear',       color: undefined },
+      { id: 'environments' as Tab,   label: 'Environments',   icon: 'solar:shield-check-linear',        color: undefined },
     ],
   },
 ];
@@ -126,6 +131,96 @@ const TOOL_SETTINGS = [
   { id: 'spanner',         label: 'Spanner' },
   { id: 'backups',         label: 'Backups' },
 ];
+
+type SearchEntry = { id: string; tab: Tab; section: string; label: string; keywords?: string[] };
+
+const TAB_ORDER: { id: Tab; label: string }[] = SIDEBAR_GROUPS.flatMap(group => group.items.map(item => ({ id: item.id, label: item.label })));
+
+const STATIC_SEARCH_ENTRIES: SearchEntry[] = [
+  { id: 'setting-account-name', tab: 'account', section: 'Profile', label: 'Name' },
+  { id: 'setting-account-email', tab: 'account', section: 'Profile', label: 'Email' },
+
+  { id: 'setting-appearance-mode', tab: 'appearance', section: 'Theme', label: 'Mode', keywords: ['light', 'dark', 'system', 'theme'] },
+  { id: 'setting-appearance-accent', tab: 'appearance', section: 'Accent color', label: 'Accent color', keywords: ['custom color'] },
+
+  { id: 'setting-notifications-system', tab: 'notifications', section: 'System', label: 'System notifications' },
+
+  { id: 'setting-labs-local-ai', tab: 'labs', section: 'Local AI', label: 'Local AI' },
+  { id: 'setting-labs-smart-suggestions', tab: 'labs', section: 'Smart Suggestions', label: 'Smart Suggestions' },
+  { id: 'setting-labs-workflows', tab: 'labs', section: 'Workflows', label: 'Workflows tab' },
+
+  { id: 'setting-updates-current-version', tab: 'updates', section: 'Version', label: 'Current version' },
+  { id: 'setting-updates-os', tab: 'updates', section: 'Version', label: 'OS' },
+  { id: 'setting-updates-go', tab: 'updates', section: 'Version', label: 'Go' },
+  { id: 'setting-updates-check', tab: 'updates', section: 'Version', label: 'Check for updates', keywords: ['update'] },
+
+  { id: 'setting-sc-file-list-view', tab: 'source-control', section: 'File List', label: 'View', keywords: ['list', 'tree'] },
+  { id: 'setting-sc-diff-mode', tab: 'source-control', section: 'Diff Viewer', label: 'Mode', keywords: ['unified', 'split', 'diff'] },
+  { id: 'setting-sc-background-fetch', tab: 'source-control', section: 'Background Fetch', label: 'Check for changes', keywords: ['off', '1m', '5m', '15m', '30m', 'fetch', 'background'] },
+
+  { id: 'setting-develop-ignore-hidden', tab: 'develop', section: 'Folder Scanning', label: 'Ignore hidden folders' },
+  { id: 'setting-develop-ignored-patterns', tab: 'develop', section: 'Folder Scanning', label: 'Ignored folder patterns', keywords: ['node_modules', 'glob'] },
+  { id: 'setting-develop-default-branch', tab: 'develop', section: 'Git', label: 'Default branch', keywords: ['local', 'custom', 'branch'] },
+  { id: 'setting-develop-smart-sort', tab: 'develop', section: 'Smart Sort', label: 'Smart Sort', keywords: ['defined', 'built', 'deployed', 'committed', 'sort by'] },
+
+  { id: 'setting-environments-protected', tab: 'environments', section: 'Protected Environments', label: 'Protected environments', keywords: ['deploy', 'guard', 'confirm', 'protect', 'stop and think'] },
+];
+
+const LABS_SEARCH_ENTRIES: SearchEntry[] = SUGGESTION_REGISTRY.map(def => ({
+  id: `setting-${def.id}`,
+  tab: 'labs' as Tab,
+  section: def.category,
+  label: def.title,
+  keywords: [def.description],
+}));
+
+const TOOLS_SEARCH_ENTRIES: SearchEntry[] = TOOL_SETTINGS.map(tool => ({
+  id: `setting-${tool.id}`,
+  tab: 'tools' as Tab,
+  section: 'Tool Context Defaults',
+  label: tool.label,
+}));
+
+const SEARCH_INDEX: SearchEntry[] = [...STATIC_SEARCH_ENTRIES, ...LABS_SEARCH_ENTRIES, ...TOOLS_SEARCH_ENTRIES];
+
+function SearchResultsView({ results, onSelect }: { results: SearchEntry[]; onSelect: (entry: SearchEntry) => void }) {
+  if (results.length === 0) {
+    return (
+      <div className="p-[14px] h-full flex items-center justify-center">
+        <p className="text-[11px] text-foreground/30 font-mono">No results found.</p>
+      </div>
+    );
+  }
+
+  const byTab = new Map<Tab, SearchEntry[]>();
+  for (const entry of results) {
+    const list = byTab.get(entry.tab) ?? [];
+    list.push(entry);
+    byTab.set(entry.tab, list);
+  }
+
+  return (
+    <div className="p-[14px] flex flex-col gap-[12px]">
+      {TAB_ORDER.filter(t => byTab.has(t.id)).map(t => (
+        <div key={t.id} className="flex flex-col gap-[5px]">
+          <SectionTitle>{t.label}</SectionTitle>
+          <SettingsCard>
+            {byTab.get(t.id)!.map(entry => (
+              <button
+                key={entry.id}
+                onClick={() => onSelect(entry)}
+                className="w-full flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0 text-left hover:bg-foreground/[0.04] transition-colors"
+              >
+                <span className="text-[12px] text-foreground/70 font-medium">{entry.label}</span>
+                <span className="text-[10px] text-foreground/30 font-mono">{entry.section}</span>
+              </button>
+            ))}
+          </SettingsCard>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { state, setPhase } = useWorkspace();
@@ -141,9 +236,13 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     setSmartSortEnabled,
     setSmartSortKey,
   } = useDevelopSettings();
+  const { isProtected, toggleProtected } = useProtectedEnvironments();
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [availableBranches, setAvailableBranches] = useState<string[]>([]);
   const { profile, profileError, clearProfile } = useUserProfile();
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const {
     updateInfo,
@@ -230,6 +329,31 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     return map;
   }, []);
 
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const searchResults = useMemo(() => {
+    if (!trimmedQuery) return [];
+    return SEARCH_INDEX.filter(entry =>
+      entry.label.toLowerCase().includes(trimmedQuery) ||
+      entry.section.toLowerCase().includes(trimmedQuery) ||
+      (entry.keywords ?? []).some(k => k.toLowerCase().includes(trimmedQuery))
+    );
+  }, [trimmedQuery]);
+
+  function closeSearch() {
+    setSearchOpen(false);
+    setSearchQuery('');
+  }
+
+  function handleResultSelect(entry: SearchEntry) {
+    setActiveTab(entry.tab);
+    closeSearch();
+    requestAnimationFrame(() => {
+      document.getElementById(entry.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedId(entry.id);
+      setTimeout(() => setHighlightedId(current => (current === entry.id ? null : current)), 1500);
+    });
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -250,13 +374,46 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
               WebkitBackdropFilter: 'blur(40px) saturate(180%)',
               boxShadow: '0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)',
             }}
+            onEscapeKeyDown={(e) => {
+              if (searchOpen) {
+                e.preventDefault();
+                closeSearch();
+              }
+            }}
           >
             {/* Title bar */}
             <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border">
-              <div className="w-[52px]" />
-              <span className="flex-1 text-center text-[13px] font-semibold text-foreground/45 tracking-[-0.2px]">
-                Settings
-              </span>
+              <div className="w-[52px] flex justify-start">
+                <button
+                  onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+                  className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.07] transition-colors"
+                >
+                  <Icon icon={searchOpen ? 'solar:close-circle-linear' : 'solar:magnifer-linear'} className="text-[15px]" />
+                </button>
+              </div>
+
+              {searchOpen ? (
+                <div className="flex-1 flex items-center gap-[6px] bg-foreground/[0.05] border border-border rounded-[7px] px-[10px] h-[26px] mx-[6px]">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search settings…"
+                    className="flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-foreground/30"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="text-foreground/30 hover:text-foreground/60 shrink-0">
+                      <Icon icon="solar:close-circle-linear" className="text-[13px]" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span className="flex-1 text-center text-[13px] font-semibold text-foreground/45 tracking-[-0.2px]">
+                  Settings
+                </span>
+              )}
+
               <div className="w-[52px] flex justify-end">
                 <button
                   onClick={() => onOpenChange(false)}
@@ -281,7 +438,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     {group.items.map(item => (
                       <button
                         key={item.id}
-                        onClick={() => setActiveTab(item.id)}
+                        onClick={() => { setActiveTab(item.id); closeSearch(); }}
                         className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors ${
                           activeTab === item.id
                             ? 'bg-foreground/[0.07]'
@@ -329,6 +486,14 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto">
+                {searchOpen && trimmedQuery ? (
+                  <SearchResultsView results={searchResults} onSelect={handleResultSelect} />
+                ) : searchOpen ? (
+                  <div className="p-[14px] h-full flex items-center justify-center">
+                    <p className="text-[11px] text-foreground/25 font-mono">Type to search settings…</p>
+                  </div>
+                ) : (
+                  <>
 
                 {/* ── Account ── */}
                 {activeTab === 'account' && (
@@ -352,8 +517,8 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Profile</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Name" value={profile?.name || '—'} />
-                        <SettingRow label="Email" value={profile?.email || '—'} />
+                        <SettingRow id="setting-account-name" highlighted={highlightedId === 'setting-account-name'} label="Name" value={profile?.name || '—'} />
+                        <SettingRow id="setting-account-email" highlighted={highlightedId === 'setting-account-email'} label="Email" value={profile?.email || '—'} />
                       </SettingsCard>
                     </div>
 
@@ -373,7 +538,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Theme</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Mode">
+                        <SettingRow id="setting-appearance-mode" highlighted={highlightedId === 'setting-appearance-mode'} label="Mode">
                           <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                             <button
                               onClick={() => setTheme('light')}
@@ -398,7 +563,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                       </SettingsCard>
                     </div>
 
-                    <div className="flex flex-col gap-[5px]">
+                    <div
+                      id="setting-appearance-accent"
+                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-appearance-accent' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
+                    >
                       <SectionTitle>Accent color</SectionTitle>
                       <SettingsCard>
                         <div className="px-[12px] py-[11px] flex items-center gap-[10px] flex-wrap">
@@ -458,7 +626,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>System</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="System notifications">
+                        <SettingRow id="setting-notifications-system" highlighted={highlightedId === 'setting-notifications-system'} label="System notifications">
                           <button
                             onClick={handleSysNotifToggle}
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? 'bg-success' : 'bg-foreground/[0.1]'}`}
@@ -474,7 +642,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                 {/* ── Labs ── */}
                 {activeTab === 'labs' && (
                   <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex flex-col gap-[5px]">
+                    <div
+                      id="setting-labs-local-ai"
+                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-labs-local-ai' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
+                    >
                       <SectionTitle>Local AI</SectionTitle>
                       <LocalAISetupCard />
                     </div>
@@ -482,7 +653,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Smart Suggestions</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Smart Suggestions">
+                        <SettingRow id="setting-labs-smart-suggestions" highlighted={highlightedId === 'setting-labs-smart-suggestions'} label="Smart Suggestions">
                           <button
                             onClick={() => setMasterEnabled(!labsState.masterEnabled)}
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
@@ -496,7 +667,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Workflows</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Workflows tab">
+                        <SettingRow id="setting-labs-workflows" highlighted={highlightedId === 'setting-labs-workflows'} label="Workflows tab">
                           <button
                             onClick={() => setWorkflowsEnabled(!labsState.workflowsEnabled)}
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.workflowsEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
@@ -512,7 +683,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                         <SectionTitle>{category}</SectionTitle>
                         <SettingsCard>
                           {groupedRegistry[category]!.map(def => (
-                            <SettingRow key={def.id} label={def.title}>
+                            <SettingRow key={def.id} id={`setting-${def.id}`} highlighted={highlightedId === `setting-${def.id}`} label={def.title}>
                               <button
                                 onClick={() => setSuggestionEnabled(def.id, !isSuggestionEnabled(def.id))}
                                 disabled={!labsState.masterEnabled}
@@ -551,9 +722,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Version</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Current version" value={updateInfo?.currentVersion || appInfo?.version || '—'} />
-                        <SettingRow label="OS" value={appInfo ? `${appInfo.os}/${appInfo.arch}` : '—'} />
-                        <SettingRow label="Go" value={appInfo?.go || '—'} />
+                        <SettingRow id="setting-updates-current-version" highlighted={highlightedId === 'setting-updates-current-version'} label="Current version" value={updateInfo?.currentVersion || appInfo?.version || '—'} />
+                        <SettingRow id="setting-updates-os" highlighted={highlightedId === 'setting-updates-os'} label="OS" value={appInfo ? `${appInfo.os}/${appInfo.arch}` : '—'} />
+                        <SettingRow id="setting-updates-go" highlighted={highlightedId === 'setting-updates-go'} label="Go" value={appInfo?.go || '—'} />
                         {updateInfo?.available && (
                           <SettingRow label="Latest version">
                             <span className="text-[11px] font-bold text-success font-mono">
@@ -609,9 +780,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     )}
 
                     <button
+                      id="setting-updates-check"
                       onClick={handleCheckUpdate}
                       disabled={checkingUpdate}
-                      className="flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono"
+                      className={`flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono ${highlightedId === 'setting-updates-check' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
                     >
                       {checkingUpdate ? <Loader size={14} /> : <Icon icon="solar:refresh-linear" className="text-sm" />}
                       {checkingUpdate ? 'Checking…' : 'Check for updates'}
@@ -652,7 +824,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>File List</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="View">
+                        <SettingRow id="setting-sc-file-list-view" highlighted={highlightedId === 'setting-sc-file-list-view'} label="View">
                           <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                             <button
                               onClick={() => setFileListView('list')}
@@ -674,7 +846,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Diff Viewer</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Mode">
+                        <SettingRow id="setting-sc-diff-mode" highlighted={highlightedId === 'setting-sc-diff-mode'} label="Mode">
                           <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                             <button
                               onClick={() => setDiffView('unified')}
@@ -696,7 +868,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Background Fetch</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Check for changes">
+                        <SettingRow id="setting-sc-background-fetch" highlighted={highlightedId === 'setting-sc-background-fetch'} label="Check for changes">
                           <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                             {[
                               { value: 0, label: 'Off' },
@@ -732,7 +904,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Folder Scanning</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Ignore hidden folders">
+                        <SettingRow id="setting-develop-ignore-hidden" highlighted={highlightedId === 'setting-develop-ignore-hidden'} label="Ignore hidden folders">
                           <button
                             onClick={() => setIgnoreHiddenFolders(!devSettings.ignoreHiddenFolders)}
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.ignoreHiddenFolders ? 'bg-success' : 'bg-foreground/[0.1]'}`}
@@ -741,7 +913,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                           </button>
                         </SettingRow>
                       </SettingsCard>
-                      <div className="flex flex-col gap-[4px]">
+                      <div
+                        id="setting-develop-ignored-patterns"
+                        className={`flex flex-col gap-[4px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-develop-ignored-patterns' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
+                      >
                         <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px]">
                           Ignored folder patterns
                         </span>
@@ -765,7 +940,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Git</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Default branch">
+                        <SettingRow id="setting-develop-default-branch" highlighted={highlightedId === 'setting-develop-default-branch'} label="Default branch">
                           <div className="flex items-center gap-[6px]">
                             <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                               <button
@@ -802,7 +977,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     <div className="flex flex-col gap-[5px]">
                       <SectionTitle>Smart Sort</SectionTitle>
                       <SettingsCard>
-                        <SettingRow label="Smart Sort">
+                        <SettingRow id="setting-develop-smart-sort" highlighted={highlightedId === 'setting-develop-smart-sort'} label="Smart Sort">
                           <button
                             onClick={() => setSmartSortEnabled(!devSettings.smartSortEnabled)}
                             className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.smartSortEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
@@ -850,7 +1025,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                         {TOOL_SETTINGS.map(tool => {
                           const current = getToolDefault(state.organisation ?? '', state.product ?? '', tool.id);
                           return (
-                            <SettingRow key={tool.id} label={tool.label}>
+                            <SettingRow key={tool.id} id={`setting-${tool.id}`} highlighted={highlightedId === `setting-${tool.id}`} label={tool.label}>
                               <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
                                 {(['org', 'product', 'env'] as const).map(level => {
                                   const levelLabel = level === 'org' ? 'Org' : level === 'product' ? 'Product' : 'Env';
@@ -874,6 +1049,49 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   </div>
                 )}
 
+                {/* ── Environments ── */}
+                {activeTab === 'environments' && (
+                  <div className="p-[14px] flex flex-col gap-[12px]">
+                    {state.organisation && state.product && (
+                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                        Settings for {state.organisation}/{state.product}
+                      </p>
+                    )}
+
+                    <div
+                      id="setting-environments-protected"
+                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-environments-protected' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
+                    >
+                      <SectionTitle>Protected Environments</SectionTitle>
+                      {state.loadedEnvs.length === 0 ? (
+                        <SettingsCard>
+                          <div className="px-[12px] py-[10px] text-[11px] text-foreground/35 font-mono">
+                            No environments loaded for this product.
+                          </div>
+                        </SettingsCard>
+                      ) : (
+                        <SettingsCard>
+                          {state.loadedEnvs.map(env => (
+                            <SettingRow key={env.name} label={env.displayName}>
+                              <button
+                                onClick={() => toggleProtected(env.name)}
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${isProtected(env.name) ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                              >
+                                <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isProtected(env.name) ? 'left-[16px]' : 'left-[2px]'}`} />
+                              </button>
+                            </SettingRow>
+                          ))}
+                        </SettingsCard>
+                      )}
+                      <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                        Protected environments require typing a confirmation phrase before any deploy proceeds — a "stop and think" guard for high-stakes environments like production.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                  </>
+                )}
               </div>
             </div>
           </DialogPrimitive.Content>

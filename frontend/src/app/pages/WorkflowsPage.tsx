@@ -11,6 +11,8 @@ import { Switch } from '../components/ui/switch';
 import { useWorkspace } from '../stores/workspace';
 import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
 import { useNotifications } from '../stores/notifications';
+import { useProtectedEnvironments } from '../stores/protectedEnvironments';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { notify } from '../lib/notify';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
@@ -345,6 +347,10 @@ export function WorkflowsPage() {
   } = useWorkflowRuns();
   const { state: notifState, focusTaskId, setFocusTaskId } = useNotifications();
   const { state: workspaceState } = useWorkspace();
+  const { isProtected } = useProtectedEnvironments();
+  const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
+  const [protectedConfirmLabels, setProtectedConfirmLabels] = useState<string[]>([]);
+  const pendingRunRef = useRef<{ argValues: Record<string, string>; startPosition: number } | null>(null);
   const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
   const [startError, setStartError] = useState<string | null>(null);
 
@@ -435,7 +441,7 @@ export function WorkflowsPage() {
 
   const [pendingStartPosition, setPendingStartPosition] = useState(0);
 
-  const doStartRun = async (argValues: Record<string, string>, startPosition: number = 0) => {
+  const startRunNow = async (argValues: Record<string, string>, startPosition: number) => {
     if (!editedWorkflow) return;
     setStartError(null);
     setActiveTab('run');
@@ -444,6 +450,38 @@ export function WorkflowsPage() {
     } catch (e: any) {
       setStartError(e?.message ?? String(e));
     }
+  };
+
+  // Resolves the environment(s) a run (from startPosition onward) would deploy to —
+  // either literal step params or the {{environment}} run-arg binding — and returns
+  // any that are marked protected, so doStartRun can gate them behind a confirmation.
+  const getProtectedRunTargets = (argValues: Record<string, string>, startPosition: number) => {
+    if (!editedWorkflow) return [];
+    const targetNames = new Set<string>();
+    for (const step of editedWorkflow.steps.slice(startPosition)) {
+      if (step.type !== 'deploy') continue;
+      let params: Record<string, any> = {};
+      try { params = JSON.parse(step.params || '{}'); } catch { continue; }
+      const envParam = params.environments;
+      if (isEnvBound(envParam)) {
+        if (argValues.environment) targetNames.add(argValues.environment);
+      } else if (Array.isArray(envParam)) {
+        envParam.forEach((name: string) => targetNames.add(name));
+      }
+    }
+    return workspaceState.loadedEnvs.filter((e) => targetNames.has(e.name) && isProtected(e.name));
+  };
+
+  const doStartRun = async (argValues: Record<string, string>, startPosition: number = 0) => {
+    if (!editedWorkflow) return;
+    const protectedTargets = getProtectedRunTargets(argValues, startPosition);
+    if (protectedTargets.length > 0) {
+      pendingRunRef.current = { argValues, startPosition };
+      setProtectedConfirmLabels(protectedTargets.map((e) => e.displayName));
+      setProtectedConfirmOpen(true);
+      return;
+    }
+    await startRunNow(argValues, startPosition);
   };
 
   const handleRun = (startPosition: number = 0) => {
@@ -1075,6 +1113,26 @@ export function WorkflowsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={protectedConfirmOpen}
+        onOpenChange={setProtectedConfirmOpen}
+        title="Protected Environment"
+        description={
+          <>
+            {protectedConfirmLabels.join(', ')} {protectedConfirmLabels.length > 1 ? 'are' : 'is'} protected.
+            Type the phrase below to confirm this run.
+          </>
+        }
+        confirmLabel="Run"
+        requireText={`Deploy to ${protectedConfirmLabels.join(', ')}`}
+        onConfirm={() => {
+          setProtectedConfirmOpen(false);
+          const pending = pendingRunRef.current;
+          pendingRunRef.current = null;
+          if (pending) startRunNow(pending.argValues, pending.startPosition);
+        }}
+      />
     </div>
   );
 }
