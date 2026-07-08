@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useWorkspace } from './workspace';
+import * as settingsClient from '../lib/settingsClient';
 
 export type SmartSortKey = 'defined' | 'built' | 'deployed' | 'committed';
 
@@ -48,7 +49,7 @@ const STORAGE_KEY = 'alis:develop-settings';
 
 function loadFromStorage(): DevelopSettingsMap {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (!raw) return {};
     return JSON.parse(raw) as DevelopSettingsMap;
   } catch {
@@ -57,9 +58,7 @@ function loadFromStorage(): DevelopSettingsMap {
 }
 
 function saveToStorage(map: DevelopSettingsMap) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {}
+  settingsClient.set(STORAGE_KEY, JSON.stringify(map));
 }
 
 function reducer(state: DevelopSettingsMap, action: DevelopSettingsAction): DevelopSettingsMap {
