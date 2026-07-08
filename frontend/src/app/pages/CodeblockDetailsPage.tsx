@@ -16,6 +16,7 @@ import { Loader } from "../components/Loader";
 import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/Button";
 import { FilterSelect } from "../components/FilterSelect";
+import { SearchableSelect } from "../components/ui/searchable-select";
 import { FileViewerModal } from "../components/CodeFileViewerModal";
 import {
   BuildTerminal,
@@ -125,19 +126,6 @@ interface InstallNeuron {
 interface BlockPlan {
   name: string;
   displayName: string;
-}
-
-interface ConflictHunk {
-  index: number;
-  before: string[];
-  current: string[];
-  incoming: string[];
-  after: string[];
-}
-
-interface ConflictFileContent {
-  path: string;
-  hunks: ConflictHunk[];
 }
 
 const TABS = [
@@ -593,7 +581,7 @@ export function CodeblockDetailsPage() {
 
 type InstallStep =
   "location" | "plan" | "configure" | "installing" | "merge" | "done";
-type MergePhase = "ready" | "merging" | "conflicts" | "done";
+type MergePhase = "ready" | "merging" | "done";
 
 function InstallBlockWizard({
   blockId,
@@ -638,16 +626,10 @@ function InstallBlockWizard({
   const [branchName, setBranchName] = useState("");
   const [repoPath, setRepoPath] = useState("");
   const [defineRepoPath, setDefineRepoPath] = useState("");
-  const [conflictFiles, setConflictFiles] = useState<string[]>([]);
-  const [selectedConflictFile, setSelectedConflictFile] = useState("");
-  const [conflictContent, setConflictContent] =
-    useState<ConflictFileContent | null>(null);
-  // hunkResolutions[file][hunkIdx] = resolved lines | null (unresolved)
-  const [hunkResolutions, setHunkResolutions] = useState<
-    Record<string, (string[] | null)[]>
-  >({});
-  const [resolvedFiles, setResolvedFiles] = useState<Set<string>>(new Set());
   const [mergeError, setMergeError] = useState("");
+  const [mergePRUrl, setMergePRUrl] = useState("");
+  const [mergeBaseBranch, setMergeBaseBranch] = useState("master");
+  const [mergeBranches, setMergeBranches] = useState<string[]>([]);
   const mergeTermRef = useRef<BuildTerminalHandle>(null);
 
   // Load orgs on mount
@@ -754,6 +736,28 @@ function InstallBlockWizard({
         setDefineRepoPath(r?.defineRepoPath ?? "");
         setMergePhase("ready");
         setStep("merge");
+
+        // The build repo can have several long-lived branches, so let the user
+        // pick the merge target instead of assuming master. (The define repo
+        // that follows is merged automatically into master — it typically only
+        // has the one branch, so there's nothing useful to ask there.)
+        const buildRepoPath = r?.repoPath ?? "";
+        if (buildRepoPath) {
+          (
+            GitService.GetBranches as (
+              p: string,
+            ) => Promise<{ name: string; isRemote: boolean }[]>
+          )(buildRepoPath)
+            .then((branches) => {
+              const remote = (branches ?? [])
+                .filter((b) => b.isRemote)
+                .map((b) => b.name.replace(/^origin\//, ""))
+                .filter((v, i, a) => a.indexOf(v) === i);
+              setMergeBranches(remote);
+              setMergeBaseBranch(remote.includes("master") ? "master" : (remote[0] ?? "master"));
+            })
+            .catch(() => {});
+        }
       })
       .catch((e) => {
         setError(String(e));
@@ -761,10 +765,13 @@ function InstallBlockWizard({
       });
   }
 
-  // runMerge performs a local git merge on `path`. If `isLast` is false, a successful
-  // merge automatically continues into the define repo. Pass `path` explicitly so that
-  // closures inside async .then() callbacks use the correct repo, not stale state.
-  function runMerge(path: string, isLast: boolean) {
+  // runMerge merges `branchName` into `baseBranch` on the Forgejo remote (via pull
+  // request) for the repo at `path`, then pulls the result down locally. If `isLast`
+  // is false, a successful merge automatically continues into the define repo
+  // (always against "master" — see doInstall's comment on why only the build repo
+  // needs a user-chosen base branch). Pass `path`/`baseBranch` explicitly so that
+  // closures inside async .then() callbacks use the correct values, not stale state.
+  function runMerge(path: string, isLast: boolean, baseBranch: string) {
     mergeTermRef.current?.clear();
     const off = Events.On("git:log", (ev: any) =>
       mergeTermRef.current?.write(
@@ -772,34 +779,24 @@ function InstallBlockWizard({
       ),
     );
     (
-      GitService.StartLocalMerge as (
+      GitService.StartRemoteMerge as (
         rp: string,
         bn: string,
-      ) => Promise<{
-        hasConflicts: boolean;
-        conflictFiles: string[];
-        errorMessage: string;
-      }>
-    )(path, branchName)
+        base: string,
+      ) => Promise<{ errorMessage: string; prUrl: string }>
+    )(path, branchName, baseBranch)
       .then((r) => {
         off();
         if (r.errorMessage) {
           setMergeError(r.errorMessage);
+          setMergePRUrl(r.prUrl ?? "");
           setMergePhase("ready");
           return;
         }
-        if (r.hasConflicts && r.conflictFiles?.length > 0) {
-          const files = r.conflictFiles;
-          setConflictFiles(files);
-          setHunkResolutions({});
-          setResolvedFiles(new Set());
-          setSelectedConflictFile(files[0]);
-          setMergePhase("conflicts");
-          loadConflictFile(files[0], path);
-        } else if (!isLast) {
+        if (!isLast) {
           // Build repo merged; continue to define repo.
           setRepoPath(defineRepoPath);
-          runMerge(defineRepoPath, true);
+          runMerge(defineRepoPath, true, "master");
         } else {
           setMergePhase("done");
         }
@@ -814,117 +811,15 @@ function InstallBlockWizard({
   function startMerge() {
     setMergePhase("merging");
     setMergeError("");
+    setMergePRUrl("");
     // isLast = true when there is no define repo, or when repoPath is already the define repo.
     const isLast = !defineRepoPath || repoPath === defineRepoPath;
-    runMerge(repoPath, isLast);
+    runMerge(repoPath, isLast, mergeBaseBranch);
   }
-
-  // loadConflictFile accepts an optional explicit repo path to avoid stale closure captures
-  // when called from inside async runMerge callbacks.
-  function loadConflictFile(filePath: string, rp?: string) {
-    const effectivePath = rp ?? repoPath;
-    setSelectedConflictFile(filePath);
-    setConflictContent(null);
-    (
-      GitService.GetConflictContent as (
-        rp: string,
-        fp: string,
-      ) => Promise<ConflictFileContent>
-    )(effectivePath, filePath)
-      .then((content) => {
-        setConflictContent(content);
-        // Init hunk resolutions for this file if not already set.
-        setHunkResolutions((prev) => {
-          if (prev[filePath]) return prev;
-          return {
-            ...prev,
-            [filePath]: Array(content.hunks.length).fill(null),
-          };
-        });
-      })
-      .catch((e) => setMergeError(String(e)));
-  }
-
-  function resolveHunk(
-    filePath: string,
-    hunkIdx: number,
-    lines: string[] | null,
-  ) {
-    setHunkResolutions((prev) => {
-      const fileResolutions = [...(prev[filePath] ?? [])];
-      fileResolutions[hunkIdx] = lines;
-      return { ...prev, [filePath]: fileResolutions };
-    });
-  }
-
-  function acceptAllCurrent() {
-    if (!conflictContent) return;
-    const lines = conflictContent.hunks.map((_, i) => i);
-    lines.forEach((i) =>
-      resolveHunk(selectedConflictFile, i, conflictContent.hunks[i].current),
-    );
-  }
-
-  function acceptAllIncoming() {
-    if (!conflictContent) return;
-    conflictContent.hunks.forEach((h, i) =>
-      resolveHunk(selectedConflictFile, i, h.incoming),
-    );
-  }
-
-  function saveResolvedFile(filePath: string) {
-    const resolutions = hunkResolutions[filePath];
-    if (!resolutions?.every((r) => r !== null)) return;
-    // Send each hunk's resolved lines as a joined string; backend replaces markers in-place.
-    const hunkStrings = resolutions.map((r) => (r ?? []).join("\n"));
-    (
-      GitService.SaveConflictResolution as (
-        rp: string,
-        fp: string,
-        res: string[],
-      ) => Promise<void>
-    )(repoPath, filePath, hunkStrings)
-      .then(() => setResolvedFiles((prev) => new Set([...prev, filePath])))
-      .catch((e) => setMergeError(String(e)));
-  }
-
-  function completeMerge() {
-    (GitService.CompleteMerge as (rp: string) => Promise<void>)(repoPath)
-      .then(() => {
-        // If we just completed the build repo and the define repo still needs merging, continue.
-        if (defineRepoPath && repoPath !== defineRepoPath) {
-          setRepoPath(defineRepoPath);
-          setConflictFiles([]);
-          setHunkResolutions({});
-          setResolvedFiles(new Set());
-          setMergePhase("merging");
-          runMerge(defineRepoPath, true);
-        } else {
-          setMergePhase("done");
-        }
-      })
-      .catch((e) => setMergeError(String(e)));
-  }
-
-  function abortMerge() {
-    (GitService.AbortMerge as (rp: string) => Promise<void>)(repoPath)
-      .then(() => {
-        setMergePhase("ready");
-        setConflictFiles([]);
-        setHunkResolutions({});
-        setResolvedFiles(new Set());
-        setMergeError("");
-      })
-      .catch((e) => setMergeError(String(e)));
-  }
-
-  const isConflicts = step === "merge" && mergePhase === "conflicts";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div
-        className={`bg-background border border-border rounded-[8px] flex flex-col shadow-2xl transition-all duration-200 ${isConflicts ? "w-[900px] max-h-[90vh]" : "w-[520px] max-h-[80vh]"}`}
-      >
+      <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl transition-all duration-200 w-[520px] max-h-[80vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-[24px] py-[18px] border-b border-border shrink-0">
           <div>
@@ -1007,8 +902,8 @@ function InstallBlockWizard({
                 <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Landing Zone
                 </label>
-                <FilterSelect
-                  size="lg"
+                <SearchableSelect
+                  className="w-full"
                   value={selectedOrg}
                   onChange={setSelectedOrg}
                   loading={orgsLoading}
@@ -1026,8 +921,8 @@ function InstallBlockWizard({
                 <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Product
                 </label>
-                <FilterSelect
-                  size="lg"
+                <SearchableSelect
+                  className="w-full"
                   value={selectedProduct}
                   onChange={setSelectedProduct}
                   loading={productsLoading}
@@ -1045,8 +940,8 @@ function InstallBlockWizard({
                 <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
                   Neuron
                 </label>
-                <FilterSelect
-                  size="lg"
+                <SearchableSelect
+                  className="w-full"
                   value={selectedNeuron?.name ?? ""}
                   onChange={(v) =>
                     setSelectedNeuron(neurons.find((n) => n.name === v) ?? null)
@@ -1186,18 +1081,13 @@ function InstallBlockWizard({
               mergePhase={mergePhase}
               branchName={branchName}
               repoPath={repoPath}
-              conflictFiles={conflictFiles}
-              selectedConflictFile={selectedConflictFile}
-              conflictContent={conflictContent}
-              hunkResolutions={hunkResolutions}
-              resolvedFiles={resolvedFiles}
               mergeError={mergeError}
+              mergePRUrl={mergePRUrl}
               termRef={mergeTermRef}
-              onLoadFile={loadConflictFile}
-              onResolveHunk={resolveHunk}
-              onAcceptAllCurrent={acceptAllCurrent}
-              onAcceptAllIncoming={acceptAllIncoming}
-              onSaveFile={saveResolvedFile}
+              onOpenPR={(url) => ProductService.OpenForgejoWindow(url)}
+              baseBranch={mergeBaseBranch}
+              baseBranches={mergeBranches}
+              onBaseBranchChange={setMergeBaseBranch}
             />
           )}
 
@@ -1260,8 +1150,8 @@ function InstallBlockWizard({
                 variant="primary"
                 onClick={doInstall}
                 disabled={versionsLoading}
+                icon={<Icon icon="solar:download-linear" />}
               >
-                <Icon icon="solar:download-linear" className="mr-1" />
                 Install
               </Button>
             </>
@@ -1275,38 +1165,16 @@ function InstallBlockWizard({
                 variant="primary"
                 onClick={startMerge}
                 disabled={!repoPath}
+                icon={<Icon icon="solar:code-square-linear" />}
               >
-                <Icon icon="solar:code-square-linear" className="mr-1" />
                 Start Merge
               </Button>
             </>
           )}
           {step === "merge" && mergePhase === "merging" && (
-            <Button variant="primary" disabled>
-              <span className="mr-2">
-                <Loader size={14} />
-              </span>
+            <Button variant="primary" disabled icon={<Loader size={14} />}>
               Merging…
             </Button>
-          )}
-          {step === "merge" && mergePhase === "conflicts" && (
-            <>
-              <Button
-                variant="secondary"
-                onClick={abortMerge}
-                className="text-red-400 border-red-400/30 hover:border-red-400/60"
-              >
-                Abort Merge
-              </Button>
-              <Button
-                variant="primary"
-                onClick={completeMerge}
-                disabled={resolvedFiles.size < conflictFiles.length}
-              >
-                <Icon icon="solar:check-circle-linear" className="mr-1" />
-                Complete Merge
-              </Button>
-            </>
           )}
           {step === "merge" && mergePhase === "done" && (
             <Button variant="primary" onClick={() => setStep("done")}>
@@ -1330,41 +1198,31 @@ function MergeStepContent({
   mergePhase,
   branchName,
   repoPath,
-  conflictFiles,
-  selectedConflictFile,
-  conflictContent,
-  hunkResolutions,
-  resolvedFiles,
   mergeError,
+  mergePRUrl,
   termRef,
-  onLoadFile,
-  onResolveHunk,
-  onAcceptAllCurrent,
-  onAcceptAllIncoming,
-  onSaveFile,
+  onOpenPR,
+  baseBranch,
+  baseBranches,
+  onBaseBranchChange,
 }: {
   mergePhase: MergePhase;
   branchName: string;
   repoPath: string;
-  conflictFiles: string[];
-  selectedConflictFile: string;
-  conflictContent: ConflictFileContent | null;
-  hunkResolutions: Record<string, (string[] | null)[]>;
-  resolvedFiles: Set<string>;
   mergeError: string;
+  mergePRUrl: string;
   termRef: React.RefObject<BuildTerminalHandle>;
-  onLoadFile: (fp: string) => void;
-  onResolveHunk: (fp: string, idx: number, lines: string[] | null) => void;
-  onAcceptAllCurrent: () => void;
-  onAcceptAllIncoming: () => void;
-  onSaveFile: (fp: string) => void;
+  onOpenPR: (url: string) => void;
+  baseBranch: string;
+  baseBranches: string[];
+  onBaseBranchChange: (v: string) => void;
 }) {
   if (mergePhase === "ready") {
     return (
       <div className="flex flex-col gap-[16px]">
         <p className="text-[12px] text-foreground/50">
-          The installation created a branch in your local build repo. Merge it
-          into master to complete the setup.
+          The installation created a branch on the remote repo. Merge it into
+          another branch to complete the setup.
         </p>
         <div className="p-[12px] bg-foreground/3 border border-border rounded-[4px] text-[11px] text-foreground/50 flex flex-col gap-[6px]">
           <div className="flex items-center gap-[8px]">
@@ -1386,17 +1244,37 @@ function MergeStepContent({
             </span>
           </div>
         </div>
+        <div className="flex flex-col gap-[6px]">
+          <label className="text-[10px] text-foreground/40 uppercase tracking-wider font-semibold">
+            Merge into
+          </label>
+          <SearchableSelect
+            value={baseBranch}
+            options={baseBranches.length > 0 ? baseBranches : [baseBranch]}
+            onChange={onBaseBranchChange}
+            placeholder="Select branch…"
+          />
+        </div>
         {mergeError && (
-          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-mono whitespace-pre-wrap">
-            {mergeError}
+          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-mono whitespace-pre-wrap flex flex-col gap-[8px] items-start">
+            <span>{mergeError}</span>
+            {mergePRUrl && (
+              <Button
+                variant="secondary"
+                onClick={() => onOpenPR(mergePRUrl)}
+                className="text-[11px]"
+                icon={<Icon icon="solar:link-linear" />}
+              >
+                Open Pull Request in Forgejo
+              </Button>
+            )}
           </div>
         )}
         <p className="text-[11px] text-foreground/30">
-          This will run:{" "}
-          <span className="font-mono">
-            git fetch --all --prune → checkout master → pull → merge origin/
-            {branchName || "…"}
-          </span>
+          This will open a pull request from{" "}
+          <span className="font-mono">{branchName || "…"}</span> into{" "}
+          <span className="font-mono">{baseBranch || "…"}</span>, merge it on
+          the remote, then pull the result down locally.
         </p>
       </div>
     );
@@ -1421,301 +1299,16 @@ function MergeStepContent({
     );
   }
 
-  if (mergePhase === "done") {
-    return (
-      <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
-        <Icon
-          icon="solar:check-circle-bold"
-          className="text-5xl text-green-400"
-        />
-        <p className="text-[14px] font-bold text-foreground">Branch Merged</p>
-        <p className="text-[12px] text-foreground/50 text-center">
-          <span className="font-mono text-foreground/80">{branchName}</span> has
-          been merged into master.
-        </p>
-      </div>
-    );
-  }
-
-  // conflicts phase — two-panel layout
-  const fileResolutions = hunkResolutions[selectedConflictFile] ?? [];
-  const allHunksResolved =
-    conflictContent !== null &&
-    fileResolutions.length === conflictContent.hunks.length &&
-    fileResolutions.every((r) => r !== null);
-  const isFileSaved = resolvedFiles.has(selectedConflictFile);
-
   return (
-    <div className="flex h-full overflow-hidden" style={{ minHeight: 420 }}>
-      {/* Left panel — file list */}
-      <div className="w-[180px] shrink-0 border-r border-border flex flex-col overflow-hidden">
-        <div className="px-[12px] py-[10px] border-b border-border shrink-0">
-          <p className="text-[9px] font-bold uppercase text-foreground/30 tracking-wider">
-            Conflicts ({conflictFiles.length} files)
-          </p>
-        </div>
-        <div className="flex-1 overflow-auto py-[4px]">
-          {conflictFiles.map((fp) => {
-            const saved = resolvedFiles.has(fp);
-            const resolutions = hunkResolutions[fp] ?? [];
-            const unresolvedCount = resolutions.filter(
-              (r) => r === null,
-            ).length;
-            const isActive = fp === selectedConflictFile;
-            const fileName = fp.split("/").pop() ?? fp;
-            return (
-              <button
-                key={fp}
-                onClick={() => onLoadFile(fp)}
-                className={`w-full flex items-center gap-[6px] px-[12px] py-[7px] text-left transition-colors ${isActive ? "bg-foreground/8 text-foreground" : "text-foreground/60 hover:bg-foreground/4 hover:text-foreground/80"}`}
-              >
-                {saved ? (
-                  <Icon
-                    icon="solar:check-circle-bold"
-                    className="text-green-400 text-xs shrink-0"
-                  />
-                ) : (
-                  <span className="w-[16px] h-[16px] shrink-0 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold leading-none">
-                    {unresolvedCount > 0 ? unresolvedCount : "!"}
-                  </span>
-                )}
-                <span className="text-[11px] font-mono truncate">
-                  {fileName}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-        {mergeError && (
-          <div className="p-[8px] border-t border-border text-[10px] text-red-400 font-mono">
-            {mergeError}
-          </div>
-        )}
-      </div>
-
-      {/* Right panel — conflict editor */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-border shrink-0 gap-[8px]">
-          <span className="text-[10px] font-mono text-foreground/40 truncate">
-            {selectedConflictFile}
-          </span>
-          <div className="flex items-center gap-[6px] shrink-0">
-            <button
-              onClick={onAcceptAllCurrent}
-              className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-green-900/30 text-green-300 hover:bg-green-900/50 transition-colors border border-green-700/30"
-            >
-              Accept All Current
-            </button>
-            <button
-              onClick={onAcceptAllIncoming}
-              className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors border border-blue-700/30"
-            >
-              Accept All Incoming
-            </button>
-            {allHunksResolved && !isFileSaved && (
-              <button
-                onClick={() => onSaveFile(selectedConflictFile)}
-                className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-brand-fill/20 text-brand hover:bg-brand-fill/30 transition-colors border border-brand-fill/30"
-              >
-                Save File
-              </button>
-            )}
-            {isFileSaved && (
-              <span className="text-[10px] text-green-400 flex items-center gap-[4px]">
-                <Icon icon="solar:check-circle-bold" className="text-xs" />{" "}
-                Saved
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* File content */}
-        <div className="flex-1 overflow-auto font-mono text-[11px]">
-          {!conflictContent ? (
-            <div className="flex items-center justify-center h-full text-foreground/30">
-              <Loader size={20} />
-            </div>
-          ) : (
-            <ConflictEditor
-              content={conflictContent}
-              branchName={branchName}
-              resolutions={fileResolutions}
-              onResolve={(idx, lines) =>
-                onResolveHunk(selectedConflictFile, idx, lines)
-              }
-            />
-          )}
-        </div>
-      </div>
+    <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
+      <Icon icon="solar:check-circle-bold" className="text-5xl text-green-400" />
+      <p className="text-[14px] font-bold text-foreground">Branch Merged</p>
+      <p className="text-[12px] text-foreground/50 text-center">
+        <span className="font-mono text-foreground/80">{branchName}</span> has
+        been merged into master.
+      </p>
     </div>
   );
-}
-
-// ── Conflict Editor ────────────────────────────────────────────────────────────
-
-function ConflictEditor({
-  content,
-  branchName,
-  resolutions,
-  onResolve,
-}: {
-  content: ConflictFileContent;
-  branchName: string;
-  resolutions: (string[] | null)[];
-  onResolve: (hunkIdx: number, lines: string[] | null) => void;
-}) {
-  const parts: React.ReactNode[] = [];
-
-  content.hunks.forEach((hunk, hunkIdx) => {
-    const resolved = resolutions[hunkIdx];
-
-    // Before context
-    if (hunk.before.length > 0) {
-      parts.push(
-        <div key={`before-${hunkIdx}`}>
-          {hunk.before.map((line, i) => (
-            <div
-              key={i}
-              className="px-[12px] py-[1px] text-foreground/50 leading-[1.6]"
-            >
-              {line || " "}
-            </div>
-          ))}
-        </div>,
-      );
-    }
-
-    if (resolved !== null) {
-      // Show resolved state with undo option
-      parts.push(
-        <div
-          key={`resolved-${hunkIdx}`}
-          className="border-l-2 border-foreground/20 my-[2px]"
-        >
-          <div className="flex items-center gap-[8px] px-[12px] py-[4px] bg-foreground/5">
-            <Icon
-              icon="solar:check-circle-bold"
-              className="text-green-400 text-xs"
-            />
-            <span className="text-[10px] text-foreground/40">Resolved</span>
-            <button
-              onClick={() => onResolve(hunkIdx, null)}
-              className="text-[10px] text-foreground/30 hover:text-foreground/60 transition-colors ml-auto"
-            >
-              Undo
-            </button>
-          </div>
-          {resolved.map((line, i) => (
-            <div
-              key={i}
-              className="px-[12px] py-[1px] text-foreground/70 leading-[1.6]"
-            >
-              {line || " "}
-            </div>
-          ))}
-        </div>,
-      );
-    } else {
-      // Show conflict hunk with action buttons
-      parts.push(
-        <div key={`hunk-${hunkIdx}`} className="my-[2px]">
-          {/* Action bar */}
-          <div className="flex items-center gap-[6px] px-[12px] py-[5px] bg-muted border-y border-border">
-            <button
-              onClick={() => onResolve(hunkIdx, hunk.current)}
-              className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-green-900/40 text-green-300 hover:bg-green-900/60 transition-colors border border-green-700/30"
-            >
-              Accept Current Change
-            </button>
-            <button
-              onClick={() => onResolve(hunkIdx, hunk.incoming)}
-              className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-blue-900/40 text-blue-300 hover:bg-blue-900/60 transition-colors border border-blue-700/30"
-            >
-              Accept Incoming Change
-            </button>
-            <button
-              onClick={() =>
-                onResolve(hunkIdx, [...hunk.current, ...hunk.incoming])
-              }
-              className="text-[10px] px-[8px] py-[2px] rounded-[3px] bg-foreground/5 text-foreground/50 hover:bg-foreground/10 transition-colors border border-foreground/15"
-            >
-              Accept Both
-            </button>
-          </div>
-
-          {/* Current change (HEAD) — green */}
-          <div className="bg-green-950/30 border-l-[3px] border-green-500">
-            <div className="flex items-center gap-[6px] px-[12px] py-[3px] bg-green-900/20">
-              <Icon
-                icon="solar:arrow-up-linear"
-                className="text-green-400 text-xs"
-              />
-              <span className="text-[10px] text-green-400 font-bold">
-                Current Change (HEAD)
-              </span>
-            </div>
-            {hunk.current.map((line, i) => (
-              <div
-                key={i}
-                className="px-[12px] py-[1px] text-green-100/80 leading-[1.6]"
-              >
-                {line || " "}
-              </div>
-            ))}
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center px-[12px] py-[2px] bg-muted">
-            <div className="flex-1 h-[1px] bg-foreground/10" />
-            <span className="px-[8px] text-[9px] text-foreground/20 uppercase tracking-widest">
-              =======
-            </span>
-            <div className="flex-1 h-[1px] bg-foreground/10" />
-          </div>
-
-          {/* Incoming change (branch) — blue */}
-          <div className="bg-blue-950/30 border-l-[3px] border-blue-500">
-            <div className="flex items-center gap-[6px] px-[12px] py-[3px] bg-blue-900/20">
-              <Icon
-                icon="solar:arrow-down-linear"
-                className="text-blue-400 text-xs"
-              />
-              <span className="text-[10px] text-blue-400 font-bold">
-                Incoming Change ({branchName})
-              </span>
-            </div>
-            {hunk.incoming.map((line, i) => (
-              <div
-                key={i}
-                className="px-[12px] py-[1px] text-blue-100/80 leading-[1.6]"
-              >
-                {line || " "}
-              </div>
-            ))}
-          </div>
-        </div>,
-      );
-    }
-
-    // After context (only for last hunk, show trailing lines)
-    if (hunkIdx === content.hunks.length - 1 && hunk.after.length > 0) {
-      parts.push(
-        <div key={`after-${hunkIdx}`}>
-          {hunk.after.map((line, i) => (
-            <div
-              key={i}
-              className="px-[12px] py-[1px] text-foreground/50 leading-[1.6]"
-            >
-              {line || " "}
-            </div>
-          ))}
-        </div>,
-      );
-    }
-  });
-
-  return <div className="py-[4px]">{parts}</div>;
 }
 
 // ── Documentation Tab ─────────────────────────────────────────────────────────
@@ -2432,15 +2025,9 @@ function UninstallModal({
             onClick={doUninstall}
             disabled={confirm !== inst.shortId || loading}
             className="bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-500/60"
+            icon={loading ? <Loader size={14} /> : undefined}
           >
-            {loading ? (
-              <>
-                <Loader size={14} />
-                <span className="ml-2">Uninstalling…</span>
-              </>
-            ) : (
-              "Uninstall"
-            )}
+            {loading ? "Uninstalling…" : "Uninstall"}
           </Button>
         </div>
       </div>
@@ -2561,15 +2148,9 @@ function ConfigureModal({
             variant="primary"
             onClick={doUpgrade}
             disabled={!selectedVersion || versionsLoading || loading}
+            icon={loading ? <Loader size={14} /> : undefined}
           >
-            {loading ? (
-              <>
-                <Loader size={14} />
-                <span className="ml-2">Upgrading…</span>
-              </>
-            ) : (
-              "Upgrade"
-            )}
+            {loading ? "Upgrading…" : "Upgrade"}
           </Button>
         </div>
       </div>
@@ -2895,15 +2476,9 @@ function DeleteBlockModal({
               confirm.toLowerCase() !== blockId.toLowerCase() || loading
             }
             className="bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-500/60"
+            icon={loading ? <Loader size={14} /> : undefined}
           >
-            {loading ? (
-              <>
-                <Loader size={14} />
-                <span className="ml-2">Deleting…</span>
-              </>
-            ) : (
-              "Delete Block"
-            )}
+            {loading ? "Deleting…" : "Delete Block"}
           </Button>
         </div>
       </div>
@@ -3443,15 +3018,9 @@ function AccessTab({
                 variant="primary"
                 onClick={doAddMember}
                 disabled={!selectedUser || !addRole || addLoading}
+                icon={addLoading ? <Loader size={14} /> : undefined}
               >
-                {addLoading ? (
-                  <>
-                    <Loader size={14} />
-                    <span className="ml-2">Adding…</span>
-                  </>
-                ) : (
-                  "Add Member"
-                )}
+                {addLoading ? "Adding…" : "Add Member"}
               </Button>
             </div>
           </div>
@@ -3536,15 +3105,9 @@ function AccessTab({
                   changeRole === changingRoleMember.role ||
                   changeRoleLoading
                 }
+                icon={changeRoleLoading ? <Loader size={14} /> : undefined}
               >
-                {changeRoleLoading ? (
-                  <>
-                    <Loader size={14} />
-                    <span className="ml-2">Saving…</span>
-                  </>
-                ) : (
-                  "Save"
-                )}
+                {changeRoleLoading ? "Saving…" : "Save"}
               </Button>
             </div>
           </div>

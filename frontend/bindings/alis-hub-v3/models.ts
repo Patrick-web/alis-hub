@@ -2209,47 +2209,6 @@ export class LocalBuildResult {
     }
 }
 
-export class LocalMergeResult {
-    "repoPath": string;
-    "branchName": string;
-    "hasConflicts": boolean;
-    "conflictFiles": string[];
-    "errorMessage": string;
-
-    /** Creates a new LocalMergeResult instance. */
-    constructor($$source: Partial<LocalMergeResult> = {}) {
-        if (!("repoPath" in $$source)) {
-            this["repoPath"] = "";
-        }
-        if (!("branchName" in $$source)) {
-            this["branchName"] = "";
-        }
-        if (!("hasConflicts" in $$source)) {
-            this["hasConflicts"] = false;
-        }
-        if (!("conflictFiles" in $$source)) {
-            this["conflictFiles"] = [];
-        }
-        if (!("errorMessage" in $$source)) {
-            this["errorMessage"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new LocalMergeResult instance from a string or object.
-     */
-    static createFrom($$source: any = {}): LocalMergeResult {
-        const $$createField3_0 = $$createType4;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("conflictFiles" in $$parsedSource) {
-            $$parsedSource["conflictFiles"] = $$createField3_0($$parsedSource["conflictFiles"]);
-        }
-        return new LocalMergeResult($$parsedSource as Partial<LocalMergeResult>);
-    }
-}
-
 export class LogEntry {
     "logName": string;
     "insertId": string;
@@ -2885,6 +2844,43 @@ export class ProductSummary {
     static createFrom($$source: any = {}): ProductSummary {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new ProductSummary($$parsedSource as Partial<ProductSummary>);
+    }
+}
+
+export class RemoteMergeResult {
+    "repoPath": string;
+    "branchName": string;
+    "baseBranch": string;
+    "errorMessage": string;
+    "prUrl": string;
+
+    /** Creates a new RemoteMergeResult instance. */
+    constructor($$source: Partial<RemoteMergeResult> = {}) {
+        if (!("repoPath" in $$source)) {
+            this["repoPath"] = "";
+        }
+        if (!("branchName" in $$source)) {
+            this["branchName"] = "";
+        }
+        if (!("baseBranch" in $$source)) {
+            this["baseBranch"] = "";
+        }
+        if (!("errorMessage" in $$source)) {
+            this["errorMessage"] = "";
+        }
+        if (!("prUrl" in $$source)) {
+            this["prUrl"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new RemoteMergeResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): RemoteMergeResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new RemoteMergeResult($$parsedSource as Partial<RemoteMergeResult>);
     }
 }
 
