@@ -131,12 +131,12 @@ func (g *GitService) emitAuthExpired() {
 	}
 }
 
-type LocalMergeResult struct {
-	RepoPath      string   `json:"repoPath"`
-	BranchName    string   `json:"branchName"`
-	HasConflicts  bool     `json:"hasConflicts"`
-	ConflictFiles []string `json:"conflictFiles"`
-	ErrorMessage  string   `json:"errorMessage"`
+type RemoteMergeResult struct {
+	RepoPath     string `json:"repoPath"`
+	BranchName   string `json:"branchName"`
+	BaseBranch   string `json:"baseBranch"`
+	ErrorMessage string `json:"errorMessage"`
+	PRURL        string `json:"prUrl"`
 }
 
 // GitSyncResult is returned by PushOrigin, PullOrigin, and CheckoutBranch with a classified outcome.
@@ -197,18 +197,31 @@ type ConflictFileContent struct {
 	Hunks []ConflictHunk `json:"hunks"`
 }
 
-// StartLocalMerge runs: git fetch, checkout master, pull, then merge origin/{branchName}.
-// Returns conflict file list if exit code 1 (conflicts detected).
+// StartRemoteMerge merges branchName into baseBranch on the Forgejo remote via a
+// pull request (opening one if none exists yet, reusing it otherwise), then
+// fast-forwards the local clone. The merge itself happens server-side — the local
+// working tree is never put into a mid-merge state, matching how a user would merge
+// the block branch manually on the git host before pulling the base branch locally.
+// baseBranch defaults to "master" when empty (the common case for a define repo,
+// which typically only has one long-lived branch; build repos can have several,
+// so callers should let the user pick).
 // Git command output is streamed via "git:log" Wails events.
-func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeResult, error) {
-	result := &LocalMergeResult{RepoPath: repoPath, BranchName: branchName}
-
-	cmds := [][]string{
-		{"git", "fetch", "--all", "--prune"},
-		{"git", "checkout", "master"},
-		{"git", "pull", "--no-ff", "origin", "master"},
+func (g *GitService) StartRemoteMerge(repoPath, branchName, baseBranch string) (*RemoteMergeResult, error) {
+	if baseBranch == "" {
+		baseBranch = "master"
 	}
-	for _, args := range cmds {
+	result := &RemoteMergeResult{RepoPath: repoPath, BranchName: branchName, BaseBranch: baseBranch}
+
+	if _, _, _, err := g.parseForgejoRemote(repoPath); err != nil {
+		result.ErrorMessage = fmt.Sprintf("remote merge requires a Forgejo-hosted repo: %s", err)
+		return result, nil
+	}
+
+	prepCmds := [][]string{
+		{"git", "fetch", "--all", "--prune"},
+		{"git", "checkout", baseBranch},
+	}
+	for _, args := range prepCmds {
 		g.emitLog("$ " + strings.Join(args, " ") + "\r\n")
 		out, err := g.gitCmdStream(repoPath, args...)
 		if err != nil {
@@ -217,19 +230,62 @@ func (g *GitService) StartLocalMerge(repoPath, branchName string) (*LocalMergeRe
 		}
 	}
 
-	// Merge the block branch — exit code 1 means conflicts, not a hard error.
-	mergeArgs := []string{"git", "merge", "--no-ff", "origin/" + branchName}
-	g.emitLog("$ " + strings.Join(mergeArgs, " ") + "\r\n")
-	out, err := g.gitCmdStream(repoPath, mergeArgs...)
+	// The branch we're about to PR comes from an external service (e.g. the Blocks
+	// backend reporting a newly-created instance's git_branch) — it can lag behind
+	// what's actually pushed to the remote. Check the just-fetched remote refs so we
+	// fail with a clear, actionable message instead of a raw Forgejo 404.
+	if _, err := gitCmd(repoPath, "git", "rev-parse", "--verify", "--quiet", "refs/remotes/origin/"+branchName); err != nil {
+		result.ErrorMessage = fmt.Sprintf(
+			"branch %q was not found on the remote after fetching — it may not have been pushed yet. Wait a moment and try again.",
+			branchName,
+		)
+		return result, nil
+	}
+
+	g.emitLog(fmt.Sprintf("$ open pull request %s -> %s\r\n", branchName, baseBranch))
+	pr, err := g.CreatePR(repoPath, "Merge "+branchName, "Opened automatically by Alis Hub during codeblock install.", branchName, baseBranch)
 	if err != nil {
-		// Check if it's a conflict (exit 1) vs a real error.
-		conflicts, listErr := g.GetConflictFiles(repoPath)
-		if listErr != nil || len(conflicts) == 0 {
-			result.ErrorMessage = strings.TrimSpace(out)
+		if !strings.Contains(strings.ToLower(err.Error()), "already exists") {
+			result.ErrorMessage = fmt.Sprintf("create pull request: %s", err)
 			return result, nil
 		}
-		result.HasConflicts = true
-		result.ConflictFiles = conflicts
+		open, listErr := g.ListPRs(repoPath, "open")
+		if listErr != nil {
+			result.ErrorMessage = fmt.Sprintf("create pull request: %s (and failed to look up existing PR: %s)", err, listErr)
+			return result, nil
+		}
+		for i := range open {
+			if open[i].HeadBranch == branchName && open[i].BaseBranch == baseBranch {
+				pr = &open[i]
+				break
+			}
+		}
+		if pr == nil {
+			result.ErrorMessage = fmt.Sprintf("create pull request: %s", err)
+			return result, nil
+		}
+	}
+
+	g.emitLog(fmt.Sprintf("$ merge pull request #%d\r\n", pr.Number))
+	var mergeErr error
+	for attempt := 0; attempt < 4; attempt++ {
+		if attempt > 0 {
+			time.Sleep(1500 * time.Millisecond)
+		}
+		if mergeErr = g.MergePR(repoPath, pr.Number, "merge"); mergeErr == nil {
+			break
+		}
+	}
+	if mergeErr != nil {
+		result.ErrorMessage = strings.TrimSpace(mergeErr.Error())
+		result.PRURL = pr.HTMLURL
+		return result, nil
+	}
+
+	pullArgs := []string{"git", "pull", "--ff-only", "origin", baseBranch}
+	g.emitLog("$ " + strings.Join(pullArgs, " ") + "\r\n")
+	if out, err := g.gitCmdStream(repoPath, pullArgs...); err != nil {
+		result.ErrorMessage = fmt.Sprintf("%s: %s", strings.Join(pullArgs, " "), strings.TrimSpace(out))
 		return result, nil
 	}
 
