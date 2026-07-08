@@ -138,8 +138,7 @@ export function BuildKitPluginsPage() {
             icon={<Icon icon={selected.icon} className="text-brand" />}
             action={
               selected.actionUrl ? (
-                <Button variant="secondary" onClick={() => Browser.OpenURL(selected.actionUrl!)}>
-                  <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+                <Button variant="secondary" onClick={() => Browser.OpenURL(selected.actionUrl!)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                   {selected.actionLabel}
                 </Button>
               ) : undefined

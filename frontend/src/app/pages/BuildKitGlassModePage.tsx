@@ -58,8 +58,7 @@ export function BuildKitGlassModePage() {
       subtitle="Understand the transparent explanation layer behind Alis Build actions and generated outputs."
       parentRoute="/buildkit"
       actions={
-        <Button variant="secondary" onClick={() => navigate("/builds")}>
-          <Icon icon="solar:eye-linear" className="text-sm mr-[4px]" />
+        <Button variant="secondary" onClick={() => navigate("/builds")} icon={<Icon icon="solar:eye-linear" className="text-sm" />}>
           Open Builds
         </Button>
       }

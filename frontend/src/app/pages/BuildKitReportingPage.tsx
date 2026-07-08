@@ -12,12 +12,10 @@ export function BuildKitReportingPage() {
       parentRoute="/buildkit"
       actions={
         <div className="flex items-center gap-[6px]">
-          <Button variant="secondary" onClick={() => Browser.OpenURL('https://console.alisx.com')}>
-            <Icon icon="solar:rocket-launch-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => Browser.OpenURL('https://console.alisx.com')} icon={<Icon icon="solar:rocket-launch-linear" className="text-sm" />}>
             Initialise
           </Button>
-          <Button variant="secondary" onClick={() => Browser.OpenURL('https://console.alisx.com')}>
-            <Icon icon="solar:document-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => Browser.OpenURL('https://console.alisx.com')} icon={<Icon icon="solar:document-linear" className="text-sm" />}>
             Template
           </Button>
         </div>
@@ -70,8 +68,7 @@ export function BuildKitReportingPage() {
             title="Reporting Assistant"
             subtitle="Use AI to handle advanced reporting tasks"
             action={
-              <Button variant="primary" onClick={() => Browser.OpenURL('https://console.alisx.com')}>
-                <Icon icon="solar:stars-linear" className="text-sm mr-[4px]" />
+              <Button variant="primary" onClick={() => Browser.OpenURL('https://console.alisx.com')} icon={<Icon icon="solar:stars-linear" className="text-sm" />}>
                 Open Assistant
               </Button>
             }

@@ -362,8 +362,9 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           <DialogOverlay className="bg-black/25" />
 
           <DialogPrimitive.Content
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-[640px] rounded-[14px] overflow-hidden text-foreground
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-[640px] max-h-[85vh] rounded-[14px] overflow-hidden text-foreground
                        border border-border
+                       flex flex-col
                        data-[state=open]:animate-in data-[state=closed]:animate-out
                        data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0
                        data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95
@@ -382,7 +383,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             }}
           >
             {/* Title bar */}
-            <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border">
+            <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border shrink-0">
               <div className="w-[52px] flex justify-start">
                 <button
                   onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
@@ -424,10 +425,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
               </div>
             </div>
 
-            <div className="flex min-h-[440px]">
+            <div className="flex flex-1 min-h-0">
 
               {/* Sidebar */}
-              <div className="w-[160px] border-r border-border flex flex-col shrink-0">
+              <div className="w-[160px] border-r border-border flex flex-col shrink-0 overflow-y-auto">
                 {SIDEBAR_GROUPS.map((group, gi) => (
                   <div key={group.label} className={gi > 0 ? 'mt-[2px]' : ''}>
                     <div className="px-[12px] pt-[10px] pb-[3px]">

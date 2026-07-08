@@ -126,12 +126,10 @@ export function BuildKitCustomApisPage() {
       parentRoute="/buildkit"
       actions={
         <div className="flex items-center gap-[6px]">
-          <Button variant="secondary" onClick={() => navigate('/builds')}>
-            <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
             Build
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/builds')}>
-            <Icon icon="solar:cloud-upload-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:cloud-upload-linear" className="text-sm" />}>
             Deploy
           </Button>
         </div>

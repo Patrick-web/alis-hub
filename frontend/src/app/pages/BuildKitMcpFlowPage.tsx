@@ -113,12 +113,10 @@ export function BuildKitMcpFlowPage() {
       parentRoute="/buildkit"
       actions={
         <div className="flex items-center gap-[6px]">
-          <Button variant="secondary" onClick={() => navigate('/builds')}>
-            <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
             Build
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/builds')}>
-            <Icon icon="solar:cloud-upload-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:cloud-upload-linear" className="text-sm" />}>
             Deploy
           </Button>
         </div>
@@ -185,9 +183,8 @@ export function BuildKitMcpFlowPage() {
                 ))}
               </div>
               <div className="flex items-center gap-[10px] mt-[14px]">
-                <Button variant="primary" onClick={() => setSelectedStage('service')}>
+                <Button variant="primary" onClick={() => setSelectedStage('service')} icon={<Icon icon="solar:alt-arrow-right-linear" className="text-sm" />} iconPosition="trailing">
                   Continue to Service Setup
-                  <Icon icon="solar:alt-arrow-right-linear" className="text-sm ml-[4px]" />
                 </Button>
               </div>
             </StageCard>
@@ -222,13 +219,11 @@ export function BuildKitMcpFlowPage() {
                 ))}
               </div>
               <div className="flex items-center gap-[8px]">
-                <Button variant="primary" onClick={() => navigate('/builds')}>
-                  <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+                <Button variant="primary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
                   Build & Deploy
                 </Button>
-                <Button variant="ghost" onClick={() => setSelectedStage('install')}>
+                <Button variant="ghost" onClick={() => setSelectedStage('install')} icon={<Icon icon="solar:alt-arrow-right-linear" className="text-sm" />} iconPosition="trailing">
                   Next: Connect Agents
-                  <Icon icon="solar:alt-arrow-right-linear" className="text-sm ml-[4px]" />
                 </Button>
               </div>
             </StageCard>

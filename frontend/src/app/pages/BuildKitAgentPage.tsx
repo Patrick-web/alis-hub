@@ -79,8 +79,7 @@ export function BuildKitAgentPage() {
       subtitle="Automated Scaffolding, Total Control"
       parentRoute="/buildkit"
       actions={
-        <Button variant="primary" onClick={() => navigate('/agents')}>
-          <Icon icon="solar:rocket-launch-linear" className="text-sm mr-[4px]" />
+        <Button variant="primary" onClick={() => navigate('/agents')} icon={<Icon icon="solar:rocket-launch-linear" className="text-sm" />}>
           Initialise Agent
         </Button>
       }

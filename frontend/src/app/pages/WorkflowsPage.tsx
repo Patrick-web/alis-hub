@@ -769,8 +769,7 @@ export function WorkflowsPage() {
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-foreground/30">
             <Icon icon="solar:playlist-2-linear" className="text-4xl opacity-30" />
             <p className="text-sm">Select a workflow or create a new one</p>
-            <Button variant="secondary" onClick={() => setShowNewModal(true)}>
-              <Icon icon="solar:add-circle-linear" className="text-base" />
+            <Button variant="secondary" onClick={() => setShowNewModal(true)} icon={<Icon icon="solar:add-circle-linear" className="text-base" />}>
               New Workflow
             </Button>
           </div>

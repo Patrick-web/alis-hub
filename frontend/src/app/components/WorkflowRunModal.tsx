@@ -170,8 +170,8 @@ export function WorkflowRunModal({
                 onClick={handleStop}
                 disabled={stopping}
                 className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-xs h-7 px-2"
+                icon={<Icon icon="solar:stop-circle-linear" className="text-sm" />}
               >
-                <Icon icon="solar:stop-circle-linear" className="text-sm" />
                 Stop
               </Button>
             )}

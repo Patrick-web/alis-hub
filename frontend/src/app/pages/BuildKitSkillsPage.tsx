@@ -82,12 +82,10 @@ export function BuildKitSkillsPage() {
       parentRoute="/buildkit"
       actions={
         <div className="flex items-center gap-[6px]">
-          <Button variant="secondary" onClick={() => Browser.OpenURL(SKILLS_REPO_URL)}>
-            <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => Browser.OpenURL(SKILLS_REPO_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
             Skills Registry
           </Button>
-          <Button variant="secondary" onClick={() => navigate('/builds')}>
-            <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+          <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
             Build
           </Button>
         </div>
@@ -145,13 +143,11 @@ export function BuildKitSkillsPage() {
                 ))}
               </div>
               <div className="mt-[12px] flex items-center gap-[8px]">
-                <Button variant="secondary" onClick={() => Browser.OpenURL(SKILLS_REPO_URL)}>
-                  <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+                <Button variant="secondary" onClick={() => Browser.OpenURL(SKILLS_REPO_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                   Browse Skills Registry
                 </Button>
-                <Button variant="ghost" onClick={() => setSelectedStage('prerequisites')}>
+                <Button variant="ghost" onClick={() => setSelectedStage('prerequisites')} icon={<Icon icon="solar:alt-arrow-right-linear" className="text-sm" />} iconPosition="trailing">
                   Continue
-                  <Icon icon="solar:alt-arrow-right-linear" className="text-sm ml-[4px]" />
                 </Button>
               </div>
             </StageCard>
@@ -174,9 +170,8 @@ export function BuildKitSkillsPage() {
                   </div>
                 ))}
               </div>
-              <Button variant="primary" onClick={() => setSelectedStage('service')}>
+              <Button variant="primary" onClick={() => setSelectedStage('service')} icon={<Icon icon="solar:alt-arrow-right-linear" className="text-sm" />} iconPosition="trailing">
                 Continue to Service Setup
-                <Icon icon="solar:alt-arrow-right-linear" className="text-sm ml-[4px]" />
               </Button>
             </StageCard>
           )}
@@ -205,13 +200,11 @@ export function BuildKitSkillsPage() {
                 ))}
               </div>
               <div className="flex items-center gap-[8px]">
-                <Button variant="primary" onClick={() => navigate('/builds')}>
-                  <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+                <Button variant="primary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
                   Build & Deploy
                 </Button>
-                <Button variant="ghost" onClick={() => setSelectedStage('next')}>
+                <Button variant="ghost" onClick={() => setSelectedStage('next')} icon={<Icon icon="solar:alt-arrow-right-linear" className="text-sm" />} iconPosition="trailing">
                   Next Steps
-                  <Icon icon="solar:alt-arrow-right-linear" className="text-sm ml-[4px]" />
                 </Button>
               </div>
             </StageCard>
