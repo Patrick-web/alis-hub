@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import * as settingsClient from '../lib/settingsClient';
 
 export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error';
 export type NotificationSource =
@@ -105,7 +106,7 @@ const STORAGE_KEY = 'alis:notifications';
 
 function loadFromStorage(): AppNotification[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -115,15 +116,13 @@ function loadFromStorage(): AppNotification[] {
 }
 
 function saveToStorage(notifications: AppNotification[]) {
-  try {
-    const serialisable = notifications
-      .filter(n => n.persistent && n.task?.status !== 'running')
-      .map(({ actions: _actions, task, ...n }) => ({
-        ...n,
-        ...(task ? { task: { ...task, logBuffer: [] } } : {}),
-      }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialisable));
-  } catch {}
+  const serialisable = notifications
+    .filter(n => n.persistent && n.task?.status !== 'running')
+    .map(({ actions: _actions, task, ...n }) => ({
+      ...n,
+      ...(task ? { task: { ...task, logBuffer: [] } } : {}),
+    }));
+  settingsClient.set(STORAGE_KEY, JSON.stringify(serialisable));
 }
 
 function reducer(state: NotificationState, action: StoreAction): NotificationState {

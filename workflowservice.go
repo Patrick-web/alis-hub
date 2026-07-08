@@ -19,8 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	_ "modernc.org/sqlite"
-
 	"alis-hub-v3/internal/terminal"
 )
 
@@ -156,108 +154,15 @@ type WorkflowService struct {
 	activeRuns     sync.Map // runId → *activeRun
 }
 
-func NewWorkflowService(bs *BuildService, gs *GitService, ds *DeployService, def *DefineService, pkg *PackageService) *WorkflowService {
+func NewWorkflowService(db *sql.DB, bs *BuildService, gs *GitService, ds *DeployService, def *DefineService, pkg *PackageService) *WorkflowService {
 	return &WorkflowService{
+		db:             db,
 		buildService:   bs,
 		gitService:     gs,
 		deployService:  ds,
 		defineService:  def,
 		packageService: pkg,
 	}
-}
-
-// Open opens (or creates) the SQLite database and runs migrations.
-func (s *WorkflowService) Open() error {
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		return fmt.Errorf("config dir: %w", err)
-	}
-	appDir := filepath.Join(dir, "AlisHub")
-	if err := os.MkdirAll(appDir, 0700); err != nil {
-		return fmt.Errorf("create config dir: %w", err)
-	}
-	db, err := sql.Open("sqlite", filepath.Join(appDir, "hub.db"))
-	if err != nil {
-		return fmt.Errorf("open db: %w", err)
-	}
-	db.SetMaxOpenConns(1)
-	if _, err := db.Exec("PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;"); err != nil {
-		return fmt.Errorf("db pragma: %w", err)
-	}
-	s.db = db
-	if err := s.migrate(); err != nil {
-		return fmt.Errorf("migrate: %w", err)
-	}
-	return nil
-}
-
-// ─── Migrations ───────────────────────────────────────────────────────────────
-
-var migrations = []string{
-	// v1 — initial schema
-	`CREATE TABLE IF NOT EXISTS workflows (
-		id          TEXT PRIMARY KEY,
-		name        TEXT NOT NULL,
-		description TEXT NOT NULL DEFAULT '',
-		is_template INTEGER NOT NULL DEFAULT 0,
-		created_at  INTEGER NOT NULL,
-		updated_at  INTEGER NOT NULL
-	);
-	CREATE TABLE IF NOT EXISTS workflow_steps (
-		id          TEXT PRIMARY KEY,
-		workflow_id TEXT NOT NULL REFERENCES workflows(id) ON DELETE CASCADE,
-		position    INTEGER NOT NULL,
-		type        TEXT NOT NULL,
-		params      TEXT NOT NULL DEFAULT '{}',
-		on_failure  TEXT NOT NULL DEFAULT 'stop'
-	);
-	CREATE TABLE IF NOT EXISTS workflow_runs (
-		id             TEXT PRIMARY KEY,
-		workflow_id    TEXT NOT NULL,
-		workflow_name  TEXT NOT NULL,
-		status         TEXT NOT NULL DEFAULT 'running',
-		log            TEXT NOT NULL DEFAULT '',
-		started_at     INTEGER NOT NULL,
-		completed_at   INTEGER
-	);
-	CREATE TABLE IF NOT EXISTS workflow_step_runs (
-		id           TEXT PRIMARY KEY,
-		run_id       TEXT NOT NULL REFERENCES workflow_runs(id) ON DELETE CASCADE,
-		step_id      TEXT NOT NULL,
-		position     INTEGER NOT NULL,
-		type         TEXT NOT NULL,
-		label        TEXT NOT NULL,
-		status       TEXT NOT NULL DEFAULT 'pending',
-		log          TEXT NOT NULL DEFAULT '',
-		started_at   INTEGER,
-		completed_at INTEGER
-	);`,
-	// v2 — workflow-level input arguments
-	`ALTER TABLE workflows ADD COLUMN args TEXT NOT NULL DEFAULT '[]'`,
-	// v3 — remove built-in workflow templates (feature removed); cascades to their steps
-	`DELETE FROM workflows WHERE id IN ('tpl-define','tpl-build','tpl-define-build','tpl-git-commit-push','tpl-build-deploy')`,
-}
-
-func (s *WorkflowService) migrate() error {
-	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS hub_meta (schema_version INTEGER PRIMARY KEY)`); err != nil {
-		return err
-	}
-	var version int
-	_ = s.db.QueryRow(`SELECT COALESCE(MAX(schema_version),0) FROM hub_meta`).Scan(&version)
-	for i, m := range migrations {
-		v := i + 1
-		if v <= version {
-			continue
-		}
-		if _, err := s.db.Exec(m); err != nil {
-			return fmt.Errorf("migration v%d: %w", v, err)
-		}
-		if _, err := s.db.Exec(`INSERT OR REPLACE INTO hub_meta VALUES (?)`, v); err != nil {
-			return fmt.Errorf("bump schema_version: %w", err)
-		}
-		log.Printf("[workflow] applied migration v%d", v)
-	}
-	return nil
 }
 
 // ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -527,7 +432,7 @@ func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string, st
 		if step.Position < startPosition {
 			if _, err := tx.Exec(
 				`INSERT INTO workflow_step_runs (id,run_id,step_id,position,type,label,status,started_at,completed_at) VALUES (?,?,?,?,?,?,'skipped',?,?)`,
-				newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step), now, now,
+				newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step, argValues), now, now,
 			); err != nil {
 				return "", err
 			}
@@ -535,7 +440,7 @@ func (s *WorkflowService) RunWorkflow(id string, argValues map[string]string, st
 		}
 		if _, err := tx.Exec(
 			`INSERT INTO workflow_step_runs (id,run_id,step_id,position,type,label,status) VALUES (?,?,?,?,?,?,'pending')`,
-			newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step),
+			newWFID(), runID, step.ID, step.Position, step.Type, stepLabel(step, argValues),
 		); err != nil {
 			return "", err
 		}
@@ -714,7 +619,7 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 			continue
 		}
 
-		label := stepLabel(step)
+		label := stepLabel(step, stepVars)
 		fmt.Fprintf(ar, "\n━━━ %s ━━━\n", label)
 
 		startedAt := time.Now().Unix()
@@ -800,7 +705,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 		if home, err := os.UserHomeDir(); err == nil {
 			stepVars["last_build_repo"] = filepath.Join(home, "alis.build", bOrg, "build", bProduct)
 		}
-		builtVersion, err := s.executeBuildCloud(ctx, neuron, str("commit"), w)
+		builtVersion, err := s.executeBuildCloud(ctx, neuron, str("commit"), str("branch"), w)
 		if err == nil && builtVersion != "" {
 			stepVars["last_build_version"] = builtVersion
 		}
@@ -1072,10 +977,10 @@ func (s *WorkflowService) executeDefine(ctx context.Context, neuron, commit stri
 	return nil
 }
 
-func (s *WorkflowService) executeBuildCloud(ctx context.Context, neuron, commit string, w io.Writer) (string, error) {
+func (s *WorkflowService) executeBuildCloud(ctx context.Context, neuron, commit, branch string, w io.Writer) (string, error) {
 	if commit == "" {
 		org, product, neuronID, version := parseNeuronResource(neuron)
-		commits, err := s.buildService.GetBuildCommits(org, product, neuronID, version, "master", 1)
+		commits, err := s.buildService.GetBuildCommits(org, product, neuronID, version, branch, 1)
 		if err != nil || len(commits) == 0 {
 			return "", fmt.Errorf("resolve latest commit: %w", err)
 		}
@@ -1212,10 +1117,10 @@ func expandVars(tmpl string, vars map[string]string) string {
 	return tmpl
 }
 
-func stepLabel(step WorkflowStep) string {
+func stepLabel(step WorkflowStep, vars map[string]string) string {
 	var params map[string]interface{}
 	_ = json.Unmarshal([]byte(step.Params), &params)
-	str := func(key string) string { v, _ := params[key].(string); return v }
+	str := func(key string) string { v, _ := params[key].(string); return expandVars(v, vars) }
 
 	switch step.Type {
 	case "shell":

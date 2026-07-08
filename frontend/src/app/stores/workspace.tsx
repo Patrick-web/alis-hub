@@ -1,4 +1,5 @@
 import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
+import * as settingsClient from '../lib/settingsClient';
 
 export type AppPhase = 'init' | 'login' | 'hub' | 'picking-org' | 'picking-product' | 'workspace' | 'standalone';
 
@@ -92,8 +93,8 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         product: action.payload.product,
         productDisplayName: action.payload.productDisplayName,
       };
-      try { localStorage.setItem('alis:recentLandingZone', JSON.stringify(recent)); } catch {}
-      try { localStorage.removeItem('alis:activeEnvName'); } catch {}
+      settingsClient.set('alis:recentLandingZone', JSON.stringify(recent));
+      settingsClient.set('alis:activeEnvName', '');
       return {
         ...state,
         organisation: action.payload.org,
@@ -102,8 +103,8 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
         productDisplayName: action.payload.productDisplayName,
         phase: 'workspace',
         recentLandingZone: recent,
-        environment: initialState.environment,
-        environmentDisplayName: initialState.environmentDisplayName,
+        environment: 'production',
+        environmentDisplayName: 'Production',
         environmentGoogleProjectId: '',
         environmentGoogleRegion: '',
         rootDirectory: '',
@@ -126,44 +127,44 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
     case 'SET_LOADED_ENVS':
       return { ...state, loadedEnvs: action.payload };
     case 'SET_ACTIVE_ENV':
-      try { localStorage.setItem('alis:activeEnvName', action.payload); } catch {}
+      settingsClient.set('alis:activeEnvName', action.payload);
       return { ...state, activeEnvName: action.payload };
     default:
       return state;
   }
 }
 
-const savedRecentLandingZone = (() => {
+// Lazy initializer (passed to useState) so it reads settingsClient's cache only
+// after settingsClient.init() has resolved, i.e. on WorkspaceProvider's first render.
+function buildInitialState(): WorkspaceState {
+  let recentLandingZone: RecentLandingZone | null = null;
   try {
-    const raw = localStorage.getItem('alis:recentLandingZone');
-    return raw ? (JSON.parse(raw) as RecentLandingZone) : null;
-  } catch { return null; }
-})();
+    const raw = settingsClient.getCached('alis:recentLandingZone');
+    recentLandingZone = raw ? (JSON.parse(raw) as RecentLandingZone) : null;
+  } catch { recentLandingZone = null; }
+  const activeEnvName = settingsClient.getCached('alis:activeEnvName') ?? '';
 
-const savedActiveEnvName = (() => {
-  try { return localStorage.getItem('alis:activeEnvName') ?? ''; } catch { return ''; }
-})();
-
-const initialState: WorkspaceState = {
-  phase: 'init',
-  recentLandingZone: savedRecentLandingZone,
-  organisation: '',
-  organisationDisplayName: '',
-  selectedOrg: null,
-  product: '',
-  productDisplayName: '',
-  environment: 'production',
-  environmentDisplayName: 'Production',
-  environmentGoogleProjectId: '',
-  environmentGoogleRegion: '',
-  rootDirectory: '',
-  neurons: [],
-  activeNeuronIds: [],
-  environments: [],
-  loadedEnvs: [],
-  activeEnvName: savedActiveEnvName,
-  envsError: null,
-};
+  return {
+    phase: 'init',
+    recentLandingZone,
+    organisation: '',
+    organisationDisplayName: '',
+    selectedOrg: null,
+    product: '',
+    productDisplayName: '',
+    environment: 'production',
+    environmentDisplayName: 'Production',
+    environmentGoogleProjectId: '',
+    environmentGoogleRegion: '',
+    rootDirectory: '',
+    neurons: [],
+    activeNeuronIds: [],
+    environments: [],
+    loadedEnvs: [],
+    activeEnvName,
+    envsError: null,
+  };
+}
 
 interface WorkspaceContextValue {
   state: WorkspaceState;
@@ -181,7 +182,7 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<WorkspaceState>(initialState);
+  const [state, setState] = useState<WorkspaceState>(buildInitialState);
 
   const dispatch = useCallback((action: WorkspaceAction) => {
     setState(prev => workspaceReducer(prev, action));
