@@ -62,7 +62,7 @@ type StepType = {
 type StepField = {
   key: string;
   label: string;
-  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'build-version' | 'env-multi' | 'repo-select';
+  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'build-version' | 'env-multi' | 'repo-select' | 'branch';
   placeholder?: string;
   options?: string[];
 };
@@ -120,12 +120,13 @@ const STEP_TYPES: StepType[] = [
     label: 'Cloud Build',
     icon: 'solar:cloud-upload-linear',
     color: 'text-brand',
-    defaultParams: { neuron: '', commit: '' },
+    defaultParams: { neuron: '', branch: 'master', commit: '' },
     fields: [
       { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
+      { key: 'branch', label: 'Branch', type: 'branch', placeholder: 'master' },
       { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: 'Latest build' },
     ],
-    summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
+    summary: (p) => p.neuron ? `${p.neuron.split('/').slice(-1)[0]} @ ${p.branch || 'master'}` : 'No neuron set',
     computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['define'], 'neuron') }),
   },
   {
@@ -1154,8 +1155,9 @@ function parseNeuronId(neuron: string): { id: string; version: string } {
   return { id, version: m ? m[1] : 'v1' };
 }
 
-function CommitPickerModal({ neuron, onSelect, onClose }: {
+function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
   neuron: string;
+  branch?: string;
   onSelect: (sha: string) => void;
   onClose: () => void;
 }) {
@@ -1177,12 +1179,12 @@ function CommitPickerModal({ neuron, onSelect, onClose }: {
     }
 
     (BuildService.GetBuildCommits as (org: string, product: string, neuron: string, version: string, branch: string, count: number) => Promise<CommitEntry[]>)(
-      org, product, neuronId, version, 'master', 30
+      org, product, neuronId, version, branch || 'master', 30
     )
       .then((res) => setCommits(res ?? []))
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, [neuron, state.organisation, state.product]);
+  }, [neuron, branch, state.organisation, state.product]);
 
   const lowerFilter = filter.toLowerCase();
   const filtered = commits.filter((c) =>
@@ -1370,12 +1372,24 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
   const [neuronPickerKey, setNeuronPickerKey] = useState<string | null>(null);
   const [commitPickerOpen, setCommitPickerOpen] = useState(false);
   const [versionPickerOpen, setVersionPickerOpen] = useState(false);
+  const [branches, setBranches] = useState<string[]>([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
   const { state } = useWorkspace();
 
   const type = getStepType(step.type);
   const summary = stepSummary(step);
   let params: Record<string, any> = {};
   try { params = JSON.parse(step.params); } catch { /**/ }
+
+  const hasBranchField = type.fields.some((f) => f.type === 'branch');
+  useEffect(() => {
+    if (!expanded || !hasBranchField || !state.organisation || !state.product) return;
+    setBranchesLoading(true);
+    BuildService.GetBuildBranches(state.organisation, state.product)
+      .then((res) => setBranches(res ?? []))
+      .catch(() => setBranches([]))
+      .finally(() => setBranchesLoading(false));
+  }, [expanded, hasBranchField, state.organisation, state.product]);
 
   return (
     <div
@@ -1554,11 +1568,26 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                     {commitPickerOpen && (
                       <CommitPickerModal
                         neuron={params['neuron'] ?? ''}
+                        branch={params['branch'] || 'master'}
                         onSelect={(sha) => { onParamChange('commit', sha); setCommitPickerOpen(false); }}
                         onClose={() => setCommitPickerOpen(false)}
                       />
                     )}
                   </>
+                ) : f.type === 'branch' ? (
+                  isTemplate ? (
+                    <div className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
+                      {params[f.key] || f.placeholder || 'master'}
+                    </div>
+                  ) : (
+                    <SearchableSelect
+                      value={params[f.key] ?? 'master'}
+                      options={branches}
+                      onChange={(v) => onParamChange(f.key, v)}
+                      placeholder={branchesLoading ? 'Loading branches…' : (f.placeholder || 'master')}
+                      className="w-full h-8"
+                    />
+                  )
                 ) : f.type === 'build-version' ? (
                   <>
                     <button
