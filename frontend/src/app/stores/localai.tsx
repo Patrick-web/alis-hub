@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Events } from '@wailsio/runtime';
 import * as LocalAIService from '../../../bindings/alis-hub-v3/localaiservice';
+import * as settingsClient from '../lib/settingsClient';
 
 export type LocalAIModel = 'gemma4:e2b' | 'gemma4:12b';
 
@@ -74,7 +75,7 @@ const DEFAULT_MODEL: LocalAIModel = 'gemma4:e2b';
 
 function loadFromStorage(): Pick<LocalAIState, 'enabled' | 'model'> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (!raw) return { enabled: false, model: DEFAULT_MODEL };
     const parsed = JSON.parse(raw);
     const model = parsed.model === 'gemma4:12b' ? 'gemma4:12b' : 'gemma4:e2b';
@@ -154,9 +155,7 @@ export function LocalAIProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, getInitialState);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ enabled: state.enabled, model: state.model }));
-    } catch {}
+    settingsClient.set(STORAGE_KEY, JSON.stringify({ enabled: state.enabled, model: state.model }));
   }, [state.enabled, state.model]);
 
   const refresh = useCallback(async () => {

@@ -46,10 +46,13 @@ func main() {
 	deploySvc := NewDeployService()
 	defineSvc := NewDefineService()
 	packageSvc := NewPackageService()
-	workflowSvc := NewWorkflowService(buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
-	if err := workflowSvc.Open(); err != nil {
-		log.Fatal("workflow db:", err)
+
+	hubDB, err := OpenHubDB()
+	if err != nil {
+		log.Fatal("hub db:", err)
 	}
+	workflowSvc := NewWorkflowService(hubDB, buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
+	settingsSvc := NewSettingsService(hubDB)
 
 	app := application.New(application.Options{
 		Name:        "AlisHub",
@@ -71,6 +74,7 @@ func main() {
 			application.NewService(changelogSvc),
 			application.NewService(localAISvc),
 			application.NewService(workflowSvc),
+			application.NewService(settingsSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -150,8 +154,7 @@ func main() {
 		updater.BackgroundCheck(app, version, 30*time.Second)
 	}
 
-	err := app.Run()
-	if err != nil {
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -6,6 +6,7 @@ import {
   useEffect,
   type ReactNode,
 } from 'react';
+import * as settingsClient from '../lib/settingsClient';
 
 interface SourceControlState {
   fileListView: 'list' | 'tree';
@@ -35,7 +36,7 @@ const DEFAULT_STATE: SourceControlState = {
 
 function loadFromStorage(): SourceControlState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE;
     return { ...DEFAULT_STATE, ...JSON.parse(raw) };
   } catch {
@@ -44,9 +45,7 @@ function loadFromStorage(): SourceControlState {
 }
 
 function saveToStorage(state: SourceControlState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+  settingsClient.set(STORAGE_KEY, JSON.stringify(state));
 }
 
 function reducer(state: SourceControlState, action: SourceControlAction): SourceControlState {

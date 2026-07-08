@@ -63,13 +63,6 @@ export function ListWorkflows(): $CancellablePromise<$models.Workflow[]> {
     });
 }
 
-/**
- * Open opens (or creates) the SQLite database and runs migrations.
- */
-export function Open(): $CancellablePromise<void> {
-    return $Call.ByID(814639472);
-}
-
 export function PollRunLogs(runID: string, offset: number): $CancellablePromise<$models.RunLogChunk | null> {
     return $Call.ByID(3468137961, runID, offset).then(($result: any) => {
         return $$createType7($result);

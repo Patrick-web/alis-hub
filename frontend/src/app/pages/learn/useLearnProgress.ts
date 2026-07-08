@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { LearningModule } from './types';
+import * as settingsClient from '../../lib/settingsClient';
 
 const STORAGE_KEY = 'alis-learn-progress';
 
 function loadCompleted(): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as { completedSteps: string[] };
       return new Set(parsed.completedSteps);
@@ -21,7 +22,7 @@ export function useLearnProgress() {
     setCompletedSteps(prev => {
       const next = new Set(prev);
       next.add(stepId);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ completedSteps: [...next] }));
+      settingsClient.set(STORAGE_KEY, JSON.stringify({ completedSteps: [...next] }));
       return next;
     });
   }, []);

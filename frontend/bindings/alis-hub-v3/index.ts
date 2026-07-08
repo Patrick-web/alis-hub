@@ -13,6 +13,7 @@ import * as LocalAIService from "./localaiservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
 import * as ServiceManager from "./servicemanager.js";
+import * as SettingsService from "./settingsservice.js";
 import * as WorkflowService from "./workflowservice.js";
 export {
     BuildKitService,
@@ -27,6 +28,7 @@ export {
     PackageService,
     ProductService,
     ServiceManager,
+    SettingsService,
     WorkflowService
 };
 
