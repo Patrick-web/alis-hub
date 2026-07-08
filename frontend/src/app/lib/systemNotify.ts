@@ -1,19 +1,14 @@
 import * as NotificationService from '../../../bindings/github.com/wailsapp/wails/v3/pkg/services/notifications/notificationservice';
+import * as settingsClient from './settingsClient';
 
 const PREF_KEY = 'alis:systemNotifications';
 
 export function isSystemNotificationsEnabled(): boolean {
-  try {
-    return localStorage.getItem(PREF_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return settingsClient.getCached(PREF_KEY) === 'true';
 }
 
 export function setSystemNotificationsEnabled(enabled: boolean): void {
-  try {
-    localStorage.setItem(PREF_KEY, String(enabled));
-  } catch {}
+  settingsClient.set(PREF_KEY, String(enabled));
 }
 
 export async function requestNotificationAuthorization(): Promise<boolean> {

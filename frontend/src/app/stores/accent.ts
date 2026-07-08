@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import * as settingsClient from '../lib/settingsClient';
 
 export interface AccentColor {
   id: string;
@@ -35,9 +36,9 @@ function applyAccent(brand: string, brandFg: string) {
 }
 
 export function initAccentColor() {
-  const id = localStorage.getItem(STORAGE_KEY) ?? DEFAULT_ID;
+  const id = settingsClient.getCached(STORAGE_KEY) ?? DEFAULT_ID;
   if (id === 'custom') {
-    const hex = localStorage.getItem(CUSTOM_COLOR_KEY) ?? '#f881a9';
+    const hex = settingsClient.getCached(CUSTOM_COLOR_KEY) ?? '#f881a9';
     applyAccent(hex, contrastColor(hex));
   } else {
     const color = ACCENT_COLORS.find(c => c.id === id) ?? ACCENT_COLORS[0];
@@ -47,25 +48,25 @@ export function initAccentColor() {
 
 export function useAccentColor() {
   const [accentId, setAccentId] = useState<string>(
-    () => localStorage.getItem(STORAGE_KEY) ?? DEFAULT_ID
+    () => settingsClient.getCached(STORAGE_KEY) ?? DEFAULT_ID
   );
   const [customHex, setCustomHex] = useState<string>(
-    () => localStorage.getItem(CUSTOM_COLOR_KEY) ?? '#f881a9'
+    () => settingsClient.getCached(CUSTOM_COLOR_KEY) ?? '#f881a9'
   );
 
   useEffect(() => { initAccentColor(); }, []);
 
   function setAccent(id: string) {
     const color = ACCENT_COLORS.find(c => c.id === id) ?? ACCENT_COLORS[0];
-    localStorage.setItem(STORAGE_KEY, id);
+    settingsClient.set(STORAGE_KEY, id);
     applyAccent(color.brand, color.brandFg);
     setAccentId(id);
   }
 
   function setCustomAccent(hex: string) {
     const fg = contrastColor(hex);
-    localStorage.setItem(CUSTOM_COLOR_KEY, hex);
-    localStorage.setItem(STORAGE_KEY, 'custom');
+    settingsClient.set(CUSTOM_COLOR_KEY, hex);
+    settingsClient.set(STORAGE_KEY, 'custom');
     applyAccent(hex, fg);
     setCustomHex(hex);
     setAccentId('custom');

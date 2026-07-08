@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { System } from '@wailsio/runtime';
+import * as settingsClient from '../lib/settingsClient';
 
 export type RealPlatform = 'darwin' | 'windows';
 export type PlatformOverride = 'auto' | RealPlatform;
@@ -28,7 +29,7 @@ const STORAGE_KEY = 'alis:platform-override';
 
 function loadOverride(): PlatformOverride {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     if (raw === 'darwin' || raw === 'windows' || raw === 'auto') return raw;
     return 'auto';
   } catch {
@@ -37,9 +38,7 @@ function loadOverride(): PlatformOverride {
 }
 
 function saveOverride(v: PlatformOverride) {
-  try {
-    localStorage.setItem(STORAGE_KEY, v);
-  } catch {}
+  settingsClient.set(STORAGE_KEY, v);
 }
 
 const PlatformContext = createContext<PlatformContextValue | null>(null);

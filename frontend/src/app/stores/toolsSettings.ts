@@ -1,3 +1,5 @@
+import * as settingsClient from '../lib/settingsClient';
+
 type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner' | 'backups';
 
 const STORAGE_KEY = 'alis:tools-context-defaults';
@@ -16,7 +18,7 @@ type DefaultsMap = Record<string, Record<string, string>>;
 
 function load(): DefaultsMap {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = settingsClient.getCached(STORAGE_KEY);
     return raw ? (JSON.parse(raw) as DefaultsMap) : {};
   } catch {
     return {};
@@ -24,9 +26,7 @@ function load(): DefaultsMap {
 }
 
 function save(map: DefaultsMap): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {}
+  settingsClient.set(STORAGE_KEY, JSON.stringify(map));
 }
 
 export function getToolDefault(org: string, product: string, toolId: string): string {
