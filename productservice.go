@@ -1630,7 +1630,9 @@ func (s *ProductService) findExistingEntitlement(ctx context.Context, blockId, a
 }
 
 func (s *ProductService) createEntitlement(ctx context.Context, blockId, planName, accountID string) (string, error) {
-	// Entitlement sub-message: f2=entitlement_plan, f3=account, f8=state(2=REDEEMABLE)
+	// Entitlement sub-message: f2=entitlement_plan_reference, f3=account, f8=type(2=PLAN_USE).
+	// Matches what the real console sends on install (verified against its JS bundle); state
+	// (f7) is intentionally left unset there too — the server defaults it on create.
 	var entMsg []byte
 	entMsg = protowire.AppendTag(entMsg, 2, protowire.BytesType)
 	entMsg = protowire.AppendString(entMsg, planName)
@@ -2052,7 +2054,8 @@ func neuronNameToPackage(neuronName string) string {
 }
 
 // parseBlockPlansResponse parses a ListEntitlementPlans response.
-// Outer field 1 = repeated EntitlementPlan (f1=name, f2=display_name).
+// Outer field 1 = repeated Entitlement (the plan list reuses the Entitlement message;
+// f1=name, f9=display_name — f2 is entitlement_plan_reference, not display_name).
 func parseBlockPlansResponse(data []byte) []BlockPlan {
 	var plans []BlockPlan
 	for len(data) > 0 {
@@ -2108,7 +2111,7 @@ func parseBlockPlan(data []byte) BlockPlan {
 		switch num {
 		case 1:
 			p.Name = string(b)
-		case 2:
+		case 9:
 			p.DisplayName = string(b)
 		}
 	}

@@ -17,6 +17,9 @@ interface SearchableSelectProps {
   placeholder?: string;
   label?: string;
   className?: string;
+  loading?: boolean;
+  disabled?: boolean;
+  emptyLabel?: string;
 }
 
 export function SearchableSelect({
@@ -26,6 +29,9 @@ export function SearchableSelect({
   placeholder = 'Select…',
   label,
   className,
+  loading,
+  disabled,
+  emptyLabel = 'No results',
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -44,18 +50,24 @@ export function SearchableSelect({
   }
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+    <PopoverPrimitive.Root open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
       <PopoverPrimitive.Trigger asChild>
         <button
+          disabled={disabled}
           className={cn(
             'flex items-center gap-1 text-[10px] bg-foreground/5 border border-foreground/15 rounded px-1.5 py-1 text-foreground/70 hover:border-foreground/25 transition-colors',
             open && 'border-foreground/30',
+            disabled && 'opacity-40 cursor-not-allowed hover:border-foreground/15',
             className,
           )}
         >
           {label && <span className="text-foreground/30 shrink-0">{label}</span>}
           <span className="font-mono truncate flex-1 text-left">{displayLabel || placeholder}</span>
-          <ChevronDown size={9} className={cn('shrink-0 text-foreground/30 transition-transform', open && 'rotate-180')} />
+          {loading ? (
+            <Search size={9} className="shrink-0 text-foreground/30 animate-pulse" />
+          ) : (
+            <ChevronDown size={9} className={cn('shrink-0 text-foreground/30 transition-transform', open && 'rotate-180')} />
+          )}
         </button>
       </PopoverPrimitive.Trigger>
 
@@ -76,9 +88,11 @@ export function SearchableSelect({
               />
             </div>
             <CommandPrimitive.List className="max-h-[180px] overflow-y-auto py-1">
-              {filtered.length === 0 ? (
+              {loading ? (
+                <div className="py-4 text-center text-[11px] text-foreground/30">Loading…</div>
+              ) : filtered.length === 0 ? (
                 <CommandPrimitive.Empty className="py-4 text-center text-[11px] text-foreground/30">
-                  No results
+                  {emptyLabel}
                 </CommandPrimitive.Empty>
               ) : (
                 filtered.map(entry => (

@@ -423,8 +423,9 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
 }
 
 /**
- * SwitchEnvironment rewrites the local .alis/.env file to match the output
- * produced by the Alis VSCode extension when switching environments.
+ * SwitchEnvironment rewrites the local .alis/.env and .alis/key.json files to
+ * match the output produced by the Alis VSCode extension when switching
+ * environments.
  */
 export function SwitchEnvironment(org: string, product: string, envName: string, projectID: string, projectNumber: string, region: string): $CancellablePromise<void> {
     return $Call.ByID(3506000719, org, product, envName, projectID, projectNumber, region);
