@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.13.0] - 2026-07-08
+
+### What's New
+- Merge conflicts now show up in a dedicated, VS Code-style Merge Changes section
+- Added a deploy guard for protected environments, plus a search bar in Settings
+- You can now pick a branch for the Cloud Build workflow step
+- App settings now persist in a local database for more reliable storage
+
+### Bug Fixes
+- Fixed inconsistent button icon styling and an oversized Settings modal
+- Fixed an issue where the wrong subscription plan name could be displayed
+- Fixed an issue where opening a PR could fail if the remote branch didn't exist yet, and you can now choose the merge target for the build repo
+- Fixed accent color contrast to be calculated automatically instead of manually picked
+- Fixed an issue where cancelled or failed tasks could leave stray status chips behind
+- Fixed an issue where switching environments could use a stale key file
+
 ## [v0.12.0] - 2026-07-07
 
 ### What's New
