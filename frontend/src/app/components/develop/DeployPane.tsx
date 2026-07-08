@@ -8,10 +8,12 @@ import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
+import { useProtectedEnvironments } from '../../stores/protectedEnvironments';
 import type { AppNotification } from '../../stores/notifications';
 import type { DeployEnv, DeployStep, EnvRunState } from './types';
 import { isAuthError, formatRelativeTime } from './types';
 import { completeTaskNotification } from '../../lib/taskNotify';
+import { ConfirmDialog } from '../ConfirmDialog';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 
@@ -25,9 +27,11 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const { state, setPhase } = useWorkspace();
   const { addNotification, updateNotification, setFocusTaskId } = useNotifications();
   const { setTabNotificationId } = useDevelopTabs();
+  const { isProtected } = useProtectedEnvironments();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<DeployStep>('loading');
+  const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
   const [deployError, setDeployError] = useState<string | null>(null);
   const [envs, setEnvs] = useState<DeployEnv[]>([]);
   const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
@@ -116,8 +120,21 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     }
   }
 
-  async function handleRunDeploy() {
+  const protectedSelectedEnvs = selectedEnvs.filter(isProtected);
+  const protectedSelectedLabels = envs
+    .filter(e => protectedSelectedEnvs.includes(e.name))
+    .map(e => e.displayName);
+
+  function handleRunDeploy() {
     if (selectedEnvs.length === 0 || !version) return;
+    if (protectedSelectedEnvs.length > 0) {
+      setProtectedConfirmOpen(true);
+      return;
+    }
+    runDeployNow();
+  }
+
+  async function runDeployNow() {
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
     setStep('running');
 
@@ -520,6 +537,24 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
           )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={protectedConfirmOpen}
+        onOpenChange={setProtectedConfirmOpen}
+        title="Protected Environment"
+        description={
+          <>
+            {protectedSelectedLabels.join(', ')} {protectedSelectedLabels.length > 1 ? 'are' : 'is'} protected.
+            Type the phrase below to confirm this deploy.
+          </>
+        }
+        confirmLabel={planOnly ? 'Run Plan' : 'Run Deploy'}
+        requireText={`Deploy to ${protectedSelectedLabels.join(', ')}`}
+        onConfirm={() => {
+          setProtectedConfirmOpen(false);
+          runDeployNow();
+        }}
+      />
     </>
   );
 }

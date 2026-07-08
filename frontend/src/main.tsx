@@ -10,6 +10,7 @@ import { UpdateProvider } from "./app/stores/update.tsx";
 import { LabsProvider } from "./app/stores/labs.tsx";
 import { SourceControlProvider } from "./app/stores/sourceControl.tsx";
 import { DevelopSettingsProvider } from "./app/stores/developSettings.tsx";
+import { ProtectedEnvironmentsProvider } from "./app/stores/protectedEnvironments.tsx";
 import { SuggestionsProvider } from "./app/stores/suggestions.tsx";
 import { PackageSessionsProvider } from "./app/stores/packageSessions.tsx";
 import { WorkflowRunsProvider } from "./app/stores/workflowRuns.tsx";
@@ -47,6 +48,7 @@ async function bootstrap() {
               <LocalAIProvider>
               <SourceControlProvider>
               <DevelopSettingsProvider>
+              <ProtectedEnvironmentsProvider>
               <SuggestionsProvider>
                 <PackageSessionsProvider>
                   <WorkflowRunsProvider>
@@ -64,6 +66,7 @@ async function bootstrap() {
                   </WorkflowRunsProvider>
                 </PackageSessionsProvider>
               </SuggestionsProvider>
+              </ProtectedEnvironmentsProvider>
               </DevelopSettingsProvider>
               </SourceControlProvider>
               </LocalAIProvider>
