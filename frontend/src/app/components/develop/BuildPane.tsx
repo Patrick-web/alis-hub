@@ -18,6 +18,8 @@ import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 import { SearchableSelect } from '../ui/searchable-select';
 
+const MAX_POLL_FAILURES = 3;
+
 interface BuildPaneProps {
   tabId: string;
   neuron: string;
@@ -54,6 +56,8 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   const logOffsetRef = useRef<number>(0);
   const logBufferRef = useRef<string[]>([]);
   const taskIdRef = useRef<string | null>(null);
+  const cloudBuildPollFailuresRef = useRef(0);
+  const localBuildPollFailuresRef = useRef(0);
 
   const orgRef = useRef(state.organisation);
   const productRef = useRef(state.product);
@@ -276,10 +280,12 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   // Poll cloud build
   useEffect(() => {
     if (!buildResult || buildResult.done || step !== 'running') return;
+    cloudBuildPollFailuresRef.current = 0;
     const interval = setInterval(async () => {
       try {
         const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
         const result = await BuildService.PollBuildOperation(buildResult.operationName, neuronResource);
+        cloudBuildPollFailuresRef.current = 0;
         setBuildResult(result as BuildResult);
         if (result?.done) {
           clearInterval(interval);
@@ -311,7 +317,19 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           setProgressMsg(result.notes);
         }
       } catch {
-        clearInterval(interval);
+        cloudBuildPollFailuresRef.current += 1;
+        if (cloudBuildPollFailuresRef.current >= MAX_POLL_FAILURES) {
+          clearInterval(interval);
+          setStep('result');
+          if (taskIdRef.current) {
+            completeTaskNotification(updateNotification, {
+              id: taskIdRef.current, severity: 'error', title: 'Build status unknown',
+              body: 'Lost connection to build status — check Cloud Build for the actual result.',
+              taskStatus: 'error', taskPatch: { step: 'result' },
+            });
+            taskIdRef.current = null;
+          }
+        }
       }
     }, 5000);
     return () => clearInterval(interval);
@@ -340,9 +358,11 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   useEffect(() => {
     if (!localBuildId || step !== 'running') return;
     let offset = 0;
+    localBuildPollFailuresRef.current = 0;
     const interval = setInterval(async () => {
       try {
         const chunk = await BuildService.PollLocalBuild(localBuildId, offset);
+        localBuildPollFailuresRef.current = 0;
         if (chunk?.content) {
           termRef.current?.write(chunk.content);
           offset = chunk.nextOffset;
@@ -367,7 +387,19 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           }
         }
       } catch {
-        clearInterval(interval);
+        localBuildPollFailuresRef.current += 1;
+        if (localBuildPollFailuresRef.current >= MAX_POLL_FAILURES) {
+          clearInterval(interval);
+          setStep('result');
+          if (taskIdRef.current) {
+            completeTaskNotification(updateNotification, {
+              id: taskIdRef.current, severity: 'error', title: 'Local build status unknown',
+              body: 'Lost connection to build status.',
+              taskStatus: 'error', taskPatch: { step: 'result' },
+            });
+            taskIdRef.current = null;
+          }
+        }
       }
     }, 500);
     return () => clearInterval(interval);

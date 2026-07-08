@@ -82,12 +82,43 @@ export function PackageSessionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeSession = useCallback((runID: string) => {
-    setSessions(prev => prev.filter(s => s.runID !== runID));
-  }, []);
+    setSessions(prev => {
+      const closing = prev.find(s => s.runID === runID);
+      const remaining = prev.filter(s => s.runID !== runID);
+      if (closing && !closing.done && !closing.error && taskIdRef.current) {
+        const stillRunning = remaining.some(s => !s.done && !s.error);
+        if (!stillRunning) {
+          completeTaskNotification(updateNotification, {
+            id: taskIdRef.current,
+            severity: 'error',
+            title: 'Packages cancelled',
+            body: 'Cancelled by user',
+            taskStatus: 'error',
+          });
+          taskIdRef.current = null;
+        }
+      }
+      return remaining;
+    });
+  }, [updateNotification]);
 
   const clearSessions = useCallback(() => {
-    setSessions([]);
-  }, []);
+    setSessions(prev => {
+      const running = prev.filter(s => !s.done && !s.error);
+      running.forEach(s => { PackageService.CancelPackageRun(s.runID).catch(() => {}); });
+      if (running.length > 0 && taskIdRef.current) {
+        completeTaskNotification(updateNotification, {
+          id: taskIdRef.current,
+          severity: 'error',
+          title: 'Packages cancelled',
+          body: 'Cancelled by user',
+          taskStatus: 'error',
+        });
+        taskIdRef.current = null;
+      }
+      return [];
+    });
+  }, [updateNotification]);
 
   const onCloseSession = useCallback((runID: string) => {
     PackageService.CancelPackageRun(runID).catch(() => {});
