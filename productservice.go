@@ -4860,8 +4860,90 @@ func parseWorkstationAny(anyBytes []byte) string {
 	return ""
 }
 
-// SwitchEnvironment rewrites the local .alis/.env file to match the output
-// produced by the Alis VSCode extension when switching environments.
+// generateServiceAccountKey calls EnvironmentsService/GenerateServiceAccountKey
+// to mint a fresh service-account key for envName. This mirrors what the Alis
+// VSCode extension downloads to .alis/key.json on every environment switch,
+// so that GOOGLE_APPLICATION_CREDENTIALS always points at a key that's valid
+// for the environment currently active in .env (not a stale one left behind
+// by whichever environment was active before).
+func (s *ProductService) generateServiceAccountKey(envName string) ([]byte, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, envName)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.EnvironmentsService/GenerateServiceAccountKey", buf)
+	if err != nil {
+		return nil, fmt.Errorf("generateServiceAccountKey: %w", err)
+	}
+	if grpcStatus != 0 {
+		return nil, fmt.Errorf("generateServiceAccountKey: grpc status %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return nil, fmt.Errorf("generateServiceAccountKey: response too short (%d bytes)", len(body))
+	}
+
+	// Top-level field 1 = ServiceAccountKey message; within it, field 3 = private_key_data bytes.
+	data := body[5:]
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		val, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 1 {
+			continue
+		}
+		sub := val
+		for len(sub) > 0 {
+			subNum, subTyp, subN := protowire.ConsumeTag(sub)
+			if subN < 0 {
+				break
+			}
+			sub = sub[subN:]
+			if subTyp != protowire.BytesType {
+				sm := protowire.ConsumeFieldValue(subNum, subTyp, sub)
+				if sm < 0 {
+					break
+				}
+				sub = sub[sm:]
+				continue
+			}
+			subVal, sm := protowire.ConsumeBytes(sub)
+			if sm < 0 {
+				break
+			}
+			sub = sub[sm:]
+			if subNum == 3 {
+				return subVal, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("generateServiceAccountKey: no private_key_data in response")
+}
+
+// SwitchEnvironment rewrites the local .alis/.env and .alis/key.json files to
+// match the output produced by the Alis VSCode extension when switching
+// environments.
 func (s *ProductService) SwitchEnvironment(org, product, envName, projectID, projectNumber, region string) error {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -4874,6 +4956,11 @@ func (s *ProductService) SwitchEnvironment(org, product, envName, projectID, pro
 	alisDir := filepath.Join(home, "alis.build", org, "build", product, ".alis")
 	envFilePath := filepath.Join(alisDir, ".env")
 	keyFilePath := filepath.Join(alisDir, "key.json")
+
+	keyData, err := s.generateServiceAccountKey(envName)
+	if err != nil {
+		return fmt.Errorf("generate service account key: %w", err)
+	}
 
 	vars, err := s.retrieveDeploymentEnvs(envName)
 	if err != nil {
@@ -4917,6 +5004,9 @@ func (s *ProductService) SwitchEnvironment(org, product, envName, projectID, pro
 
 	if err := os.MkdirAll(alisDir, 0755); err != nil {
 		return fmt.Errorf("mkdir alis dir: %w", err)
+	}
+	if err := os.WriteFile(keyFilePath, keyData, 0600); err != nil {
+		return fmt.Errorf("write key.json: %w", err)
 	}
 	return os.WriteFile(envFilePath, []byte(sb.String()), 0644)
 }
