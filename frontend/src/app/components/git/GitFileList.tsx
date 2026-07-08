@@ -16,7 +16,9 @@ interface Props {
   generatingCommitMsg: boolean;
   ahead?: number;
   behind?: number;
+  isMerging?: boolean;
   onSelectFile: (path: string, staged: boolean) => void;
+  onSelectConflictFile?: (path: string) => void;
   onStage: (path: string) => void;
   onUnstage: (path: string) => void;
   onStageMany: (paths: string[]) => void;
@@ -24,6 +26,7 @@ interface Props {
   onDiscard: (paths: string[]) => void;
   onStageAll: () => void;
   onCommit: () => void;
+  onContinueMerge?: () => void;
   onCommitMessageChange: (msg: string) => void;
   onGenerateCommitMessage: () => void;
   onSync?: () => void;
@@ -74,13 +77,17 @@ function statusIcon(code: string) {
   }
 }
 
+function conflictStatusIcon() {
+  return <span className="text-red-400 text-[10px] font-bold w-3 shrink-0">!</span>;
+}
+
 function filePart(path: string) {
   return path.split('/').pop() ?? path;
 }
 
 function FileRow({
   file, staged, selected, onSelect, onAction1, onAction2,
-  action1Icon, action2Icon, action1Title, action2Title, indent,
+  action1Icon, action2Icon, action1Title, action2Title, indent, conflict,
 }: {
   file: GitFileStatus | string;
   staged: boolean;
@@ -93,6 +100,7 @@ function FileRow({
   action1Title?: string;
   action2Title?: string;
   indent?: number;
+  conflict?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const path = typeof file === 'string' ? file : file.path;
@@ -109,7 +117,7 @@ function FileRow({
       onClick={onSelect}
       title={path}
     >
-      {statusIcon(code)}
+      {conflict ? conflictStatusIcon() : statusIcon(code)}
       <Icon icon={getFileIcon(path)} className="shrink-0 text-sm" />
       <span className="flex-1 truncate">{filePart(path)}</span>
       {hover && (
@@ -133,7 +141,7 @@ function FileRow({
 function TreeDir({
   node, depth, staged, selectedFile, selectedStaged,
   onSelectFile, onAction1, onAction2, action1Icon, action2Icon, action1Title, action2Title,
-  onFolderAction1, onFolderAction2,
+  onFolderAction1, onFolderAction2, conflict,
 }: {
   node: TreeNode;
   depth: number;
@@ -149,6 +157,7 @@ function TreeDir({
   action2Title?: string;
   onFolderAction1?: (paths: string[]) => void;
   onFolderAction2?: (paths: string[]) => void;
+  conflict?: boolean;
 }) {
   const [open, setOpen] = useState(true);
   const [folderHover, setFolderHover] = useState(false);
@@ -219,6 +228,7 @@ function TreeDir({
               action2Title={action2Title}
               onFolderAction1={onFolderAction1}
               onFolderAction2={onFolderAction2}
+              conflict={conflict}
             />
           ))}
           {node.items.map(file => {
@@ -237,6 +247,7 @@ function TreeDir({
                 action1Title={action1Title}
                 action2Title={action2Title}
                 indent={pl + 12}
+                conflict={conflict}
               />
             );
           })}
@@ -273,14 +284,16 @@ function Section({
 
 export function GitFileList({
   status, selectedFile, selectedStaged, commitMessage, committing, generatingCommitMsg,
-  ahead, behind,
-  onSelectFile, onStage, onUnstage, onStageMany, onUnstageMany, onDiscard, onStageAll, onCommit, onCommitMessageChange, onGenerateCommitMessage,
+  ahead, behind, isMerging,
+  onSelectFile, onSelectConflictFile, onStage, onUnstage, onStageMany, onUnstageMany, onDiscard, onStageAll, onCommit, onContinueMerge, onCommitMessageChange, onGenerateCommitMessage,
   onSync,
 }: Props) {
   const { state: scState, setFileListView } = useSourceControl();
   const treeMode = scState.fileListView === 'tree';
   const canCommit = status.staged.length > 0 && commitMessage.trim().length > 0 && !committing;
+  const canContinue = isMerging && status.conflicted.length === 0 && !committing;
 
+  const conflictedTree = buildTree(status.conflicted);
   const stagedTree = buildTree(status.staged);
   const unstagedTree = buildTree(status.unstaged);
   const untrackedTree = buildTree(status.untracked);
@@ -296,21 +309,40 @@ export function GitFileList({
           value={commitMessage}
           onChange={e => onCommitMessageChange(e.target.value)}
         />
-        <button
-          onClick={onGenerateCommitMessage}
-          disabled={status.staged.length === 0 || generatingCommitMsg || committing}
-          className="w-full py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground/60 flex items-center justify-center gap-1.5"
-        >
-          <Sparkles size={11} className="text-purple-400/80" />
-          {generatingCommitMsg ? 'Generating…' : 'Generate with AI'}
-        </button>
-        <button
-          onClick={onCommit}
-          disabled={!canCommit}
-          className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
-        >
-          {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
-        </button>
+        {!isMerging && (
+          <button
+            onClick={onGenerateCommitMessage}
+            disabled={status.staged.length === 0 || generatingCommitMsg || committing}
+            className="w-full py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground/60 flex items-center justify-center gap-1.5"
+          >
+            <Sparkles size={11} className="text-purple-400/80" />
+            {generatingCommitMsg ? 'Generating…' : 'Generate with AI'}
+          </button>
+        )}
+        {isMerging ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={onContinueMerge}
+                disabled={!canContinue}
+                className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                {committing ? 'Continuing…' : 'Continue'}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {status.conflicted.length > 0 ? 'Resolve all conflicts to continue the merge' : 'Continue Merge'}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <button
+            onClick={onCommit}
+            disabled={!canCommit}
+            className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
+          >
+            {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
+          </button>
+        )}
         {(!!ahead || !!behind) && onSync && (
           <button
             onClick={onSync}
@@ -349,6 +381,34 @@ export function GitFileList({
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Merge conflicts */}
+        {status.conflicted.length > 0 && (
+          <Section title="Merge Changes" count={status.conflicted.length}>
+            {treeMode ? (
+              <TreeDir
+                node={conflictedTree}
+                depth={1}
+                staged={false}
+                selectedFile={selectedFile}
+                selectedStaged={selectedStaged}
+                onSelectFile={(path) => onSelectConflictFile?.(path)}
+                conflict
+              />
+            ) : (
+              status.conflicted.map(f => (
+                <FileRow
+                  key={f.path}
+                  file={f}
+                  staged={false}
+                  selected={false}
+                  onSelect={() => onSelectConflictFile?.(f.path)}
+                  conflict
+                />
+              ))
+            )}
+          </Section>
+        )}
+
         {/* Staged */}
         <Section
           title="Staged Changes"

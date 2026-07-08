@@ -1722,6 +1722,7 @@ export class GitStatus {
     "staged": GitFileStatus[];
     "unstaged": GitFileStatus[];
     "untracked": string[];
+    "conflicted": GitFileStatus[];
 
     /** Creates a new GitStatus instance. */
     constructor($$source: Partial<GitStatus> = {}) {
@@ -1734,6 +1735,9 @@ export class GitStatus {
         if (!("untracked" in $$source)) {
             this["untracked"] = [];
         }
+        if (!("conflicted" in $$source)) {
+            this["conflicted"] = [];
+        }
 
         Object.assign(this, $$source);
     }
@@ -1745,6 +1749,7 @@ export class GitStatus {
         const $$createField0_0 = $$createType22;
         const $$createField1_0 = $$createType22;
         const $$createField2_0 = $$createType4;
+        const $$createField3_0 = $$createType22;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("staged" in $$parsedSource) {
             $$parsedSource["staged"] = $$createField0_0($$parsedSource["staged"]);
@@ -1754,6 +1759,9 @@ export class GitStatus {
         }
         if ("untracked" in $$parsedSource) {
             $$parsedSource["untracked"] = $$createField2_0($$parsedSource["untracked"]);
+        }
+        if ("conflicted" in $$parsedSource) {
+            $$parsedSource["conflicted"] = $$createField3_0($$parsedSource["conflicted"]);
         }
         return new GitStatus($$parsedSource as Partial<GitStatus>);
     }

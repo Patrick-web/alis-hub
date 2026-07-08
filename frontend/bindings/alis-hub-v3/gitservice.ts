@@ -182,6 +182,14 @@ export function GetLog(repoPath: string, limit: number): $CancellablePromise<$mo
 }
 
 /**
+ * GetMergeMessage returns the pre-filled merge commit message (from
+ * .git/MERGE_MSG), or "" if the repo isn't mid-merge.
+ */
+export function GetMergeMessage(repoPath: string): $CancellablePromise<string> {
+    return $Call.ByID(850958268, repoPath);
+}
+
+/**
  * GetPRComments returns the conversation comments on a pull request.
  */
 export function GetPRComments(repoPath: string, $number: number): $CancellablePromise<$models.PRComment[]> {
@@ -242,6 +250,13 @@ export function GetStatus(repoPath: string): $CancellablePromise<$models.GitStat
  */
 export function IsForgejo(repoPath: string): $CancellablePromise<boolean> {
     return $Call.ByID(2168993683, repoPath);
+}
+
+/**
+ * IsMerging reports whether repoPath currently has a merge in progress.
+ */
+export function IsMerging(repoPath: string): $CancellablePromise<boolean> {
+    return $Call.ByID(745183984, repoPath);
 }
 
 /**

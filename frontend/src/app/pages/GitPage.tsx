@@ -65,7 +65,7 @@ function RepoSection({
   localAIEnabled, localAIModelPulled, localAIModel,
 }: RepoSectionProps) {
   const { generate, generateCommitMessage } = useLocalAI();
-  const [gitStatus, setGitStatus] = useState<GitStatus>({ staged: [], unstaged: [], untracked: [] });
+  const [gitStatus, setGitStatus] = useState<GitStatus>({ staged: [], unstaged: [], untracked: [], conflicted: [] });
   const [currentBranch, setCurrentBranch] = useState('');
   const [branches, setBranches] = useState<GitBranch[]>([]);
   const [commits, setLocalCommits] = useState<GitCommit[]>([]);
@@ -78,7 +78,9 @@ function RepoSection({
   const [behind, setBehind] = useState(0);
   const [error, setError] = useState('');
   const [syncResult, setSyncResult] = useState<{ kind: string; message: string; conflictFiles?: string[] } | null>(null);
+  const [isMerging, setIsMerging] = useState(false);
   const [showConflictEditor, setShowConflictEditor] = useState(false);
+  const [conflictEditorInitialFile, setConflictEditorInitialFile] = useState<string | null>(null);
   const [discardPending, setDiscardPending] = useState<string[] | null>(null);
   const [discarding, setDiscarding] = useState(false);
   const [checkoutPending, setCheckoutPending] = useState<string | null>(null);
@@ -90,12 +92,13 @@ function RepoSection({
     if (!repoPath) return;
     setError('');
     try {
-      const [s, branch, b, log, ab] = await Promise.all([
+      const [s, branch, b, log, ab, merging] = await Promise.all([
         GitService.GetStatus(repoPath),
         GitService.GetCurrentBranch(repoPath),
         GitService.GetBranches(repoPath),
         GitService.GetLog(repoPath, LOG_LIMIT),
         GitService.GetAheadBehind(repoPath),
+        GitService.IsMerging(repoPath),
       ]);
       if (s) setGitStatus(s);
       setCurrentBranch(branch ?? '');
@@ -105,6 +108,11 @@ function RepoSection({
       setLocalCommits(loadedCommits);
       setCommits(loadedCommits);
       if (ab) { setAhead(ab.ahead); setBehind(ab.behind); }
+      setIsMerging(!!merging);
+      if (merging) {
+        const msg = await GitService.GetMergeMessage(repoPath);
+        if (msg) setCommitMessage(prev => prev || msg);
+      }
     } catch (e: any) {
       setError(String(e));
     }
@@ -113,7 +121,7 @@ function RepoSection({
   // Reset and load when repoPath changes
   useEffect(() => {
     if (repoPath) {
-      setGitStatus({ staged: [], unstaged: [], untracked: [] });
+      setGitStatus({ staged: [], unstaged: [], untracked: [], conflicted: [] });
       setCurrentBranch('');
       setBranches([]);
       setLocalCommits([]);
@@ -121,6 +129,7 @@ function RepoSection({
       setAhead(0);
       setBehind(0);
       setCommitMessage('');
+      setIsMerging(false);
       refresh();
     }
   }, [repoPath]);
@@ -199,6 +208,25 @@ function RepoSection({
     } finally {
       setCommitting(false);
     }
+  }
+
+  async function handleContinueMerge() {
+    setCommitting(true);
+    try {
+      await GitService.CompleteMerge(repoPath);
+      setCommitMessage('');
+      setIsMerging(false);
+      refresh();
+    } catch (e: any) {
+      setError(String(e));
+    } finally {
+      setCommitting(false);
+    }
+  }
+
+  function handleSelectConflictFile(path: string) {
+    setConflictEditorInitialFile(path);
+    setShowConflictEditor(true);
   }
 
   async function handleGenerateCommitMessage() {
@@ -366,6 +394,10 @@ function RepoSection({
     refresh();
   }
 
+  const conflictFilePaths = gitStatus.conflicted.length > 0
+    ? gitStatus.conflicted.map(f => f.path)
+    : (syncResult?.conflictFiles ?? []);
+
   const discardDescription = discardPending
     ? discardPending.length === 1
       ? <>Discard changes to <span className="text-foreground font-semibold">{discardPending[0].split('/').pop()}</span>? This cannot be undone.</>
@@ -424,12 +456,13 @@ function RepoSection({
         behind={behind}
       />
 
-      {showConflictEditor && syncResult?.conflictFiles && syncResult.conflictFiles.length > 0 ? (
+      {showConflictEditor && conflictFilePaths.length > 0 ? (
         <GitConflictEditor
           repoPath={repoPath}
-          conflictFiles={syncResult.conflictFiles}
-          onComplete={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
-          onAbort={() => { setShowConflictEditor(false); setSyncResult(null); refresh(); }}
+          conflictFiles={conflictFilePaths}
+          initialFile={conflictEditorInitialFile ?? undefined}
+          onComplete={() => { setShowConflictEditor(false); setConflictEditorInitialFile(null); setSyncResult(null); refresh(); }}
+          onAbort={() => { setShowConflictEditor(false); setConflictEditorInitialFile(null); setSyncResult(null); refresh(); }}
         />
       ) : (
         <GitFileList
@@ -441,7 +474,9 @@ function RepoSection({
           generatingCommitMsg={generatingCommitMsg}
           ahead={ahead}
           behind={behind}
+          isMerging={isMerging}
           onSelectFile={(path, staged) => onSelectFile(repoPath, path, staged)}
+          onSelectConflictFile={handleSelectConflictFile}
           onStage={handleStage}
           onUnstage={handleUnstage}
           onStageMany={handleStageMany}
@@ -449,6 +484,7 @@ function RepoSection({
           onDiscard={handleDiscard}
           onStageAll={handleStageAll}
           onCommit={handleCommit}
+          onContinueMerge={handleContinueMerge}
           onCommitMessageChange={setCommitMessage}
           onGenerateCommitMessage={handleGenerateCommitMessage}
           onSync={handleSync}
