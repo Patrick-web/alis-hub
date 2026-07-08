@@ -86,7 +86,7 @@ export function RightPane({
         onMouseDown={handleMouseDown}
         className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize z-10 group"
       >
-        <div className="absolute inset-y-0 left-0 w-[1px] bg-border group-hover:bg-brand/50 transition-colors" />
+        <div className="absolute inset-y-0 left-0 w-[1px] bg-border group-hover:bg-brand-fill/50 transition-colors" />
       </div>
 
       {/* Header */}

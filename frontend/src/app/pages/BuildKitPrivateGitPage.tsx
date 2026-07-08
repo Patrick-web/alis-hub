@@ -109,7 +109,7 @@ export function BuildKitPrivateGitPage() {
             <div className="flex flex-col gap-[8px]">
               {steps.map((step, i) => (
                 <div key={step.title} className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]">
-                  <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                  <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                     <span className="text-[9px] font-bold text-brand font-mono">{i + 1}</span>
                   </div>
                   <div>

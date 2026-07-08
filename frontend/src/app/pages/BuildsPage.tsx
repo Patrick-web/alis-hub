@@ -943,7 +943,7 @@ export function BuildsPage() {
                         }`}
                       >
                         <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 ${
-                          selected ? 'bg-brand border-brand' : 'border-border'
+                          selected ? 'bg-brand-fill border-brand-fill' : 'border-border'
                         }`}>
                           {selected && <Icon icon="solar:check-linear" className="text-black text-[10px]" />}
                         </div>

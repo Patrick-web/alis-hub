@@ -254,7 +254,7 @@ export function NotificationsDebugPage() {
                   onClick={() => setSeverity(s)}
                   className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     severity === s
-                      ? 'bg-brand text-black font-bold'
+                      ? 'bg-brand-fill text-brand-foreground font-bold'
                       : 'bg-accent text-foreground/50 hover:text-foreground'
                   }`}
                 >
@@ -274,7 +274,7 @@ export function NotificationsDebugPage() {
                   onClick={() => setSource(s)}
                   className={`px-[8px] py-[3px] rounded text-[10px] font-mono transition-colors ${
                     source === s
-                      ? 'bg-brand text-black font-bold'
+                      ? 'bg-brand-fill text-brand-foreground font-bold'
                       : 'bg-accent text-foreground/50 hover:text-foreground'
                   }`}
                 >
@@ -296,7 +296,7 @@ export function NotificationsDebugPage() {
                 onClick={() => set(!val)}
                 className="flex items-center gap-[7px] text-[10px] font-mono text-foreground/50 hover:text-foreground transition-colors"
               >
-                <span className={`relative w-[28px] h-[16px] rounded-full transition-colors ${val ? 'bg-brand' : 'bg-accent'}`}>
+                <span className={`relative w-[28px] h-[16px] rounded-full transition-colors ${val ? 'bg-brand-fill' : 'bg-accent'}`}>
                   <span className={`absolute top-[2px] w-[12px] h-[12px] rounded-full bg-white shadow transition-all ${val ? 'left-[14px]' : 'left-[2px]'}`} />
                 </span>
                 {label}
@@ -343,7 +343,7 @@ export function NotificationsDebugPage() {
                       <div className="px-[12px] py-[5px] bg-foreground/[0.02] flex items-center gap-[8px]">
                         <span className="text-[9px] font-bold font-mono text-foreground/40 uppercase tracking-wide flex-1">{source}</span>
                         {unread > 0 && (
-                          <span className="text-[8px] font-mono text-brand bg-brand/10 px-[5px] py-[1px] rounded-[3px]">{unread} new</span>
+                          <span className="text-[8px] font-mono text-brand bg-brand-fill/10 px-[5px] py-[1px] rounded-[3px]">{unread} new</span>
                         )}
                       </div>
                       {items.map(n => (

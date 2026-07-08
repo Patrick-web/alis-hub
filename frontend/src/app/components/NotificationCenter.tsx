@@ -218,7 +218,7 @@ export function NotificationCenter() {
               Notifications
             </span>
             {unreadCount > 0 && (
-              <span className="text-[8.5px] bg-brand text-[#111] px-[5px] py-[2px] rounded-[4px] font-mono font-bold tracking-[0.3px]">
+              <span className="text-[8.5px] bg-brand-fill text-brand-foreground px-[5px] py-[2px] rounded-[4px] font-mono font-bold tracking-[0.3px]">
                 {unreadCount}
               </span>
             )}
@@ -226,7 +226,7 @@ export function NotificationCenter() {
           {unreadCount > 0 && (
             <button
               onClick={markAllRead}
-              className="text-[11px] font-medium text-brand hover:bg-brand/10 px-[6px] py-[3px] rounded-[6px] transition-colors"
+              className="text-[11px] font-medium text-brand hover:bg-brand-fill/10 px-[6px] py-[3px] rounded-[6px] transition-colors"
             >
               Mark all read
             </button>

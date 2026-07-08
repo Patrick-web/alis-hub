@@ -12,7 +12,7 @@ export function Tab({ label, icon, active = false, onClick }: TabProps) {
     <button
       onClick={onClick}
       className={`content-stretch flex gap-[8px] h-full items-center px-[12px] relative shrink-0 transition-colors border-r border-border ${
-        active ? 'bg-brand' : 'hover:bg-foreground/5'
+        active ? 'bg-brand-fill' : 'hover:bg-foreground/5'
       }`}
     >
       <div className={`relative shrink-0 flex items-center justify-center ${active ? 'text-brand-foreground' : 'text-foreground'}`}>

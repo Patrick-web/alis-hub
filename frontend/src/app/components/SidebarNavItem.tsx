@@ -26,7 +26,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
       <div
         className={`absolute ${
           active
-            ? 'border-brand border-b border-solid border-t'
+            ? 'border-brand-fill border-b border-solid border-t'
             : 'border-border border-solid border-t'
         } inset-0 pointer-events-none`}
         aria-hidden="true"

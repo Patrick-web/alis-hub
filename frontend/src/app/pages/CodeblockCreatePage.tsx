@@ -40,7 +40,7 @@ const TAB_LABEL: Record<Tab, string> = {
 const CATEGORY_LABEL: Record<string, string> = { build: 'Build', infra: 'Infra', proto: 'Proto' };
 
 const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[2px]';
-const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors';
+const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand-fill resize-none w-full transition-colors';
 
 export function CodeblockCreatePage() {
   const navigate = useNavigate();
@@ -452,11 +452,11 @@ export function CodeblockCreatePage() {
             >
               {TAB_LABEL[t]}
               {t === 'files' && selectedFileCount > 0 && (
-                <span className="ml-[6px] text-[9px] bg-brand/20 text-brand rounded-full px-[5px] py-[1px]">
+                <span className="ml-[6px] text-[9px] bg-brand-fill/20 text-brand rounded-full px-[5px] py-[1px]">
                   {selectedFileCount}
                 </span>
               )}
-              {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />}
+              {activeTab === t && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-fill" />}
             </button>
           ))}
         </div>
@@ -489,7 +489,7 @@ export function CodeblockCreatePage() {
 
                 <div>
                   <p className={labelClass}>Highlights</p>
-                  <div className="border border-border rounded-[4px] p-[8px] flex flex-wrap gap-[6px] min-h-[42px] focus-within:border-brand transition-colors">
+                  <div className="border border-border rounded-[4px] p-[8px] flex flex-wrap gap-[6px] min-h-[42px] focus-within:border-brand-fill transition-colors">
                     {highlights.map((h, i) => (
                       <span key={i} className="flex items-center gap-[4px] bg-card text-foreground text-[11px] px-[8px] py-[3px] rounded-[3px]">
                         {h}

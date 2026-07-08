@@ -575,7 +575,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                     : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                 }`}
               >
-                <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-brand' : 'bg-accent'}`} />
+                <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-brand-fill' : 'bg-accent'}`} />
                 <Icon icon={icon} className="text-sm shrink-0" />
                 <span className="text-[11px] font-medium flex-1">{label}</span>
               </button>
@@ -607,7 +607,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                             : 'bg-background border-border text-foreground/50 hover:text-foreground/70'
                         }`}
                       >
-                        <span className={`size-[12px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand border-brand' : 'border-border'}`}>
+                        <span className={`size-[12px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
                           {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[8px]" />}
                         </span>
                         <span className="text-[11px] font-medium flex-1">{env.displayName || env.name}</span>

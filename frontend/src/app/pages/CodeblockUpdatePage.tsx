@@ -48,7 +48,7 @@ const STATUS_COLOR: Record<FileStatus, string> = {
 };
 
 const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[4px]';
-const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors';
+const textareaClass = 'bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand-fill resize-none w-full transition-colors';
 
 function buildDiff(baseline: models.CodeblockFolder[], newContent: models.NeuronFileContents): DiffEntry[] {
   const oldByCategory: Record<Category, Map<string, string>> = { build: new Map(), infra: new Map(), proto: new Map() };
@@ -280,7 +280,7 @@ export function CodeblockUpdatePage() {
             <div className="mb-[4px]">
               <p className={labelClass}>Version Tag</p>
               <input
-                className="bg-background border border-border rounded-[4px] px-[10px] py-[6px] text-foreground text-[12px] font-mono outline-none focus:border-brand w-full transition-colors"
+                className="bg-background border border-border rounded-[4px] px-[10px] py-[6px] text-foreground text-[12px] font-mono outline-none focus:border-brand-fill w-full transition-colors"
                 placeholder="e.g. v1.2.0-beta1"
                 value={versionTag}
                 onChange={e => setVersionTag(e.target.value)}
@@ -378,7 +378,7 @@ function StepIndicator({ index, label, active, done }: {
   return (
     <div className={`flex items-center gap-[10px] ${active ? 'opacity-100' : done ? 'opacity-60' : 'opacity-30'}`}>
       <div className={`w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-        done ? 'bg-brand/20 text-brand' : active ? 'bg-brand text-brand-foreground' : 'bg-foreground/10 text-brand-foreground/40'
+        done ? 'bg-brand-fill/20 text-brand' : active ? 'bg-brand-fill text-brand-foreground' : 'bg-foreground/10 text-brand-foreground/40'
       }`}>
         {done ? <Icon icon="solar:check-circle-bold" className="text-xs" /> : index}
       </div>

@@ -443,7 +443,7 @@ export function GCloudSetup({ onReady }: Props) {
                 Setup Terminal
               </p>
               {sessionActive && (
-                <span className="w-[6px] h-[6px] rounded-full bg-brand animate-pulse" />
+                <span className="w-[6px] h-[6px] rounded-full bg-brand-fill animate-pulse" />
               )}
             </div>
             <button

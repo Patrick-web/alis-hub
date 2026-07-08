@@ -231,14 +231,14 @@ export function DevelopPage() {
                     onClick={toggleAllVisible}
                     className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
                       allVisibleSelected
-                        ? 'bg-brand border-brand'
+                        ? 'bg-brand-fill border-brand-fill'
                         : someVisibleSelected
-                          ? 'border-brand bg-[rgba(248,129,169,0.15)]'
+                          ? 'border-brand-fill bg-[rgba(248,129,169,0.15)]'
                           : 'border-border hover:border-[rgba(248,129,169,0.5)]'
                     }`}
                   >
                     {allVisibleSelected && <Icon icon="solar:check-linear" className="text-black text-[8px]" />}
-                    {someVisibleSelected && !allVisibleSelected && <span className="block w-[6px] h-[2px] bg-brand rounded-full" />}
+                    {someVisibleSelected && !allVisibleSelected && <span className="block w-[6px] h-[2px] bg-brand-fill rounded-full" />}
                   </button>
                 </th>
                 <th className="text-left px-[20px] py-[8px]">
@@ -266,7 +266,7 @@ export function DevelopPage() {
                         onClick={() => toggleNeuron(name)}
                         className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
                           isSelected
-                            ? 'bg-brand border-brand'
+                            ? 'bg-brand-fill border-brand-fill'
                             : 'border-border hover:border-[rgba(248,129,169,0.5)]'
                         }`}
                       >

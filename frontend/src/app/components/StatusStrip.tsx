@@ -98,7 +98,7 @@ export function StatusStrip() {
                 <div className="flex items-center gap-[5px] pl-[7px] pr-[4px] h-[22px] rounded-[3px] border border-border bg-muted shrink-0 group/chip">
                   {/* Status indicator */}
                   {isRunning ? (
-                    <span className="w-[5px] h-[5px] rounded-full bg-brand animate-pulse shrink-0" />
+                    <span className="w-[5px] h-[5px] rounded-full bg-brand-fill animate-pulse shrink-0" />
                   ) : isDone ? (
                     <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400 shrink-0" />
                   ) : (

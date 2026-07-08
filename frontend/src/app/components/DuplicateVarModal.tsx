@@ -161,12 +161,12 @@ export function DuplicateVarModal({
               <div
                 key={target.env.name}
                 className={`flex items-start gap-[10px] p-[12px] rounded-[4px] border transition-colors cursor-pointer ${
-                  target.checked ? 'border-brand bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-foreground/[3%]'
+                  target.checked ? 'border-brand-fill bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-foreground/[3%]'
                 }`}
                 onClick={() => !target.loading && toggle(target.env.name)}
               >
                 <div className={`w-[16px] h-[16px] mt-[1px] rounded-[3px] border shrink-0 flex items-center justify-center transition-colors ${
-                  target.checked ? 'border-brand bg-brand' : 'border-border'
+                  target.checked ? 'border-brand-fill bg-brand-fill' : 'border-border'
                 }`}>
                   {target.checked && <Icon icon="solar:check-linear" className="text-foreground text-[10px]" />}
                 </div>
@@ -176,7 +176,7 @@ export function DuplicateVarModal({
                       {target.env.displayName}
                     </span>
                     {target.env.envType === 3 && (
-                      <span className="font-mono text-[9px] uppercase text-brand border border-brand px-[4px] py-[1px] rounded-[3px]">
+                      <span className="font-mono text-[9px] uppercase text-brand border border-brand-fill px-[4px] py-[1px] rounded-[3px]">
                         prod
                       </span>
                     )}

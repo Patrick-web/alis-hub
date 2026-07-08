@@ -143,7 +143,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
                     : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                 }`}
               >
-                <span className={`size-[6px] rounded-full shrink-0 ${action === value ? 'bg-brand' : 'bg-accent'}`} />
+                <span className={`size-[6px] rounded-full shrink-0 ${action === value ? 'bg-brand-fill' : 'bg-accent'}`} />
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-medium">{label}</p>
                   <p className="text-[9px] text-foreground/35 leading-snug mt-[1px]">{desc}</p>
@@ -188,7 +188,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
                     })}
                     className={`text-left px-[16px] py-[10px] border-b border-border flex items-center gap-[10px] transition-colors ${checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-foreground/[2%]'}`}
                   >
-                    <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand border-brand' : 'border-border'}`}>
+                    <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
                       {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -255,7 +255,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
                 ) : s.done ? (
                   <Icon icon="solar:check-circle-bold" className="text-green-400 text-sm shrink-0" />
                 ) : (
-                  <span className="w-[8px] h-[8px] rounded-full bg-brand animate-pulse shrink-0" />
+                  <span className="w-[8px] h-[8px] rounded-full bg-brand-fill animate-pulse shrink-0" />
                 )}
                 <span className="text-[10px] text-foreground font-mono flex-1 truncate min-w-0">{s.title}</span>
                 <span className="text-[9px] text-foreground/30 shrink-0 uppercase">{s.lang}</span>

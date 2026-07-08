@@ -28,7 +28,7 @@ export function SuggestionsBubble() {
         <span className="text-[10px] font-bold font-mono text-brand">
           {count} suggestion{count !== 1 ? 's' : ''}
         </span>
-        <span className="w-[5px] h-[5px] rounded-full bg-brand animate-pulse" />
+        <span className="w-[5px] h-[5px] rounded-full bg-brand-fill animate-pulse" />
       </button>
       <SuggestionsPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
     </>

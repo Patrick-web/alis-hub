@@ -41,8 +41,8 @@ export function MultiSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            'flex items-start gap-1.5 min-h-[34px] w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-left transition-colors hover:border-foreground/30 focus:outline-none focus:border-brand disabled:opacity-50 disabled:cursor-not-allowed',
-            open && 'border-brand',
+            'flex items-start gap-1.5 min-h-[34px] w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-left transition-colors hover:border-foreground/30 focus:outline-none focus:border-brand-fill disabled:opacity-50 disabled:cursor-not-allowed',
+            open && 'border-brand-fill',
             className,
           )}
         >
@@ -53,7 +53,7 @@ export function MultiSelect({
               selectedLabels.map((label, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center text-[10px] bg-brand/10 text-brand rounded px-1.5 py-0.5 font-mono leading-4"
+                  className="inline-flex items-center text-[10px] bg-brand-fill/10 text-brand rounded px-1.5 py-0.5 font-mono leading-4"
                 >
                   {label}
                 </span>
@@ -101,7 +101,7 @@ export function MultiSelect({
                     >
                       <div className={cn(
                         'size-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors',
-                        checked ? 'bg-brand border-brand' : 'border-border',
+                        checked ? 'bg-brand-fill border-brand-fill' : 'border-border',
                       )}>
                         {checked && <Check size={9} className="text-white" strokeWidth={3} />}
                       </div>

@@ -527,7 +527,7 @@ export function CodeblockDetailsPage() {
             >
               {TAB_LABEL[t]}
               {activeTab === t && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-fill" />
               )}
             </button>
           ))}
@@ -975,7 +975,7 @@ function InstallBlockWizard({
                 <div key={s} className="flex items-center gap-[8px]">
                   {i > 0 && (
                     <div
-                      className={`w-[24px] h-[1px] ${done ? "bg-brand" : "bg-foreground/20"}`}
+                      className={`w-[24px] h-[1px] ${done ? "bg-brand-fill" : "bg-foreground/20"}`}
                     />
                   )}
                   <span
@@ -1089,7 +1089,7 @@ function InstallBlockWizard({
                     onClick={() => setSelectedPlan(plan)}
                     className={`w-full text-left p-[16px] border rounded-[4px] transition-all ${
                       selectedPlan?.name === plan.name
-                        ? "border-brand bg-brand/5"
+                        ? "border-brand-fill bg-brand-fill/5"
                         : "border-border bg-foreground/3 hover:border-foreground/30"
                     }`}
                   >
@@ -1119,7 +1119,7 @@ function InstallBlockWizard({
                   type="text"
                   value={buildFolder}
                   onChange={(e) => setBuildFolder(e.target.value)}
-                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground font-mono focus:outline-none focus:border-brand transition-colors"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground font-mono focus:outline-none focus:border-brand-fill transition-colors"
                 />
               </div>
 
@@ -1406,7 +1406,7 @@ function MergeStepContent({
     return (
       <div className="flex flex-col gap-[10px] h-full">
         <div className="flex items-center gap-[8px]">
-          <span className="inline-block w-[6px] h-[6px] rounded-full bg-brand animate-pulse" />
+          <span className="inline-block w-[6px] h-[6px] rounded-full bg-brand-fill animate-pulse" />
           <p className="text-[11px] text-foreground/50">
             Running git operations…
           </p>
@@ -1516,7 +1516,7 @@ function MergeStepContent({
             {allHunksResolved && !isFileSaved && (
               <button
                 onClick={() => onSaveFile(selectedConflictFile)}
-                className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-brand/20 text-brand hover:bg-brand/30 transition-colors border border-brand/30"
+                className="text-[10px] px-[8px] py-[3px] rounded-[3px] bg-brand-fill/20 text-brand hover:bg-brand-fill/30 transition-colors border border-brand-fill/30"
               >
                 Save File
               </button>
@@ -1798,7 +1798,7 @@ function DocumentationTab({
           >
             {a === "user" ? "User Facing" : "Agent Facing"}
             {audience === a && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-fill" />
             )}
           </button>
         ))}
@@ -3325,7 +3325,7 @@ function AccessTab({
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search by name or email…"
                   disabled={addLoading}
-                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground focus:outline-none focus:border-brand transition-colors disabled:opacity-50 placeholder:text-foreground/20 mb-[6px]"
+                  className="w-full bg-card border border-border rounded-[4px] px-[12px] py-[8px] text-[12px] text-foreground focus:outline-none focus:border-brand-fill transition-colors disabled:opacity-50 placeholder:text-foreground/20 mb-[6px]"
                 />
                 <div className="border border-border rounded-[4px] overflow-hidden max-h-[200px] overflow-y-auto">
                   {usersLoading ? (
@@ -3408,19 +3408,19 @@ function AccessTab({
                         disabled={addLoading}
                         className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                           addRole === r.name
-                            ? "border-brand bg-[rgba(248,129,169,0.06)]"
+                            ? "border-brand-fill bg-[rgba(248,129,169,0.06)]"
                             : "border-border bg-foreground/2 hover:border-foreground/30"
                         }`}
                       >
                         <div
                           className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
                             addRole === r.name
-                              ? "border-brand"
+                              ? "border-brand-fill"
                               : "border-foreground/30"
                           }`}
                         >
                           {addRole === r.name && (
-                            <div className="w-[6px] h-[6px] rounded-full bg-brand" />
+                            <div className="w-[6px] h-[6px] rounded-full bg-brand-fill" />
                           )}
                         </div>
                         <AccessRoleBadge roleLabel={r.title} />
@@ -3498,19 +3498,19 @@ function AccessTab({
                       disabled={changeRoleLoading}
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                         changeRole === r.name
-                          ? "border-brand bg-[rgba(248,129,169,0.06)]"
+                          ? "border-brand-fill bg-[rgba(248,129,169,0.06)]"
                           : "border-border bg-foreground/2 hover:border-foreground/30"
                       }`}
                     >
                       <div
                         className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
                           changeRole === r.name
-                            ? "border-brand"
+                            ? "border-brand-fill"
                             : "border-foreground/30"
                         }`}
                       >
                         {changeRole === r.name && (
-                          <div className="w-[6px] h-[6px] rounded-full bg-brand" />
+                          <div className="w-[6px] h-[6px] rounded-full bg-brand-fill" />
                         )}
                       </div>
                       <AccessRoleBadge roleLabel={r.title} />

@@ -228,7 +228,7 @@ export function WorkflowRunModal({
           <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                finalStatus === 'success' ? 'bg-green-400' : finalStatus === 'failed' ? 'bg-red-400' : 'bg-brand'
+                finalStatus === 'success' ? 'bg-green-400' : finalStatus === 'failed' ? 'bg-red-400' : 'bg-brand-fill'
               }`}
               style={{ width: `${done ? 100 : progress}%` }}
             />

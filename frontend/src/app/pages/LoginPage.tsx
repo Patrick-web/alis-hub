@@ -45,7 +45,7 @@ export function LoginPage() {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="flex items-center justify-center gap-[10px] h-[42px] rounded-[8px] bg-brand hover:bg-[#f96fb9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[13px] font-bold text-brand-foreground"
+          className="flex items-center justify-center gap-[10px] h-[42px] rounded-[8px] bg-brand-fill hover:bg-[#f96fb9] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[13px] font-bold text-brand-foreground"
         >
           {loading ? (
             <>

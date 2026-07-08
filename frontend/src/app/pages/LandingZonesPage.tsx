@@ -20,7 +20,7 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-left bg-card border border-border rounded-[10px] p-[16px] hover:border-brand hover:bg-muted transition-all cursor-pointer group"
+      className="text-left bg-card border border-border rounded-[10px] p-[16px] hover:border-brand-fill hover:bg-muted transition-all cursor-pointer group"
     >
       <div className="flex items-start gap-[12px]">
         {org.logo ? (

@@ -314,7 +314,7 @@ export function LogsExplorer({ projectID }: Props) {
           onChange={(e) => setSearchText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && load()}
           placeholder="Search logs..."
-          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-foreground placeholder:text-foreground/30 font-mono outline-none focus:border-brand w-[180px]"
+          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-foreground placeholder:text-foreground/30 font-mono outline-none focus:border-brand-fill w-[180px]"
         />
 
         <Button

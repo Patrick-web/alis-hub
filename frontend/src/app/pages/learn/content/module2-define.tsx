@@ -86,7 +86,7 @@ export const module2: LearningModule = {
               { label: 'Language agnostic', desc: 'The same .proto generates Go, TypeScript, Python, Java, and more from one definition.' },
             ].map(({ label, desc }) => (
               <div key={label} className="flex items-start gap-[10px] px-[12px] py-[8px] bg-muted border border-border rounded-[4px]">
-                <div className="size-[6px] rounded-full bg-brand mt-[5px] shrink-0" />
+                <div className="size-[6px] rounded-full bg-brand-fill mt-[5px] shrink-0" />
                 <div>
                   <span className="text-[11px] font-bold text-foreground font-mono">{label} </span>
                   <span className="text-[11px] text-foreground/50">— {desc}</span>

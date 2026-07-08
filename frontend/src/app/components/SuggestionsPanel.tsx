@@ -69,7 +69,7 @@ function SuggestionCard({ suggestion, actions }: { suggestion: Suggestion; actio
               onClick={action.onClick}
               className={`text-[10px] font-mono font-bold px-[8px] py-[4px] rounded-full transition-colors ${
                 action.variant === 'primary'
-                  ? 'bg-brand text-black hover:opacity-90'
+                  ? 'bg-brand-fill text-brand-foreground hover:opacity-90'
                   : 'text-foreground/40 hover:text-foreground'
               }`}
             >
