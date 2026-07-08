@@ -30,7 +30,7 @@ export function LogsServicesTab({ services, loading, error, selectedService, onS
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search services..."
-          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-foreground placeholder:text-foreground/30 font-mono outline-none focus:border-brand w-[220px]"
+          className="bg-card border border-border rounded-[3px] px-[8px] py-[3px] text-[10px] text-foreground placeholder:text-foreground/30 font-mono outline-none focus:border-brand-fill w-[220px]"
         />
         <div className="flex-1" />
         {!loading && !error && (

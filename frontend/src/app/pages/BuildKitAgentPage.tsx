@@ -44,7 +44,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
   return (
     <button onClick={onChange} className="flex items-center gap-[8px] text-left py-[4px] group">
       <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? 'bg-brand border-brand' : 'border-border group-hover:border-border'
+        checked ? 'bg-brand-fill border-brand-fill' : 'border-border group-hover:border-border'
       }`}>
         {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[10px]" />}
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
+import { useTheme } from 'next-themes';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
 import { Sidebar } from './components/Sidebar';
@@ -33,6 +34,7 @@ const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function RootLayout() {
   const location = useLocation();
+  const { resolvedTheme } = useTheme();
   const { state, setPhase } = useWorkspace();
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
   const { fetchProfile } = useUserProfile();
@@ -46,7 +48,7 @@ export function RootLayout() {
   const fetchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [repoPaths, setRepoPaths] = useState<{ buildDir: string; defineDir: string } | null>(null);
 
-  useEffect(() => { initAccentColor(); }, []);
+  useEffect(() => { initAccentColor(); }, [resolvedTheme]);
 
   useEffect(() => {
     const unauthPhases: AppPhase[] = ['init', 'login'];

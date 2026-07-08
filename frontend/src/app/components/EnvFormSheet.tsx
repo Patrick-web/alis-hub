@@ -145,7 +145,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       disabled={loading}
                       className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
                         envType === t.value
-                          ? 'border-brand bg-[rgba(248,129,169,0.08)]'
+                          ? 'border-brand-fill bg-[rgba(248,129,169,0.08)]'
                           : 'border-border hover:bg-foreground/[4%]'
                       }`}
                     >

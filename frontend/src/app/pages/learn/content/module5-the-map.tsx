@@ -25,7 +25,7 @@ export const module5: LearningModule = {
               { stage: 'Deploy', cmd: 'alis deploy', desc: 'Cloud Run, Endpoints, and IAM are provisioned. Your service gets a live HTTPS endpoint.' },
             ].map(({ stage, cmd, desc }, i) => (
               <div key={stage} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
-                <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                   <span className="text-[10px] font-bold text-brand font-mono">{i + 1}</span>
                 </div>
                 <div className="flex-1">

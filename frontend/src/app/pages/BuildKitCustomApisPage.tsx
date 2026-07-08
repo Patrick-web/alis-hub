@@ -87,7 +87,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
       className="flex items-center gap-[8px] text-left py-[4px] group"
     >
       <div className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${
-        checked ? 'bg-brand border-brand' : 'border-border group-hover:border-border'
+        checked ? 'bg-brand-fill border-brand-fill' : 'border-border group-hover:border-border'
       }`}>
         {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[10px]" />}
       </div>
@@ -158,7 +158,7 @@ export function BuildKitCustomApisPage() {
                 { n: 3, title: 'Your Workspace is Prepared', sub: 'Your local file system is automatically updated with your new service and starter code.' },
               ].map(({ n, title, sub }) => (
                 <div key={n} className="flex gap-[10px]">
-                  <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand flex items-center justify-center shrink-0 mt-[1px]">
+                  <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                     <span className="text-[9px] font-bold text-brand font-mono">{n}</span>
                   </div>
                   <div>

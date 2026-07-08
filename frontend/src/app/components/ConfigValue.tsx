@@ -19,7 +19,7 @@ export function ConfigValue({ label, value, mono = true, copyable = false }: Con
       </p>
       <div
         className={`bg-background border border-border rounded-[4px] px-[10px] py-[6px] ${
-          copyable ? 'cursor-pointer hover:border-brand transition-colors' : ''
+          copyable ? 'cursor-pointer hover:border-brand-fill transition-colors' : ''
         }`}
         onClick={handleCopy}
       >

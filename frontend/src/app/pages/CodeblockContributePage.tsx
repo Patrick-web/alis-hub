@@ -28,7 +28,7 @@ const STATE_COLOR: Record<number, string> = {
 };
 
 const labelClass = 'text-[10px] font-bold uppercase text-foreground/40 mb-[4px]';
-const textareaClass = "bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand resize-none w-full transition-colors";
+const textareaClass = "bg-background border border-border rounded-[4px] p-[10px] text-foreground text-[12px] font-mono outline-none focus:border-brand-fill resize-none w-full transition-colors";
 
 function relativeDate(iso: string): string {
   const d = new Date(iso);
@@ -267,7 +267,7 @@ function StepIndicator({ index, label, active, done }: {
   return (
     <div className={`flex items-center gap-[10px] ${active ? 'opacity-100' : done ? 'opacity-60' : 'opacity-30'}`}>
       <div className={`w-[20px] h-[20px] rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-        done ? 'bg-brand/20 text-brand' : active ? 'bg-brand text-brand-foreground' : 'bg-foreground/10 text-brand-foreground/40'
+        done ? 'bg-brand-fill/20 text-brand' : active ? 'bg-brand-fill text-brand-foreground' : 'bg-foreground/10 text-brand-foreground/40'
       }`}>
         {done ? <Icon icon="solar:check-circle-bold" className="text-xs" /> : index}
       </div>
@@ -321,7 +321,7 @@ function InstancePickerStep({ instances, loading, selected, onSelect, onOpen, op
                   key={inst.name}
                   onClick={() => onSelect(inst)}
                   className={`w-full text-left bg-card border rounded-[4px] p-[16px] transition-colors ${
-                    isSelected ? 'border-brand bg-[rgba(248,129,169,0.06)]' : 'border-border hover:border-border'
+                    isSelected ? 'border-brand-fill bg-[rgba(248,129,169,0.06)]' : 'border-border hover:border-border'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-[8px]">

@@ -104,7 +104,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
           >
             {level}
             {activeFilter === level && (
-              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand" />
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-fill" />
             )}
           </button>
         ))}
@@ -128,7 +128,7 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
               <div
                 key={cb.name}
                 onClick={() => navigate(`/codeblocks/${blockId(cb.name)}`)}
-                className="bg-card border border-border rounded-[4px] cursor-pointer hover:border-brand transition-all group overflow-hidden"
+                className="bg-card border border-border rounded-[4px] cursor-pointer hover:border-brand-fill transition-all group overflow-hidden"
               >
                 {/* Banner */}
                 <div className="h-[140px] overflow-hidden relative">

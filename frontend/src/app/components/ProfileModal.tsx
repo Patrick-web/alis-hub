@@ -18,6 +18,7 @@ import { useSourceControl } from '../stores/sourceControl';
 import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings';
 import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
 import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
+import { getAccessibleForeground } from '../lib/colorContrast';
 import { useUserProfile } from '../stores/userProfile';
 import { useUpdate } from '../stores/update';
 import { LocalAISetupCard } from './LocalAISetupCard';
@@ -130,10 +131,6 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { state, setPhase } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { accentId, setAccent, customHex, setCustomAccent } = useAccentColor();
-  const contrastForCustom = (hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? '#1a1a1a' : '#ffffff';
-  };
   const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled, setWorkflowsEnabled } = useLabs();
   const { state: scState, setFileListView, setDiffView, setFetchIntervalMinutes } = useSourceControl();
   const {
@@ -415,7 +412,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                             >
                               {accentId === color.id && (
                                 <span className="absolute inset-0 flex items-center justify-center">
-                                  <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: color.brandFg }} />
+                                  <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: getAccessibleForeground(color.brand) }} />
                                 </span>
                               )}
                               {accentId === color.id && (
@@ -436,7 +433,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                           >
                             {accentId === 'custom' && (
                               <span className="absolute inset-0 flex items-center justify-center">
-                                <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: contrastForCustom(customHex) }} />
+                                <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: getAccessibleForeground(customHex) }} />
                               </span>
                             )}
                             {accentId === 'custom' && (

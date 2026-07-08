@@ -46,7 +46,7 @@ export function Dropdown({ label, options = [], onSelect, onSettingsClick, loadi
                   setIsOpen(false);
                   onSelect?.(option);
                 }}
-                className="w-full px-[12px] py-[10px] text-left text-foreground hover:bg-brand hover:text-brand-foreground transition-colors font-mono text-[11px] uppercase border-b border-border last:border-b-0"
+                className="w-full px-[12px] py-[10px] text-left text-foreground hover:bg-brand-fill hover:text-brand-foreground transition-colors font-mono text-[11px] uppercase border-b border-border last:border-b-0"
               >
                 {option}
               </button>

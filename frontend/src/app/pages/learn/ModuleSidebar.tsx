@@ -47,7 +47,7 @@ export function ModuleSidebar({
               >
                 <div
                   className={`absolute inset-0 pointer-events-none border-t ${
-                    isActive ? 'border-brand' : 'border-border'
+                    isActive ? 'border-brand-fill' : 'border-border'
                   }`}
                   aria-hidden="true"
                 />
@@ -106,7 +106,7 @@ export function ModuleSidebar({
                           ) : (
                             <div
                               className={`size-[6px] rounded-full ${
-                                isStepActive ? 'bg-brand' : 'bg-foreground/20'
+                                isStepActive ? 'bg-brand-fill' : 'bg-foreground/20'
                               }`}
                             />
                           )}
@@ -153,7 +153,7 @@ export function ModuleSidebar({
               </div>
               <div className="h-[3px] bg-border rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-brand rounded-full transition-all duration-300"
+                  className="h-full bg-brand-fill rounded-full transition-all duration-300"
                   style={{ width: `${pct}%` }}
                 />
               </div>

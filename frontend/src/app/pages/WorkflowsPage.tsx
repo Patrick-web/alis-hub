@@ -821,7 +821,7 @@ export function WorkflowsPage() {
                 onClick={() => setActiveTab('steps')}
                 className={`h-9 px-1 mr-4 text-xs font-medium border-b-2 transition-colors ${
                   activeTab === 'steps'
-                    ? 'border-brand text-brand'
+                    ? 'border-brand-fill text-brand'
                     : 'border-transparent text-foreground/40 hover:text-foreground/70'
                 }`}
               >
@@ -831,7 +831,7 @@ export function WorkflowsPage() {
                 onClick={() => setActiveTab('run')}
                 className={`h-9 px-1 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
                   activeTab === 'run'
-                    ? 'border-brand text-brand'
+                    ? 'border-brand-fill text-brand'
                     : 'border-transparent text-foreground/40 hover:text-foreground/70'
                 }`}
               >
@@ -925,7 +925,7 @@ export function WorkflowsPage() {
                     <div className="relative mt-2" ref={pickerRef}>
                       <button
                         onClick={() => setShowPicker((v) => !v)}
-                        className="w-full py-2.5 border border-dashed border-border rounded-lg text-xs text-foreground/30 hover:border-brand hover:text-brand flex items-center justify-center gap-1.5 transition-colors"
+                        className="w-full py-2.5 border border-dashed border-border rounded-lg text-xs text-foreground/30 hover:border-brand-fill hover:text-brand flex items-center justify-center gap-1.5 transition-colors"
                       >
                         <Icon icon="solar:add-circle-linear" className="text-sm" />
                         Add step
@@ -1323,7 +1323,7 @@ function WorkflowListItem({ workflow, active, onClick, onExport }: {
   return (
     <div
       className={`relative group flex items-stretch mx-1 rounded-lg transition-colors text-sm ${
-        active ? 'bg-brand/10 text-brand' : 'text-foreground hover:bg-accent'
+        active ? 'bg-brand-fill/10 text-brand' : 'text-foreground hover:bg-accent'
       }`}
       style={{ width: 'calc(100% - 8px)' }}
     >
@@ -1453,7 +1453,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                 <label className="text-[10px] font-medium text-foreground/50 block mb-1">{f.label}</label>
                 {f.type === 'mono' ? (
                   <textarea
-                    className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-[11px] font-mono text-green-400 focus:outline-none focus:border-brand resize-none"
+                    className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-[11px] font-mono text-green-400 focus:outline-none focus:border-brand-fill resize-none"
                     rows={2}
                     value={params[f.key] ?? ''}
                     placeholder={f.placeholder}
@@ -1535,7 +1535,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                     {!isTemplate && (
                       <button
                         onClick={() => setNeuronPickerKey(f.key)}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-border rounded-md text-xs text-foreground/40 hover:text-brand hover:border-brand transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 border border-dashed border-border rounded-md text-xs text-foreground/40 hover:text-brand hover:border-brand-fill transition-colors"
                       >
                         <Icon icon="solar:add-circle-linear" className="text-sm" />
                         Add neuron
@@ -1650,7 +1650,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                   </>
                 ) : (
                   <input
-                    className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs focus:outline-none focus:border-brand"
+                    className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs focus:outline-none focus:border-brand-fill"
                     value={params[f.key] ?? ''}
                     placeholder={f.placeholder}
                     onChange={(e) => onParamChange(f.key, e.target.value)}

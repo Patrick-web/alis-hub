@@ -241,7 +241,7 @@ export function ProductPickerPage() {
                 <div
                   key={p.name}
                   className={`rounded-[8px] border transition-colors overflow-hidden ${
-                    isExpanded ? 'border-brand' : 'border-border'
+                    isExpanded ? 'border-brand-fill' : 'border-border'
                   }`}
                 >
                   {/* Card header row */}
@@ -300,7 +300,7 @@ export function ProductPickerPage() {
                             </button>
                             <button
                               onClick={() => handleClone(p)}
-                              className="px-[10px] py-[5px] rounded-[5px] bg-brand text-[11px] font-semibold text-brand-foreground hover:bg-[#f96bb0] transition-colors"
+                              className="px-[10px] py-[5px] rounded-[5px] bg-brand-fill text-[11px] font-semibold text-brand-foreground hover:bg-[#f96bb0] transition-colors"
                             >
                               Clone &amp; open
                             </button>
@@ -311,7 +311,7 @@ export function ProductPickerPage() {
                       {syncState === 'syncing' && isSyncing && (
                         <div className="flex flex-col">
                           <div className="flex items-center gap-[8px] px-[14px] py-[10px] border-b border-border">
-                            <span className="w-[6px] h-[6px] rounded-full bg-brand animate-pulse shrink-0" />
+                            <span className="w-[6px] h-[6px] rounded-full bg-brand-fill animate-pulse shrink-0" />
                             <p className="text-[9px] font-bold text-foreground/40 uppercase font-mono tracking-wider">
                               Syncing repos…
                             </p>

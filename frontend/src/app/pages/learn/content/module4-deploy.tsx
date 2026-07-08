@@ -125,7 +125,7 @@ export const module4: LearningModule = {
               { task: 'Rate limiting', detail: 'Can enforce per-consumer quotas defined in your Endpoints config.' },
             ].map(({ task, detail }) => (
               <div key={task} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
-                <div className="size-[6px] rounded-full bg-brand mt-[5px] shrink-0" />
+                <div className="size-[6px] rounded-full bg-brand-fill mt-[5px] shrink-0" />
                 <div>
                   <span className="text-[11px] font-bold text-foreground font-mono">{task} </span>
                   <span className="text-[11px] text-foreground/50">— {detail}</span>

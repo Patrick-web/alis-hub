@@ -317,7 +317,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                         onClick={() => toggleColumn(col)}
                         className="w-full flex items-center gap-[8px] px-[10px] py-[5px] hover:bg-foreground/[4%] text-left"
                       >
-                        <div className={`w-[11px] h-[11px] border rounded-[2px] flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand border-brand' : 'border-border'}`}>
+                        <div className={`w-[11px] h-[11px] border rounded-[2px] flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
                           {checked && <Icon icon="solar:check-read-linear" className="text-[7px] text-foreground" />}
                         </div>
                         <span className="text-[10px] font-mono text-foreground/70 truncate">{col}</span>

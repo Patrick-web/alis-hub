@@ -32,7 +32,7 @@ const TYPE_LABELS: Record<TaskType, string> = {
 };
 
 function StatusDot({ status }: { status: string }): ReactNode {
-  if (status === 'running') return <span className="size-[5px] rounded-full bg-brand animate-pulse shrink-0" />;
+  if (status === 'running') return <span className="size-[5px] rounded-full bg-brand-fill animate-pulse shrink-0" />;
   if (status === 'done') return <span className="size-[5px] rounded-full bg-green-400 shrink-0" />;
   if (status === 'error') return <span className="size-[5px] rounded-full bg-red-400 shrink-0" />;
   return null;
@@ -112,7 +112,7 @@ export function DevelopTaskPanel() {
         onMouseDown={handleMouseDown}
         className="absolute left-0 top-0 bottom-0 w-[4px] cursor-col-resize z-10 group"
       >
-        <div className="absolute inset-y-0 left-0 w-[1px] bg-border group-hover:bg-brand/50 transition-colors" />
+        <div className="absolute inset-y-0 left-0 w-[1px] bg-border group-hover:bg-brand-fill/50 transition-colors" />
       </div>
 
       {/* Tab bar */}

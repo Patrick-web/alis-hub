@@ -57,14 +57,14 @@ export function FilterSelect({
                 disabled
                   ? 'bg-background border-border text-foreground/20 cursor-not-allowed'
                   : open
-                  ? 'bg-card border-brand text-foreground'
+                  ? 'bg-card border-brand-fill text-foreground'
                   : 'bg-card border-border text-foreground hover:border-foreground/30'
               }`
             : `px-[8px] py-[3px] rounded-[3px] text-[9px] uppercase whitespace-nowrap ${
                 disabled
                   ? 'bg-background border-border text-foreground/20 cursor-not-allowed'
                   : open
-                  ? 'bg-card border-brand text-foreground'
+                  ? 'bg-card border-brand-fill text-foreground'
                   : 'bg-card border-border text-foreground/60 hover:border-foreground/30 hover:text-foreground'
               }`
         }`}
@@ -100,7 +100,7 @@ export function FilterSelect({
                 } ${
                   opt.value === value
                     ? 'text-brand bg-[rgba(248,129,169,0.08)]'
-                    : 'text-foreground/55 hover:bg-brand hover:text-brand-foreground'
+                    : 'text-foreground/55 hover:bg-brand-fill hover:text-brand-foreground'
                 }`}
               >
                 {opt.label}

@@ -177,7 +177,7 @@ export function VarFormSheet({
               onChange={(e) => setValue(e.target.value)}
               disabled={loading}
               rows={6}
-              className="w-full bg-background border border-border rounded-[4px] px-[12px] py-[8px] text-foreground font-mono text-[12px] resize-none focus:outline-none focus:border-brand disabled:opacity-50 placeholder:text-foreground/30"
+              className="w-full bg-background border border-border rounded-[4px] px-[12px] py-[8px] text-foreground font-mono text-[12px] resize-none focus:outline-none focus:border-brand-fill disabled:opacity-50 placeholder:text-foreground/30"
             />
           </div>
 
@@ -194,7 +194,7 @@ export function VarFormSheet({
                     Propagate to other environments
                   </span>
                   {checkedCount > 0 && (
-                    <span className="font-mono text-[9px] text-brand border border-brand px-[5px] py-[1px] rounded-[3px]">
+                    <span className="font-mono text-[9px] text-brand border border-brand-fill px-[5px] py-[1px] rounded-[3px]">
                       {checkedCount}
                     </span>
                   )}
@@ -214,7 +214,7 @@ export function VarFormSheet({
                         onClick={() => !loading && toggleEnv(p.envName)}
                       >
                         <div className={`w-[15px] h-[15px] rounded-[3px] border shrink-0 flex items-center justify-center transition-colors ${
-                          p.checked ? 'border-brand bg-brand' : 'border-border'
+                          p.checked ? 'border-brand-fill bg-brand-fill' : 'border-border'
                         }`}>
                           {p.checked && <Icon icon="solar:check-linear" className="text-foreground text-[9px]" />}
                         </div>
@@ -222,7 +222,7 @@ export function VarFormSheet({
                           {p.displayName}
                         </span>
                         {p.envType === 3 && (
-                          <span className="font-mono text-[9px] text-brand border border-brand px-[4px] py-[1px] rounded-[3px]">
+                          <span className="font-mono text-[9px] text-brand border border-brand-fill px-[4px] py-[1px] rounded-[3px]">
                             prod
                           </span>
                         )}
@@ -235,7 +235,7 @@ export function VarFormSheet({
                               onClick={() => !loading && p.useCustom && toggleCustom(p.envName)}
                               className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 !p.useCustom
-                                  ? 'border-brand bg-[rgba(248,129,169,0.08)] text-brand'
+                                  ? 'border-brand-fill bg-[rgba(248,129,169,0.08)] text-brand'
                                   : 'border-border text-foreground/40 hover:bg-foreground/[3%]'
                               }`}
                             >
@@ -245,7 +245,7 @@ export function VarFormSheet({
                               onClick={() => !loading && !p.useCustom && toggleCustom(p.envName)}
                               className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 p.useCustom
-                                  ? 'border-brand bg-[rgba(248,129,169,0.08)] text-brand'
+                                  ? 'border-brand-fill bg-[rgba(248,129,169,0.08)] text-brand'
                                   : 'border-border text-foreground/40 hover:bg-foreground/[3%]'
                               }`}
                             >
@@ -259,7 +259,7 @@ export function VarFormSheet({
                               onChange={(e) => setCustomValue(p.envName, e.target.value)}
                               disabled={loading}
                               rows={3}
-                              className="w-full bg-background border border-border rounded-[4px] px-[10px] py-[6px] text-foreground font-mono text-[11px] resize-none focus:outline-none focus:border-brand disabled:opacity-50 placeholder:text-foreground/30"
+                              className="w-full bg-background border border-border rounded-[4px] px-[10px] py-[6px] text-foreground font-mono text-[11px] resize-none focus:outline-none focus:border-brand-fill disabled:opacity-50 placeholder:text-foreground/30"
                             />
                           )}
                         </div>

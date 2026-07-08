@@ -227,7 +227,7 @@ export function ServicesPage() {
                 {overview.environments.map(env => {
                   const isActive = env.name === state.activeEnvName;
                   return (
-                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-brand' : ''}`}>
+                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-brand-fill' : ''}`}>
                       <span className={`text-[10px] font-bold font-mono uppercase ${isActive ? 'text-brand' : 'text-foreground/40'}`}>
                         {env.displayName}
                       </span>

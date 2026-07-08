@@ -56,7 +56,7 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
           />
         );
       return (
-        <span className="inline-block w-[7px] h-[7px] rounded-full bg-brand animate-pulse" />
+        <span className="inline-block w-[7px] h-[7px] rounded-full bg-brand-fill animate-pulse" />
       );
     };
 

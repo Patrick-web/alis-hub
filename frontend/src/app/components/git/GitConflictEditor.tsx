@@ -184,7 +184,7 @@ export function GitConflictEditor({ repoPath, conflictFiles, onComplete, onAbort
               {allHunksResolved && !isFileSaved && (
                 <button
                   onClick={() => saveFile(selectedFile)}
-                  className="text-[10px] px-[7px] py-[2px] rounded-[3px] bg-brand/20 text-brand hover:bg-brand/30 transition-colors border border-brand/30"
+                  className="text-[10px] px-[7px] py-[2px] rounded-[3px] bg-brand-fill/20 text-brand hover:bg-brand-fill/30 transition-colors border border-brand-fill/30"
                 >
                   Save File
                 </button>

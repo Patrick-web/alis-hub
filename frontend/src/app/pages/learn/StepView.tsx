@@ -67,7 +67,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
               key={i}
               className={`rounded-full transition-all ${
                 i === stepIndex
-                  ? 'size-[8px] bg-brand'
+                  ? 'size-[8px] bg-brand-fill'
                   : i < stepIndex
                   ? 'size-[6px] bg-[rgba(248,129,169,0.4)]'
                   : 'size-[6px] bg-border'
@@ -90,7 +90,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
 
           <button
             onClick={onNext}
-            className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] bg-brand text-black hover:bg-[#fa96b8] active:bg-[#e66e9a] transition-colors text-[11px] font-mono font-bold"
+            className="flex items-center gap-[6px] px-[14px] py-[7px] rounded-[4px] bg-brand-fill text-brand-foreground hover:bg-[#fa96b8] active:bg-[#e66e9a] transition-colors text-[11px] font-mono font-bold"
           >
             {isLastStep && isLastModule ? (
               <>

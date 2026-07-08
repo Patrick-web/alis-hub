@@ -127,7 +127,7 @@ export function HubPage() {
               </p>
               <button
                 onClick={resumeRecent}
-                className="w-full text-left bg-card border border-border hover:border-brand rounded-[10px] p-[16px] transition-all group"
+                className="w-full text-left bg-card border border-border hover:border-brand-fill rounded-[10px] p-[16px] transition-all group"
               >
                 <div className="flex items-center gap-[12px]">
                   <div className="size-[36px] rounded-[8px] flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--brand) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 20%, transparent)' }}>
@@ -164,7 +164,7 @@ export function HubPage() {
                 <button
                   key={s.id}
                   onClick={s.action}
-                  className="text-left bg-card border border-border hover:border-brand rounded-[10px] p-[16px] transition-all group"
+                  className="text-left bg-card border border-border hover:border-brand-fill rounded-[10px] p-[16px] transition-all group"
                 >
                   <div className="size-[32px] rounded-[8px] flex items-center justify-center mb-[12px]" style={{ background: 'color-mix(in srgb, var(--brand) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--brand) 15%, transparent)' }}>
                     <Icon icon={s.icon} className="text-brand text-base" />

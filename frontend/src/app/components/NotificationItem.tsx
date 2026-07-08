@@ -113,7 +113,7 @@ export function NotificationItem({
                     ? "border-destructive/20 text-destructive bg-transparent hover:bg-destructive/5"
                     : action.variant === "ghost"
                       ? "border-foreground/10 text-foreground/50 bg-transparent hover:bg-foreground/[7%] hover:text-foreground/70"
-                      : "border-brand/25 text-brand bg-transparent hover:bg-brand/10"
+                      : "border-brand-fill/25 text-brand bg-transparent hover:bg-brand-fill/10"
                 }`}
               >
                 {action.label}
