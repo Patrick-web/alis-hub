@@ -52,8 +52,7 @@ export function BuildKitGeminiEnterprisePage() {
       subtitle="Configure Gemini Enterprise access, subscriptions, workforce federation, and data connectors."
       parentRoute="/buildkit"
       actions={
-        <Button variant="secondary" onClick={() => Browser.OpenURL(GEMINI_ENTERPRISE_URL)}>
-          <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+        <Button variant="secondary" onClick={() => Browser.OpenURL(GEMINI_ENTERPRISE_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
           GCP Console
         </Button>
       }
@@ -74,8 +73,7 @@ export function BuildKitGeminiEnterprisePage() {
               subtitle={stage.subtitle}
               icon={<Icon icon={stage.icon} className="text-brand" />}
               action={
-                <Button variant="secondary" onClick={() => Browser.OpenURL(stage.actionUrl)}>
-                  <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+                <Button variant="secondary" onClick={() => Browser.OpenURL(stage.actionUrl)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                   {stage.action}
                 </Button>
               }

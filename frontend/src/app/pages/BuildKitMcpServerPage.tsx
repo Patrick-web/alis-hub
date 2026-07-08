@@ -118,8 +118,7 @@ export function BuildKitMcpServerPage() {
       subtitle="Connect coding agents directly to the hosted Alis Build MCP server and review available tools."
       parentRoute="/buildkit"
       actions={
-        <Button variant="secondary" onClick={() => Browser.OpenURL(MCP_SERVER_URL)}>
-          <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+        <Button variant="secondary" onClick={() => Browser.OpenURL(MCP_SERVER_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
           Open MCP Server
         </Button>
       }
@@ -163,13 +162,11 @@ export function BuildKitMcpServerPage() {
             action={
               selected.action ? (
                 selected.action.deeplink ? (
-                  <Button variant="primary" onClick={() => Browser.OpenURL(selected.action!.deeplink!)}>
-                    <Icon icon="solar:cursor-linear" className="text-sm mr-[4px]" />
+                  <Button variant="primary" onClick={() => Browser.OpenURL(selected.action!.deeplink!)} icon={<Icon icon="solar:cursor-linear" className="text-sm" />}>
                     {selected.action.label}
                   </Button>
                 ) : (
-                  <Button variant="secondary" onClick={() => Browser.OpenURL(selected.action!.url!)}>
-                    <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+                  <Button variant="secondary" onClick={() => Browser.OpenURL(selected.action!.url!)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                     {selected.action.label}
                   </Button>
                 )

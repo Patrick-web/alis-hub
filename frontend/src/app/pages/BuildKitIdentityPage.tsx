@@ -17,8 +17,7 @@ export function BuildKitIdentityPage() {
       subtitle="Manage identity, access, and application integrations for agent and enterprise workflows."
       parentRoute="/buildkit"
       actions={
-        <Button variant="secondary" onClick={() => navigate('/builds')}>
-          <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+        <Button variant="secondary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
           Build
         </Button>
       }
@@ -53,8 +52,7 @@ export function BuildKitIdentityPage() {
                 </div>
               ))}
             </div>
-            <Button variant="primary" onClick={() => navigate('/builds')}>
-              <Icon icon="solar:hammer-linear" className="text-sm mr-[4px]" />
+            <Button variant="primary" onClick={() => navigate('/builds')} icon={<Icon icon="solar:hammer-linear" className="text-sm" />}>
               Build & Deploy
             </Button>
           </StageCard>
@@ -65,8 +63,7 @@ export function BuildKitIdentityPage() {
             title="Configure Google OAuth"
             subtitle="Create a Google OAuth 2.0 Web Client for the Identity service"
             action={
-              <Button variant="secondary" onClick={() => Browser.OpenURL(GOOGLE_OAUTH_URL)}>
-                <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+              <Button variant="secondary" onClick={() => Browser.OpenURL(GOOGLE_OAUTH_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                 GCP Console
               </Button>
             }
@@ -94,8 +91,7 @@ export function BuildKitIdentityPage() {
             title="Configure Microsoft OAuth"
             subtitle="Register an application in Microsoft Entra ID"
             action={
-              <Button variant="secondary" onClick={() => Browser.OpenURL(MICROSOFT_OAUTH_URL)}>
-                <Icon icon="solar:arrow-right-up-linear" className="text-sm mr-[4px]" />
+              <Button variant="secondary" onClick={() => Browser.OpenURL(MICROSOFT_OAUTH_URL)} icon={<Icon icon="solar:arrow-right-up-linear" className="text-sm" />}>
                 Azure Portal
               </Button>
             }
