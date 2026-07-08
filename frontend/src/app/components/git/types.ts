@@ -8,6 +8,7 @@ export interface GitStatus {
   staged: GitFileStatus[];
   unstaged: GitFileStatus[];
   untracked: string[];
+  conflicted: GitFileStatus[];
 }
 
 export interface GitFileDiff {

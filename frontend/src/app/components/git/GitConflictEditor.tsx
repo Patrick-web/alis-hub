@@ -19,12 +19,14 @@ interface ConflictFileContent {
 interface Props {
   repoPath: string;
   conflictFiles: string[];
+  initialFile?: string;
   onComplete: () => void;
   onAbort: () => void;
 }
 
-export function GitConflictEditor({ repoPath, conflictFiles, onComplete, onAbort }: Props) {
-  const [selectedFile, setSelectedFile] = useState(conflictFiles[0] ?? '');
+export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComplete, onAbort }: Props) {
+  const startFile = (initialFile && conflictFiles.includes(initialFile)) ? initialFile : (conflictFiles[0] ?? '');
+  const [selectedFile, setSelectedFile] = useState(startFile);
   const [conflictContent, setConflictContent] = useState<ConflictFileContent | null>(null);
   const [hunkResolutions, setHunkResolutions] = useState<Record<string, (string[] | null)[]>>({});
   const [resolvedFiles, setResolvedFiles] = useState<Set<string>>(new Set());
@@ -33,7 +35,7 @@ export function GitConflictEditor({ repoPath, conflictFiles, onComplete, onAbort
   const [aborting, setAborting] = useState(false);
 
   useEffect(() => {
-    if (conflictFiles[0]) loadFile(conflictFiles[0]);
+    if (startFile) loadFile(startFile);
   }, []);
 
   function loadFile(fp: string) {

@@ -323,6 +323,31 @@ func (g *GitService) gitCmdStream(dir string, args ...string) (string, error) {
 	return combined.String(), err
 }
 
+// IsMerging reports whether repoPath currently has a merge in progress.
+func (g *GitService) IsMerging(repoPath string) (bool, error) {
+	_, err := os.Stat(filepath.Join(repoPath, ".git", "MERGE_HEAD"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// GetMergeMessage returns the pre-filled merge commit message (from
+// .git/MERGE_MSG), or "" if the repo isn't mid-merge.
+func (g *GitService) GetMergeMessage(repoPath string) (string, error) {
+	data, err := os.ReadFile(filepath.Join(repoPath, ".git", "MERGE_MSG"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
 // GetConflictFiles returns the list of files with unmerged conflicts.
 func (g *GitService) GetConflictFiles(repoPath string) ([]string, error) {
 	out, _ := gitCmd(repoPath, "git", "diff", "--name-only", "--diff-filter=U")
@@ -577,9 +602,10 @@ func (g *GitService) GetProductRepoPaths(org, product string) (*ProductRepoPaths
 // --- Source Control (SCM) types ---
 
 type GitStatus struct {
-	Staged    []GitFileStatus `json:"staged"`
-	Unstaged  []GitFileStatus `json:"unstaged"`
-	Untracked []string        `json:"untracked"`
+	Staged     []GitFileStatus `json:"staged"`
+	Unstaged   []GitFileStatus `json:"unstaged"`
+	Untracked  []string        `json:"untracked"`
+	Conflicted []GitFileStatus `json:"conflicted"`
 }
 
 type GitFileStatus struct {
@@ -725,6 +751,14 @@ func (g *GitService) GetStatus(repoPath string) (*GitStatus, error) {
 		if (x == "R" || y == "R" || x == "C" || y == "C") && strings.Contains(rest, " -> ") {
 			parts := strings.SplitN(rest, " -> ", 2)
 			oldPath, path = parts[0], parts[1]
+		}
+
+		// Unmerged/conflicted paths: either side is "U", or both sides agree
+		// on an add-add / delete-delete conflict. These don't belong in the
+		// staged/unstaged buckets.
+		if x == "U" || y == "U" || (x == "A" && y == "A") || (x == "D" && y == "D") {
+			status.Conflicted = append(status.Conflicted, GitFileStatus{Path: path, StatusCode: x + y, OldPath: oldPath})
+			continue
 		}
 
 		if x != " " && x != "!" {
