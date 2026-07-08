@@ -13,6 +13,8 @@ import { parseNeuron, formatTimestamp } from './types';
 import { completeTaskNotification } from '../../lib/taskNotify';
 import * as DefineService from '../../../../bindings/alis-hub-v3/defineservice';
 
+const MAX_POLL_FAILURES = 3;
+
 interface DefinePaneProps {
   tabId: string;
   neuron: string;
@@ -35,6 +37,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
   const [glassLoading, setGlassLoading] = useState(false);
   const [defineError, setDefineError] = useState<string | null>(null);
   const taskIdRef = useRef<string | null>(null);
+  const definePollFailuresRef = useRef(0);
 
   // Stable refs for org/product so effects don't re-run on every render
   const orgRef = useRef(state.organisation);
@@ -104,9 +107,11 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
   useEffect(() => {
     if (!defineResult || defineResult.done || step !== 'running') return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
+    definePollFailuresRef.current = 0;
     const interval = setInterval(async () => {
       try {
         const result = await DefineService.PollDefineOperation(defineResult.operationName);
+        definePollFailuresRef.current = 0;
         setDefineResult(result as DefineResult);
         if (result?.done) {
           clearInterval(interval);
@@ -144,7 +149,19 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
           setProgressMsg(result.notes);
         }
       } catch {
-        clearInterval(interval);
+        definePollFailuresRef.current += 1;
+        if (definePollFailuresRef.current >= MAX_POLL_FAILURES) {
+          clearInterval(interval);
+          const errMsg = 'Lost connection to define status.';
+          setDefineError(errMsg);
+          if (taskIdRef.current) {
+            completeTaskNotification(updateNotification, {
+              id: taskIdRef.current, severity: 'error', title: 'Define status unknown', body: errMsg,
+              taskStatus: 'error', taskPatch: { step: 'running' },
+            });
+            taskIdRef.current = null;
+          }
+        }
       }
     }, 2000);
     return () => clearInterval(interval);
