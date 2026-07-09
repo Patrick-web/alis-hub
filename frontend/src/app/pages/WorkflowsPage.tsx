@@ -28,6 +28,7 @@ type WorkflowArg = {
 const ARG_DEFS: WorkflowArg[] = [
   { key: 'environment', label: 'Environment' },
   { key: 'neuron', label: 'Neuron' },
+  { key: 'branch', label: 'Git Branch' },
 ];
 
 type Workflow = {
@@ -249,6 +250,7 @@ function getStepType(id: string): StepType {
 // the same {{key}} templating used for freeform inputs.
 const NEURON_ARG_SENTINEL = '{{neuron}}';
 const ENV_ARG_SENTINEL = ['{{environment}}'];
+const BRANCH_ARG_SENTINEL = '{{branch}}';
 
 function isNeuronBound(v: any): boolean {
   return v === NEURON_ARG_SENTINEL;
@@ -256,6 +258,10 @@ function isNeuronBound(v: any): boolean {
 
 function isEnvBound(v: any): boolean {
   return Array.isArray(v) && v.length === 1 && v[0] === ENV_ARG_SENTINEL[0];
+}
+
+function isBranchBound(v: any): boolean {
+  return v === BRANCH_ARG_SENTINEL;
 }
 
 // When a workflow argument is disabled, un-bind any step fields that were
@@ -272,6 +278,10 @@ function clearArgBinding(steps: WorkflowStep[], argKey: string): WorkflowStep[] 
       }
       if (argKey === 'environment' && f.type === 'env-multi' && isEnvBound(params[f.key])) {
         params[f.key] = [];
+        changed = true;
+      }
+      if (argKey === 'branch' && f.type === 'branch' && isBranchBound(params[f.key])) {
+        params[f.key] = '';
         changed = true;
       }
     }
@@ -356,6 +366,8 @@ export function WorkflowsPage() {
 
   const [runArgsOpen, setRunArgsOpen] = useState(false);
   const [runArgValues, setRunArgValues] = useState<Record<string, string>>({});
+  const [runBranches, setRunBranches] = useState<string[]>([]);
+  const [runBranchesLoading, setRunBranchesLoading] = useState(false);
 
   const logBodyRef = useRef<HTMLDivElement>(null);
 
@@ -491,12 +503,23 @@ export function WorkflowsPage() {
       doStartRun({}, startPosition);
     } else {
       const defaults: Record<string, string> = {};
-      for (const a of args) defaults[a.key] = '';
+      for (const a of args) defaults[a.key] = a.key === 'branch' ? 'master' : '';
       setRunArgValues(defaults);
       setActiveTab('run');
       setRunArgsOpen(true);
     }
   };
+
+  useEffect(() => {
+    if (!runArgsOpen) return;
+    if (!(editedWorkflow?.args ?? []).some((a) => a.key === 'branch')) return;
+    if (!workspaceState.organisation || !workspaceState.product) return;
+    setRunBranchesLoading(true);
+    BuildService.GetBuildBranches(workspaceState.organisation, workspaceState.product)
+      .then((res) => setRunBranches(res ?? []))
+      .catch(() => setRunBranches([]))
+      .finally(() => setRunBranchesLoading(false));
+  }, [runArgsOpen, editedWorkflow, workspaceState.organisation, workspaceState.product]);
 
   const handleStop = async () => {
     if (!activeId || !runEntry?.runId || runEntry.stopping) return;
@@ -1054,6 +1077,13 @@ export function WorkflowsPage() {
                       }))}
                       onChange={(v) => setRunArgValues((vals) => ({ ...vals, neuron: v }))}
                       placeholder="Select neuron…"
+                    />
+                  ) : arg.key === 'branch' ? (
+                    <SearchableSelect
+                      value={runArgValues.branch ?? 'master'}
+                      options={runBranches}
+                      onChange={(v) => setRunArgValues((vals) => ({ ...vals, branch: v }))}
+                      placeholder={runBranchesLoading ? 'Loading branches…' : 'Select branch…'}
                     />
                   ) : null}
                 </div>
@@ -1632,19 +1662,35 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                     )}
                   </>
                 ) : f.type === 'branch' ? (
-                  isTemplate ? (
-                    <div className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
-                      {params[f.key] || f.placeholder || 'master'}
-                    </div>
-                  ) : (
-                    <SearchableSelect
-                      value={params[f.key] ?? 'master'}
-                      options={branches}
-                      onChange={(v) => onParamChange(f.key, v)}
-                      placeholder={branchesLoading ? 'Loading branches…' : (f.placeholder || 'master')}
-                      className="w-full h-8"
-                    />
-                  )
+                  <>
+                    {workflowArgs.some((a) => a.key === 'branch') && (
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <Switch
+                          checked={isBranchBound(params[f.key])}
+                          onCheckedChange={(checked) => onParamChange(f.key, checked ? BRANCH_ARG_SENTINEL : 'master')}
+                          disabled={isTemplate}
+                        />
+                      </div>
+                    )}
+                    {isBranchBound(params[f.key]) ? (
+                      <div className="w-full bg-background border border-dashed border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
+                        {BRANCH_ARG_SENTINEL}
+                      </div>
+                    ) : isTemplate ? (
+                      <div className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
+                        {params[f.key] || f.placeholder || 'master'}
+                      </div>
+                    ) : (
+                      <SearchableSelect
+                        value={params[f.key] ?? 'master'}
+                        options={branches}
+                        onChange={(v) => onParamChange(f.key, v)}
+                        placeholder={branchesLoading ? 'Loading branches…' : (f.placeholder || 'master')}
+                        className="w-full h-8"
+                      />
+                    )}
+                  </>
                 ) : f.type === 'build-version' ? (
                   <>
                     <button
