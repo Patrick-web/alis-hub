@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { MultiSelect } from '../components/ui/multi-select';
 import { SearchableSelect } from '../components/ui/searchable-select';
 import { Switch } from '../components/ui/switch';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
 import { useWorkspace } from '../stores/workspace';
 import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
 import { useNotifications } from '../stores/notifications';
@@ -1255,6 +1256,12 @@ function parseNeuronId(neuron: string): { id: string; version: string } {
   return { id, version: m ? m[1] : 'v1' };
 }
 
+// Replace any full neuron resource path in a step label with just its short id,
+// e.g. "Build: organisations/o/products/p/neurons/svc-v1" → "Build: svc-v1".
+function shortStepLabel(label: string): string {
+  return label.replace(/organisations\/\S*?\/neurons\/([^\s/]+)/g, '$1');
+}
+
 function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
   neuron: string;
   branch?: string;
@@ -1942,9 +1949,10 @@ function WorkflowRunView({
       </div>
 
       {/* Split layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
         {/* Left: timeline spine */}
-        <div className="w-[220px] flex-shrink-0 border-r border-border overflow-y-auto py-5 px-4">
+        <ResizablePanel defaultSize={22} minSize={12} maxSize={45}>
+          <div className="h-full border-r border-border overflow-y-auto py-5 px-4">
           {stepRuns.map((sr, idx) => {
             const dotBase = 'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 text-[9px] font-mono transition-all';
             const dotCls = sr.status === 'running'
@@ -1983,7 +1991,7 @@ function WorkflowRunView({
                 </div>
                 <div className="flex-1 min-w-0 pb-5">
                   <div className={`text-xs font-medium truncate ${sr.status === 'running' ? 'text-foreground' : sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
-                    {sr.label}
+                    {shortStepLabel(sr.label)}
                   </div>
                   {duration && (
                     <div className="text-[10px] text-foreground/30 font-mono mt-0.5">{duration}</div>
@@ -1995,10 +2003,14 @@ function WorkflowRunView({
               </div>
             );
           })}
-        </div>
+          </div>
+        </ResizablePanel>
+
+        <ResizableHandle withHandle />
 
         {/* Right: log feed */}
-        <div ref={logBodyRef} className="flex-1 overflow-y-auto">
+        <ResizablePanel defaultSize={78}>
+        <div ref={logBodyRef} className="h-full overflow-y-auto">
           {stepRuns.map((sr) => {
             const isOpen = !collapsedSections[sr.id];
             // Prefer the persisted per-step log once the backend has written it (i.e. the
@@ -2035,7 +2047,7 @@ function WorkflowRunView({
                     className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ''} ${sr.status === 'running' ? 'animate-spin' : ''}`}
                   />
                   <span className={`text-xs font-medium flex-1 truncate ${sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
-                    {sr.label}
+                    {shortStepLabel(sr.label)}
                   </span>
                   {sr.status === 'running' && (
                     <span className="text-[10px] text-blue-400/60 flex-shrink-0">running…</span>
@@ -2108,7 +2120,8 @@ function WorkflowRunView({
             );
           })}
         </div>
-      </div>
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </div>
   );
 }
