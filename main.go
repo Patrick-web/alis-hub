@@ -29,10 +29,19 @@ func main() {
 		return
 	}
 
-	// Best-effort: refresh git auth on every app launch.
+	// Best-effort: refresh git auth on launch, then keep it fresh. The
+	// underlying access token is short-lived (~5min), so only syncing at
+	// launch/login leaves git-auth.gitconfig stale for most of the session.
 	go func() {
 		if err := SyncGitAuth(); err != nil {
 			log.Printf("git auth sync: %v", err)
+		}
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := SyncGitAuth(); err != nil {
+				log.Printf("git auth sync: %v", err)
+			}
 		}
 	}()
 
