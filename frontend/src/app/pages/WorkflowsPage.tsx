@@ -442,12 +442,23 @@ export function WorkflowsPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Auto-scroll log feed when new text arrives (while running)
+  // Auto-scroll log feed: on step transition scroll to the step's section start;
+  // within the same step, follow live output.
+  const prevStepRunIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (runEntry && !runEntry.done && logBodyRef.current) {
-      logBodyRef.current.scrollTop = logBodyRef.current.scrollHeight;
+    if (!runEntry || runEntry.done || !logBodyRef.current) return;
+    const body = logBodyRef.current;
+    const stepId = runEntry.currentStepRunId;
+    if (stepId && stepId !== prevStepRunIdRef.current) {
+      prevStepRunIdRef.current = stepId;
+      const el = body.querySelector(`[data-step-run-id="${stepId}"]`);
+      if (el && el instanceof HTMLElement) {
+        body.scrollTop = el.offsetTop;
+      }
+    } else {
+      body.scrollTop = body.scrollHeight;
     }
-  }, [runEntry?.logSegments, runEntry?.done]);
+  }, [runEntry?.logSegments, runEntry?.done, runEntry?.currentStepRunId]);
 
   // ── Run actions ─────────────────────────────────────────────────────────────
 
@@ -1032,6 +1043,7 @@ export function WorkflowsPage() {
                 onStop={handleStop}
                 stopping={runEntry?.stopping ?? false}
                 logBodyRef={logBodyRef}
+                currentStepRunId={runEntry?.currentStepRunId ?? null}
               />
             </div>
           </>
@@ -1836,6 +1848,7 @@ function WorkflowRunView({
   onStop,
   stopping,
   logBodyRef,
+  currentStepRunId,
 }: {
   stepRuns: StepRunStatus[];
   logSegments: Record<string, string>;
@@ -1848,6 +1861,7 @@ function WorkflowRunView({
   onStop: () => void;
   stopping: boolean;
   logBodyRef: React.RefObject<HTMLDivElement>;
+  currentStepRunId: string | null;
 }) {
   const isRunning = runId !== null && !done;
   const [activeSub, setActiveSub] = useState<Record<string, string>>({});
@@ -2002,7 +2016,7 @@ function WorkflowRunView({
             const activeTabText = tabs?.find((t) => t.id === activeTabId)?.text ?? '';
 
             return (
-              <div key={sr.id} className="border-b border-border/30 last:border-0">
+              <div key={sr.id} data-step-run-id={sr.id} className="border-b border-border/30 last:border-0">
                 {/* Section header */}
                 <div
                   role="button"
