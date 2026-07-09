@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.14.0] - 2026-07-09
+
+### What's New
+- You can now retry or skip individual steps in a failed workflow run
+- Run steps now show the neuron ID instead of the full path, and the run sidebar can be resized
+- You can now select a git branch as a workflow argument, with a searchable dropdown
+
+### Bug Fixes
+- Fixed an issue where workflow steps could get stuck showing as running
+- Fixed autoscroll jumping to the log's end instead of the start of the new step section during transitions
+- Fixed an issue where git authentication could go stale between logins
+
 ## [v0.13.0] - 2026-07-08
 
 ### What's New
