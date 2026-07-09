@@ -10,6 +10,14 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * ClearRuns removes all past runs for a workflow, skipping any that are still
+ * active. Returns the number of runs deleted.
+ */
+export function ClearRuns(workflowID: string): $CancellablePromise<number> {
+    return $Call.ByID(2013056683, workflowID);
+}
+
+/**
  * CloneWorkflow creates an editable copy of any workflow (including templates).
  */
 export function CloneWorkflow(id: string): $CancellablePromise<$models.Workflow | null> {
@@ -22,6 +30,14 @@ export function CreateWorkflow(params: $models.UpsertWorkflowParams): $Cancellab
     return $Call.ByID(3307618937, params).then(($result: any) => {
         return $$createType1($result);
     });
+}
+
+/**
+ * DeleteRun removes a single past run and its step runs. Active (still-running)
+ * runs cannot be deleted.
+ */
+export function DeleteRun(runID: string): $CancellablePromise<void> {
+    return $Call.ByID(2627270676, runID);
 }
 
 export function DeleteWorkflow(id: string): $CancellablePromise<void> {

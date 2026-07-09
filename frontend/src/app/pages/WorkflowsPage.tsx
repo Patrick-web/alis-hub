@@ -16,6 +16,7 @@ import { useProtectedEnvironments } from '../stores/protectedEnvironments';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { notify } from '../lib/notify';
 import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
+import type { WorkflowRun } from '../../../bindings/alis-hub-v3/models';
 import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
 
@@ -363,7 +364,7 @@ export function WorkflowsPage() {
   const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
   const [protectedConfirmLabels, setProtectedConfirmLabels] = useState<string[]>([]);
   const pendingRunRef = useRef<{ argValues: Record<string, string>; startPosition: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<'steps' | 'run'>('steps');
+  const [activeTab, setActiveTab] = useState<'steps' | 'run' | 'history'>('steps');
   const [startError, setStartError] = useState<string | null>(null);
 
   const [runArgsOpen, setRunArgsOpen] = useState(false);
@@ -919,6 +920,16 @@ export function WorkflowsPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                 )}
               </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`h-9 px-1 ml-4 text-xs font-medium border-b-2 transition-colors ${
+                  activeTab === 'history'
+                    ? 'border-brand-fill text-brand'
+                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                }`}
+              >
+                History
+              </button>
             </div>
 
             {/* Steps tab — kept mounted to preserve scroll position */}
@@ -1049,6 +1060,17 @@ export function WorkflowsPage() {
                 onRetryStep={(position, mode) => handleRun(mode === 'skip' ? position + 1 : position)}
               />
             </div>
+
+            {/* History tab */}
+            {activeTab === 'history' && (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                <WorkflowHistoryView
+                  workflowId={editedWorkflow.id}
+                  liveRunId={isRunning ? (runEntry?.runId ?? null) : null}
+                  refreshKey={runEntry?.done ? runEntry.runId : null}
+                />
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1843,6 +1865,250 @@ function LogLine({ text }: { text: string }) {
   return <div className={`${cls} font-mono text-[11px] leading-relaxed`}>{text || ' '}</div>;
 }
 
+// ─── WorkflowHistoryView ──────────────────────────────────────────────────────
+
+function formatRunTime(ts: number): string {
+  const diff = Date.now() / 1000 - ts;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(ts * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+const RUN_STATUS_META: Record<string, { icon: string; color: string; label: string }> = {
+  running: { icon: 'solar:spinner-linear', color: 'text-blue-400', label: 'Running' },
+  success: { icon: 'solar:check-circle-bold', color: 'text-green-400', label: 'Success' },
+  failed: { icon: 'solar:close-circle-bold', color: 'text-red-400', label: 'Failed' },
+  stopped: { icon: 'solar:stop-circle-bold', color: 'text-orange-400', label: 'Stopped' },
+};
+
+const HISTORY_PAGE_SIZE = 25;
+
+function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
+  workflowId: string;
+  liveRunId: string | null;
+  refreshKey: string | null;
+}) {
+  const [runs, setRuns] = useState<WorkflowRun[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [limit, setLimit] = useState(HISTORY_PAGE_SIZE);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<WorkflowRun | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [clearOpen, setClearOpen] = useState(false);
+  const [mutating, setMutating] = useState(false);
+  const detailBodyRef = useRef<HTMLDivElement>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await WorkflowService.ListRuns(workflowId, limit + 1);
+      setRuns(list ?? []);
+    } catch {
+      setRuns([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [workflowId, limit]);
+
+  useEffect(() => { load(); }, [load, refreshKey, liveRunId]);
+
+  // Reset selection when switching workflows.
+  useEffect(() => {
+    setSelectedId(null);
+    setDetail(null);
+    setLimit(HISTORY_PAGE_SIZE);
+  }, [workflowId]);
+
+  const openRun = useCallback(async (runId: string) => {
+    setSelectedId(runId);
+    setDetailLoading(true);
+    try {
+      const r = await WorkflowService.GetRun(runId);
+      setDetail(r);
+      // Collapse successful/skipped step sections by default; expand failed ones.
+      const c: Record<string, boolean> = {};
+      for (const sr of r?.stepRuns ?? []) c[sr.id] = sr.status !== 'failed' && sr.status !== 'running';
+      setCollapsed(c);
+    } catch {
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const handleDelete = async (runId: string) => {
+    setMutating(true);
+    try {
+      await WorkflowService.DeleteRun(runId);
+      if (selectedId === runId) { setSelectedId(null); setDetail(null); }
+      await load();
+    } finally {
+      setMutating(false);
+      setDeleteTarget(null);
+    }
+  };
+
+  const handleClear = async () => {
+    setMutating(true);
+    try {
+      await WorkflowService.ClearRuns(workflowId);
+      setSelectedId(null);
+      setDetail(null);
+      await load();
+    } finally {
+      setMutating(false);
+      setClearOpen(false);
+    }
+  };
+
+  const hasMore = runs.length > limit;
+  const visibleRuns = hasMore ? runs.slice(0, limit) : runs;
+
+  const logSegments: Record<string, string> = {};
+  for (const sr of detail?.stepRuns ?? []) logSegments[sr.id] = sr.log ?? '';
+
+  return (
+    <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
+      {/* Left: run list */}
+      <ResizablePanel defaultSize={26} minSize={16} maxSize={45}>
+        <div className="h-full flex flex-col border-r border-border">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
+            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Run History</span>
+            {runs.length > 0 && (
+              <button
+                onClick={() => setClearOpen(true)}
+                className="text-[10px] text-foreground/40 hover:text-red-400 transition-colors"
+                title="Clear all history"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {loading && runs.length === 0 ? (
+              <div className="px-4 py-8 text-center text-foreground/30 text-xs">Loading…</div>
+            ) : runs.length === 0 ? (
+              <div className="px-4 py-10 text-center text-foreground/30">
+                <Icon icon="solar:history-linear" className="text-3xl mx-auto mb-2 opacity-30" />
+                <p className="text-xs">No past runs yet</p>
+              </div>
+            ) : (
+              <>
+                {visibleRuns.map((r) => {
+                  const meta = RUN_STATUS_META[r.status] ?? RUN_STATUS_META.stopped;
+                  const isLive = r.id === liveRunId || r.status === 'running';
+                  return (
+                    <div
+                      key={r.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openRun(r.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') openRun(r.id); }}
+                      className={`group flex items-center gap-2.5 px-4 py-2.5 border-b border-border/40 cursor-pointer transition-colors ${
+                        selectedId === r.id ? 'bg-accent' : 'hover:bg-foreground/[3%]'
+                      }`}
+                    >
+                      <Icon icon={meta.icon} className={`text-sm flex-shrink-0 ${meta.color} ${isLive ? 'animate-spin' : ''}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{meta.label}</div>
+                        <div className="text-[10px] text-foreground/40 font-mono mt-0.5">
+                          {formatRunTime(r.startedAt)}
+                          {r.completedAt != null && ` · ${formatDuration(r.startedAt, r.completedAt)}`}
+                        </div>
+                      </div>
+                      {!isLive && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(r.id); }}
+                          title="Delete this run"
+                          className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
+                        >
+                          <Icon icon="solar:trash-bin-trash-linear" className="text-xs" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+                {hasMore && (
+                  <button
+                    onClick={() => setLimit((l) => l + HISTORY_PAGE_SIZE)}
+                    className="w-full px-4 py-2.5 text-[11px] text-foreground/40 hover:text-foreground hover:bg-foreground/[3%] transition-colors"
+                  >
+                    Load more
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      {/* Right: run detail */}
+      <ResizablePanel defaultSize={74}>
+        {!selectedId ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-foreground/25">
+            <Icon icon="solar:history-linear" className="text-4xl opacity-30" />
+            <p className="text-sm">Select a run to view its details</p>
+          </div>
+        ) : detailLoading ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-foreground/30">
+            <Icon icon="solar:spinner-linear" className="text-2xl animate-spin" />
+            <p className="text-xs">Loading run…</p>
+          </div>
+        ) : !detail ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-foreground/30">
+            <Icon icon="solar:danger-triangle-linear" className="text-3xl text-red-400/60" />
+            <p className="text-xs">Could not load this run</p>
+          </div>
+        ) : (
+          <WorkflowRunView
+            stepRuns={(detail.stepRuns ?? []) as unknown as StepRunStatus[]}
+            logSegments={logSegments}
+            collapsedSections={collapsed}
+            onToggleSection={(id) => setCollapsed((c) => ({ ...c, [id]: !c[id] }))}
+            done={detail.status !== 'running'}
+            finalStatus={detail.status === 'success' ? 'success' : 'failed'}
+            error={null}
+            runId={detail.id}
+            onStop={() => {}}
+            stopping={false}
+            logBodyRef={detailBodyRef}
+            currentStepRunId={null}
+            onRetryStep={() => {}}
+            readOnly
+          />
+        )}
+      </ResizablePanel>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        title="Delete Run"
+        description="This permanently removes this run and its logs from history."
+        confirmLabel="Delete"
+        loading={mutating}
+        loadingLabel="Deleting…"
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+      />
+      <ConfirmDialog
+        open={clearOpen}
+        onOpenChange={(o) => { if (!o) setClearOpen(false); }}
+        title="Clear Run History"
+        description="This permanently removes all past runs and their logs for this workflow. Running executions are kept."
+        confirmLabel="Clear all"
+        loading={mutating}
+        loadingLabel="Clearing…"
+        onConfirm={handleClear}
+      />
+    </ResizablePanelGroup>
+  );
+}
+
 // ─── WorkflowRunView ──────────────────────────────────────────────────────────
 
 function WorkflowRunView({
@@ -1859,6 +2125,7 @@ function WorkflowRunView({
   logBodyRef,
   currentStepRunId,
   onRetryStep,
+  readOnly = false,
 }: {
   stepRuns: StepRunStatus[];
   logSegments: Record<string, string>;
@@ -1873,6 +2140,7 @@ function WorkflowRunView({
   logBodyRef: React.RefObject<HTMLDivElement>;
   currentStepRunId: string | null;
   onRetryStep: (position: number, mode: 'retry' | 'skip') => void;
+  readOnly?: boolean;
 }) {
   const isRunning = runId !== null && !done;
   const [activeSub, setActiveSub] = useState<Record<string, string>>({});
@@ -1938,7 +2206,7 @@ function WorkflowRunView({
           )}
         </div>
         <div className="flex-1 h-px bg-border mx-2" />
-        {isRunning && (
+        {isRunning && !readOnly && (
           <Button
             variant="ghost"
             onClick={onStop}
@@ -2061,7 +2329,7 @@ function WorkflowRunView({
                   {duration && (sr.status === 'success' || sr.status === 'failed') && (
                     <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">{duration}</span>
                   )}
-                  {sr.status === 'failed' && done && (
+                  {sr.status === 'failed' && done && !readOnly && (
                     <>
                       <button
                         onClick={(e) => { e.stopPropagation(); onRetryStep(sr.position, 'retry'); }}

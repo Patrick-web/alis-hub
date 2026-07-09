@@ -548,6 +548,56 @@ func (s *WorkflowService) ListRuns(workflowID string, limit int) ([]WorkflowRun,
 	return out, rows.Err()
 }
 
+// DeleteRun removes a single past run and its step runs. Active (still-running)
+// runs cannot be deleted.
+func (s *WorkflowService) DeleteRun(runID string) error {
+	if _, ok := s.activeRuns.Load(runID); ok {
+		return fmt.Errorf("cannot delete a running run")
+	}
+	if _, err := s.db.Exec(`DELETE FROM workflow_step_runs WHERE run_id=?`, runID); err != nil {
+		return err
+	}
+	_, err := s.db.Exec(`DELETE FROM workflow_runs WHERE id=?`, runID)
+	return err
+}
+
+// ClearRuns removes all past runs for a workflow, skipping any that are still
+// active. Returns the number of runs deleted.
+func (s *WorkflowService) ClearRuns(workflowID string) (int, error) {
+	rows, err := s.db.Query(`SELECT id FROM workflow_runs WHERE workflow_id=?`, workflowID)
+	if err != nil {
+		return 0, err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	deleted := 0
+	for _, id := range ids {
+		if _, ok := s.activeRuns.Load(id); ok {
+			continue // don't delete a run that's still executing
+		}
+		if _, err := s.db.Exec(`DELETE FROM workflow_step_runs WHERE run_id=?`, id); err != nil {
+			return deleted, err
+		}
+		if _, err := s.db.Exec(`DELETE FROM workflow_runs WHERE id=?`, id); err != nil {
+			return deleted, err
+		}
+		deleted++
+	}
+	return deleted, nil
+}
+
 func (s *WorkflowService) PollRunLogs(runID string, offset int) (*RunLogChunk, error) {
 	var status string
 	err := s.db.QueryRow(`SELECT status FROM workflow_runs WHERE id=?`, runID).Scan(&status)
