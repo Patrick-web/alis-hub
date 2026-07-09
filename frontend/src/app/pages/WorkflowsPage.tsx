@@ -213,10 +213,11 @@ const STEP_TYPES: StepType[] = [
     label: 'Shell Command',
     icon: 'solar:terminal-linear',
     color: 'text-yellow-400',
-    defaultParams: { command: '', workdir: '' },
+    defaultParams: { command: '', workdir: '', timeout: '' },
     fields: [
       { key: 'command', label: 'Command', type: 'mono', placeholder: 'alis define neurons/bff-v1' },
       { key: 'workdir', label: 'Working directory (optional)', type: 'text', placeholder: '' },
+      { key: 'timeout', label: 'Timeout in seconds (optional)', type: 'text', placeholder: 'e.g. 300' },
     ],
     summary: (p) => p.command || 'No command set',
   },

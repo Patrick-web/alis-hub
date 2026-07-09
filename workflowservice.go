@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -155,13 +156,38 @@ type WorkflowService struct {
 }
 
 func NewWorkflowService(db *sql.DB, bs *BuildService, gs *GitService, ds *DeployService, def *DefineService, pkg *PackageService) *WorkflowService {
-	return &WorkflowService{
+	s := &WorkflowService{
 		db:             db,
 		buildService:   bs,
 		gitService:     gs,
 		deployService:  ds,
 		defineService:  def,
 		packageService: pkg,
+	}
+	s.recoverOrphanedRuns()
+	return s
+}
+
+// recoverOrphanedRuns reconciles the DB on startup. Any run or step left in a
+// non-terminal state ('running'/'pending') can only be an orphan from a previous
+// process that crashed or was killed mid-run — the in-memory activeRuns map is
+// always empty at startup, so nothing is genuinely executing. Left as-is these
+// rows would show as perpetually "running" in the UI and could never advance.
+func (s *WorkflowService) recoverOrphanedRuns() {
+	now := time.Now().Unix()
+	if _, err := s.db.Exec(
+		`UPDATE workflow_step_runs SET status='failed', completed_at=?
+		 WHERE status IN ('running','pending')
+		 AND run_id IN (SELECT id FROM workflow_runs WHERE status='running')`,
+		now,
+	); err != nil {
+		log.Printf("[workflow] recover orphaned step runs: %v", err)
+	}
+	if _, err := s.db.Exec(
+		`UPDATE workflow_runs SET status='failed', completed_at=? WHERE status='running'`,
+		now,
+	); err != nil {
+		log.Printf("[workflow] recover orphaned runs: %v", err)
 	}
 }
 
@@ -589,6 +615,14 @@ func (s *WorkflowService) loadStepRuns(runID string) ([]StepRunStatus, error) {
 
 func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Workflow, ar *activeRun, argValues map[string]string, startPosition int) {
 	defer func() {
+		if r := recover(); r != nil {
+			// Last-resort guard: a panic outside a step (loop/DB code) would
+			// otherwise leave the run and its steps stuck as 'running'.
+			log.Printf("[workflow] run %s panicked: %v", runID, r)
+			now := time.Now().Unix()
+			s.db.Exec(`UPDATE workflow_step_runs SET status='failed',completed_at=? WHERE run_id=? AND status IN ('running','pending')`, now, runID)
+			s.db.Exec(`UPDATE workflow_runs SET status='failed',completed_at=? WHERE id=? AND status='running'`, now, runID)
+		}
 		s.activeRuns.Delete(runID)
 		ar.cancel()
 	}()
@@ -629,7 +663,7 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 		w := io.MultiWriter(ar, stepBuf)
 
 		start := time.Now()
-		execErr := s.executeStep(ctx, step, stepVars, ar, w)
+		execErr := s.executeStepSafe(ctx, step, stepVars, ar, w)
 		elapsed := time.Since(start)
 		completedAt := time.Now().Unix()
 
@@ -668,12 +702,25 @@ func (s *WorkflowService) executeRun(ctx context.Context, runID string, wf *Work
 	s.db.Exec(`UPDATE workflow_runs SET status=?,log=?,completed_at=? WHERE id=?`, finalStatus, fullLog, now, runID)
 }
 
+// executeStepSafe wraps executeStep with panic recovery so a panic inside a step
+// (e.g. a nil-pointer deref in a sub-service) becomes a normal step failure that
+// executeRun can record and act on, instead of unwinding the goroutine and
+// leaving the step stuck as 'running' forever.
+func (s *WorkflowService) executeStepSafe(ctx context.Context, step WorkflowStep, stepVars map[string]string, ar *activeRun, w io.Writer) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("[workflow] step %s panicked: %v", step.ID, r)
+			err = fmt.Errorf("step panicked: %v", r)
+		}
+	}()
+	return s.executeStep(ctx, step, stepVars, ar, w)
+}
+
 func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, stepVars map[string]string, ar *activeRun, w io.Writer) error {
 	var params map[string]interface{}
 	if err := json.Unmarshal([]byte(step.Params), &params); err != nil {
 		return fmt.Errorf("invalid step params: %w", err)
 	}
-
 	str := func(key string) string {
 		v, _ := params[key].(string)
 		return expandVars(v, stepVars)
@@ -681,7 +728,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 
 	switch step.Type {
 	case "shell":
-		return s.runShell(ctx, ar, str("command"), str("workdir"), w)
+		return s.runShell(ctx, ar, str("command"), str("workdir"), parseIntParam(params["timeout"]), w)
 
 	case "define":
 		neuron := str("neuron")
@@ -758,7 +805,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 					continue
 				}
 				fmt.Fprintf(w, "  Running in %s\n", script.Name)
-				if err := s.runShell(ctx, ar, cmd, script.WorkDir, w); err != nil {
+				if err := s.runShell(ctx, ar, cmd, script.WorkDir, 0, w); err != nil {
 					return fmt.Errorf("package script %s: %w", script.Name, err)
 				}
 			}
@@ -866,7 +913,7 @@ func (s *WorkflowService) executeStep(ctx context.Context, step WorkflowStep, st
 // The PTY is registered on ar for the duration of the command so SendRunInput
 // can forward keystrokes to it — some commands (e.g. corepack's download
 // confirmation) prompt interactively and would otherwise hang forever.
-func (s *WorkflowService) runShell(ctx context.Context, ar *activeRun, command, workdir string, w io.Writer) error {
+func (s *WorkflowService) runShell(ctx context.Context, ar *activeRun, command, workdir string, timeoutSecs int, w io.Writer) error {
 	if command == "" {
 		return fmt.Errorf("shell step: command is empty")
 	}
@@ -898,6 +945,34 @@ func (s *WorkflowService) runShell(ctx context.Context, ar *activeRun, command, 
 		ptmx.Close()
 	}()
 
+	// Watchdog: force the shell (and the read loop below) to stop if the run is
+	// cancelled or the optional per-step timeout elapses. Without this, a command
+	// that finishes its work but leaves the tty open (e.g. spawns a background
+	// process) keeps cmd.Wait() — and therefore the step — blocked forever, which
+	// surfaces as a step stuck on "running".
+	var timedOut atomic.Bool
+	watchdogDone := make(chan struct{})
+	defer close(watchdogDone)
+	go func() {
+		var timeoutCh <-chan time.Time
+		if timeoutSecs > 0 {
+			t := time.NewTimer(time.Duration(timeoutSecs) * time.Second)
+			defer t.Stop()
+			timeoutCh = t.C
+		}
+		select {
+		case <-watchdogDone:
+			return
+		case <-ctx.Done():
+		case <-timeoutCh:
+			timedOut.Store(true)
+		}
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		ptmx.Close()
+	}()
+
 	buf := make([]byte, 4096)
 	for {
 		n, rerr := ptmx.Read(buf)
@@ -909,7 +984,11 @@ func (s *WorkflowService) runShell(ctx context.Context, ar *activeRun, command, 
 		}
 	}
 
-	return <-exitErrCh
+	waitErr := <-exitErrCh
+	if timedOut.Load() {
+		return fmt.Errorf("shell step timed out after %ds", timeoutSecs)
+	}
+	return waitErr
 }
 
 // parseNeuronResource splits "organisations/o/products/p/neurons/svc-v1" into
@@ -1115,6 +1194,27 @@ func expandVars(tmpl string, vars map[string]string) string {
 		tmpl = strings.ReplaceAll(tmpl, "{{"+k+"}}", v)
 	}
 	return tmpl
+}
+
+// parseIntParam coerces a step param into a non-negative int, tolerating both
+// JSON numbers (float64) and strings (the frontend stores text inputs as strings).
+// Returns 0 for empty/absent/invalid values (callers treat 0 as "no limit").
+func parseIntParam(v interface{}) int {
+	switch t := v.(type) {
+	case float64:
+		if t < 0 {
+			return 0
+		}
+		return int(t)
+	case string:
+		n, err := strconv.Atoi(strings.TrimSpace(t))
+		if err != nil || n < 0 {
+			return 0
+		}
+		return n
+	default:
+		return 0
+	}
 }
 
 func stepLabel(step WorkflowStep, vars map[string]string) string {
