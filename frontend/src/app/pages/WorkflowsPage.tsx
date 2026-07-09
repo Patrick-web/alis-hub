@@ -1046,6 +1046,7 @@ export function WorkflowsPage() {
                 stopping={runEntry?.stopping ?? false}
                 logBodyRef={logBodyRef}
                 currentStepRunId={runEntry?.currentStepRunId ?? null}
+                onRetryStep={(position, mode) => handleRun(mode === 'skip' ? position + 1 : position)}
               />
             </div>
           </>
@@ -1857,6 +1858,7 @@ function WorkflowRunView({
   stopping,
   logBodyRef,
   currentStepRunId,
+  onRetryStep,
 }: {
   stepRuns: StepRunStatus[];
   logSegments: Record<string, string>;
@@ -1870,6 +1872,7 @@ function WorkflowRunView({
   stopping: boolean;
   logBodyRef: React.RefObject<HTMLDivElement>;
   currentStepRunId: string | null;
+  onRetryStep: (position: number, mode: 'retry' | 'skip') => void;
 }) {
   const isRunning = runId !== null && !done;
   const [activeSub, setActiveSub] = useState<Record<string, string>>({});
@@ -2057,6 +2060,26 @@ function WorkflowRunView({
                   )}
                   {duration && (sr.status === 'success' || sr.status === 'failed') && (
                     <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">{duration}</span>
+                  )}
+                  {sr.status === 'failed' && done && (
+                    <>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onRetryStep(sr.position, 'retry'); }}
+                        title="Retry from this step"
+                        className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-blue-400/70 hover:text-blue-300 hover:bg-blue-400/10 transition-colors flex-shrink-0"
+                      >
+                        <Icon icon="solar:refresh-linear" className="text-xs" />
+                        Retry
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onRetryStep(sr.position, 'skip'); }}
+                        title="Skip this step and continue from the next"
+                        className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-foreground/40 hover:text-foreground hover:bg-foreground/10 transition-colors flex-shrink-0"
+                      >
+                        <Icon icon="solar:skip-next-linear" className="text-xs" />
+                        Skip
+                      </button>
+                    </>
                   )}
                   {logText && (
                     <button
