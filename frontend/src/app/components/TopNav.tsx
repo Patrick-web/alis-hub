@@ -12,20 +12,9 @@ import { notify } from '../lib/notify';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
 import { useLabs } from '../stores/labs';
+import { useTabSettings, getVisibleTabs } from '../stores/tabSettings';
 import { MacWindowControls, WindowsWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
-
-const tabs = [
-  { id: 'about', label: 'About', icon: <Icon icon="solar:info-circle-linear" className="text-lg" /> },
-  { id: 'develop', label: 'Develop', icon: <Icon icon="solar:code-2-linear" className="text-lg" /> },
-  { id: 'builds', label: 'Builds', icon: <Icon icon="solar:box-linear" className="text-lg" /> },
-  { id: 'deployments', label: 'Deployments', icon: <Icon icon="solar:cloud-upload-linear" className="text-lg" /> },
-  { id: 'environments', label: 'Environments', icon: <Icon icon="solar:server-linear" className="text-lg" /> },
-  { id: 'tools', label: 'Tools', icon: <Icon icon="solar:settings-linear" className="text-lg" /> },
-  { id: 'git', label: 'Source Control', icon: <Icon icon="solar:code-scan-linear" className="text-lg" /> },
-];
-
-const workflowsTab = { id: 'workflows', label: 'Workflows', icon: <Icon icon="solar:playlist-2-linear" className="text-lg" /> };
 
 export function TopNav() {
   const navigate = useNavigate();
@@ -41,7 +30,8 @@ export function TopNav() {
   const { profile } = useUserProfile();
   const avatarUrl = profile?.picture ?? '';
   const { state: labsState } = useLabs();
-  const visibleTabs = labsState.workflowsEnabled ? [...tabs, workflowsTab] : tabs;
+  useTabSettings();
+  const visibleTabs = getVisibleTabs(labsState.workflowsEnabled);
   const avatarName = profile?.name ?? '';
 
   const [envsLoading, setEnvsLoading] = useState(false);
@@ -162,7 +152,7 @@ export function TopNav() {
             <Tab
               key={tab.id}
               label={tab.label}
-              icon={tab.icon}
+              icon={<Icon icon={tab.icon} className="text-lg" />}
               active={activeTab === tab.id}
               onClick={() => handleTabClick(tab.id)}
             />
