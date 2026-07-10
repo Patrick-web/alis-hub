@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { Button } from "../components/Button";
-import { Input } from "../components/Input";
+import { FilterInput } from "../components/FilterInput";
+import { Toolbar } from "../components/Toolbar";
 import { EmptyState } from "../components/EmptyState";
 import { useWorkspace } from "../stores/workspace";
 import { useNotifications } from "../stores/notifications";
@@ -262,19 +263,12 @@ export function DevelopPage() {
       </div>
 
       {/* Filter toolbar */}
-      <div className="border-b border-border px-[20px] py-[8px] flex items-center gap-[8px] shrink-0">
-        <div className="flex items-center h-[34px]">
-          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-foreground">/</p>
-          </div>
-          <Input
-            placeholder="Filter services..."
-            value={neuronFilter}
-            onChange={(e) => setNeuronFilter(e.target.value)}
-            className="w-[260px] border-l-0 rounded-l-none h-full"
-            containerClassName="h-full"
-          />
-        </div>
+      <Toolbar className="gap-[8px] shrink-0">
+        <FilterInput
+          placeholder="Filter services..."
+          value={neuronFilter}
+          onChange={(e) => setNeuronFilter(e.target.value)}
+        />
         <div className="ml-auto">
           {selectedNeurons.size === 0 && (
             <Button
@@ -304,7 +298,7 @@ export function DevelopPage() {
             </button>
           )}
         </div>
-      </div>
+      </Toolbar>
 
       {/* Services table */}
       <div className="flex-1 overflow-y-auto">

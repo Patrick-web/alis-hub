@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
-import { Input } from '../components/Input';
+import { FilterInput } from '../components/FilterInput';
+import { Toolbar } from '../components/Toolbar';
 import { EmptyState } from '../components/EmptyState';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
@@ -77,20 +78,14 @@ export function CodeblocksPage({ view = 'all' }: { view?: 'all' | 'mine' }) {
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Toolbar */}
-      <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
-        <div className="flex items-center h-[34px]">
-          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-foreground">/</p>
-          </div>
-          <Input
-            placeholder="Search blocks..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-[300px] border-l-0 rounded-l-none h-full"
-            containerClassName="h-full"
-          />
-        </div>
-      </div>
+      <Toolbar className="justify-between">
+        <FilterInput
+          placeholder="Search blocks..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          width="w-[300px]"
+        />
+      </Toolbar>
 
       {/* Filter tabs */}
       <div className="border-b border-border flex items-center px-[20px] gap-[4px]">

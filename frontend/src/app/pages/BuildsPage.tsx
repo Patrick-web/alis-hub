@@ -2,7 +2,8 @@ import { Loader } from "../components/Loader";
 import { EmptyState } from "../components/EmptyState";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Icon } from "@iconify/react";
-import { Input } from "../components/Input";
+import { FilterInput } from "../components/FilterInput";
+import { Toolbar } from "../components/Toolbar";
 import { Button } from "../components/Button";
 import { Table } from "../components/Table";
 import {
@@ -704,19 +705,13 @@ export function BuildsPage() {
       {/* Left Section: Toolbar and Table */}
       <div className="flex-1 flex flex-col border-r border-border overflow-hidden">
         {/* Toolbar */}
-        <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
-          <div className="flex items-center h-[34px]">
-            <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-              <p className="text-[12px] text-foreground">/</p>
-            </div>
-            <Input
-              placeholder="Filter..."
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-              className="w-[150px] border-l-0 rounded-l-none h-full"
-              containerClassName="h-full"
-            />
-          </div>
+        <Toolbar className="justify-between">
+          <FilterInput
+            placeholder="Filter..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            width="w-[150px]"
+          />
 
           <div className="flex items-center gap-[10px]">
             <Button
@@ -742,7 +737,7 @@ export function BuildsPage() {
               BUILD
             </Button>
           </div>
-        </div>
+        </Toolbar>
 
         {/* Table Content */}
         <div className="flex-1 overflow-hidden">
