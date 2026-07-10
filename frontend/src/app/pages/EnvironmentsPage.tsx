@@ -9,7 +9,8 @@ function parseError(err: unknown): string {
   return s;
 }
 import { Icon } from '@iconify/react';
-import { Input } from '../components/Input';
+import { FilterInput } from '../components/FilterInput';
+import { Toolbar } from '../components/Toolbar';
 import { Button } from '../components/Button';
 import { ActionButton } from '../components/ActionButton';
 import { Table } from '../components/Table';
@@ -264,19 +265,13 @@ export function EnvironmentsPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="border-b border-border px-[20px] py-[8px] flex items-center justify-between">
-        <div className="flex items-center h-[34px]">
-          <div className="bg-card border border-border px-[12px] h-full flex items-center justify-center border-r-0 rounded-l-[4px]">
-            <p className="text-[12px] text-foreground">/</p>
-          </div>
-          <Input
-            placeholder="Filter..."
-            value={filterText}
-            onChange={(e) => setFilterText(e.target.value)}
-            className="w-[300px] border-l-0 rounded-l-none h-full"
-            containerClassName="h-full"
-          />
-        </div>
+      <Toolbar className="justify-between">
+        <FilterInput
+          placeholder="Filter..."
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          width="w-[300px]"
+        />
 
         <div className="flex items-center gap-[10px]">
           <Button
@@ -292,7 +287,7 @@ export function EnvironmentsPage() {
             New Variable
           </Button>
         </div>
-      </div>
+      </Toolbar>
 
       {/* Table Content */}
       <div className="flex-1 overflow-hidden">
