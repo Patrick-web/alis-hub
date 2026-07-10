@@ -3,6 +3,8 @@ import { Icon } from '@iconify/react';
 import { Events } from '@wailsio/runtime';
 import { useNavigate } from 'react-router';
 import { useWorkspace } from '../stores/workspace';
+import { useLabs } from '../stores/labs';
+import { getDefaultRoute } from '../stores/tabSettings';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import type { SyncReposResult } from '../../../bindings/alis-hub-v3/models';
 import { Loader } from '../components/Loader';
@@ -38,6 +40,7 @@ function StateIndicator({ state }: { state: number }) {
 
 export function ProductPickerPage() {
   const { state, setProduct, setPhase } = useWorkspace();
+  const { state: labsState } = useLabs();
   const navigate = useNavigate();
   const org = state.selectedOrg!;
   const orgId = org.name.replace('organisations/', '');
@@ -96,7 +99,7 @@ export function ProductPickerPage() {
     if (cloneStatus[p.name]) {
       const productId = p.name.split('/products/')[1] ?? p.name;
       setProduct(orgId, org.displayName, productId, p.displayName);
-      navigate('/about');
+      navigate(getDefaultRoute(labsState.workflowsEnabled));
       return;
     }
     setExpandedProduct(prev => (prev === p.name ? null : p.name));
@@ -126,7 +129,7 @@ export function ProductPickerPage() {
     }
     setSyncState('done');
     setProduct(orgId, org.displayName, productId, p.displayName);
-    navigate('/about');
+    navigate(getDefaultRoute(labsState.workflowsEnabled));
   };
 
   const handleOpenWithoutClone = (p: ProductSummary) => {
@@ -135,7 +138,7 @@ export function ProductPickerPage() {
     setSyncState('idle');
     setSyncError(null);
     setProduct(orgId, org.displayName, productId, p.displayName);
-    navigate('/about');
+    navigate(getDefaultRoute(labsState.workflowsEnabled));
   };
 
   const handleCancelExpand = () => {

@@ -14,6 +14,7 @@ const LEGACY_LOCAL_STORAGE_KEYS = [
   'alis:platform-override',
   'alis:source-control',
   'alis:tools-context-defaults',
+  'alis:tab-settings',
   'alis:recentLandingZone',
   'alis:activeEnvName',
   'alis:systemNotifications',

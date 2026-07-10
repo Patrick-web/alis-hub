@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { useWorkspace } from '../stores/workspace';
+import { useLabs } from '../stores/labs';
+import { getDefaultRoute } from '../stores/tabSettings';
 import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
@@ -12,6 +14,7 @@ import { handleTitleBarDoubleClick } from '../lib/titlebar';
 export function HubPage() {
   const navigate = useNavigate();
   const { state, setPhase, setProduct } = useWorkspace();
+  const { state: labsState } = useLabs();
   const { effective } = usePlatform();
   const isWindows = effective === 'windows';
   const [profileOpen, setProfileOpen] = useState(false);
@@ -30,7 +33,7 @@ export function HubPage() {
     if (!state.recentLandingZone) return;
     const { org, orgDisplayName, product, productDisplayName } = state.recentLandingZone;
     setProduct(org, orgDisplayName, product, productDisplayName);
-    navigate('/about');
+    navigate(getDefaultRoute(labsState.workflowsEnabled));
   };
 
   const shortcuts = [

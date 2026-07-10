@@ -1,35 +1,66 @@
-import { useState, useEffect, useReducer, useMemo } from 'react';
-import { useTheme } from 'next-themes';
-import { marked } from 'marked';
-import { Loader } from './Loader';
-import { Icon } from '@iconify/react';
-import { Browser } from '@wailsio/runtime';
-import { isSystemNotificationsEnabled, setSystemNotificationsEnabled, requestNotificationAuthorization } from '../lib/systemNotify';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
-import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
-import * as ChangelogService from '../../../bindings/alis-hub-v3/changelogservice';
-import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
-import { SearchableSelect } from './ui/searchable-select';
-import { useWorkspace } from '../stores/workspace';
-import { useLabs, SUGGESTION_REGISTRY, SUGGESTION_CATEGORY_ORDER, type SuggestionCategory } from '../stores/labs';
-import { useSourceControl } from '../stores/sourceControl';
-import { useDevelopSettings, type SmartSortKey } from '../stores/developSettings';
-import { useProtectedEnvironments } from '../stores/protectedEnvironments';
-import { getToolDefault, setToolDefault } from '../stores/toolsSettings';
-import { useAccentColor, ACCENT_COLORS } from '../stores/accent';
-import { getAccessibleForeground } from '../lib/colorContrast';
-import { useUserProfile } from '../stores/userProfile';
-import { useUpdate } from '../stores/update';
-import { LocalAISetupCard } from './LocalAISetupCard';
+import { useState, useEffect, useReducer, useMemo, useRef } from "react";
+import { useTheme } from "next-themes";
+import { marked } from "marked";
+import { Loader } from "./Loader";
+import { Icon } from "@iconify/react";
+import { Browser } from "@wailsio/runtime";
+import {
+  isSystemNotificationsEnabled,
+  setSystemNotificationsEnabled,
+  requestNotificationAuthorization,
+} from "../lib/systemNotify";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "./ui/dialog";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
+import * as UpdaterService from "../../../bindings/alis-hub-v3/internal/updater/service";
+import * as ChangelogService from "../../../bindings/alis-hub-v3/changelogservice";
+import * as BuildService from "../../../bindings/alis-hub-v3/buildservice";
+import { SearchableSelect } from "./ui/searchable-select";
+import { useWorkspace } from "../stores/workspace";
+import {
+  useLabs,
+  SUGGESTION_REGISTRY,
+  SUGGESTION_CATEGORY_ORDER,
+  type SuggestionCategory,
+} from "../stores/labs";
+import { useSourceControl } from "../stores/sourceControl";
+import {
+  useDevelopSettings,
+  type SmartSortKey,
+} from "../stores/developSettings";
+import { useProtectedEnvironments } from "../stores/protectedEnvironments";
+import { getToolDefault, setToolDefault } from "../stores/toolsSettings";
+import { useAccentColor, ACCENT_COLORS } from "../stores/accent";
+import {
+  TAB_REGISTRY,
+  getVisibleTabs,
+  setTabOrder,
+  setDefaultTab,
+  useTabSettings,
+} from "../stores/tabSettings";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { getAccessibleForeground } from "../lib/colorContrast";
+import { useUserProfile } from "../stores/userProfile";
+import { useUpdate } from "../stores/update";
+import { LocalAISetupCard } from "./LocalAISetupCard";
 
 interface ProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type Tab = 'account' | 'appearance' | 'notifications' | 'labs' | 'updates' | 'source-control' | 'develop' | 'tools' | 'environments';
+type Tab =
+  | "account"
+  | "appearance"
+  | "tabs"
+  | "notifications"
+  | "labs"
+  | "updates"
+  | "source-control"
+  | "develop"
+  | "tools"
+  | "environments";
 
 interface AppInfo {
   version: string;
@@ -39,7 +70,15 @@ interface AppInfo {
   executable: string;
 }
 
-function Avatar({ name, picture, size = 48 }: { name: string; picture: string; size?: number }) {
+function Avatar({
+  name,
+  picture,
+  size = 48,
+}: {
+  name: string;
+  picture: string;
+  size?: number;
+}) {
   const [imgError, setImgError] = useState(false);
 
   if (picture && !imgError) {
@@ -57,29 +96,55 @@ function Avatar({ name, picture, size = 48 }: { name: string; picture: string; s
   }
 
   const initials = name
-    ? name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
+    ? name
+        .split(" ")
+        .map((w) => w[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "?";
 
   return (
     <div
       className="rounded-full bg-brand-fill/15 border border-brand-fill/30 flex items-center justify-center shrink-0"
       style={{ width: size, height: size }}
     >
-      <span className="text-brand font-bold font-mono" style={{ fontSize: size * 0.35 }}>
+      <span
+        className="text-brand font-bold font-mono"
+        style={{ fontSize: size * 0.35 }}
+      >
         {initials}
       </span>
     </div>
   );
 }
 
-export function SettingRow({ id, label, value, children, highlighted }: { id?: string; label: string; value?: string; children?: React.ReactNode; highlighted?: boolean }) {
+export function SettingRow({
+  id,
+  label,
+  value,
+  children,
+  highlighted,
+}: {
+  id?: string;
+  label: string;
+  value?: string;
+  children?: React.ReactNode;
+  highlighted?: boolean;
+}) {
   return (
     <div
       id={id}
-      className={`flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0 transition-colors duration-500 ${highlighted ? 'bg-brand/[0.12] ring-1 ring-inset ring-brand/40 rounded-[6px]' : ''}`}
+      className={`flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0 transition-colors duration-500 ${highlighted ? "bg-brand/[0.12] ring-1 ring-inset ring-brand/40 rounded-[6px]" : ""}`}
     >
-      <span className="text-[12px] text-foreground/70 font-medium">{label}</span>
-      {value && <span className="text-[11px] text-foreground/45 font-mono">{value}</span>}
+      <span className="text-[12px] text-foreground/70 font-medium">
+        {label}
+      </span>
+      {value && (
+        <span className="text-[11px] text-foreground/45 font-mono">
+          {value}
+        </span>
+      )}
       {children}
     </div>
   );
@@ -101,93 +166,343 @@ export function SettingsCard({ children }: { children: React.ReactNode }) {
   );
 }
 
+const TAB_DND_TYPE = "profile-tab-row";
+
+function DraggableTabRow({
+  id,
+  label,
+  icon,
+  index,
+  isDefault,
+  onMove,
+  onDrop,
+}: {
+  id: string;
+  label: string;
+  icon: string;
+  index: number;
+  isDefault: boolean;
+  onMove: (from: number, to: number) => void;
+  onDrop: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  const [{ isDragging }, drag] = useDrag({
+    type: TAB_DND_TYPE,
+    item: { index },
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+    end: () => onDrop(),
+  });
+
+  const [{ isOver }, drop] = useDrop({
+    accept: TAB_DND_TYPE,
+    collect: (monitor) => ({ isOver: monitor.isOver() }),
+    hover: (item: { index: number }) => {
+      if (item.index === index) return;
+      onMove(item.index, index);
+      item.index = index;
+    },
+  });
+
+  drag(drop(ref));
+
+  return (
+    <div
+      ref={ref}
+      className={`flex items-center gap-[10px] px-[12px] py-[9px] border-b border-border last:border-0 bg-background/40 transition-colors ${
+        isDragging ? "opacity-40" : ""
+      } ${isOver ? "bg-brand/[0.06]" : ""}`}
+    >
+      <Icon
+        icon="solar:hamburger-menu-linear"
+        className="text-foreground/25 text-base shrink-0 cursor-grab active:cursor-grabbing"
+      />
+      <Icon icon={icon} className="text-foreground/60 text-base shrink-0" />
+      <span className="text-[12px] text-foreground/80 font-medium flex-1">
+        {label}
+      </span>
+      {isDefault && (
+        <span className="text-[9px] font-mono uppercase tracking-[1px] text-brand bg-brand/[0.1] px-[6px] py-[2px] rounded-[4px]">
+          Default
+        </span>
+      )}
+    </div>
+  );
+}
+
 const SIDEBAR_GROUPS = [
   {
-    label: 'Personal',
+    label: "Personal",
     items: [
-      { id: 'account' as Tab,       label: 'Account',       icon: 'solar:user-circle-linear',    color: '#f881a9' },
-      { id: 'appearance' as Tab,    label: 'Appearance',    icon: 'solar:palette-linear',         color: undefined },
-      { id: 'notifications' as Tab, label: 'Notifications', icon: 'solar:bell-linear',            color: undefined },
+      {
+        id: "account" as Tab,
+        label: "Account",
+        icon: "solar:user-circle-linear",
+        color: "#f881a9",
+      },
+      {
+        id: "appearance" as Tab,
+        label: "Appearance",
+        icon: "solar:palette-linear",
+        color: undefined,
+      },
+      {
+        id: "tabs" as Tab,
+        label: "Tabs",
+        icon: "solar:widget-linear",
+        color: undefined,
+      },
+      {
+        id: "notifications" as Tab,
+        label: "Notifications",
+        icon: "solar:bell-linear",
+        color: undefined,
+      },
     ],
   },
   {
-    label: 'Advanced',
+    label: "Advanced",
     items: [
-      { id: 'labs' as Tab,           label: 'Labs',           icon: 'solar:test-tube-linear',        color: '#bf5af2' },
-      { id: 'updates' as Tab,        label: 'Updates',        icon: 'solar:refresh-circle-linear',   color: '#3b82f6' },
-      { id: 'source-control' as Tab, label: 'Source Control', icon: 'solar:branching-paths-down-linear', color: undefined },
-      { id: 'develop' as Tab,        label: 'Develop',        icon: 'solar:code-square-linear',        color: undefined },
-      { id: 'tools' as Tab,          label: 'Tools',          icon: 'solar:cloud-storage-linear',       color: undefined },
-      { id: 'environments' as Tab,   label: 'Environments',   icon: 'solar:shield-check-linear',        color: undefined },
+      {
+        id: "labs" as Tab,
+        label: "Labs",
+        icon: "solar:test-tube-linear",
+        color: "#bf5af2",
+      },
+      {
+        id: "updates" as Tab,
+        label: "Updates",
+        icon: "solar:refresh-circle-linear",
+        color: "#3b82f6",
+      },
+      {
+        id: "source-control" as Tab,
+        label: "Source Control",
+        icon: "solar:branching-paths-down-linear",
+        color: undefined,
+      },
+      {
+        id: "develop" as Tab,
+        label: "Develop",
+        icon: "solar:code-square-linear",
+        color: undefined,
+      },
+      {
+        id: "tools" as Tab,
+        label: "Tools",
+        icon: "solar:cloud-storage-linear",
+        color: undefined,
+      },
+      {
+        id: "environments" as Tab,
+        label: "Environments",
+        icon: "solar:shield-check-linear",
+        color: undefined,
+      },
     ],
   },
 ];
 
 const TOOL_SETTINGS = [
-  { id: 'buckets',         label: 'Buckets' },
-  { id: 'logs',            label: 'Logs' },
-  { id: 'artifactregistry',label: 'Artifact Registry' },
-  { id: 'secrets',         label: 'Secret Manager' },
-  { id: 'spanner',         label: 'Spanner' },
-  { id: 'backups',         label: 'Backups' },
+  { id: "buckets", label: "Buckets" },
+  { id: "logs", label: "Logs" },
+  { id: "artifactregistry", label: "Artifact Registry" },
+  { id: "secrets", label: "Secret Manager" },
+  { id: "spanner", label: "Spanner" },
+  { id: "backups", label: "Backups" },
 ];
 
-type SearchEntry = { id: string; tab: Tab; section: string; label: string; keywords?: string[] };
+type SearchEntry = {
+  id: string;
+  tab: Tab;
+  section: string;
+  label: string;
+  keywords?: string[];
+};
 
-const TAB_ORDER: { id: Tab; label: string }[] = SIDEBAR_GROUPS.flatMap(group => group.items.map(item => ({ id: item.id, label: item.label })));
+const TAB_ORDER: { id: Tab; label: string }[] = SIDEBAR_GROUPS.flatMap(
+  (group) => group.items.map((item) => ({ id: item.id, label: item.label })),
+);
 
 const STATIC_SEARCH_ENTRIES: SearchEntry[] = [
-  { id: 'setting-account-name', tab: 'account', section: 'Profile', label: 'Name' },
-  { id: 'setting-account-email', tab: 'account', section: 'Profile', label: 'Email' },
+  {
+    id: "setting-account-name",
+    tab: "account",
+    section: "Profile",
+    label: "Name",
+  },
+  {
+    id: "setting-account-email",
+    tab: "account",
+    section: "Profile",
+    label: "Email",
+  },
 
-  { id: 'setting-appearance-mode', tab: 'appearance', section: 'Theme', label: 'Mode', keywords: ['light', 'dark', 'system', 'theme'] },
-  { id: 'setting-appearance-accent', tab: 'appearance', section: 'Accent color', label: 'Accent color', keywords: ['custom color'] },
+  {
+    id: "setting-appearance-mode",
+    tab: "appearance",
+    section: "Theme",
+    label: "Mode",
+    keywords: ["light", "dark", "system", "theme"],
+  },
+  {
+    id: "setting-appearance-accent",
+    tab: "appearance",
+    section: "Accent color",
+    label: "Accent color",
+    keywords: ["custom color"],
+  },
 
-  { id: 'setting-notifications-system', tab: 'notifications', section: 'System', label: 'System notifications' },
+  {
+    id: "setting-tabs-default",
+    tab: "tabs",
+    section: "Default tab",
+    label: "Default tab",
+    keywords: ["default", "landing zone", "home", "startup", "open"],
+  },
+  {
+    id: "setting-tabs-order",
+    tab: "tabs",
+    section: "Order",
+    label: "Tab order",
+    keywords: ["reorder", "arrange", "navigation", "drag"],
+  },
 
-  { id: 'setting-labs-local-ai', tab: 'labs', section: 'Local AI', label: 'Local AI' },
-  { id: 'setting-labs-smart-suggestions', tab: 'labs', section: 'Smart Suggestions', label: 'Smart Suggestions' },
-  { id: 'setting-labs-workflows', tab: 'labs', section: 'Workflows', label: 'Workflows tab' },
+  {
+    id: "setting-notifications-system",
+    tab: "notifications",
+    section: "System",
+    label: "System notifications",
+  },
 
-  { id: 'setting-updates-current-version', tab: 'updates', section: 'Version', label: 'Current version' },
-  { id: 'setting-updates-os', tab: 'updates', section: 'Version', label: 'OS' },
-  { id: 'setting-updates-go', tab: 'updates', section: 'Version', label: 'Go' },
-  { id: 'setting-updates-check', tab: 'updates', section: 'Version', label: 'Check for updates', keywords: ['update'] },
+  {
+    id: "setting-labs-local-ai",
+    tab: "labs",
+    section: "Local AI",
+    label: "Local AI",
+  },
+  {
+    id: "setting-labs-smart-suggestions",
+    tab: "labs",
+    section: "Smart Suggestions",
+    label: "Smart Suggestions",
+  },
+  {
+    id: "setting-labs-workflows",
+    tab: "labs",
+    section: "Workflows",
+    label: "Workflows tab",
+  },
 
-  { id: 'setting-sc-file-list-view', tab: 'source-control', section: 'File List', label: 'View', keywords: ['list', 'tree'] },
-  { id: 'setting-sc-diff-mode', tab: 'source-control', section: 'Diff Viewer', label: 'Mode', keywords: ['unified', 'split', 'diff'] },
-  { id: 'setting-sc-background-fetch', tab: 'source-control', section: 'Background Fetch', label: 'Check for changes', keywords: ['off', '1m', '5m', '15m', '30m', 'fetch', 'background'] },
+  {
+    id: "setting-updates-current-version",
+    tab: "updates",
+    section: "Version",
+    label: "Current version",
+  },
+  { id: "setting-updates-os", tab: "updates", section: "Version", label: "OS" },
+  { id: "setting-updates-go", tab: "updates", section: "Version", label: "Go" },
+  {
+    id: "setting-updates-check",
+    tab: "updates",
+    section: "Version",
+    label: "Check for updates",
+    keywords: ["update"],
+  },
 
-  { id: 'setting-develop-ignore-hidden', tab: 'develop', section: 'Folder Scanning', label: 'Ignore hidden folders' },
-  { id: 'setting-develop-ignored-patterns', tab: 'develop', section: 'Folder Scanning', label: 'Ignored folder patterns', keywords: ['node_modules', 'glob'] },
-  { id: 'setting-develop-default-branch', tab: 'develop', section: 'Git', label: 'Default branch', keywords: ['local', 'custom', 'branch'] },
-  { id: 'setting-develop-smart-sort', tab: 'develop', section: 'Smart Sort', label: 'Smart Sort', keywords: ['defined', 'built', 'deployed', 'committed', 'sort by'] },
+  {
+    id: "setting-sc-file-list-view",
+    tab: "source-control",
+    section: "File List",
+    label: "View",
+    keywords: ["list", "tree"],
+  },
+  {
+    id: "setting-sc-diff-mode",
+    tab: "source-control",
+    section: "Diff Viewer",
+    label: "Mode",
+    keywords: ["unified", "split", "diff"],
+  },
+  {
+    id: "setting-sc-background-fetch",
+    tab: "source-control",
+    section: "Background Fetch",
+    label: "Check for changes",
+    keywords: ["off", "1m", "5m", "15m", "30m", "fetch", "background"],
+  },
 
-  { id: 'setting-environments-protected', tab: 'environments', section: 'Protected Environments', label: 'Protected environments', keywords: ['deploy', 'guard', 'confirm', 'protect', 'stop and think'] },
+  {
+    id: "setting-develop-ignore-hidden",
+    tab: "develop",
+    section: "Folder Scanning",
+    label: "Ignore hidden folders",
+  },
+  {
+    id: "setting-develop-ignored-patterns",
+    tab: "develop",
+    section: "Folder Scanning",
+    label: "Ignored folder patterns",
+    keywords: ["node_modules", "glob"],
+  },
+  {
+    id: "setting-develop-default-branch",
+    tab: "develop",
+    section: "Git",
+    label: "Default branch",
+    keywords: ["local", "custom", "branch"],
+  },
+  {
+    id: "setting-develop-smart-sort",
+    tab: "develop",
+    section: "Smart Sort",
+    label: "Smart Sort",
+    keywords: ["defined", "built", "deployed", "committed", "sort by"],
+  },
+
+  {
+    id: "setting-environments-protected",
+    tab: "environments",
+    section: "Protected Environments",
+    label: "Protected environments",
+    keywords: ["deploy", "guard", "confirm", "protect", "stop and think"],
+  },
 ];
 
-const LABS_SEARCH_ENTRIES: SearchEntry[] = SUGGESTION_REGISTRY.map(def => ({
+const LABS_SEARCH_ENTRIES: SearchEntry[] = SUGGESTION_REGISTRY.map((def) => ({
   id: `setting-${def.id}`,
-  tab: 'labs' as Tab,
+  tab: "labs" as Tab,
   section: def.category,
   label: def.title,
   keywords: [def.description],
 }));
 
-const TOOLS_SEARCH_ENTRIES: SearchEntry[] = TOOL_SETTINGS.map(tool => ({
+const TOOLS_SEARCH_ENTRIES: SearchEntry[] = TOOL_SETTINGS.map((tool) => ({
   id: `setting-${tool.id}`,
-  tab: 'tools' as Tab,
-  section: 'Tool Context Defaults',
+  tab: "tools" as Tab,
+  section: "Tool Context Defaults",
   label: tool.label,
 }));
 
-const SEARCH_INDEX: SearchEntry[] = [...STATIC_SEARCH_ENTRIES, ...LABS_SEARCH_ENTRIES, ...TOOLS_SEARCH_ENTRIES];
+const SEARCH_INDEX: SearchEntry[] = [
+  ...STATIC_SEARCH_ENTRIES,
+  ...LABS_SEARCH_ENTRIES,
+  ...TOOLS_SEARCH_ENTRIES,
+];
 
-function SearchResultsView({ results, onSelect }: { results: SearchEntry[]; onSelect: (entry: SearchEntry) => void }) {
+function SearchResultsView({
+  results,
+  onSelect,
+}: {
+  results: SearchEntry[];
+  onSelect: (entry: SearchEntry) => void;
+}) {
   if (results.length === 0) {
     return (
       <div className="p-[14px] h-full flex items-center justify-center">
-        <p className="text-[11px] text-foreground/30 font-mono">No results found.</p>
+        <p className="text-[11px] text-foreground/30 font-mono">
+          No results found.
+        </p>
       </div>
     );
   }
@@ -201,18 +516,22 @@ function SearchResultsView({ results, onSelect }: { results: SearchEntry[]; onSe
 
   return (
     <div className="p-[14px] flex flex-col gap-[12px]">
-      {TAB_ORDER.filter(t => byTab.has(t.id)).map(t => (
+      {TAB_ORDER.filter((t) => byTab.has(t.id)).map((t) => (
         <div key={t.id} className="flex flex-col gap-[5px]">
           <SectionTitle>{t.label}</SectionTitle>
           <SettingsCard>
-            {byTab.get(t.id)!.map(entry => (
+            {byTab.get(t.id)!.map((entry) => (
               <button
                 key={entry.id}
                 onClick={() => onSelect(entry)}
                 className="w-full flex items-center justify-between px-[12px] py-[8px] border-b border-border last:border-0 text-left hover:bg-foreground/[0.04] transition-colors"
               >
-                <span className="text-[12px] text-foreground/70 font-medium">{entry.label}</span>
-                <span className="text-[10px] text-foreground/30 font-mono">{entry.section}</span>
+                <span className="text-[12px] text-foreground/70 font-medium">
+                  {entry.label}
+                </span>
+                <span className="text-[10px] text-foreground/30 font-mono">
+                  {entry.section}
+                </span>
               </button>
             ))}
           </SettingsCard>
@@ -226,8 +545,19 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const { state, setPhase } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { accentId, setAccent, customHex, setCustomAccent } = useAccentColor();
-  const { state: labsState, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled, setWorkflowsEnabled } = useLabs();
-  const { state: scState, setFileListView, setDiffView, setFetchIntervalMinutes } = useSourceControl();
+  const {
+    state: labsState,
+    isSuggestionEnabled,
+    setSuggestionEnabled,
+    setMasterEnabled,
+    setWorkflowsEnabled,
+  } = useLabs();
+  const {
+    state: scState,
+    setFileListView,
+    setDiffView,
+    setFetchIntervalMinutes,
+  } = useSourceControl();
   const {
     settings: devSettings,
     setIgnoreHiddenFolders,
@@ -237,11 +567,34 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     setSmartSortKey,
   } = useDevelopSettings();
   const { isProtected, toggleProtected } = useProtectedEnvironments();
-  const [activeTab, setActiveTab] = useState<Tab>('account');
+  const [activeTab, setActiveTab] = useState<Tab>("account");
+  const tabSettings = useTabSettings();
+  const visibleTabDefs = getVisibleTabs(labsState.workflowsEnabled);
+  const [tabOrderDraft, setTabOrderDraft] = useState<string[]>(
+    visibleTabDefs.map((t) => t.id),
+  );
+
+  useEffect(() => {
+    setTabOrderDraft(getVisibleTabs(labsState.workflowsEnabled).map((t) => t.id));
+  }, [tabSettings.order, labsState.workflowsEnabled]);
+
+  const moveTabDraft = (from: number, to: number) => {
+    setTabOrderDraft((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
+  const commitTabOrder = () => {
+    setTabOrder(tabOrderDraft);
+  };
+
   const [availableBranches, setAvailableBranches] = useState<string[]>([]);
   const { profile, profileError, clearProfile } = useUserProfile();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const {
@@ -255,12 +608,19 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [changelogHtml, setChangelogHtml] = useState('');
-  const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
-  const [, forceToolDefaultsUpdate] = useReducer(x => x + 1, 0);
+  const [changelogHtml, setChangelogHtml] = useState("");
+  const [sysNotifications, setSysNotifications] = useState(() =>
+    isSystemNotificationsEnabled(),
+  );
+  const [, forceToolDefaultsUpdate] = useReducer((x) => x + 1, 0);
 
   function handleToolDefaultChange(toolId: string, level: string) {
-    setToolDefault(state.organisation ?? '', state.product ?? '', toolId, level);
+    setToolDefault(
+      state.organisation ?? "",
+      state.product ?? "",
+      toolId,
+      level,
+    );
     forceToolDefaultsUpdate();
   }
 
@@ -278,24 +638,30 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   }
 
   useEffect(() => {
-    if (!open || activeTab !== 'develop') return;
+    if (!open || activeTab !== "develop") return;
     if (!state.organisation || !state.product) return;
     BuildService.GetBuildBranches(state.organisation, state.product)
-      .then((bs: any) => { if (bs && bs.length > 0) setAvailableBranches(bs as string[]); })
+      .then((bs: any) => {
+        if (bs && bs.length > 0) setAvailableBranches(bs as string[]);
+      })
       .catch(() => {});
   }, [open, activeTab, state.organisation, state.product]);
 
   useEffect(() => {
     if (!open) return;
 
-    UpdaterService.AppInfo().then((info: any) => {
-      if (info) setAppInfo(info as AppInfo);
-    }).catch(() => {});
+    UpdaterService.AppInfo()
+      .then((info: any) => {
+        if (info) setAppInfo(info as AppInfo);
+      })
+      .catch(() => {});
 
-    ChangelogService.GetReleaseNotes().then(async (notes: string) => {
-      const html = await marked.parse(notes || '');
-      setChangelogHtml(html);
-    }).catch(() => {});
+    ChangelogService.GetReleaseNotes()
+      .then(async (notes: string) => {
+        const html = await marked.parse(notes || "");
+        setChangelogHtml(html);
+      })
+      .catch(() => {});
   }, [open]);
 
   const handleCheckUpdate = async () => {
@@ -315,14 +681,15 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
       await ProductService.Logout();
       clearProfile();
       onOpenChange(false);
-      setPhase('login');
+      setPhase("login");
     } catch (e) {
       setLoggingOut(false);
     }
   };
 
   const groupedRegistry = useMemo(() => {
-    const map: Partial<Record<SuggestionCategory, typeof SUGGESTION_REGISTRY>> = {};
+    const map: Partial<Record<SuggestionCategory, typeof SUGGESTION_REGISTRY>> =
+      {};
     for (const def of SUGGESTION_REGISTRY) {
       (map[def.category] ??= []).push(def);
     }
@@ -332,25 +699,36 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const searchResults = useMemo(() => {
     if (!trimmedQuery) return [];
-    return SEARCH_INDEX.filter(entry =>
-      entry.label.toLowerCase().includes(trimmedQuery) ||
-      entry.section.toLowerCase().includes(trimmedQuery) ||
-      (entry.keywords ?? []).some(k => k.toLowerCase().includes(trimmedQuery))
+    return SEARCH_INDEX.filter(
+      (entry) =>
+        entry.label.toLowerCase().includes(trimmedQuery) ||
+        entry.section.toLowerCase().includes(trimmedQuery) ||
+        (entry.keywords ?? []).some((k) =>
+          k.toLowerCase().includes(trimmedQuery),
+        ),
     );
   }, [trimmedQuery]);
 
   function closeSearch() {
     setSearchOpen(false);
-    setSearchQuery('');
+    setSearchQuery("");
   }
 
   function handleResultSelect(entry: SearchEntry) {
     setActiveTab(entry.tab);
     closeSearch();
     requestAnimationFrame(() => {
-      document.getElementById(entry.id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document
+        .getElementById(entry.id)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
       setHighlightedId(entry.id);
-      setTimeout(() => setHighlightedId(current => (current === entry.id ? null : current)), 1500);
+      setTimeout(
+        () =>
+          setHighlightedId((current) =>
+            current === entry.id ? null : current,
+          ),
+        1500,
+      );
     });
   }
 
@@ -370,10 +748,11 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                        data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95
                        duration-200"
             style={{
-              background: 'var(--modal-bg)',
-              backdropFilter: 'blur(40px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-              boxShadow: '0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)',
+              background: "var(--modal-bg)",
+              backdropFilter: "blur(40px) saturate(180%)",
+              WebkitBackdropFilter: "blur(40px) saturate(180%)",
+              boxShadow:
+                "0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)",
             }}
             onEscapeKeyDown={(e) => {
               if (searchOpen) {
@@ -386,10 +765,19 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
             <div className="flex items-center px-[14px] pt-[12px] pb-[9px] border-b border-border shrink-0">
               <div className="w-[52px] flex justify-start">
                 <button
-                  onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+                  onClick={() =>
+                    searchOpen ? closeSearch() : setSearchOpen(true)
+                  }
                   className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.07] transition-colors"
                 >
-                  <Icon icon={searchOpen ? 'solar:close-circle-linear' : 'solar:magnifer-linear'} className="text-[15px]" />
+                  <Icon
+                    icon={
+                      searchOpen
+                        ? "solar:close-circle-linear"
+                        : "solar:magnifer-linear"
+                    }
+                    className="text-[15px]"
+                  />
                 </button>
               </div>
 
@@ -399,13 +787,19 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     autoFocus
                     type="text"
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search settings…"
                     className="flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-foreground/30"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="text-foreground/30 hover:text-foreground/60 shrink-0">
-                      <Icon icon="solar:close-circle-linear" className="text-[13px]" />
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="text-foreground/30 hover:text-foreground/60 shrink-0"
+                    >
+                      <Icon
+                        icon="solar:close-circle-linear"
+                        className="text-[13px]"
+                      />
                     </button>
                   )}
                 </div>
@@ -420,49 +814,66 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                   onClick={() => onOpenChange(false)}
                   className="w-[22px] h-[22px] rounded-full flex items-center justify-center text-foreground/40 hover:text-foreground/70 hover:bg-foreground/[0.07] transition-colors"
                 >
-                  <Icon icon="solar:close-circle-linear" className="text-[15px]" />
+                  <Icon
+                    icon="solar:close-circle-linear"
+                    className="text-[15px]"
+                  />
                 </button>
               </div>
             </div>
 
             <div className="flex flex-1 min-h-0">
-
               {/* Sidebar */}
               <div className="w-[160px] border-r border-border flex flex-col shrink-0 overflow-y-auto">
                 {SIDEBAR_GROUPS.map((group, gi) => (
-                  <div key={group.label} className={gi > 0 ? 'mt-[2px]' : ''}>
+                  <div key={group.label} className={gi > 0 ? "mt-[2px]" : ""}>
                     <div className="px-[12px] pt-[10px] pb-[3px]">
                       <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/20">
                         {group.label}
                       </span>
                     </div>
-                    {group.items.map(item => (
+                    {group.items.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => { setActiveTab(item.id); closeSearch(); }}
+                        onClick={() => {
+                          setActiveTab(item.id);
+                          closeSearch();
+                        }}
                         className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors ${
                           activeTab === item.id
-                            ? 'bg-foreground/[0.07]'
-                            : 'hover:bg-foreground/[0.04]'
+                            ? "bg-foreground/[0.07]"
+                            : "hover:bg-foreground/[0.04]"
                         }`}
-                        style={{ width: 'calc(100% - 10px)' }}
+                        style={{ width: "calc(100% - 10px)" }}
                       >
                         <Icon
                           icon={item.icon}
                           className={`text-[15px] shrink-0 ${
                             activeTab === item.id
-                              ? (item.color ? '' : 'text-foreground/90')
-                              : 'text-foreground/35'
+                              ? item.color
+                                ? ""
+                                : "text-foreground/90"
+                              : "text-foreground/35"
                           }`}
-                          style={activeTab === item.id && item.color ? { color: item.color } : undefined}
+                          style={
+                            activeTab === item.id && item.color
+                              ? { color: item.color }
+                              : undefined
+                          }
                         />
                         <span
                           className={`text-[12px] font-medium ${
                             activeTab === item.id
-                              ? (item.color ? '' : 'text-foreground/90')
-                              : 'text-foreground/45'
+                              ? item.color
+                                ? ""
+                                : "text-foreground/90"
+                              : "text-foreground/45"
                           }`}
-                          style={activeTab === item.id && item.color ? { color: item.color } : undefined}
+                          style={
+                            activeTab === item.id && item.color
+                              ? { color: item.color }
+                              : undefined
+                          }
                         >
                           {item.label}
                         </span>
@@ -479,7 +890,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                     disabled={loggingOut}
                     className="flex items-center gap-[7px] w-full px-[9px] py-[7px] rounded-[7px] text-[rgba(255,92,95,0.65)] hover:text-destructive hover:bg-[rgba(255,92,95,0.08)] transition-colors disabled:opacity-50"
                   >
-                    <Icon icon="solar:logout-linear" className="text-[14px] shrink-0" />
+                    <Icon
+                      icon="solar:logout-linear"
+                      className="text-[14px] shrink-0"
+                    />
                     <span className="text-[12px] font-medium">Sign out</span>
                   </button>
                 </div>
@@ -488,609 +902,958 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
               {/* Content */}
               <div className="flex-1 overflow-y-auto">
                 {searchOpen && trimmedQuery ? (
-                  <SearchResultsView results={searchResults} onSelect={handleResultSelect} />
+                  <SearchResultsView
+                    results={searchResults}
+                    onSelect={handleResultSelect}
+                  />
                 ) : searchOpen ? (
                   <div className="p-[14px] h-full flex items-center justify-center">
-                    <p className="text-[11px] text-foreground/25 font-mono">Type to search settings…</p>
+                    <p className="text-[11px] text-foreground/25 font-mono">
+                      Type to search settings…
+                    </p>
                   </div>
                 ) : (
                   <>
-
-                {/* ── Account ── */}
-                {activeTab === 'account' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex items-center gap-[12px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
-                      <Avatar name={profile?.name || ''} picture={profile?.picture || ''} size={44} />
-                      <div className="min-w-0">
-                        <p className="text-[13px] font-bold text-foreground tracking-[-0.3px] truncate">
-                          {profile?.name || '—'}
-                        </p>
-                        <p className="text-[11px] text-foreground/45 font-mono truncate mt-[2px]">
-                          {profile?.email || '—'}
-                        </p>
-                      </div>
-                    </div>
-
-                    {profileError && (
-                      <p className="text-[10px] text-destructive font-mono">{profileError}</p>
-                    )}
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Profile</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-account-name" highlighted={highlightedId === 'setting-account-name'} label="Name" value={profile?.name || '—'} />
-                        <SettingRow id="setting-account-email" highlighted={highlightedId === 'setting-account-email'} label="Email" value={profile?.email || '—'} />
-                      </SettingsCard>
-                    </div>
-
-                    <button
-                      onClick={() => Browser.OpenURL('https://console.alisx.com/profile')}
-                      className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
-                    >
-                      <Icon icon="solar:link-square-linear" className="text-sm" />
-                      Edit profile on console.alisx.com
-                    </button>
-                  </div>
-                )}
-
-                {/* ── Appearance ── */}
-                {activeTab === 'appearance' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Theme</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-appearance-mode" highlighted={highlightedId === 'setting-appearance-mode'} label="Mode">
-                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                            <button
-                              onClick={() => setTheme('light')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'light' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              Light
-                            </button>
-                            <button
-                              onClick={() => setTheme('dark')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'dark' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              Dark
-                            </button>
-                            <button
-                              onClick={() => setTheme('system')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === 'system' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              System
-                            </button>
-                          </div>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    <div
-                      id="setting-appearance-accent"
-                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-appearance-accent' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
-                    >
-                      <SectionTitle>Accent color</SectionTitle>
-                      <SettingsCard>
-                        <div className="px-[12px] py-[11px] flex items-center gap-[10px] flex-wrap">
-                          {ACCENT_COLORS.map(color => (
-                            <button
-                              key={color.id}
-                              title={color.label}
-                              onClick={() => setAccent(color.id)}
-                              className="relative w-[24px] h-[24px] rounded-full transition-transform hover:scale-110 shrink-0 focus:outline-none"
-                              style={{ background: color.brand }}
-                            >
-                              {accentId === color.id && (
-                                <span className="absolute inset-0 flex items-center justify-center">
-                                  <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: getAccessibleForeground(color.brand) }} />
-                                </span>
-                              )}
-                              {accentId === color.id && (
-                                <span className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none" style={{ borderColor: color.brand }} />
-                              )}
-                            </button>
-                          ))}
-
-                          {/* Custom color */}
-                          <label
-                            title="Custom color"
-                            className="relative w-[24px] h-[24px] rounded-full cursor-pointer hover:scale-110 transition-transform shrink-0 overflow-hidden"
-                            style={
-                              accentId === 'custom'
-                                ? { background: customHex }
-                                : { background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }
-                            }
-                          >
-                            {accentId === 'custom' && (
-                              <span className="absolute inset-0 flex items-center justify-center">
-                                <Icon icon="solar:check-bold" className="text-[11px]" style={{ color: getAccessibleForeground(customHex) }} />
-                              </span>
-                            )}
-                            {accentId === 'custom' && (
-                              <span className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none" style={{ borderColor: customHex }} />
-                            )}
-                            <input
-                              type="color"
-                              value={customHex}
-                              onChange={e => setCustomAccent(e.target.value)}
-                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                            />
-                          </label>
-                        </div>
-                      </SettingsCard>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Notifications ── */}
-                {activeTab === 'notifications' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>System</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-notifications-system" highlighted={highlightedId === 'setting-notifications-system'} label="System notifications">
-                          <button
-                            onClick={handleSysNotifToggle}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                          >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysNotifications ? 'left-[16px]' : 'left-[2px]'}`} />
-                          </button>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Labs ── */}
-                {activeTab === 'labs' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div
-                      id="setting-labs-local-ai"
-                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-labs-local-ai' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
-                    >
-                      <SectionTitle>Local AI</SectionTitle>
-                      <LocalAISetupCard />
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Smart Suggestions</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-labs-smart-suggestions" highlighted={highlightedId === 'setting-labs-smart-suggestions'} label="Smart Suggestions">
-                          <button
-                            onClick={() => setMasterEnabled(!labsState.masterEnabled)}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                          >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
-                          </button>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Workflows</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-labs-workflows" highlighted={highlightedId === 'setting-labs-workflows'} label="Workflows tab">
-                          <button
-                            onClick={() => setWorkflowsEnabled(!labsState.workflowsEnabled)}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.workflowsEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                          >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.workflowsEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
-                          </button>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    {SUGGESTION_CATEGORY_ORDER.filter(c => groupedRegistry[c]?.length).map(category => (
-                      <div key={category} className="flex flex-col gap-[5px]">
-                        <SectionTitle>{category}</SectionTitle>
-                        <SettingsCard>
-                          {groupedRegistry[category]!.map(def => (
-                            <SettingRow key={def.id} id={`setting-${def.id}`} highlighted={highlightedId === `setting-${def.id}`} label={def.title}>
-                              <button
-                                onClick={() => setSuggestionEnabled(def.id, !isSuggestionEnabled(def.id))}
-                                disabled={!labsState.masterEnabled}
-                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 disabled:opacity-40 ${isSuggestionEnabled(def.id) ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                                title={def.description}
-                              >
-                                <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isSuggestionEnabled(def.id) ? 'left-[16px]' : 'left-[2px]'}`} />
-                              </button>
-                            </SettingRow>
-                          ))}
-                        </SettingsCard>
-                      </div>
-                    ))}
-
-                    <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
-                      Labs features are experimental and may change without notice.
-                    </p>
-                  </div>
-                )}
-
-                {/* ── Updates ── */}
-                {activeTab === 'updates' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex items-center gap-[10px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
-                      <div className="size-[34px] rounded-[8px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
-                        <Icon icon="solar:cloud-bold" className="text-brand text-base" />
-                      </div>
-                      <div>
-                        <p className="text-[13px] font-bold text-foreground tracking-[-0.2px]">AlisHub</p>
-                        <p className="text-[11px] text-foreground/40 font-mono mt-[1px]">
-                          v{appInfo?.version || updateInfo?.currentVersion || '—'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Version</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-updates-current-version" highlighted={highlightedId === 'setting-updates-current-version'} label="Current version" value={updateInfo?.currentVersion || appInfo?.version || '—'} />
-                        <SettingRow id="setting-updates-os" highlighted={highlightedId === 'setting-updates-os'} label="OS" value={appInfo ? `${appInfo.os}/${appInfo.arch}` : '—'} />
-                        <SettingRow id="setting-updates-go" highlighted={highlightedId === 'setting-updates-go'} label="Go" value={appInfo?.go || '—'} />
-                        {updateInfo?.available && (
-                          <SettingRow label="Latest version">
-                            <span className="text-[11px] font-bold text-success font-mono">
-                              v{updateInfo.latestVersion}
-                            </span>
-                          </SettingRow>
-                        )}
-                      </SettingsCard>
-                    </div>
-
-                    {updateError && (
-                      <p className="text-[10px] text-destructive font-mono">{updateError}</p>
-                    )}
-
-                    {updateInfo?.available && (
-                      <div className="flex items-center justify-between bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)] rounded-[9px] px-[12px] py-[9px]">
-                        <div className="flex items-center gap-[8px]">
-                          <Icon icon="solar:download-minimalistic-linear" className="text-success text-base" />
-                          <div>
-                            <p className="text-[11px] font-bold text-foreground">Update available</p>
-                            <p className="text-[10px] text-foreground/50 font-mono mt-[1px]">
-                              v{updateInfo.currentVersion} → v{updateInfo.latestVersion}
+                    {/* ── Account ── */}
+                    {activeTab === "account" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div className="flex items-center gap-[12px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
+                          <Avatar
+                            name={profile?.name || ""}
+                            picture={profile?.picture || ""}
+                            size={44}
+                          />
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-bold text-foreground tracking-[-0.3px] truncate">
+                              {profile?.name || "—"}
+                            </p>
+                            <p className="text-[11px] text-foreground/45 font-mono truncate mt-[2px]">
+                              {profile?.email || "—"}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-[6px]">
-                          <button
-                            onClick={() => setNotesOpen(true)}
-                            className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono uppercase tracking-wide"
+
+                        {profileError && (
+                          <p className="text-[10px] text-destructive font-mono">
+                            {profileError}
+                          </p>
+                        )}
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Profile</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-account-name"
+                              highlighted={
+                                highlightedId === "setting-account-name"
+                              }
+                              label="Name"
+                              value={profile?.name || "—"}
+                            />
+                            <SettingRow
+                              id="setting-account-email"
+                              highlighted={
+                                highlightedId === "setting-account-email"
+                              }
+                              label="Email"
+                              value={profile?.email || "—"}
+                            />
+                          </SettingsCard>
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            Browser.OpenURL("https://console.alisx.com/profile")
+                          }
+                          className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
+                        >
+                          <Icon
+                            icon="solar:link-square-linear"
+                            className="text-sm"
+                          />
+                          Edit profile on console.alisx.com
+                        </button>
+                      </div>
+                    )}
+
+                    {/* ── Appearance ── */}
+                    {activeTab === "appearance" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Theme</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-appearance-mode"
+                              highlighted={
+                                highlightedId === "setting-appearance-mode"
+                              }
+                              label="Mode"
+                            >
+                              <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                <button
+                                  onClick={() => setTheme("light")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === "light" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  Light
+                                </button>
+                                <button
+                                  onClick={() => setTheme("dark")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === "dark" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  Dark
+                                </button>
+                                <button
+                                  onClick={() => setTheme("system")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${theme === "system" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  System
+                                </button>
+                              </div>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+
+                        <div
+                          id="setting-appearance-accent"
+                          className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-appearance-accent" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          <SectionTitle>Accent color</SectionTitle>
+                          <SettingsCard>
+                            <div className="px-[12px] py-[11px] flex items-center justify-between flex-wrap">
+                              {ACCENT_COLORS.map((color) => (
+                                <button
+                                  key={color.id}
+                                  title={color.label}
+                                  onClick={() => setAccent(color.id)}
+                                  className="relative w-[48px] h-[24px] rounded-full transition-transform hover:scale-110 shrink-0 focus:outline-none"
+                                  style={{ background: color.brand }}
+                                >
+                                  {accentId === color.id && (
+                                    <span className="absolute inset-0 flex items-center justify-center">
+                                      <Icon
+                                        icon="solar:check-bold"
+                                        className="text-[11px]"
+                                        style={{
+                                          color: getAccessibleForeground(
+                                            color.brand,
+                                          ),
+                                        }}
+                                      />
+                                    </span>
+                                  )}
+                                  {accentId === color.id && (
+                                    <span
+                                      className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none"
+                                      style={{ borderColor: color.brand }}
+                                    />
+                                  )}
+                                </button>
+                              ))}
+
+                              {/* Custom color */}
+                              <label
+                                title="Custom color"
+                                className="relative w-[24px] h-[24px] rounded-full cursor-pointer hover:scale-110 transition-transform shrink-0 overflow-hidden"
+                                style={
+                                  accentId === "custom"
+                                    ? { background: customHex }
+                                    : {
+                                        background:
+                                          "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)",
+                                      }
+                                }
+                              >
+                                {accentId === "custom" && (
+                                  <span className="absolute inset-0 flex items-center justify-center">
+                                    <Icon
+                                      icon="solar:check-bold"
+                                      className="text-[11px]"
+                                      style={{
+                                        color:
+                                          getAccessibleForeground(customHex),
+                                      }}
+                                    />
+                                  </span>
+                                )}
+                                {accentId === "custom" && (
+                                  <span
+                                    className="absolute inset-[-3px] rounded-full border-[1.5px] pointer-events-none"
+                                    style={{ borderColor: customHex }}
+                                  />
+                                )}
+                                <input
+                                  type="color"
+                                  value={customHex}
+                                  onChange={(e) =>
+                                    setCustomAccent(e.target.value)
+                                  }
+                                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                />
+                              </label>
+                            </div>
+                          </SettingsCard>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Tabs ── */}
+                    {activeTab === "tabs" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div
+                          id="setting-tabs-default"
+                          className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-tabs-default" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          <SectionTitle>Default tab</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow label="Open landing zones in">
+                              <SearchableSelect
+                                value={tabSettings.defaultTab}
+                                options={visibleTabDefs.map((t) => ({
+                                  label: t.label,
+                                  value: t.id,
+                                }))}
+                                onChange={(v) => setDefaultTab(v)}
+                                className="min-w-[130px]"
+                              />
+                            </SettingRow>
+                          </SettingsCard>
+                          <p className="text-[10px] text-foreground/30 font-mono px-[2px]">
+                            The tab shown when you open a landing zone.
+                          </p>
+                        </div>
+
+                        <div
+                          id="setting-tabs-order"
+                          className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-tabs-order" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          <SectionTitle>Order</SectionTitle>
+                          <SettingsCard>
+                            <DndProvider backend={HTML5Backend}>
+                              {tabOrderDraft.map((id, index) => {
+                                const def = TAB_REGISTRY.find((t) => t.id === id);
+                                if (!def) return null;
+                                return (
+                                  <DraggableTabRow
+                                    key={id}
+                                    id={id}
+                                    label={def.label}
+                                    icon={def.icon}
+                                    index={index}
+                                    isDefault={tabSettings.defaultTab === id}
+                                    onMove={moveTabDraft}
+                                    onDrop={commitTabOrder}
+                                  />
+                                );
+                              })}
+                            </DndProvider>
+                          </SettingsCard>
+                          <p className="text-[10px] text-foreground/30 font-mono px-[2px]">
+                            Drag to reorder how tabs appear in the top navigation.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Notifications ── */}
+                    {activeTab === "notifications" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>System</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-notifications-system"
+                              highlighted={
+                                highlightedId === "setting-notifications-system"
+                              }
+                              label="System notifications"
+                            >
+                              <button
+                                onClick={handleSysNotifToggle}
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${sysNotifications ? "bg-success" : "bg-foreground/[0.1]"}`}
+                              >
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${sysNotifications ? "left-[16px]" : "left-[2px]"}`}
+                                />
+                              </button>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Labs ── */}
+                    {activeTab === "labs" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div
+                          id="setting-labs-local-ai"
+                          className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-labs-local-ai" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          <SectionTitle>Local AI</SectionTitle>
+                          <LocalAISetupCard />
+                        </div>
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Smart Suggestions</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-labs-smart-suggestions"
+                              highlighted={
+                                highlightedId ===
+                                "setting-labs-smart-suggestions"
+                              }
+                              label="Smart Suggestions"
+                            >
+                              <button
+                                onClick={() =>
+                                  setMasterEnabled(!labsState.masterEnabled)
+                                }
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.masterEnabled ? "bg-success" : "bg-foreground/[0.1]"}`}
+                              >
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.masterEnabled ? "left-[16px]" : "left-[2px]"}`}
+                                />
+                              </button>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Workflows</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-labs-workflows"
+                              highlighted={
+                                highlightedId === "setting-labs-workflows"
+                              }
+                              label="Workflows tab"
+                            >
+                              <button
+                                onClick={() =>
+                                  setWorkflowsEnabled(
+                                    !labsState.workflowsEnabled,
+                                  )
+                                }
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${labsState.workflowsEnabled ? "bg-success" : "bg-foreground/[0.1]"}`}
+                              >
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${labsState.workflowsEnabled ? "left-[16px]" : "left-[2px]"}`}
+                                />
+                              </button>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+
+                        {SUGGESTION_CATEGORY_ORDER.filter(
+                          (c) => groupedRegistry[c]?.length,
+                        ).map((category) => (
+                          <div
+                            key={category}
+                            className="flex flex-col gap-[5px]"
                           >
-                            Notes
+                            <SectionTitle>{category}</SectionTitle>
+                            <SettingsCard>
+                              {groupedRegistry[category]!.map((def) => (
+                                <SettingRow
+                                  key={def.id}
+                                  id={`setting-${def.id}`}
+                                  highlighted={
+                                    highlightedId === `setting-${def.id}`
+                                  }
+                                  label={def.title}
+                                >
+                                  <button
+                                    onClick={() =>
+                                      setSuggestionEnabled(
+                                        def.id,
+                                        !isSuggestionEnabled(def.id),
+                                      )
+                                    }
+                                    disabled={!labsState.masterEnabled}
+                                    className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 disabled:opacity-40 ${isSuggestionEnabled(def.id) ? "bg-success" : "bg-foreground/[0.1]"}`}
+                                    title={def.description}
+                                  >
+                                    <span
+                                      className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isSuggestionEnabled(def.id) ? "left-[16px]" : "left-[2px]"}`}
+                                    />
+                                  </button>
+                                </SettingRow>
+                              ))}
+                            </SettingsCard>
+                          </div>
+                        ))}
+
+                        <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                          Labs features are experimental and may change without
+                          notice.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* ── Updates ── */}
+                    {activeTab === "updates" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div className="flex items-center gap-[10px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
+                          <div className="size-[34px] rounded-[8px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
+                            <Icon
+                              icon="solar:cloud-bold"
+                              className="text-brand text-base"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-bold text-foreground tracking-[-0.2px]">
+                              AlisHub
+                            </p>
+                            <p className="text-[11px] text-foreground/40 font-mono mt-[1px]">
+                              v
+                              {appInfo?.version ||
+                                updateInfo?.currentVersion ||
+                                "—"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Version</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-updates-current-version"
+                              highlighted={
+                                highlightedId ===
+                                "setting-updates-current-version"
+                              }
+                              label="Current version"
+                              value={
+                                updateInfo?.currentVersion ||
+                                appInfo?.version ||
+                                "—"
+                              }
+                            />
+                            <SettingRow
+                              id="setting-updates-os"
+                              highlighted={
+                                highlightedId === "setting-updates-os"
+                              }
+                              label="OS"
+                              value={
+                                appInfo ? `${appInfo.os}/${appInfo.arch}` : "—"
+                              }
+                            />
+                            <SettingRow
+                              id="setting-updates-go"
+                              highlighted={
+                                highlightedId === "setting-updates-go"
+                              }
+                              label="Go"
+                              value={appInfo?.go || "—"}
+                            />
+                            {updateInfo?.available && (
+                              <SettingRow label="Latest version">
+                                <span className="text-[11px] font-bold text-success font-mono">
+                                  v{updateInfo.latestVersion}
+                                </span>
+                              </SettingRow>
+                            )}
+                          </SettingsCard>
+                        </div>
+
+                        {updateError && (
+                          <p className="text-[10px] text-destructive font-mono">
+                            {updateError}
+                          </p>
+                        )}
+
+                        {updateInfo?.available && (
+                          <div className="flex items-center justify-between bg-[rgba(52,199,89,0.08)] border border-[rgba(52,199,89,0.2)] rounded-[9px] px-[12px] py-[9px]">
+                            <div className="flex items-center gap-[8px]">
+                              <Icon
+                                icon="solar:download-minimalistic-linear"
+                                className="text-success text-base"
+                              />
+                              <div>
+                                <p className="text-[11px] font-bold text-foreground">
+                                  Update available
+                                </p>
+                                <p className="text-[10px] text-foreground/50 font-mono mt-[1px]">
+                                  v{updateInfo.currentVersion} → v
+                                  {updateInfo.latestVersion}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-[6px]">
+                              <button
+                                onClick={() => setNotesOpen(true)}
+                                className="text-[10px] text-foreground/40 hover:text-foreground transition-colors font-mono uppercase tracking-wide"
+                              >
+                                Notes
+                              </button>
+                              <button
+                                onClick={handleDownload}
+                                disabled={
+                                  downloadProgress !== null &&
+                                  !downloadProgress.done
+                                }
+                                className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide disabled:opacity-60"
+                              >
+                                {downloadProgress === null
+                                  ? "Download"
+                                  : downloadProgress.done
+                                    ? "Ready to install"
+                                    : "Downloading…"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {updateInfo && !updateInfo.available && (
+                          <div className="flex items-center gap-[8px] px-[12px] py-[9px] bg-[rgba(52,199,89,0.06)] border border-[rgba(52,199,89,0.18)] rounded-[9px]">
+                            <Icon
+                              icon="solar:check-circle-linear"
+                              className="text-success text-base shrink-0"
+                            />
+                            <p className="text-[11px] text-foreground/70 font-mono">
+                              You're on the latest version.
+                            </p>
+                          </div>
+                        )}
+
+                        <button
+                          id="setting-updates-check"
+                          onClick={handleCheckUpdate}
+                          disabled={checkingUpdate}
+                          className={`flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono ${highlightedId === "setting-updates-check" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          {checkingUpdate ? (
+                            <Loader size={14} />
+                          ) : (
+                            <Icon
+                              icon="solar:refresh-linear"
+                              className="text-sm"
+                            />
+                          )}
+                          {checkingUpdate ? "Checking…" : "Check for updates"}
+                        </button>
+
+                        {changelogHtml && (
+                          <div className="flex flex-col gap-[5px]">
+                            <SectionTitle>Changelog</SectionTitle>
+                            <div
+                              className="prose prose-invert prose-sm max-w-none font-mono text-[12px] text-foreground/75 [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-foreground/35 [&_h3]:mt-[12px] [&_h3]:mb-[4px] [&_ul]:pl-4 [&_li]:my-[2px] [&_p]:text-foreground/55"
+                              dangerouslySetInnerHTML={{
+                                __html: changelogHtml,
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex flex-col gap-[5px] pt-[2px]">
+                          <button
+                            onClick={() =>
+                              Browser.OpenURL(
+                                "https://github.com/Patrick-web/alis-hub-v3",
+                              )
+                            }
+                            className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
+                          >
+                            <Icon
+                              icon="solar:link-square-linear"
+                              className="text-sm"
+                            />
+                            View on GitHub
                           </button>
                           <button
-                            onClick={handleDownload}
-                            disabled={downloadProgress !== null && !downloadProgress.done}
-                            className="text-[10px] font-bold bg-success text-black px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide disabled:opacity-60"
+                            onClick={() =>
+                              Browser.OpenURL("https://console.alisx.com")
+                            }
+                            className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
                           >
-                            {downloadProgress === null
-                              ? 'Download'
-                              : downloadProgress.done
-                                ? 'Ready to install'
-                                : 'Downloading…'}
+                            <Icon
+                              icon="solar:link-square-linear"
+                              className="text-sm"
+                            />
+                            Alis Console
                           </button>
                         </div>
                       </div>
                     )}
 
-                    {updateInfo && !updateInfo.available && (
-                      <div className="flex items-center gap-[8px] px-[12px] py-[9px] bg-[rgba(52,199,89,0.06)] border border-[rgba(52,199,89,0.18)] rounded-[9px]">
-                        <Icon icon="solar:check-circle-linear" className="text-success text-base shrink-0" />
-                        <p className="text-[11px] text-foreground/70 font-mono">You're on the latest version.</p>
-                      </div>
-                    )}
-
-                    <button
-                      id="setting-updates-check"
-                      onClick={handleCheckUpdate}
-                      disabled={checkingUpdate}
-                      className={`flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono ${highlightedId === 'setting-updates-check' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
-                    >
-                      {checkingUpdate ? <Loader size={14} /> : <Icon icon="solar:refresh-linear" className="text-sm" />}
-                      {checkingUpdate ? 'Checking…' : 'Check for updates'}
-                    </button>
-
-                    {changelogHtml && (
-                      <div className="flex flex-col gap-[5px]">
-                        <SectionTitle>Changelog</SectionTitle>
-                        <div
-                          className="prose prose-invert prose-sm max-w-none font-mono text-[12px] text-foreground/75 [&_h3]:text-[10px] [&_h3]:uppercase [&_h3]:tracking-wide [&_h3]:text-foreground/35 [&_h3]:mt-[12px] [&_h3]:mb-[4px] [&_ul]:pl-4 [&_li]:my-[2px] [&_p]:text-foreground/55"
-                          dangerouslySetInnerHTML={{ __html: changelogHtml }}
-                        />
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-[5px] pt-[2px]">
-                      <button
-                        onClick={() => Browser.OpenURL('https://github.com/Patrick-web/alis-hub-v3')}
-                        className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
-                      >
-                        <Icon icon="solar:link-square-linear" className="text-sm" />
-                        View on GitHub
-                      </button>
-                      <button
-                        onClick={() => Browser.OpenURL('https://console.alisx.com')}
-                        className="flex items-center gap-[5px] text-[11px] text-foreground/30 hover:text-foreground/55 transition-colors font-mono"
-                      >
-                        <Icon icon="solar:link-square-linear" className="text-sm" />
-                        Alis Console
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Source Control ── */}
-                {activeTab === 'source-control' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>File List</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-sc-file-list-view" highlighted={highlightedId === 'setting-sc-file-list-view'} label="View">
-                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                            <button
-                              onClick={() => setFileListView('list')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === 'list' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                    {/* ── Source Control ── */}
+                    {activeTab === "source-control" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>File List</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-sc-file-list-view"
+                              highlighted={
+                                highlightedId === "setting-sc-file-list-view"
+                              }
+                              label="View"
                             >
-                              List
-                            </button>
-                            <button
-                              onClick={() => setFileListView('tree')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === 'tree' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              Tree
-                            </button>
-                          </div>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Diff Viewer</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-sc-diff-mode" highlighted={highlightedId === 'setting-sc-diff-mode'} label="Mode">
-                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                            <button
-                              onClick={() => setDiffView('unified')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === 'unified' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              Unified
-                            </button>
-                            <button
-                              onClick={() => setDiffView('split')}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === 'split' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                            >
-                              Split
-                            </button>
-                          </div>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Background Fetch</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-sc-background-fetch" highlighted={highlightedId === 'setting-sc-background-fetch'} label="Check for changes">
-                          <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                            {[
-                              { value: 0, label: 'Off' },
-                              { value: 1, label: '1m' },
-                              { value: 5, label: '5m' },
-                              { value: 15, label: '15m' },
-                              { value: 30, label: '30m' },
-                            ].map(opt => (
-                              <button
-                                key={opt.value}
-                                onClick={() => setFetchIntervalMinutes(opt.value)}
-                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fetchIntervalMinutes === opt.value ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Develop ── */}
-                {activeTab === 'develop' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    {state.organisation && state.product && (
-                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
-                        Settings for {state.organisation}/{state.product}
-                      </p>
-                    )}
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Folder Scanning</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-develop-ignore-hidden" highlighted={highlightedId === 'setting-develop-ignore-hidden'} label="Ignore hidden folders">
-                          <button
-                            onClick={() => setIgnoreHiddenFolders(!devSettings.ignoreHiddenFolders)}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.ignoreHiddenFolders ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                          >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.ignoreHiddenFolders ? 'left-[16px]' : 'left-[2px]'}`} />
-                          </button>
-                        </SettingRow>
-                      </SettingsCard>
-                      <div
-                        id="setting-develop-ignored-patterns"
-                        className={`flex flex-col gap-[4px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-develop-ignored-patterns' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
-                      >
-                        <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px]">
-                          Ignored folder patterns
-                        </span>
-                        <SettingsCard>
-                          <textarea
-                            value={devSettings.ignoredFolderPatterns.join('\n')}
-                            onChange={e => {
-                              const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean);
-                              setIgnoredFolderPatterns(lines);
-                            }}
-                            placeholder={"node_modules\nbuild\ndist"}
-                            rows={4}
-                            spellCheck={false}
-                            className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
-                          />
-                        </SettingsCard>
-                        <p className="text-[10px] text-foreground/25 font-mono px-[1px]">One folder name or glob per line.</p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Git</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-develop-default-branch" highlighted={highlightedId === 'setting-develop-default-branch'} label="Default branch">
-                          <div className="flex items-center gap-[6px]">
-                            <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                              <button
-                                onClick={() => setDefaultBranch('local')}
-                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch === 'local' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                              >
-                                Local
-                              </button>
-                              <button
-                                onClick={() => {
-                                  if (devSettings.defaultBranch === 'local') {
-                                    setDefaultBranch(availableBranches[0] || 'master');
-                                  }
-                                }}
-                                className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch !== 'local' ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                              >
-                                Custom
-                              </button>
-                            </div>
-                            {devSettings.defaultBranch !== 'local' && (
-                              <SearchableSelect
-                                value={devSettings.defaultBranch}
-                                options={availableBranches.length > 0 ? availableBranches : [devSettings.defaultBranch]}
-                                onChange={setDefaultBranch}
-                                placeholder="Select branch…"
-                                className="w-[130px]"
-                              />
-                            )}
-                          </div>
-                        </SettingRow>
-                      </SettingsCard>
-                    </div>
-
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Smart Sort</SectionTitle>
-                      <SettingsCard>
-                        <SettingRow id="setting-develop-smart-sort" highlighted={highlightedId === 'setting-develop-smart-sort'} label="Smart Sort">
-                          <button
-                            onClick={() => setSmartSortEnabled(!devSettings.smartSortEnabled)}
-                            className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.smartSortEnabled ? 'bg-success' : 'bg-foreground/[0.1]'}`}
-                          >
-                            <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.smartSortEnabled ? 'left-[16px]' : 'left-[2px]'}`} />
-                          </button>
-                        </SettingRow>
-                        {devSettings.smartSortEnabled && (
-                          <SettingRow label="Sort by">
-                            <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                              {(['defined', 'built', 'deployed', 'committed'] as SmartSortKey[]).map(k => (
-                                <button
-                                  key={k}
-                                  onClick={() => setSmartSortKey(k)}
-                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.smartSortKey === k ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                                >
-                                  {k.charAt(0).toUpperCase() + k.slice(1)}
-                                </button>
-                              ))}
-                            </div>
-                          </SettingRow>
-                        )}
-                      </SettingsCard>
-                      <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
-                        Sorts services by the most recently touched, based on local activity or git history.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── Tools ── */}
-                {activeTab === 'tools' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    {state.organisation && state.product && (
-                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
-                        Settings for {state.organisation}/{state.product}
-                      </p>
-                    )}
-                    <div className="flex flex-col gap-[5px]">
-                      <SectionTitle>Tool Context Defaults</SectionTitle>
-                      <p className="text-[10px] text-foreground/25 font-mono px-[1px] pb-[2px]">
-                        Set which project level each tool opens at by default.
-                      </p>
-                      <SettingsCard>
-                        {TOOL_SETTINGS.map(tool => {
-                          const current = getToolDefault(state.organisation ?? '', state.product ?? '', tool.id);
-                          return (
-                            <SettingRow key={tool.id} id={`setting-${tool.id}`} highlighted={highlightedId === `setting-${tool.id}`} label={tool.label}>
                               <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                                {(['org', 'product', 'env'] as const).map(level => {
-                                  const levelLabel = level === 'org' ? 'Org' : level === 'product' ? 'Product' : 'Env';
-                                  const isActive = current === level;
-                                  return (
-                                    <button
-                                      key={level}
-                                      onClick={() => handleToolDefaultChange(tool.id, level)}
-                                      className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${isActive ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
-                                    >
-                                      {levelLabel}
-                                    </button>
-                                  );
-                                })}
+                                <button
+                                  onClick={() => setFileListView("list")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === "list" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  List
+                                </button>
+                                <button
+                                  onClick={() => setFileListView("tree")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fileListView === "tree" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  Tree
+                                </button>
                               </div>
                             </SettingRow>
-                          );
-                        })}
-                      </SettingsCard>
-                    </div>
-                  </div>
-                )}
+                          </SettingsCard>
+                        </div>
 
-                {/* ── Environments ── */}
-                {activeTab === 'environments' && (
-                  <div className="p-[14px] flex flex-col gap-[12px]">
-                    {state.organisation && state.product && (
-                      <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
-                        Settings for {state.organisation}/{state.product}
-                      </p>
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Diff Viewer</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-sc-diff-mode"
+                              highlighted={
+                                highlightedId === "setting-sc-diff-mode"
+                              }
+                              label="Mode"
+                            >
+                              <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                <button
+                                  onClick={() => setDiffView("unified")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === "unified" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  Unified
+                                </button>
+                                <button
+                                  onClick={() => setDiffView("split")}
+                                  className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.diffView === "split" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                >
+                                  Split
+                                </button>
+                              </div>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Background Fetch</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-sc-background-fetch"
+                              highlighted={
+                                highlightedId === "setting-sc-background-fetch"
+                              }
+                              label="Check for changes"
+                            >
+                              <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                {[
+                                  { value: 0, label: "Off" },
+                                  { value: 1, label: "1m" },
+                                  { value: 5, label: "5m" },
+                                  { value: 15, label: "15m" },
+                                  { value: 30, label: "30m" },
+                                ].map((opt) => (
+                                  <button
+                                    key={opt.value}
+                                    onClick={() =>
+                                      setFetchIntervalMinutes(opt.value)
+                                    }
+                                    className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${scState.fetchIntervalMinutes === opt.value ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+                      </div>
                     )}
 
-                    <div
-                      id="setting-environments-protected"
-                      className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === 'setting-environments-protected' ? 'ring-1 ring-inset ring-brand/40 bg-brand/[0.08]' : ''}`}
-                    >
-                      <SectionTitle>Protected Environments</SectionTitle>
-                      {state.loadedEnvs.length === 0 ? (
-                        <SettingsCard>
-                          <div className="px-[12px] py-[10px] text-[11px] text-foreground/35 font-mono">
-                            No environments loaded for this product.
-                          </div>
-                        </SettingsCard>
-                      ) : (
-                        <SettingsCard>
-                          {state.loadedEnvs.map(env => (
-                            <SettingRow key={env.name} label={env.displayName}>
+                    {/* ── Develop ── */}
+                    {activeTab === "develop" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        {state.organisation && state.product && (
+                          <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                            Settings for {state.organisation}/{state.product}
+                          </p>
+                        )}
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Folder Scanning</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-develop-ignore-hidden"
+                              highlighted={
+                                highlightedId ===
+                                "setting-develop-ignore-hidden"
+                              }
+                              label="Ignore hidden folders"
+                            >
                               <button
-                                onClick={() => toggleProtected(env.name)}
-                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${isProtected(env.name) ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+                                onClick={() =>
+                                  setIgnoreHiddenFolders(
+                                    !devSettings.ignoreHiddenFolders,
+                                  )
+                                }
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.ignoreHiddenFolders ? "bg-success" : "bg-foreground/[0.1]"}`}
                               >
-                                <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isProtected(env.name) ? 'left-[16px]' : 'left-[2px]'}`} />
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.ignoreHiddenFolders ? "left-[16px]" : "left-[2px]"}`}
+                                />
                               </button>
                             </SettingRow>
-                          ))}
-                        </SettingsCard>
-                      )}
-                      <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
-                        Protected environments require typing a confirmation phrase before any deploy proceeds — a "stop and think" guard for high-stakes environments like production.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                          </SettingsCard>
+                          <div
+                            id="setting-develop-ignored-patterns"
+                            className={`flex flex-col gap-[4px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-develop-ignored-patterns" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                          >
+                            <span className="text-[9px] font-mono uppercase tracking-[1.5px] text-foreground/25 px-[2px]">
+                              Ignored folder patterns
+                            </span>
+                            <SettingsCard>
+                              <textarea
+                                value={devSettings.ignoredFolderPatterns.join(
+                                  "\n",
+                                )}
+                                onChange={(e) => {
+                                  const lines = e.target.value
+                                    .split("\n")
+                                    .map((l) => l.trim())
+                                    .filter(Boolean);
+                                  setIgnoredFolderPatterns(lines);
+                                }}
+                                placeholder={"node_modules\nbuild\ndist"}
+                                rows={4}
+                                spellCheck={false}
+                                className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
+                              />
+                            </SettingsCard>
+                            <p className="text-[10px] text-foreground/25 font-mono px-[1px]">
+                              One folder name or glob per line.
+                            </p>
+                          </div>
+                        </div>
 
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Git</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-develop-default-branch"
+                              highlighted={
+                                highlightedId ===
+                                "setting-develop-default-branch"
+                              }
+                              label="Default branch"
+                            >
+                              <div className="flex items-center gap-[6px]">
+                                <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                  <button
+                                    onClick={() => setDefaultBranch("local")}
+                                    className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch === "local" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                  >
+                                    Local
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (
+                                        devSettings.defaultBranch === "local"
+                                      ) {
+                                        setDefaultBranch(
+                                          availableBranches[0] || "master",
+                                        );
+                                      }
+                                    }}
+                                    className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.defaultBranch !== "local" ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                  >
+                                    Custom
+                                  </button>
+                                </div>
+                                {devSettings.defaultBranch !== "local" && (
+                                  <SearchableSelect
+                                    value={devSettings.defaultBranch}
+                                    options={
+                                      availableBranches.length > 0
+                                        ? availableBranches
+                                        : [devSettings.defaultBranch]
+                                    }
+                                    onChange={setDefaultBranch}
+                                    placeholder="Select branch…"
+                                    className="w-[130px]"
+                                  />
+                                )}
+                              </div>
+                            </SettingRow>
+                          </SettingsCard>
+                        </div>
+
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Smart Sort</SectionTitle>
+                          <SettingsCard>
+                            <SettingRow
+                              id="setting-develop-smart-sort"
+                              highlighted={
+                                highlightedId === "setting-develop-smart-sort"
+                              }
+                              label="Smart Sort"
+                            >
+                              <button
+                                onClick={() =>
+                                  setSmartSortEnabled(
+                                    !devSettings.smartSortEnabled,
+                                  )
+                                }
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${devSettings.smartSortEnabled ? "bg-success" : "bg-foreground/[0.1]"}`}
+                              >
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${devSettings.smartSortEnabled ? "left-[16px]" : "left-[2px]"}`}
+                                />
+                              </button>
+                            </SettingRow>
+                            {devSettings.smartSortEnabled && (
+                              <SettingRow label="Sort by">
+                                <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                  {(
+                                    [
+                                      "defined",
+                                      "built",
+                                      "deployed",
+                                      "committed",
+                                    ] as SmartSortKey[]
+                                  ).map((k) => (
+                                    <button
+                                      key={k}
+                                      onClick={() => setSmartSortKey(k)}
+                                      className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${devSettings.smartSortKey === k ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                    >
+                                      {k.charAt(0).toUpperCase() + k.slice(1)}
+                                    </button>
+                                  ))}
+                                </div>
+                              </SettingRow>
+                            )}
+                          </SettingsCard>
+                          <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                            Sorts services by the most recently touched, based
+                            on local activity or git history.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Tools ── */}
+                    {activeTab === "tools" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        {state.organisation && state.product && (
+                          <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                            Settings for {state.organisation}/{state.product}
+                          </p>
+                        )}
+                        <div className="flex flex-col gap-[5px]">
+                          <SectionTitle>Tool Context Defaults</SectionTitle>
+                          <p className="text-[10px] text-foreground/25 font-mono px-[1px] pb-[2px]">
+                            Set which project level each tool opens at by
+                            default.
+                          </p>
+                          <SettingsCard>
+                            {TOOL_SETTINGS.map((tool) => {
+                              const current = getToolDefault(
+                                state.organisation ?? "",
+                                state.product ?? "",
+                                tool.id,
+                              );
+                              return (
+                                <SettingRow
+                                  key={tool.id}
+                                  id={`setting-${tool.id}`}
+                                  highlighted={
+                                    highlightedId === `setting-${tool.id}`
+                                  }
+                                  label={tool.label}
+                                >
+                                  <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
+                                    {(["org", "product", "env"] as const).map(
+                                      (level) => {
+                                        const levelLabel =
+                                          level === "org"
+                                            ? "Org"
+                                            : level === "product"
+                                              ? "Product"
+                                              : "Env";
+                                        const isActive = current === level;
+                                        return (
+                                          <button
+                                            key={level}
+                                            onClick={() =>
+                                              handleToolDefaultChange(
+                                                tool.id,
+                                                level,
+                                              )
+                                            }
+                                            className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${isActive ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
+                                          >
+                                            {levelLabel}
+                                          </button>
+                                        );
+                                      },
+                                    )}
+                                  </div>
+                                </SettingRow>
+                              );
+                            })}
+                          </SettingsCard>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Environments ── */}
+                    {activeTab === "environments" && (
+                      <div className="p-[14px] flex flex-col gap-[12px]">
+                        {state.organisation && state.product && (
+                          <p className="text-[10px] font-mono text-foreground/30 px-[1px]">
+                            Settings for {state.organisation}/{state.product}
+                          </p>
+                        )}
+
+                        <div
+                          id="setting-environments-protected"
+                          className={`flex flex-col gap-[5px] rounded-[9px] transition-colors duration-500 ${highlightedId === "setting-environments-protected" ? "ring-1 ring-inset ring-brand/40 bg-brand/[0.08]" : ""}`}
+                        >
+                          <SectionTitle>Protected Environments</SectionTitle>
+                          {state.loadedEnvs.length === 0 ? (
+                            <SettingsCard>
+                              <div className="px-[12px] py-[10px] text-[11px] text-foreground/35 font-mono">
+                                No environments loaded for this product.
+                              </div>
+                            </SettingsCard>
+                          ) : (
+                            <SettingsCard>
+                              {state.loadedEnvs.map((env) => (
+                                <SettingRow
+                                  key={env.name}
+                                  label={env.displayName}
+                                >
+                                  <button
+                                    onClick={() => toggleProtected(env.name)}
+                                    className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${isProtected(env.name) ? "bg-success" : "bg-foreground/[0.1]"}`}
+                                  >
+                                    <span
+                                      className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${isProtected(env.name) ? "left-[16px]" : "left-[2px]"}`}
+                                    />
+                                  </button>
+                                </SettingRow>
+                              ))}
+                            </SettingsCard>
+                          )}
+                          <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
+                            Protected environments require typing a confirmation
+                            phrase before any deploy proceeds — a "stop and
+                            think" guard for high-stakes environments like
+                            production.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
