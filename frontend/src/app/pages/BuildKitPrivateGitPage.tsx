@@ -49,7 +49,7 @@ export function BuildKitPrivateGitPage() {
             icon={<Icon icon="solar:shield-check-linear" className="text-brand" />}
           >
             <div className="flex items-start gap-[12px]">
-              <div className="size-[32px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+              <div className="size-[32px] rounded-[4px] bg-brand-fill/10 border border-brand-fill/20 flex items-center justify-center shrink-0">
                 <Icon icon="solar:code-square-linear" className="text-brand text-[16px]" />
               </div>
               <div>
@@ -109,7 +109,7 @@ export function BuildKitPrivateGitPage() {
             <div className="flex flex-col gap-[8px]">
               {steps.map((step, i) => (
                 <div key={step.title} className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]">
-                  <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                  <div className="size-[22px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                     <span className="text-[9px] font-bold text-brand font-mono">{i + 1}</span>
                   </div>
                   <div>

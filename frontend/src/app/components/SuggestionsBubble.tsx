@@ -22,7 +22,7 @@ export function SuggestionsBubble() {
           WebkitBackdropFilter: 'blur(20px) saturate(160%)',
         } as React.CSSProperties}
         onClick={() => setPanelOpen(true)}
-        className="flex items-center gap-[6px] h-[28px] px-[10px] rounded-full border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5)] hover:border-[rgba(248,129,169,0.4)] transition-all"
+        className="flex items-center gap-[6px] h-[28px] px-[10px] rounded-full border border-white/[0.12] shadow-[0_4px_16px_rgba(0,0,0,0.5)] hover:border-brand-fill/40 transition-all"
       >
         <Icon icon="solar:lightbulb-linear" className="text-brand text-[13px]" />
         <span className="text-[10px] font-bold font-mono text-brand">

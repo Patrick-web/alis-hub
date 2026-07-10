@@ -16,7 +16,7 @@ export function StageCard({ step, title, subtitle, icon, children, action, class
       <div className="flex items-start justify-between p-[16px] border-b border-border">
         <div className="flex items-center gap-[12px]">
           {step && (
-            <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0">
+            <div className="size-[24px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0">
               <span className="text-[11px] font-bold text-brand font-mono">{step}</span>
             </div>
           )}

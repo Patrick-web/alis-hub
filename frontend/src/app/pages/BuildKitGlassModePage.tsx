@@ -101,7 +101,7 @@ export function BuildKitGlassModePage() {
               and what to do next.
             </p>
             <div className="flex items-center gap-[10px] flex-wrap">
-              <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.4)] rounded-[4px]">
+              <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-brand-fill/12 border border-brand-fill/40 rounded-[4px]">
                 <Icon
                   icon="solar:eye-linear"
                   className="text-brand text-[13px]"
@@ -131,7 +131,7 @@ export function BuildKitGlassModePage() {
                   key={ex.title}
                   className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]"
                 >
-                  <div className="size-[28px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0 mt-[1px]">
+                  <div className="size-[28px] rounded-[4px] bg-brand-fill/10 border border-brand-fill/30 flex items-center justify-center shrink-0 mt-[1px]">
                     <Icon
                       icon={ex.icon}
                       className="text-brand text-[14px]"

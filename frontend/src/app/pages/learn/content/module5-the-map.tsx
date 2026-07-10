@@ -25,7 +25,7 @@ export const module5: LearningModule = {
               { stage: 'Deploy', cmd: 'alis deploy', desc: 'Cloud Run, Endpoints, and IAM are provisioned. Your service gets a live HTTPS endpoint.' },
             ].map(({ stage, cmd, desc }, i) => (
               <div key={stage} className="flex items-start gap-[12px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]">
-                <div className="size-[22px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                <div className="size-[22px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                   <span className="text-[10px] font-bold text-brand font-mono">{i + 1}</span>
                 </div>
                 <div className="flex-1">
@@ -136,7 +136,7 @@ export const module5: LearningModule = {
               </div>
             ))}
           </div>
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <p className="text-[11px] text-foreground/70 leading-[1.5]">
               <span className="text-brand font-bold">You're ready. </span>
               Go define your first service — start with a simple{' '}

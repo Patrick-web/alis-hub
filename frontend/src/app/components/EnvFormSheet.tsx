@@ -145,7 +145,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       disabled={loading}
                       className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
                         envType === t.value
-                          ? 'border-brand-fill bg-[rgba(248,129,169,0.08)]'
+                          ? 'border-brand-fill bg-brand-fill/8'
                           : 'border-border hover:bg-foreground/[4%]'
                       }`}
                     >
@@ -181,7 +181,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                       disabled={loading}
                       className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
                         region === r
-                          ? 'bg-[rgba(248,129,169,0.12)] text-brand'
+                          ? 'bg-brand-fill/12 text-brand'
                           : 'text-foreground/70 hover:bg-foreground/[4%]'
                       }`}
                     >

@@ -2550,7 +2550,7 @@ function MemberAvatar({ name, photoUrl }: { name: string; photoUrl: string }) {
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
   return (
-    <div className="size-[32px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0">
+    <div className="size-[32px] rounded-full bg-brand-fill/20 border border-brand-fill/30 flex items-center justify-center shrink-0">
       <span className="text-[11px] font-bold text-brand">
         {initials || "?"}
       </span>
@@ -2937,7 +2937,7 @@ function AccessTab({
                           disabled={addLoading}
                           className={`w-full flex items-center gap-[10px] px-[12px] py-[10px] border-b border-border last:border-0 text-left transition-colors ${
                             selectedUser?.name === u.name
-                              ? "bg-[rgba(248,129,169,0.08)]"
+                              ? "bg-brand-fill/8"
                               : "hover:bg-foreground/[3%]"
                           }`}
                         >
@@ -2983,7 +2983,7 @@ function AccessTab({
                         disabled={addLoading}
                         className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                           addRole === r.name
-                            ? "border-brand-fill bg-[rgba(248,129,169,0.06)]"
+                            ? "border-brand-fill bg-brand-fill/6"
                             : "border-border bg-foreground/2 hover:border-foreground/30"
                         }`}
                       >
@@ -3067,7 +3067,7 @@ function AccessTab({
                       disabled={changeRoleLoading}
                       className={`flex items-center gap-[10px] px-[12px] py-[10px] border rounded-[4px] text-left transition-all disabled:opacity-50 ${
                         changeRole === r.name
-                          ? "border-brand-fill bg-[rgba(248,129,169,0.06)]"
+                          ? "border-brand-fill bg-brand-fill/6"
                           : "border-border bg-foreground/2 hover:border-foreground/30"
                       }`}
                     >

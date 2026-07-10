@@ -145,7 +145,7 @@ export function BuildKitMcpServerPage() {
                 onClick={() => setActiveClient(c.id)}
                 className={`flex items-center gap-[6px] px-[10px] py-[6px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                   activeClient === c.id
-                    ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
+                    ? 'bg-brand-fill/10 border-brand-fill/50 text-brand'
                     : 'bg-card border-border text-foreground/60 hover:border-foreground/30'
                 }`}
               >

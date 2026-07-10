@@ -204,7 +204,7 @@ func (s *server) CreatePayment(
 }`}
             </pre>
           </div>
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               <span className="text-brand font-bold">Key insight: </span>
               the generated interface is the only coupling between your business logic and the transport layer.

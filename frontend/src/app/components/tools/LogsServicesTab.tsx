@@ -88,7 +88,7 @@ export function LogsServicesTab({ services, loading, error, selectedService, onS
               key={s.name || s.serviceName}
               onClick={() => onSelectService(s.serviceName)}
               className={`w-full flex items-center gap-[10px] px-[16px] py-[10px] border-b border-border hover:bg-foreground/[2%] transition-colors text-left ${
-                isActive ? 'bg-[rgba(248,129,169,0.12)] border-l-2 border-l-brand' : ''
+                isActive ? 'bg-brand-fill/12 border-l-2 border-l-brand' : ''
               }`}
             >
               <Icon icon="solar:server-minimalistic-linear" className="text-sm text-foreground/40 shrink-0" />

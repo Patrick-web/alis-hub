@@ -99,7 +99,7 @@ export function FilterSelect({
                   isLg ? 'px-[12px] py-[8px] text-[12px]' : 'px-[10px] py-[6px] text-[9px] uppercase'
                 } ${
                   opt.value === value
-                    ? 'text-brand bg-[rgba(248,129,169,0.08)]'
+                    ? 'text-brand bg-brand-fill/8'
                     : 'text-foreground/55 hover:bg-brand-fill hover:text-brand-foreground'
                 }`}
               >

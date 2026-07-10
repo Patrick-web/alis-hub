@@ -79,7 +79,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
 
 function ActionAlert({ icon, title, description, action }: { icon: string; title: string; description: string; action: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px] mt-[16px]">
+    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px] mt-[16px]">
       <div className="flex items-center gap-[12px]">
         <Icon icon={icon} className="text-brand text-[18px] shrink-0" />
         <div>
@@ -105,7 +105,7 @@ function AddToolDiagram() {
         <div key={s.label} className="flex items-center">
           <div className="flex flex-col items-center gap-[6px] px-[14px] py-[10px] bg-card border border-border rounded-[4px]">
             <div className="flex items-center gap-[6px]">
-              <div className="size-[18px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0">
+              <div className="size-[18px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0">
                 <span className="text-[8px] font-bold text-brand font-mono">{s.n}</span>
               </div>
               <Icon icon={s.icon} className="text-brand text-[14px]" />
@@ -170,7 +170,7 @@ export function BuildKitAgentToolPage() {
             </p>
             <div className="flex flex-col gap-[8px] mb-[16px]">
               <div className="flex gap-[10px]">
-                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                <div className="size-[20px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                   <span className="text-[9px] font-bold text-brand font-mono">1</span>
                 </div>
                 <div>
@@ -179,7 +179,7 @@ export function BuildKitAgentToolPage() {
                 </div>
               </div>
               <div className="flex gap-[10px]">
-                <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                <div className="size-[20px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                   <span className="text-[9px] font-bold text-brand font-mono">2</span>
                 </div>
                 <div>

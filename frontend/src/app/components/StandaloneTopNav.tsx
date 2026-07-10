@@ -95,7 +95,7 @@ export function StandaloneTopNav() {
                 onError={() => setAvatarImgError(true)}
               />
             ) : avatarName ? (
-              <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.4)] flex items-center justify-center">
+              <div className="size-[24px] rounded-full bg-brand-fill/20 border border-brand-fill/40 flex items-center justify-center">
                 <span className="text-[9px] font-bold text-brand font-mono">
                   {avatarName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
                 </span>

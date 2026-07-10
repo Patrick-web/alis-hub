@@ -338,7 +338,7 @@ export function DeploymentsPage() {
                     return (
                       <td
                         key={env.name}
-                        className={`px-[16px] py-[12px] ${isActive ? "bg-[rgba(248,129,169,0.03)]" : ""}`}
+                        className={`px-[16px] py-[12px] ${isActive ? "bg-brand-fill/3" : ""}`}
                       >
                         <EnvCell neuronVersion={neuron.version} dep={dep} />
                       </td>

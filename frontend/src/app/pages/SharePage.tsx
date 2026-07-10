@@ -52,7 +52,7 @@ function Avatar({ name, photoUrl, isGroup }: { name: string; photoUrl: string; i
     .map(p => p[0]?.toUpperCase() ?? '')
     .join('');
   return (
-    <div className="size-[28px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0">
+    <div className="size-[28px] rounded-full bg-brand-fill/20 border border-brand-fill/30 flex items-center justify-center shrink-0">
       <span className="text-[10px] font-bold text-brand">{initials || '?'}</span>
     </div>
   );
@@ -82,7 +82,7 @@ function RoleBadge({ role }: { role: string }) {
       );
     case 'Builder':
       return (
-        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)]">
+        <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-brand-fill/12 border border-brand-fill/25">
           <Icon icon="solar:hammer-linear" className="text-brand text-[10px]" />
           <span className="text-[10px] font-bold font-mono text-brand">Builder</span>
         </span>

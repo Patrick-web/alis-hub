@@ -26,7 +26,7 @@ export function LoginPage() {
     <div className="flex-1 flex flex-col items-center justify-center bg-background gap-[32px]">
       {/* Logo / wordmark */}
       <div className="flex flex-col items-center gap-[8px]">
-        <div className="size-[56px] rounded-[14px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)] flex items-center justify-center">
+        <div className="size-[56px] rounded-[14px] bg-brand-fill/12 border border-brand-fill/25 flex items-center justify-center">
           <Icon icon="solar:cloud-bold" className="text-brand text-[28px]" />
         </div>
         <p className="text-[22px] font-bold text-foreground tracking-tight">AlisHub</p>

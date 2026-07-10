@@ -39,7 +39,7 @@ export function Table<T>({ columns, data, rowId, onRowClick, activeRowId }: Tabl
               <tr
                 key={id}
                 onClick={onRowClick ? () => onRowClick(item) : undefined}
-                className={`border-b border-border transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${isActive ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-foreground/[2%]'}`}
+                className={`border-b border-border transition-colors ${onRowClick ? 'cursor-pointer' : ''} ${isActive ? 'bg-brand-fill/8' : 'hover:bg-foreground/[2%]'}`}
               >
                 {columns.map((column, index) => (
                   <td

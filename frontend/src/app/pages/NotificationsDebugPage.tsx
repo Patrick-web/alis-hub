@@ -331,7 +331,7 @@ export function NotificationsDebugPage() {
             <div className="bg-muted rounded-[8px] border border-border overflow-hidden">
               <div className="px-[12px] py-[8px] border-b border-border flex items-center gap-[6px]">
                 <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-widest">Store state — grouped by source</span>
-                <span className="text-[9px] bg-[rgba(248,129,169,0.15)] text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
+                <span className="text-[9px] bg-brand-fill/15 text-brand px-[5px] py-[1px] rounded-full font-mono font-bold">
                   {state.notifications.length}
                 </span>
               </div>

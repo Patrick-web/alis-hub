@@ -31,7 +31,7 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         ) : (
-          <div className="size-[36px] rounded-[8px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+          <div className="size-[36px] rounded-[8px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
             <span className="text-[14px] font-bold text-brand">
               {org.displayName[0]?.toUpperCase() ?? '?'}
             </span>

@@ -235,7 +235,7 @@ export function VarFormSheet({
                               onClick={() => !loading && p.useCustom && toggleCustom(p.envName)}
                               className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 !p.useCustom
-                                  ? 'border-brand-fill bg-[rgba(248,129,169,0.08)] text-brand'
+                                  ? 'border-brand-fill bg-brand-fill/8 text-brand'
                                   : 'border-border text-foreground/40 hover:bg-foreground/[3%]'
                               }`}
                             >
@@ -245,7 +245,7 @@ export function VarFormSheet({
                               onClick={() => !loading && !p.useCustom && toggleCustom(p.envName)}
                               className={`flex-1 px-[8px] py-[5px] rounded-[3px] border font-mono text-[10px] font-bold uppercase transition-colors ${
                                 p.useCustom
-                                  ? 'border-brand-fill bg-[rgba(248,129,169,0.08)] text-brand'
+                                  ? 'border-brand-fill bg-brand-fill/8 text-brand'
                                   : 'border-border text-foreground/40 hover:bg-foreground/[3%]'
                               }`}
                             >

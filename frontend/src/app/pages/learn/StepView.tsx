@@ -69,7 +69,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
                 i === stepIndex
                   ? 'size-[8px] bg-brand-fill'
                   : i < stepIndex
-                  ? 'size-[6px] bg-[rgba(248,129,169,0.4)]'
+                  ? 'size-[6px] bg-brand-fill/40'
                   : 'size-[6px] bg-border'
               }`}
             />

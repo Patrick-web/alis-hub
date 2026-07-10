@@ -81,8 +81,8 @@ export function SecretManager({ projectID }: Props) {
       </div>
 
       {/* Notice */}
-      <div className="flex items-center gap-[8px] px-[16px] py-[8px] bg-[rgba(248,129,169,0.05)] border-b border-border">
-        <Icon icon="solar:shield-warning-linear" className="text-sm text-[rgba(248,129,169,0.5)] shrink-0" />
+      <div className="flex items-center gap-[8px] px-[16px] py-[8px] bg-brand-fill/5 border-b border-border">
+        <Icon icon="solar:shield-warning-linear" className="text-sm text-brand-fill/50 shrink-0" />
         <p className="text-[9px] text-foreground/40 font-mono">
           Secret values are access-controlled and are never fetched or displayed here
         </p>

@@ -575,7 +575,7 @@ export function SpannerExplorer({ projectID }: Props) {
                             >
                               <button
                                 onClick={() => toggleDatabase(db)}
-                                className={`w-full flex items-center gap-[7px] pl-[24px] pr-[10px] py-[7px] transition-colors text-left ${dbSelected ? "bg-[rgba(248,129,169,0.07)]" : "hover:bg-foreground/[2%]"}`}
+                                className={`w-full flex items-center gap-[7px] pl-[24px] pr-[10px] py-[7px] transition-colors text-left ${dbSelected ? "bg-brand-fill/7" : "hover:bg-foreground/[2%]"}`}
                               >
                                 <Icon
                                   icon={
@@ -639,11 +639,11 @@ export function SpannerExplorer({ projectID }: Props) {
                                                   db.name,
                                                 )
                                               }
-                                              className={`w-full flex items-center gap-[7px] px-[4px] py-[4px] rounded-[2px] transition-colors text-left group ${isActive ? "bg-[rgba(248,129,169,0.1)]" : "hover:bg-foreground/[3%]"}`}
+                                              className={`w-full flex items-center gap-[7px] px-[4px] py-[4px] rounded-[2px] transition-colors text-left group ${isActive ? "bg-brand-fill/10" : "hover:bg-foreground/[3%]"}`}
                                             >
                                               <Icon
                                                 icon="hugeicons:table"
-                                                className={`text-xs shrink-0 transition-colors ${isActive ? "text-brand" : isOpen ? "text-[rgba(248,129,169,0.5)]" : "text-foreground/30"}`}
+                                                className={`text-xs shrink-0 transition-colors ${isActive ? "text-brand" : isOpen ? "text-brand-fill/50" : "text-foreground/30"}`}
                                               />
                                               <span
                                                 className={`text-[9px] font-mono flex-1 truncate transition-colors ${isActive ? "text-foreground" : isOpen ? "text-foreground/70" : "text-foreground/50 group-hover:text-foreground"}`}
@@ -653,7 +653,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                               {isOpen && !isActive && (
                                                 <Icon
                                                   icon="solar:circle-bold"
-                                                  className="text-[6px] text-[rgba(248,129,169,0.5)] shrink-0"
+                                                  className="text-[6px] text-brand-fill/50 shrink-0"
                                                 />
                                               )}
                                             </button>
@@ -714,7 +714,7 @@ export function SpannerExplorer({ projectID }: Props) {
                   }}
                   onClick={(e) => e.stopPropagation()}
                   onDoubleClick={(e) => e.stopPropagation()}
-                  className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-[rgba(248,129,169,0.6)]"
+                  className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-brand-fill/60"
                 />
               ) : (
                 <span
@@ -810,7 +810,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                 </button>
                                 <button
                                   onClick={() => updateTabQuery(tabId, { dmlMode: "readwrite" })}
-                                  className={`px-[7px] py-[3px] border-l border-border transition-colors ${dmlMode === "readwrite" ? "bg-[rgba(248,129,169,0.12)] text-brand" : "text-foreground/40 hover:text-foreground/70"}`}
+                                  className={`px-[7px] py-[3px] border-l border-border transition-colors ${dmlMode === "readwrite" ? "bg-brand-fill/12 text-brand" : "text-foreground/40 hover:text-foreground/70"}`}
                                 >
                                   Read-Write
                                 </button>
@@ -827,7 +827,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           style={{ height: queryPanelHeight }}
                         >
                           <div className="px-[16px] pt-[12px] pb-[8px] flex-1 min-h-0 flex flex-col">
-                            <div className="flex-1 min-h-0 border border-border rounded-[4px] overflow-hidden focus-within:border-[rgba(248,129,169,0.4)] transition-colors">
+                            <div className="flex-1 min-h-0 border border-border rounded-[4px] overflow-hidden focus-within:border-brand-fill/40 transition-colors">
                               <SqlEditor
                                 value={sql}
                                 onChange={(val) =>
@@ -862,7 +862,7 @@ export function SpannerExplorer({ projectID }: Props) {
                           </div>
                           <div
                             onMouseDown={handleResizerMouseDown}
-                            className="h-[4px] cursor-row-resize shrink-0 border-t border-border hover:bg-[rgba(248,129,169,0.3)] transition-colors"
+                            className="h-[4px] cursor-row-resize shrink-0 border-t border-border hover:bg-brand-fill/30 transition-colors"
                           />
                         </div>
 

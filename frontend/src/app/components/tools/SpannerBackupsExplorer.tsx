@@ -129,7 +129,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
                   onClick={() => handleSelectInstance(instance)}
                   className={`w-full flex items-center gap-[7px] px-[10px] py-[8px] transition-colors text-left border-b border-border ${
                     isActive
-                      ? "bg-[rgba(248,129,169,0.07)]"
+                      ? "bg-brand-fill/7"
                       : "hover:bg-foreground/[3%]"
                   }`}
                 >

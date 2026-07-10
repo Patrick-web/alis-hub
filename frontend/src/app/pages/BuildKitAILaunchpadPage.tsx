@@ -85,7 +85,7 @@ export function BuildKitAILaunchpadPage() {
             </StageCard>
           ))}
 
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               Full AI Launchpad setup is guided step-by-step in the VS Code extension. Use the Alis Build extension in

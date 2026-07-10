@@ -246,7 +246,7 @@ export function BucketsExplorer({ projectID }: Props) {
                 onClick={() => selectBucket(b.name)}
                 className={`w-full flex items-center gap-[8px] px-[12px] py-[8px] text-left transition-colors ${
                   selectedBucket === b.name
-                    ? 'bg-[rgba(248,129,169,0.1)] border-r-2 border-r-[#f881a9]'
+                    ? 'bg-brand-fill/10 border-r-2 border-r-brand-fill'
                     : 'hover:bg-foreground/[3%]'
                 }`}
               >
@@ -353,7 +353,7 @@ export function BucketsExplorer({ projectID }: Props) {
                     onDoubleClick={() => { setSelectedObject(obj); setShowPreview(true); }}
                     className={`w-full flex items-center gap-[10px] px-[16px] py-[8px] border-b border-border transition-colors text-left ${
                       selectedObject?.name === obj.name
-                        ? 'bg-[rgba(248,129,169,0.08)] border-r-2 border-r-[#f881a9]'
+                        ? 'bg-brand-fill/8 border-r-2 border-r-brand-fill'
                         : 'hover:bg-foreground/[3%]'
                     }`}
                   >

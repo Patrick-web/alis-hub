@@ -41,7 +41,7 @@ export function ModuleSidebar({
                 onClick={() => onSelectModule(module.id)}
                 className={`relative w-full text-left transition-colors ${
                   isActive
-                    ? 'bg-[rgba(248,129,169,0.1)]'
+                    ? 'bg-brand-fill/10'
                     : 'hover:bg-foreground/[4%]'
                 }`}
               >
@@ -96,7 +96,7 @@ export function ModuleSidebar({
                         onClick={() => onSelectStep(module.id, sIdx)}
                         className={`w-full text-left px-[16px] py-[8px] flex items-center gap-[10px] transition-colors ${
                           isStepActive
-                            ? 'bg-[rgba(248,129,169,0.08)]'
+                            ? 'bg-brand-fill/8'
                             : 'hover:bg-foreground/[3%]'
                         }`}
                       >
