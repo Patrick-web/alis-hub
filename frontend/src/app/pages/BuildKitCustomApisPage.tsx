@@ -98,7 +98,7 @@ function Checkbox({ checked, onChange, label }: { checked: boolean; onChange: ()
 
 function ActionAlert({ icon, title, description, action }: { icon: string; title: string; description: string; action: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px] mt-[16px]">
+    <div className="flex items-center justify-between gap-[12px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px] mt-[16px]">
       <div className="flex items-center gap-[12px]">
         <Icon icon={icon} className="text-brand text-[18px] shrink-0" />
         <div>
@@ -156,7 +156,7 @@ export function BuildKitCustomApisPage() {
                 { n: 3, title: 'Your Workspace is Prepared', sub: 'Your local file system is automatically updated with your new service and starter code.' },
               ].map(({ n, title, sub }) => (
                 <div key={n} className="flex gap-[10px]">
-                  <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                  <div className="size-[20px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                     <span className="text-[9px] font-bold text-brand font-mono">{n}</span>
                   </div>
                   <div>

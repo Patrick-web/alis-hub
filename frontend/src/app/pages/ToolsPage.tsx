@@ -147,7 +147,7 @@ export function ToolsPanel() {
                         onClick={() => setSelectedCtx(ctx)}
                         className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[3px] text-left transition-all ${
                           isActive
-                            ? 'bg-[rgba(248,129,169,0.12)] border border-brand-fill'
+                            ? 'bg-brand-fill/12 border border-brand-fill'
                             : 'hover:bg-foreground/[4%] border border-transparent'
                         }`}
                       >
@@ -175,7 +175,7 @@ export function ToolsPanel() {
                     onClick={() => setActiveTab(tool.id)}
                     className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
                       isActive
-                        ? 'bg-[rgba(248,129,169,0.1)] border border-brand-fill'
+                        ? 'bg-brand-fill/10 border border-brand-fill'
                         : 'hover:bg-foreground/[3%] border border-transparent'
                     }`}
                   >

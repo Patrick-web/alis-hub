@@ -105,12 +105,12 @@ export function BuildKitSkillsPage() {
                 key={s.id}
                 onClick={() => setSelectedStage(s.id)}
                 className={`flex-1 flex flex-col items-start px-[14px] py-[10px] transition-all border-r last:border-r-0 border-border ${
-                  selectedStage === s.id ? 'bg-[rgba(248,129,169,0.08)]' : 'bg-card hover:bg-accent'
+                  selectedStage === s.id ? 'bg-brand-fill/8' : 'bg-card hover:bg-accent'
                 }`}
               >
                 <div className="flex items-center gap-[6px] mb-[2px]">
                   <div className={`size-[16px] rounded-full border flex items-center justify-center shrink-0 ${
-                    selectedStage === s.id ? 'bg-[rgba(248,129,169,0.2)] border-brand-fill' : 'border-border'
+                    selectedStage === s.id ? 'bg-brand-fill/20 border-brand-fill' : 'border-border'
                   }`}>
                     <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/40'}`}>{i + 1}</span>
                   </div>
@@ -189,7 +189,7 @@ export function BuildKitSkillsPage() {
                   { n: 3, label: 'Build & Deploy', desc: 'Build the service image and deploy it to your environment.' },
                 ].map((item) => (
                   <div key={item.n} className="flex gap-[10px]">
-                    <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                    <div className="size-[20px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                       <span className="text-[9px] font-bold text-brand font-mono">{item.n}</span>
                     </div>
                     <div>

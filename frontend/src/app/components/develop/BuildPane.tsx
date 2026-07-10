@@ -571,7 +571,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                 onClick={() => setBuildMode(mode)}
                 className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                   buildMode === mode
-                    ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                    ? 'bg-brand-fill/8 border-brand-fill/35 text-foreground'
                     : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                 }`}
               >
@@ -603,7 +603,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                         onClick={() => setSelectedDeployEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
                         className={`flex items-center gap-[10px] px-[12px] py-[9px] rounded-[6px] border transition-colors text-left ${
                           selected
-                            ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                            ? 'bg-brand-fill/8 border-brand-fill/35 text-foreground'
                             : 'bg-background border-border text-foreground/50 hover:text-foreground/70'
                         }`}
                       >

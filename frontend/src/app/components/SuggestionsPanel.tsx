@@ -118,7 +118,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
             <Icon icon="solar:lightbulb-bold" className="text-brand text-[16px]" />
             <span className="text-[13px] font-bold text-foreground font-mono">Suggestions</span>
             {count > 0 && (
-              <span className="text-[10px] bg-[rgba(248,129,169,0.15)] text-brand px-[6px] py-[1px] rounded-full font-mono font-bold">
+              <span className="text-[10px] bg-brand-fill/15 text-brand px-[6px] py-[1px] rounded-full font-mono font-bold">
                 {count}
               </span>
             )}
@@ -161,7 +161,7 @@ export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: ()
         {/* Footer */}
         <div className="border-t border-border px-[14px] py-[8px] flex items-center justify-between">
           <span className="text-[10px] text-foreground/20 font-mono">alis hub Labs</span>
-          <span className="text-[10px] bg-[rgba(248,129,169,0.1)] text-brand px-[6px] py-[1px] rounded-full font-mono uppercase tracking-wide">
+          <span className="text-[10px] bg-brand-fill/10 text-brand px-[6px] py-[1px] rounded-full font-mono uppercase tracking-wide">
             beta
           </span>
         </div>

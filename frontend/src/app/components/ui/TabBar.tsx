@@ -191,7 +191,7 @@ export function TabBar({
                       "shrink-0 flex items-center justify-center opacity-0 group-hover/tab:opacity-100 transition-all",
                       variant === "filled"
                         ? "size-[14px] rounded-[2px] text-foreground/25 hover:text-foreground hover:bg-accent"
-                        : "ml-[2px] p-[3px] rounded text-foreground/40 hover:text-brand hover:bg-[rgba(248,129,169,0.1)]",
+                        : "ml-[2px] p-[3px] rounded text-foreground/40 hover:text-brand hover:bg-brand-fill/10",
                     )}
                   >
                     <Icon

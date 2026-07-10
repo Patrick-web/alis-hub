@@ -699,10 +699,6 @@ export function BuildsPage() {
     ? versions.find((v) => v.version === activeVersionId)
     : null;
 
-  const canDeploy =
-    Boolean(activeVersionId) &&
-    (selectedVersion?.state === 1 || selectedVersion?.state === 2);
-
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-background">
       {/* Left Section: Toolbar and Table */}
@@ -1102,7 +1098,9 @@ export function BuildsPage() {
                         <div className="flex flex-col">
                           <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-foreground/30 uppercase font-bold font-mono">
                             {changelogCommits.length} commit
-                            {changelogCommits.length !== 1 ? "s" : ""} since{" "}
+                            {changelogCommits.length !== 1
+                              ? "s"
+                              : ""} since{" "}
                             {versions[
                               versions.findIndex(
                                 (v) => v.version === activeVersionId,
@@ -1277,7 +1275,7 @@ export function BuildsPage() {
                           }
                           className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border text-left transition-colors ${
                             selected
-                              ? "bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.4)]"
+                              ? "bg-brand-fill/10 border-brand-fill/40"
                               : "bg-card border-border hover:border-border"
                           }`}
                         >

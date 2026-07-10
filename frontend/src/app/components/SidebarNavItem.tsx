@@ -20,7 +20,7 @@ export function SidebarNavItem({ label, icon, active = false, onClick, onEdit, o
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={`relative shrink-0 w-full transition-colors ${
-        active ? 'bg-[rgba(248,129,169,0.12)]' : 'hover:bg-foreground/5'
+        active ? 'bg-brand-fill/12' : 'hover:bg-foreground/5'
       }`}
     >
       <div

@@ -62,7 +62,7 @@ function Avatar({ name, picture, size = 48 }: { name: string; picture: string; s
 
   return (
     <div
-      className="rounded-full bg-[rgba(248,129,169,0.15)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center shrink-0"
+      className="rounded-full bg-brand-fill/15 border border-brand-fill/30 flex items-center justify-center shrink-0"
       style={{ width: size, height: size }}
     >
       <span className="text-brand font-bold font-mono" style={{ fontSize: size * 0.35 }}>
@@ -709,7 +709,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                 {activeTab === 'updates' && (
                   <div className="p-[14px] flex flex-col gap-[12px]">
                     <div className="flex items-center gap-[10px] p-[12px] bg-foreground/[0.04] rounded-[9px] border border-border">
-                      <div className="size-[34px] rounded-[8px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+                      <div className="size-[34px] rounded-[8px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
                         <Icon icon="solar:cloud-bold" className="text-brand text-base" />
                       </div>
                       <div>

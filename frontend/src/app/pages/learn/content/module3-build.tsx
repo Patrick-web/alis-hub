@@ -122,7 +122,7 @@ export const module3: LearningModule = {
             a path that encodes the organisation, product, and neuron name. Every build produces a unique
             image tagged with the Git short SHA, so rollbacks are just a matter of deploying a previous tag.
           </p>
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               <span className="text-brand font-bold">In the hub: </span>
               the Builds tab shows live Cloud Build logs so you can watch the build progress in real time

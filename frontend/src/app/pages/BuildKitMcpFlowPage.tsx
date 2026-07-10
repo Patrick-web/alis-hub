@@ -138,13 +138,13 @@ export function BuildKitMcpFlowPage() {
                 onClick={() => setSelectedStage(s.id)}
                 className={`flex-1 flex flex-col items-start px-[14px] py-[10px] transition-all border-r last:border-r-0 border-border ${
                   selectedStage === s.id
-                    ? 'bg-[rgba(248,129,169,0.08)]'
+                    ? 'bg-brand-fill/8'
                     : 'bg-card hover:bg-accent'
                 }`}
               >
                 <div className="flex items-center gap-[6px] mb-[2px]">
                   <div className={`size-[16px] rounded-full border flex items-center justify-center shrink-0 ${
-                    selectedStage === s.id ? 'bg-[rgba(248,129,169,0.2)] border-brand-fill' : 'border-border'
+                    selectedStage === s.id ? 'bg-brand-fill/20 border-brand-fill' : 'border-border'
                   }`}>
                     <span className={`text-[8px] font-bold font-mono ${selectedStage === s.id ? 'text-brand' : 'text-foreground/40'}`}>{i + 1}</span>
                   </div>
@@ -208,7 +208,7 @@ export function BuildKitMcpFlowPage() {
                   { label: 'Build & Deploy', desc: 'Build the service image and deploy it to your cloud environment.' },
                 ].map((item, i) => (
                   <div key={item.label} className="flex gap-[10px]">
-                    <div className="size-[20px] rounded-full bg-[rgba(248,129,169,0.15)] border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
+                    <div className="size-[20px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
                       <span className="text-[9px] font-bold text-brand font-mono">{i + 1}</span>
                     </div>
                     <div>
@@ -248,7 +248,7 @@ export function BuildKitMcpFlowPage() {
                     onClick={() => setActiveClient(c.id)}
                     className={`flex items-center gap-[6px] px-[10px] py-[5px] rounded-[4px] border text-[11px] font-mono font-bold transition-all ${
                       activeClient === c.id
-                        ? 'bg-[rgba(248,129,169,0.1)] border-[rgba(248,129,169,0.5)] text-brand'
+                        ? 'bg-brand-fill/10 border-brand-fill/50 text-brand'
                         : 'bg-muted border-border text-foreground/60 hover:border-foreground/30'
                     }`}
                   >
@@ -264,7 +264,7 @@ export function BuildKitMcpFlowPage() {
             </StageCard>
           )}
 
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               To connect to the hosted{' '}

@@ -12,7 +12,7 @@ function TileLink({ icon, label, onClick }: { icon: string; label: string; onCli
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-[10px] w-[150px] h-[90px] bg-card border border-border hover:border-[rgba(248,129,169,0.35)] hover:bg-[rgba(248,129,169,0.04)] transition-all"
+      className="flex flex-col items-center justify-center gap-[10px] w-[150px] h-[90px] bg-card border border-border hover:border-brand-fill/35 hover:bg-brand-fill/4 transition-all"
     >
       <Icon icon={icon} className="text-brand text-[22px]" />
       <span className="text-[10px] text-foreground/65 font-['Fira_Code',sans-serif] text-center leading-tight px-[10px]">{label}</span>
@@ -148,7 +148,7 @@ export function AboutPage() {
       {/* Product Identity Header */}
       <div className="bg-card border-b border-border px-[20px] py-[16px] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-[12px]">
-          <div className="size-[38px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.18)] flex items-center justify-center shrink-0">
+          <div className="size-[38px] bg-brand-fill/8 border border-brand-fill/18 flex items-center justify-center shrink-0">
             <Icon icon="solar:box-minimalistic-linear" className="text-brand text-lg" />
           </div>
           <div>

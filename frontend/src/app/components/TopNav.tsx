@@ -212,7 +212,7 @@ export function TopNav() {
               onError={() => setAvatarImgError(true)}
             />
           ) : avatarName ? (
-            <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.2)] border border-[rgba(248,129,169,0.4)] flex items-center justify-center">
+            <div className="size-[24px] rounded-full bg-brand-fill/20 border border-brand-fill/40 flex items-center justify-center">
               <span className="text-[9px] font-bold text-brand font-mono">
                 {avatarName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
               </span>
@@ -264,7 +264,7 @@ export function TopNav() {
                     }}
                     className={`w-full flex items-center justify-between px-[16px] py-[11px] transition-colors text-left ${
                       isActive
-                        ? 'bg-[rgba(248,129,169,0.08)] text-brand'
+                        ? 'bg-brand-fill/8 text-brand'
                         : 'text-foreground hover:bg-foreground/[4%]'
                     }`}
                   >

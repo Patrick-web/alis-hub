@@ -28,7 +28,7 @@ export function ReloginModal({ onSuccess }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="w-[340px] bg-card border border-border rounded-[14px] p-[28px] flex flex-col gap-[20px] shadow-2xl">
         <div className="flex flex-col items-center gap-[10px] text-center">
-          <div className="size-[48px] rounded-[12px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.25)] flex items-center justify-center">
+          <div className="size-[48px] rounded-[12px] bg-brand-fill/12 border border-brand-fill/25 flex items-center justify-center">
             <Icon icon="solar:lock-keyhole-minimalistic-bold" className="text-brand text-[24px]" />
           </div>
           <div>

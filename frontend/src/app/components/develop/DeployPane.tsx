@@ -348,7 +348,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                         key={v.name}
                         onClick={() => setVersion(v.version)}
                         className={`w-full text-left px-[16px] py-[9px] border-b border-border flex items-center gap-[10px] transition-colors ${
-                          selected ? 'bg-[rgba(248,129,169,0.08)]' : 'hover:bg-foreground/[2%]'
+                          selected ? 'bg-brand-fill/8' : 'hover:bg-foreground/[2%]'
                         }`}
                       >
                         <span className={`size-[14px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
@@ -379,7 +379,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                     <button
                       key={env.name}
                       onClick={() => setSelectedEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
-                      className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${selected ? 'bg-[rgba(248,129,169,0.05)]' : 'hover:bg-foreground/[2%]'}`}
+                      className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${selected ? 'bg-brand-fill/5' : 'hover:bg-foreground/[2%]'}`}
                     >
                       <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
                         {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}

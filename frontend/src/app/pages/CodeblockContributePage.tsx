@@ -321,7 +321,7 @@ function InstancePickerStep({ instances, loading, selected, onSelect, onOpen, op
                   key={inst.name}
                   onClick={() => onSelect(inst)}
                   className={`w-full text-left bg-card border rounded-[4px] p-[16px] transition-colors ${
-                    isSelected ? 'border-brand-fill bg-[rgba(248,129,169,0.06)]' : 'border-border hover:border-border'
+                    isSelected ? 'border-brand-fill bg-brand-fill/6' : 'border-border hover:border-border'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-[8px]">
@@ -506,7 +506,7 @@ function CommitList({ label, commits, selected, onSelect }: {
                 key={commit.fullHash}
                 onClick={() => onSelect(commit.fullHash)}
                 className={`w-full text-left px-[16px] py-[10px] border-b border-border transition-colors hover:bg-foreground/[3%] ${
-                  isSelected ? 'bg-[rgba(248,129,169,0.07)] border-l-2 border-l-[#f881a9]' : ''
+                  isSelected ? 'bg-brand-fill/7 border-l-2 border-l-brand-fill' : ''
                 }`}
               >
                 <div className="flex items-start justify-between gap-[8px]">

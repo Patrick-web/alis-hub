@@ -297,7 +297,7 @@ export function DevelopPage() {
                 openTab("packages", Array.from(selectedNeurons).join(","));
                 setSelectedNeurons(new Set());
               }}
-              className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-brand hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-mono uppercase"
+              className="flex items-center gap-[6px] px-[12px] h-[34px] bg-brand-fill/10 border border-brand-fill/30 rounded-[4px] text-brand hover:bg-brand-fill/15 transition-colors text-[11px] font-bold font-mono uppercase"
             >
               <Icon icon="solar:box-linear" className="text-base" />
               Packages · {selectedNeurons.size}
@@ -326,8 +326,8 @@ export function DevelopPage() {
                       allVisibleSelected
                         ? "bg-brand-fill border-brand-fill"
                         : someVisibleSelected
-                          ? "border-brand-fill bg-[rgba(248,129,169,0.15)]"
-                          : "border-border hover:border-[rgba(248,129,169,0.5)]"
+                          ? "border-brand-fill bg-brand-fill/15"
+                          : "border-border hover:border-brand-fill/50"
                     }`}
                   >
                     {allVisibleSelected && (
@@ -365,7 +365,7 @@ export function DevelopPage() {
                 return (
                   <tr
                     key={name}
-                    className={`border-b border-border transition-colors ${isSelected ? "bg-[rgba(248,129,169,0.04)]" : "hover:bg-foreground/[2%]"}`}
+                    className={`border-b border-border transition-colors ${isSelected ? "bg-brand-fill/4" : "hover:bg-foreground/[2%]"}`}
                   >
                     <td className="px-[16px] py-[10px]">
                       <button
@@ -373,7 +373,7 @@ export function DevelopPage() {
                         className={`size-[14px] rounded-[3px] border flex items-center justify-center transition-colors ${
                           isSelected
                             ? "bg-brand-fill border-brand-fill"
-                            : "border-border hover:border-[rgba(248,129,169,0.5)]"
+                            : "border-border hover:border-brand-fill/50"
                         }`}
                       >
                         {isSelected && (

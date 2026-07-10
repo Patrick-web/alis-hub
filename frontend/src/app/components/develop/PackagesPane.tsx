@@ -139,7 +139,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
                 onClick={() => setAction(value)}
                 className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
                   action === value
-                    ? 'bg-[rgba(248,129,169,0.08)] border-[rgba(248,129,169,0.35)] text-foreground'
+                    ? 'bg-brand-fill/8 border-brand-fill/35 text-foreground'
                     : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                 }`}
               >
@@ -186,7 +186,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
                       if (next.has(s.workDir)) next.delete(s.workDir); else next.add(s.workDir);
                       return next;
                     })}
-                    className={`text-left px-[16px] py-[10px] border-b border-border flex items-center gap-[10px] transition-colors ${checked ? 'bg-[rgba(248,129,169,0.04)]' : 'hover:bg-foreground/[2%]'}`}
+                    className={`text-left px-[16px] py-[10px] border-b border-border flex items-center gap-[10px] transition-colors ${checked ? 'bg-brand-fill/4' : 'hover:bg-foreground/[2%]'}`}
                   >
                     <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
                       {checked && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
@@ -210,7 +210,7 @@ export function PackagesPane({ neuronNames }: PackagesPaneProps) {
 
       {step === 'venv-setup' && (
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto px-[16px] py-[16px]">
-          <div className="flex items-start gap-[10px] p-[12px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.25)] rounded-[6px] mb-[20px]">
+          <div className="flex items-start gap-[10px] p-[12px] bg-brand-fill/8 border border-brand-fill/25 rounded-[6px] mb-[20px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-base shrink-0 mt-[1px]" />
             <div>
               <p className="text-[11px] font-medium text-foreground leading-snug">Python virtual environment not found</p>

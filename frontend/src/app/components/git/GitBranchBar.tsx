@@ -95,7 +95,7 @@ export function GitBranchBar({
                         onClick={() => handleSelect(b.name)}
                         className={`w-full flex items-center justify-between px-[16px] py-[9px] transition-colors text-left ${
                           b.isCurrent
-                            ? 'bg-[rgba(248,129,169,0.08)] text-brand'
+                            ? 'bg-brand-fill/8 text-brand'
                             : 'text-foreground hover:bg-foreground/[4%]'
                         }`}
                       >

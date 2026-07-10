@@ -166,7 +166,7 @@ export function ProductPickerPage() {
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
           ) : (
-            <div className="size-[40px] rounded-[10px] bg-[rgba(248,129,169,0.12)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+            <div className="size-[40px] rounded-[10px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
               <span className="text-[16px] font-bold text-brand">
                 {org.displayName[0]?.toUpperCase() ?? '?'}
               </span>
@@ -252,7 +252,7 @@ export function ProductPickerPage() {
                       ${isDisabled ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted'}
                     `}
                   >
-                    <div className="size-[32px] rounded-[7px] bg-[rgba(248,129,169,0.08)] border border-[rgba(248,129,169,0.15)] flex items-center justify-center shrink-0">
+                    <div className="size-[32px] rounded-[7px] bg-brand-fill/8 border border-brand-fill/15 flex items-center justify-center shrink-0">
                       <Icon icon="solar:box-linear" className="text-brand text-base" />
                     </div>
                     <div className="flex-1 min-w-0">

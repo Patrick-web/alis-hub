@@ -271,7 +271,7 @@ export function BuildKitPage() {
                       <button
                         key={product}
                         onClick={() => Browser.OpenURL(productResourceToLandingZoneUrl(product))}
-                        className="flex items-center justify-between px-[12px] py-[8px] bg-muted border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.4)] hover:bg-muted transition-all group text-left"
+                        className="flex items-center justify-between px-[12px] py-[8px] bg-muted border border-border rounded-[4px] hover:border-brand-fill/40 hover:bg-muted transition-all group text-left"
                       >
                         <div className="flex items-center gap-[8px]">
                           <Icon icon="solar:box-linear" className="text-foreground/35 text-[13px] shrink-0" />
@@ -307,7 +307,7 @@ export function BuildKitPage() {
             <button
               key={flow.route}
               onClick={() => navigate(`/buildkit/${flow.route}`)}
-              className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.5)] hover:bg-accent transition-all group"
+              className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-brand-fill/50 hover:bg-accent transition-all group"
             >
               <div className="flex items-start justify-between mb-[10px]">
                 <h3 className="text-[11px] font-bold text-foreground font-mono uppercase leading-tight group-hover:text-brand transition-colors">
@@ -339,7 +339,7 @@ export function BuildKitPage() {
             <button
               key={s.title}
               onClick={() => s.route ? navigate(s.route) : Browser.OpenURL(s.url!)}
-              className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-[rgba(248,129,169,0.5)] hover:bg-accent transition-all group"
+              className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-brand-fill/50 hover:bg-accent transition-all group"
             >
               <div className="flex items-start justify-between mb-[10px]">
                 <h3 className="text-[11px] font-bold text-foreground font-mono uppercase leading-tight group-hover:text-brand transition-colors">

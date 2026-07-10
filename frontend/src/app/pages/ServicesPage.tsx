@@ -176,7 +176,7 @@ export function ServicesPage() {
         <div className="ml-auto">
           <button
             onClick={() => setNewServiceOpen(true)}
-            className="flex items-center gap-[6px] px-[12px] h-[34px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] rounded-[4px] text-brand hover:bg-[rgba(248,129,169,0.15)] transition-colors text-[11px] font-bold font-mono uppercase"
+            className="flex items-center gap-[6px] px-[12px] h-[34px] bg-brand-fill/10 border border-brand-fill/30 rounded-[4px] text-brand hover:bg-brand-fill/15 transition-colors text-[11px] font-bold font-mono uppercase"
           >
             <Icon icon="solar:add-circle-linear" className="text-base" />
             New Service
@@ -256,7 +256,7 @@ export function ServicesPage() {
                     const dep = env.deployments.find(d => d.neuronId === neuron.id);
                     const isActive = env.name === state.activeEnvName;
                     return (
-                      <td key={env.name} className={`px-[16px] py-[12px] ${isActive ? 'bg-[rgba(248,129,169,0.03)]' : ''}`}>
+                      <td key={env.name} className={`px-[16px] py-[12px] ${isActive ? 'bg-brand-fill/3' : ''}`}>
                         <EnvCell neuronVersion={neuron.version} dep={dep} />
                       </td>
                     );

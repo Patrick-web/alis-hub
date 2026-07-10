@@ -286,7 +286,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <div className="relative shrink-0" ref={colPickerRef}>
             <button
               onClick={() => setShowColPicker((v) => !v)}
-              className="flex items-center gap-[5px] h-[26px] px-[8px] bg-muted border border-border rounded-[3px] text-[10px] font-mono text-foreground hover:border-[rgba(248,129,169,0.5)] transition-colors"
+              className="flex items-center gap-[5px] h-[26px] px-[8px] bg-muted border border-border rounded-[3px] text-[10px] font-mono text-foreground hover:border-brand-fill/50 transition-colors"
             >
               <Icon icon="solar:filter-table-linear" className="text-[11px] text-brand" />
               <span>
@@ -356,7 +356,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                     onChange={(e) => updateCondition(cond.id, { value: e.target.value })}
                     onKeyDown={(e) => { if (e.key === 'Enter') applyFilters(); }}
                     placeholder="value"
-                    className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-[rgba(248,129,169,0.4)] w-[120px]"
+                    className="bg-muted border border-border text-foreground text-[10px] font-mono px-[6px] h-[24px] rounded-[3px] focus:outline-none focus:border-brand-fill/40 w-[120px]"
                   />
                 )}
                 <button
@@ -389,7 +389,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             {orderBy && (
               <button
                 onClick={() => { const d = orderDir === 'ASC' ? 'DESC' : 'ASC'; setOrderDir(d); runQuery({ od: d }); }}
-                className="flex items-center gap-[3px] h-[24px] px-[6px] bg-card border border-border rounded-[3px] text-[9px] font-mono text-foreground hover:border-[rgba(248,129,169,0.4)] transition-colors"
+                className="flex items-center gap-[3px] h-[24px] px-[6px] bg-card border border-border rounded-[3px] text-[9px] font-mono text-foreground hover:border-brand-fill/40 transition-colors"
               >
                 <Icon
                   icon={orderDir === 'ASC' ? 'solar:sort-from-bottom-to-top-linear' : 'solar:sort-from-top-to-bottom-linear'}

@@ -244,7 +244,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
                 <Icon icon="solar:close-circle-linear" className="text-destructive text-xl" />
               </div>
             ) : (
-              <div className="size-[48px] rounded-full bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] flex items-center justify-center">
+              <div className="size-[48px] rounded-full bg-brand-fill/10 border border-brand-fill/30 flex items-center justify-center">
                 <Loader size={20} />
               </div>
             )}
@@ -311,7 +311,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
                     </span>
                   )}
                   {glassResult.definition.releaseType && (
-                    <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.3)] text-brand">
+                    <span className="text-[9px] uppercase font-bold font-mono px-[6px] py-[2px] rounded bg-brand-fill/10 border border-brand-fill/30 text-brand">
                       {glassResult.definition.releaseType}
                     </span>
                   )}

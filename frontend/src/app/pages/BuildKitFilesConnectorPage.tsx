@@ -18,7 +18,7 @@ export function BuildKitFilesConnectorPage() {
             </div>
           </div>
           <div className="flex items-center gap-[12px] mb-[12px]">
-            <div className="size-[36px] rounded-[4px] bg-[rgba(248,129,169,0.1)] border border-[rgba(248,129,169,0.2)] flex items-center justify-center shrink-0">
+            <div className="size-[36px] rounded-[4px] bg-brand-fill/10 border border-brand-fill/20 flex items-center justify-center shrink-0">
               <Icon icon="solar:file-text-linear" className="text-brand text-[18px]" />
             </div>
             <div>
@@ -26,7 +26,7 @@ export function BuildKitFilesConnectorPage() {
               <p className="text-[11px] text-foreground/50">This flow is in private preview.</p>
             </div>
           </div>
-          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-[rgba(248,129,169,0.06)] border border-[rgba(248,129,169,0.2)] rounded-[4px]">
+          <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
             <p className="text-[11px] text-foreground/65 leading-[1.5]">
               This flow is in private preview. Please contact your Build partner for access.

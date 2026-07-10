@@ -161,7 +161,7 @@ export function DuplicateVarModal({
               <div
                 key={target.env.name}
                 className={`flex items-start gap-[10px] p-[12px] rounded-[4px] border transition-colors cursor-pointer ${
-                  target.checked ? 'border-brand-fill bg-[rgba(248,129,169,0.06)]' : 'border-border hover:bg-foreground/[3%]'
+                  target.checked ? 'border-brand-fill bg-brand-fill/6' : 'border-border hover:bg-foreground/[3%]'
                 }`}
                 onClick={() => !target.loading && toggle(target.env.name)}
               >
