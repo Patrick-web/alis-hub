@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -473,10 +474,14 @@ func (s *ProductService) IsLoggedIn() bool {
 func (s *ProductService) CheckAuth() bool {
 	ts, err := NewConsoleTokenSource()
 	if err != nil {
+		log.Printf("[auth] CheckAuth: token source unavailable: %v", err)
 		return false
 	}
-	_, err = ts.Token()
-	return err == nil
+	if _, err = ts.Token(); err != nil {
+		log.Printf("[auth] CheckAuth: FAILED, will prompt re-login: %v", err)
+		return false
+	}
+	return true
 }
 
 // Login triggers the PKCE OAuth2 flow. The browser opens, the user authenticates,

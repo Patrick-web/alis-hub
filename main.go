@@ -23,6 +23,8 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
+	SetupLogging()
+
 	// Multi-call binary: act as git credential helper when invoked under that name.
 	if base := filepath.Base(os.Args[0]); strings.Contains(base, "git-credential-alis") {
 		RunAsCredentialHelper()
@@ -55,6 +57,7 @@ func main() {
 	deploySvc := NewDeployService()
 	defineSvc := NewDefineService()
 	packageSvc := NewPackageService()
+	logSvc := NewLogService()
 
 	hubDB, err := OpenHubDB()
 	if err != nil {
@@ -84,6 +87,7 @@ func main() {
 			application.NewService(localAISvc),
 			application.NewService(workflowSvc),
 			application.NewService(settingsSvc),
+			application.NewService(logSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -95,10 +99,11 @@ func main() {
 
 	// Create a new window
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:     "AlisHub",
-		Width:     1024,
-		Height:    768,
-		Frameless: true,
+		Title:           "AlisHub",
+		Width:           1024,
+		Height:          768,
+		Frameless:       true,
+		DevToolsEnabled: true,
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTranslucent,
 			TitleBar: application.MacTitleBar{
@@ -159,6 +164,7 @@ func main() {
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
 	localAISvc.SetApp(app)
+	logSvc.SetApp(app)
 	if !isDevelopment {
 		updater.BackgroundCheck(app, version, 30*time.Second)
 	}

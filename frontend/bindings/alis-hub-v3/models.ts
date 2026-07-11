@@ -2266,6 +2266,38 @@ export class LogEntry {
     }
 }
 
+/**
+ * LogInfo describes the active log file.
+ */
+export class LogInfo {
+    "path": string;
+    "exists": boolean;
+    "sizeBytes": number;
+
+    /** Creates a new LogInfo instance. */
+    constructor($$source: Partial<LogInfo> = {}) {
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("exists" in $$source)) {
+            this["exists"] = false;
+        }
+        if (!("sizeBytes" in $$source)) {
+            this["sizeBytes"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LogInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LogInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new LogInfo($$parsedSource as Partial<LogInfo>);
+    }
+}
+
 export class LogPage {
     "entries": LogEntry[];
     "nextPageToken": string;

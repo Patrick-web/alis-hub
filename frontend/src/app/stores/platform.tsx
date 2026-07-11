@@ -9,7 +9,7 @@ import {
 import { System } from '@wailsio/runtime';
 import * as settingsClient from '../lib/settingsClient';
 
-export type RealPlatform = 'darwin' | 'windows';
+export type RealPlatform = 'darwin' | 'windows' | 'linux';
 export type PlatformOverride = 'auto' | RealPlatform;
 
 interface EnvironmentInfo {
@@ -30,7 +30,7 @@ const STORAGE_KEY = 'alis:platform-override';
 function loadOverride(): PlatformOverride {
   try {
     const raw = settingsClient.getCached(STORAGE_KEY);
-    if (raw === 'darwin' || raw === 'windows' || raw === 'auto') return raw;
+    if (raw === 'darwin' || raw === 'windows' || raw === 'linux' || raw === 'auto') return raw;
     return 'auto';
   } catch {
     return 'auto';
@@ -44,7 +44,9 @@ function saveOverride(v: PlatformOverride) {
 const PlatformContext = createContext<PlatformContextValue | null>(null);
 
 export function PlatformProvider({ children }: { children: ReactNode }) {
-  const [real, setReal] = useState<RealPlatform>(() => (System.IsWindows() ? 'windows' : 'darwin'));
+  const [real, setReal] = useState<RealPlatform>(() =>
+    System.IsWindows() ? 'windows' : System.IsLinux() ? 'linux' : 'darwin',
+  );
   const [envInfo, setEnvInfo] = useState<EnvironmentInfo | null>(null);
   const [override, setOverrideState] = useState<PlatformOverride>(loadOverride);
 
@@ -57,6 +59,7 @@ export function PlatformProvider({ children }: { children: ReactNode }) {
       .then((env) => {
         setEnvInfo(env);
         if (env?.OS === 'windows') setReal('windows');
+        else if (env?.OS === 'linux') setReal('linux');
         else if (env?.OS) setReal('darwin');
       })
       .catch(() => {});

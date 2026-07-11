@@ -87,3 +87,44 @@ export function WindowsWindowControls() {
     </div>
   );
 }
+
+// LinuxWindowControls mirrors the GNOME/Adwaita convention: circular buttons
+// on the right of the title bar, with symbolic minimise / maximise / close
+// glyphs. Rendered on the right, like Windows, but visually distinct.
+export function LinuxWindowControls() {
+  const [isMaximised, setIsMaximised] = useState(false);
+
+  useEffect(() => {
+    Window.IsMaximised().then(setIsMaximised);
+    const offMax = Events.On('common:WindowMaximise', () => setIsMaximised(true));
+    const offUnmax = Events.On('common:WindowUnMaximise', () => setIsMaximised(false));
+    return () => { offMax(); offUnmax(); };
+  }, []);
+
+  const base =
+    'flex items-center justify-center w-[24px] h-[24px] rounded-full bg-foreground/[0.06] ' +
+    'text-foreground/70 transition-colors focus:outline-none shrink-0';
+  const neutral = `${base} hover:text-foreground hover:bg-foreground/[0.12]`;
+  const danger = `${base} hover:text-white hover:bg-destructive`;
+
+  return (
+    <div
+      className="flex items-center gap-[8px] px-[10px] h-full"
+      style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
+    >
+      <button onClick={() => Window.Minimise()} className={neutral} title="Minimise">
+        <MinimizeIcon />
+      </button>
+      <button
+        onClick={() => Window.ToggleMaximise()}
+        className={neutral}
+        title={isMaximised ? 'Restore' : 'Maximise'}
+      >
+        {isMaximised ? <RestoreIcon /> : <MaximizeIcon />}
+      </button>
+      <button onClick={() => Window.Close()} className={danger} title="Close">
+        <CloseIcon />
+      </button>
+    </div>
+  );
+}

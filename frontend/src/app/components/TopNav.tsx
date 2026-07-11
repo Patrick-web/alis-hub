@@ -13,7 +13,7 @@ import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
 import { useLabs } from '../stores/labs';
 import { useTabSettings, getVisibleTabs } from '../stores/tabSettings';
-import { MacWindowControls, WindowsWindowControls } from './WindowControls';
+import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
 export function TopNav() {
@@ -22,6 +22,8 @@ export function TopNav() {
   const { state, setPhase, setLoadedEnvs, setActiveEnv, setNeurons, updateWorkspace } = useWorkspace();
   const { effective } = usePlatform();
   const isWindows = effective === 'windows';
+  const isLinux = effective === 'linux';
+  const isMac = effective === 'darwin';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);
@@ -106,13 +108,13 @@ export function TopNav() {
     >
       {/* Left: Window controls and breadcrumb */}
       <div className="flex items-center h-full pr-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-        {!isWindows && (
+        {isMac && (
           <div className="px-[10px] flex items-center justify-center">
             <MacWindowControls />
           </div>
         )}
 
-        <div className={`flex items-center gap-[6px] border-r border-border h-full px-[10px] ${!isWindows ? 'ml-[5px] border-l' : 'pl-[10px]'}`}>
+        <div className={`flex items-center gap-[6px] border-r border-border h-full px-[10px] ${isMac ? 'ml-[5px] border-l' : 'pl-[10px]'}`}>
           <button
             onClick={handleHomeClick}
             className="opacity-70 hover:opacity-100 transition-opacity"
@@ -213,6 +215,7 @@ export function TopNav() {
         </button>
       </div>
       {isWindows && <WindowsWindowControls />}
+      {isLinux && <LinuxWindowControls />}
       </div>
 
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />

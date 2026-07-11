@@ -6,7 +6,7 @@ import { useWorkspace } from '../stores/workspace';
 import { ProfileModal } from './ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
-import { MacWindowControls, WindowsWindowControls } from './WindowControls';
+import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from './WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
 const standaloneTabs = [
@@ -21,6 +21,8 @@ export function StandaloneTopNav() {
   const { setPhase } = useWorkspace();
   const { effective } = usePlatform();
   const isWindows = effective === 'windows';
+  const isLinux = effective === 'linux';
+  const isMac = effective === 'darwin';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
 
@@ -38,14 +40,14 @@ export function StandaloneTopNav() {
     >
       {/* Left: Window controls + home */}
       <div className="flex items-center h-full" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-        {!isWindows && (
+        {isMac && (
           <div className="px-[10px] flex items-center justify-center">
             <MacWindowControls />
           </div>
         )}
         <button
           onClick={() => setPhase('hub')}
-          className={`${!isWindows ? 'border-l' : ''} border-border h-full px-[12px] flex items-center opacity-70 hover:opacity-100 transition-opacity`}
+          className={`${isMac ? 'border-l' : ''} border-border h-full px-[12px] flex items-center opacity-70 hover:opacity-100 transition-opacity`}
           title="Back to hub"
         >
           <Icon icon="solar:home-2-linear" className="text-foreground text-[17px]" />
@@ -106,6 +108,7 @@ export function StandaloneTopNav() {
           </button>
         </div>
         {isWindows && <WindowsWindowControls />}
+        {isLinux && <LinuxWindowControls />}
       </div>
 
       <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
