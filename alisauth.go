@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -15,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 )
 
@@ -116,24 +118,43 @@ func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 	}
 
 	if tok != "" && !creds.Expiry.IsZero() && time.Until(creds.Expiry) > alisConsoleTokenRefGrace {
+		log.Printf("[auth] console token valid, no refresh needed (expiry=%s, in %s)",
+			creds.Expiry.Format(time.RFC3339), time.Until(creds.Expiry).Round(time.Second))
 		return creds, nil
 	}
 
+	log.Printf("[auth] console token needs refresh (hasToken=%t expiry=%s untilExpiry=%s hasRefreshToken=%t)",
+		tok != "", formatExpiry(creds.Expiry), time.Until(creds.Expiry).Round(time.Second), creds.RefreshToken != "")
+
 	if creds.RefreshToken == "" {
 		if tok != "" {
+			log.Printf("[auth] no refresh token on disk; returning existing (possibly expired) token")
 			return creds, nil
 		}
+		log.Printf("[auth] console token expired and no refresh token — re-login required")
 		return nil, fmt.Errorf("console token expired and no refresh token — run Login() again")
 	}
 
 	newCreds, err := s.refresh(creds.RefreshToken)
 	if err != nil {
+		log.Printf("[auth] console token refresh FAILED: %v", err)
 		return nil, fmt.Errorf("console token refresh: %w", err)
 	}
 	if err := s.write(newCreds); err != nil {
+		log.Printf("[auth] refresh succeeded but writing credentials FAILED: %v", err)
 		return nil, fmt.Errorf("writing console credentials: %w", err)
 	}
+	log.Printf("[auth] console token refreshed OK (newExpiry=%s, rotatedRefreshToken=%t)",
+		formatExpiry(newCreds.Expiry), newCreds.RefreshToken != creds.RefreshToken)
 	return newCreds, nil
+}
+
+// formatExpiry renders a token expiry for logs, tolerating the zero value.
+func formatExpiry(t time.Time) string {
+	if t.IsZero() {
+		return "unknown"
+	}
+	return t.Format(time.RFC3339)
 }
 
 func (s *ConsoleTokenSource) read() (*consoleCredentials, error) {
@@ -157,6 +178,7 @@ func (s *ConsoleTokenSource) write(c *consoleCredentials) error {
 }
 
 func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, error) {
+	log.Printf("[auth] requesting console token refresh from %s (pid=%d)", alisConsoleIdentityURL, os.Getpid())
 	form := url.Values{
 		"grant_type":    {"refresh_token"},
 		"refresh_token": {refreshToken},
@@ -173,12 +195,14 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		log.Printf("[auth] refresh request to identity server errored: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
+		log.Printf("[auth] identity server rejected refresh: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
 		return nil, fmt.Errorf("identity server returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -204,6 +228,176 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 		creds.Expiry = time.Now().Add(time.Duration(result.ExpiresIn) * time.Second)
 	}
 	return creds, nil
+}
+
+// authResultPage renders the OAuth callback landing page using the Alis Hub
+// design language (monospace, uppercase, brand pink, light/dark aware).
+func authResultPage(success bool, detail string) string {
+	var (
+		accent   = "#e90d57"
+		icon     = "&#10003;" // check
+		title    = "Authenticated"
+		message  = "You&rsquo;re signed in. Head back to Alis&nbsp;Hub to continue. You can close this tab."
+		statusEl = `<span class="status ok">Success</span>`
+	)
+	if !success {
+		accent = "#e53e3e"
+		icon = "&#10005;" // cross
+		title = "Authentication failed"
+		message = "Something went wrong while signing you in. Return to Alis&nbsp;Hub and try again."
+		statusEl = `<span class="status err">Failed</span>`
+	}
+
+	detailEl := ""
+	if strings.TrimSpace(detail) != "" {
+		detailEl = `<pre class="detail">` + template.HTMLEscapeString(detail) + `</pre>`
+	}
+
+	action := `<a class="btn" href="alishub://auth/callback">Return to Alis&nbsp;Hub</a>`
+	if !success {
+		action = `<a class="btn" href="alishub://auth/failed">Back to Alis&nbsp;Hub</a>`
+	}
+
+	return `<!DOCTYPE html>
+<html lang="en" data-accent="` + accent + `">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>` + title + ` &middot; Alis Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --accent: ` + accent + `;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #666666;
+    --card: #f5f5f5;
+    --border: rgba(0,0,0,0.12);
+    --radius: 0.625rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1e;
+      --fg: #ffffff;
+      --muted: #a0a0a0;
+      --card: #2c2c2c;
+      --border: rgba(255,255,255,0.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--bg);
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    text-align: center;
+    box-shadow: 0 24px 60px -24px rgba(0,0,0,0.35);
+  }
+  .badge {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 30px;
+    color: #fff;
+    background: var(--accent);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+  .status {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 16px;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+  }
+  p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+    margin: 0;
+  }
+  .detail {
+    margin: 20px 0 0;
+    padding: 12px;
+    text-align: left;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+  }
+  .brand {
+    margin-top: 28px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .brand b { color: var(--accent); }
+  .btn {
+    display: inline-block;
+    margin-top: 28px;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #fff;
+    background: var(--accent);
+    border-radius: calc(var(--radius) - 2px);
+    transition: filter 0.15s ease, transform 0.15s ease;
+  }
+  .btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge">` + icon + `</div>
+    ` + statusEl + `
+    <h1>` + title + `</h1>
+    <p>` + message + `</p>
+    ` + detailEl + `
+    ` + action + `
+    <div class="brand">Alis<b>&middot;</b>Hub</div>
+  </main>
+  <script>setTimeout(function () { try { window.close(); } catch (e) {} }, 8000);</script>
+</body>
+</html>`
 }
 
 // PKCELogin opens the browser to identity.alisx.com, waits for the OAuth2 callback
@@ -233,19 +427,24 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		code := r.URL.Query().Get("code")
 		if errParam := r.URL.Query().Get("error"); errParam != "" {
 			errCh <- fmt.Errorf("auth error: %s — %s", errParam, r.URL.Query().Get("error_description"))
-			fmt.Fprintf(w, "<html><body><p>Authentication failed. You can close this tab.</p></body></html>")
+			desc := r.URL.Query().Get("error_description")
+			if desc == "" {
+				desc = errParam
+			}
+			fmt.Fprint(w, authResultPage(false, desc))
 			return
 		}
 		if code == "" {
 			errCh <- fmt.Errorf("no code in callback")
-			fmt.Fprintf(w, "<html><body><p>Authentication failed. You can close this tab.</p></body></html>")
+			fmt.Fprint(w, authResultPage(false, "No authorization code was returned."))
 			return
 		}
 		codeCh <- code
-		fmt.Fprintf(w, "<html><body><p>Authenticated successfully! You can close this tab.</p></body></html>")
+		fmt.Fprint(w, authResultPage(true, ""))
 	})
 
 	server := &http.Server{Handler: mux}

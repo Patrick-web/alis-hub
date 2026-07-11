@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -282,12 +283,16 @@ func credentialGet() {
 		os.Exit(1)
 	}
 
+	log.Printf("[gitcred] credential helper invoked for host=%s (pid=%d)", host, os.Getpid())
+
 	ts, err := NewConsoleTokenSource()
 	if err != nil {
+		log.Printf("[gitcred] no console token source: %v", err)
 		os.Exit(1)
 	}
 	token, err := ts.AccessToken()
 	if err != nil {
+		log.Printf("[gitcred] could not obtain access token: %v", err)
 		os.Exit(1)
 	}
 

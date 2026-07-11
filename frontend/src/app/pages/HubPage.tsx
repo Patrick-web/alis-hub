@@ -8,7 +8,7 @@ import { NotificationCenter } from '../components/NotificationCenter';
 import { ProfileModal } from '../components/ProfileModal';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
-import { MacWindowControls, WindowsWindowControls } from '../components/WindowControls';
+import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from '../components/WindowControls';
 import { handleTitleBarDoubleClick } from '../lib/titlebar';
 
 export function HubPage() {
@@ -17,6 +17,8 @@ export function HubPage() {
   const { state: labsState } = useLabs();
   const { effective } = usePlatform();
   const isWindows = effective === 'windows';
+  const isLinux = effective === 'linux';
+  const isMac = effective === 'darwin';
   const [profileOpen, setProfileOpen] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
 
@@ -76,7 +78,7 @@ export function HubPage() {
         onDoubleClick={handleTitleBarDoubleClick}
       >
         <div className="flex items-center gap-[10px] px-[10px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-          {!isWindows && <MacWindowControls />}
+          {isMac && <MacWindowControls />}
         </div>
         <div className="flex items-stretch h-full" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
         <div className="flex items-center gap-[10px] px-[10px]">
@@ -105,6 +107,7 @@ export function HubPage() {
           </button>
         </div>
           {isWindows && <WindowsWindowControls />}
+          {isLinux && <LinuxWindowControls />}
         </div>
       </div>
 

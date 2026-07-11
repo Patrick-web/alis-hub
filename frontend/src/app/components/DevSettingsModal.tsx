@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
@@ -8,17 +8,21 @@ import { useLocalAI } from '../stores/localai';
 import { SettingRow, SectionTitle, SettingsCard } from './ProfileModal';
 import { NotificationsDebugPage } from '../pages/NotificationsDebugPage';
 import { Loader } from './Loader';
+import * as LogService from '../../../bindings/alis-hub-v3/logservice';
+import type { LogInfo } from '../../../bindings/alis-hub-v3/models';
 
 const SIDEBAR_ITEMS: { id: DevSettingsTab; label: string; icon: string }[] = [
   { id: 'platform', label: 'Title Bar', icon: 'solar:window-frame-linear' },
   { id: 'notifications', label: 'Notifications', icon: 'solar:bell-bing-linear' },
   { id: 'ai', label: 'Local AI', icon: 'solar:cpu-bolt-linear' },
+  { id: 'logs', label: 'Logs', icon: 'solar:document-text-linear' },
 ];
 
 const OVERRIDE_OPTIONS: { id: PlatformOverride; label: string }[] = [
   { id: 'auto', label: 'Auto' },
   { id: 'darwin', label: 'macOS' },
   { id: 'windows', label: 'Windows' },
+  { id: 'linux', label: 'Linux' },
 ];
 
 // Inert, icon-only previews — deliberately NOT the real MacWindowControls /
@@ -53,6 +57,26 @@ function WindowsControlsPreview() {
           <path d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1.1" />
         </svg>
       </div>
+    </div>
+  );
+}
+
+function LinuxControlsPreview() {
+  const glyphs = [
+    <line key="min" x1="0" y1="7" x2="10" y2="7" stroke="currentColor" strokeWidth="1.1" />,
+    <rect key="max" x="0.5" y="0.5" width="9" height="9" stroke="currentColor" strokeWidth="1.1" />,
+    <path key="close" d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1.1" />,
+  ];
+  return (
+    <div className="flex items-center gap-[8px] h-[28px]">
+      {glyphs.map((glyph, i) => (
+        <span
+          key={i}
+          className="flex items-center justify-center w-[24px] h-[24px] rounded-full bg-foreground/[0.08] text-foreground/50"
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">{glyph}</svg>
+        </span>
+      ))}
     </div>
   );
 }
@@ -157,6 +181,153 @@ function LocalAITestTab() {
   );
 }
 
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function DevButton({
+  icon,
+  label,
+  onClick,
+  disabled,
+  busy,
+}: {
+  icon: string;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  busy?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled || busy}
+      className="flex items-center justify-center gap-[7px] h-[32px] px-[12px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono"
+    >
+      {busy ? <Loader size={13} /> : <Icon icon={icon} className="text-sm" />}
+      {label}
+    </button>
+  );
+}
+
+function LogsTab() {
+  const [info, setInfo] = useState<LogInfo | null>(null);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const viewerRef = useRef<HTMLPreElement>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [logInfo, text] = await Promise.all([
+        LogService.GetLogInfo(),
+        LogService.ReadLog(0),
+      ]);
+      setInfo(logInfo);
+      setContent(text);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const el = viewerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [content]);
+
+  async function handleDownload() {
+    setDownloading(true);
+    setStatus(null);
+    try {
+      const saved = await LogService.DownloadLog();
+      setStatus(saved ? `Saved to ${saved}` : 'Download cancelled.');
+    } catch (e) {
+      setStatus(`Error: ${String(e)}`);
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleReveal() {
+    try {
+      await LogService.RevealLog();
+    } catch (e) {
+      setStatus(`Error: ${String(e)}`);
+    }
+  }
+
+  return (
+    <div className="p-[14px] flex flex-col gap-[12px]">
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>Log file</SectionTitle>
+        <SettingsCard>
+          <SettingRow label="Location" value={info?.path ?? 'pending…'} />
+          <SettingRow
+            label="Size"
+            value={info?.exists ? formatBytes(info.sizeBytes) : 'no log yet'}
+          />
+        </SettingsCard>
+        <div className="flex flex-wrap items-center gap-[8px]">
+          <DevButton icon="solar:refresh-linear" label="Refresh" onClick={refresh} busy={loading} />
+          <DevButton
+            icon="solar:download-minimalistic-linear"
+            label="Download"
+            onClick={handleDownload}
+            busy={downloading}
+            disabled={!info?.exists}
+          />
+          <DevButton
+            icon="solar:folder-open-linear"
+            label="Show in folder"
+            onClick={handleReveal}
+            disabled={!info?.exists}
+          />
+        </div>
+        {status && (
+          <p className="text-[10px] text-foreground/45 font-mono leading-relaxed break-all">{status}</p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>Recent log output</SectionTitle>
+        <pre
+          ref={viewerRef}
+          className="whitespace-pre-wrap break-words text-[10px] font-mono leading-relaxed text-foreground/70 bg-foreground/[0.03] border border-border rounded-[9px] px-[12px] py-[9px] h-[240px] overflow-y-auto"
+        >
+          {error ? `Failed to read log: ${error}` : content || (loading ? 'Loading…' : 'Log is empty.')}
+        </pre>
+      </div>
+
+      <div className="flex flex-col gap-[5px]">
+        <SectionTitle>Web inspector</SectionTitle>
+        <div className="flex items-center justify-between gap-[8px]">
+          <p className="text-[10px] text-foreground/25 font-mono leading-relaxed flex-1">
+            Opens Chrome DevTools for the app window. You can also right-click anywhere and choose
+            “Inspect Element”, or press ⌥⌘I.
+          </p>
+          <DevButton
+            icon="solar:code-square-linear"
+            label="Open inspector"
+            onClick={() => { LogService.OpenInspector().catch(() => {}); }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DevSettingsModal() {
   const { isOpen, activeTab, close, open } = useDevSettingsModal();
   const { real, envInfo, override, effective, setOverride } = usePlatform();
@@ -257,11 +428,11 @@ export function DevSettingsModal() {
                       </SettingRow>
                     </SettingsCard>
                     <div className="flex items-center justify-center bg-foreground/[0.03] border border-border rounded-[9px] py-[16px]">
-                      {effective === 'windows' ? <WindowsControlsPreview /> : <MacControlsPreview />}
+                      {effective === 'windows' ? <WindowsControlsPreview /> : effective === 'linux' ? <LinuxControlsPreview /> : <MacControlsPreview />}
                     </div>
                     <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
-                      Overrides which title bar chrome renders across the app, for previewing Windows
-                      controls without Windows hardware. Persisted locally — doesn't change the real OS.
+                      Overrides which title bar chrome renders across the app, for previewing
+                      Windows or Linux controls without that hardware. Persisted locally — doesn't change the real OS.
                     </p>
                   </div>
                 </div>
@@ -274,6 +445,9 @@ export function DevSettingsModal() {
 
               {/* ── Local AI ── */}
               {activeTab === 'ai' && <LocalAITestTab />}
+
+              {/* ── Logs ── */}
+              {activeTab === 'logs' && <LogsTab />}
 
             </div>
           </div>

@@ -10,6 +10,7 @@ import * as GCloudService from "./gcloudservice.js";
 import * as GitService from "./gitservice.js";
 import * as GreetService from "./greetservice.js";
 import * as LocalAIService from "./localaiservice.js";
+import * as LogService from "./logservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
 import * as ServiceManager from "./servicemanager.js";
@@ -25,6 +26,7 @@ export {
     GitService,
     GreetService,
     LocalAIService,
+    LogService,
     PackageService,
     ProductService,
     ServiceManager,
@@ -92,6 +94,7 @@ export {
     LocalBuildChunk,
     LocalBuildResult,
     LogEntry,
+    LogInfo,
     LogPage,
     LogResource,
     NeuronFileContents,

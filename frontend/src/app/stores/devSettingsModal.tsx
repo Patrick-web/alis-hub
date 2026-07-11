@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 
-export type DevSettingsTab = 'platform' | 'notifications' | 'ai';
+export type DevSettingsTab = 'platform' | 'notifications' | 'ai' | 'logs';
 
 interface DevSettingsModalState {
   isOpen: boolean;
