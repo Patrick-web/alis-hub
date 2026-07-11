@@ -12,9 +12,14 @@ import (
 	wailsnotif "github.com/wailsapp/wails/v3/pkg/services/notifications"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 var version = "dev"
+
+// deepLinkScheme is the custom URL scheme used to focus/return to the app,
+// e.g. from the OAuth login success page (alishub://auth/callback).
+const deepLinkScheme = "alishub"
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -66,6 +71,18 @@ func main() {
 	workflowSvc := NewWorkflowService(hubDB, buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
 	settingsSvc := NewSettingsService(hubDB)
 
+	// window is declared up front so the single-instance and deep-link
+	// callbacks can bring it to the foreground.
+	var window *application.WebviewWindow
+	focusMainWindow := func() {
+		if window == nil {
+			return
+		}
+		window.Show()
+		window.Restore()
+		window.Focus()
+	}
+
 	app := application.New(application.Options{
 		Name:        "AlisHub",
 		Description: "AlisHub Desktop Application",
@@ -95,10 +112,21 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.patrickweb.alishub",
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				focusMainWindow()
+				for _, arg := range data.Args {
+					if strings.HasPrefix(arg, deepLinkScheme+"://") {
+						log.Printf("deep link (second instance): %s", arg)
+					}
+				}
+			},
+		},
 	})
 
 	// Create a new window
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:           "AlisHub",
 		Width:           1024,
 		Height:          768,
@@ -118,13 +146,20 @@ func main() {
 	})
 	window.Maximise()
 
+	// Bring the app to the foreground when it is opened via its custom URL
+	// scheme (e.g. the "Return to Alis Hub" button on the login page).
+	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
+		log.Printf("deep link: %s", e.Context().URL())
+		focusMainWindow()
+	})
+
 	trayWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:         "Tray Window",
-		Width:         300,
-		Height:        400,
-		AlwaysOnTop:   true,
-		Frameless:     true,
-		Hidden:        true,
+		Title:       "Tray Window",
+		Width:       300,
+		Height:      400,
+		AlwaysOnTop: true,
+		Frameless:   true,
+		Hidden:      true,
 		Windows: application.WindowsWindow{
 			BackdropType: application.Acrylic,
 		},

@@ -8,6 +8,7 @@ Terminal=false
 Type=Application
 Icon=alis-hub-v3
 Categories=Utility;
+MimeType=x-scheme-handler/alishub;
 StartupWMClass=alis-hub-v3
 
  
