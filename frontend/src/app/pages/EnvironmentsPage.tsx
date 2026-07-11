@@ -28,6 +28,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '../components/ui/tooltip';
+import { notify } from '../lib/notify';
 import { useWorkspace } from '../stores/workspace';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
 import { Loader } from '../components/Loader';
@@ -198,6 +199,7 @@ export function EnvironmentsPage() {
               onClick={(e) => {
                 e.stopPropagation();
                 navigator.clipboard.writeText(item.value);
+                notify.success('Value copied to clipboard');
               }}
             >
               Copy
@@ -358,7 +360,12 @@ export function EnvironmentsPage() {
               variant="secondary"
               className="h-[34px] px-[16px] text-[11px] font-bold uppercase"
               icon={<Icon icon="solar:copy-linear" className="text-xl" />}
-              onClick={() => viewVar && navigator.clipboard.writeText(viewVar.value)}
+              onClick={() => {
+                if (viewVar) {
+                  navigator.clipboard.writeText(viewVar.value);
+                  notify.success('Value copied to clipboard');
+                }
+              }}
             >
               Copy
             </Button>
