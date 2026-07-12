@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -20,11 +21,22 @@ import (
 	"time"
 )
 
+// errAuthRejected indicates the identity server *definitively* rejected the
+// refresh token (e.g. invalid_grant / expired refresh token), meaning the user
+// genuinely must sign in again. Transient failures — network errors, timeouts,
+// 5xx — must NOT use this, so freshCreds can keep serving a still-valid on-disk
+// token instead of surfacing a spurious "session expired" (common right after
+// the laptop wakes, when the poll/focus check fires before the network is up).
+var errAuthRejected = errors.New("refresh token rejected by identity server")
+
 const (
 	alisConsoleCredentialsPath = ".alis/console-credentials.json"
-	alisConsoleIdentityURL     = "https://identity.alisx.com"
 	alisConsoleTokenRefGrace   = 5 * time.Minute
 )
+
+// alisConsoleIdentityURL is the OAuth2 token/authorize endpoint host. It is a
+// var (not a const) so tests can point the refresh flow at a mock server.
+var alisConsoleIdentityURL = "https://identity.alisx.com"
 
 type consoleCredentials struct {
 	AccessToken  string    `json:"access_token"`
@@ -138,6 +150,19 @@ func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 	newCreds, err := s.refresh(creds.RefreshToken)
 	if err != nil {
 		log.Printf("[auth] console token refresh FAILED: %v", err)
+		// Definitive rejection (invalid_grant / expired refresh token): the
+		// session is genuinely dead, so propagate and let the UI prompt re-login.
+		if errors.Is(err, errAuthRejected) {
+			return nil, fmt.Errorf("console token refresh: %w", err)
+		}
+		// Transient failure (network down after wake, timeout, 5xx). If the
+		// current access token is still valid, keep using it rather than
+		// flashing a spurious "session expired"; the next poll/focus retries.
+		if tok != "" && !creds.Expiry.IsZero() && time.Until(creds.Expiry) > 0 {
+			log.Printf("[auth] refresh failed transiently but on-disk token still valid (expiry=%s, in %s) — serving it",
+				creds.Expiry.Format(time.RFC3339), time.Until(creds.Expiry).Round(time.Second))
+			return creds, nil
+		}
 		return nil, fmt.Errorf("console token refresh: %w", err)
 	}
 	if err := s.write(newCreds); err != nil {
@@ -174,7 +199,39 @@ func (s *ConsoleTokenSource) write(c *consoleCredentials) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(s.path, data, 0600)
+	return writeFileAtomic(s.path, data, 0600)
+}
+
+// writeFileAtomic writes data to a temp file in the same directory and renames
+// it into place, so readers never observe a missing or half-written file. A
+// plain os.WriteFile truncates the target first, opening a window where a
+// concurrent os.Stat/read (e.g. the SyncGitAuth ticker or the CheckAuth poll)
+// sees no credentials and surfaces a spurious "session expired".
+func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".console-credentials-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(perm); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
 }
 
 func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, error) {
@@ -203,6 +260,13 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
 		log.Printf("[auth] identity server rejected refresh: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+		// A 4xx with an OAuth error (invalid_grant / expired refresh token) is a
+		// definitive rejection: the refresh token is no longer usable, so the
+		// user must re-login. 5xx and other statuses are treated as transient by
+		// the caller so a still-valid access token keeps working.
+		if isDefinitiveAuthRejection(resp.StatusCode, body) {
+			return nil, fmt.Errorf("%w: identity server returned %d: %s", errAuthRejected, resp.StatusCode, string(body))
+		}
 		return nil, fmt.Errorf("identity server returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -228,6 +292,34 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 		creds.Expiry = time.Now().Add(time.Duration(result.ExpiresIn) * time.Second)
 	}
 	return creds, nil
+}
+
+// isDefinitiveAuthRejection reports whether a non-200 token-endpoint response
+// means the refresh token is permanently unusable (re-login required) rather
+// than a transient server/network condition worth retrying. Per RFC 6749 the
+// token endpoint returns 400 with an "error" of invalid_grant when the refresh
+// token is expired/revoked; 401 invalid_client is likewise definitive.
+func isDefinitiveAuthRejection(status int, body []byte) bool {
+	if status != http.StatusBadRequest && status != http.StatusUnauthorized {
+		return false
+	}
+	var parsed struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &parsed); err == nil {
+		switch parsed.Error {
+		case "invalid_grant", "invalid_client", "unauthorized_client":
+			return true
+		case "":
+			// No structured error; fall through to substring check below.
+		default:
+			return false
+		}
+	}
+	b := strings.ToLower(string(body))
+	return strings.Contains(b, "invalid_grant") ||
+		strings.Contains(b, "invalid_client") ||
+		strings.Contains(b, "expired")
 }
 
 // authResultPage renders the OAuth callback landing page using the Alis Hub
@@ -494,7 +586,7 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(credsPath, data, 0600); err != nil {
+	if err := writeFileAtomic(credsPath, data, 0600); err != nil {
 		return err
 	}
 
