@@ -99,12 +99,36 @@ export function RootLayout() {
     const unauthPhases: AppPhase[] = ['init', 'login'];
     if (unauthPhases.includes(state.phase)) return;
 
+    // CheckAuth resolves to a definitive boolean (the Go side never errors, it
+    // catches internally). So a *thrown* promise means the Wails RPC transport
+    // failed — typically the webview bridge not being ready when the window
+    // regains focus after the laptop sleeps — not that the session expired.
+    // Retry transient transport failures with backoff and only surface the
+    // re-login modal on a definitive false, so we don't flash a spurious
+    // "session expired" on resume while the token is actually still valid.
     async function checkAuth() {
-      try {
-        const ok = await (ProductService.CheckAuth as () => Promise<boolean>)();
-        if (!ok) setSessionExpired(true);
-      } catch {
-        setSessionExpired(true);
+      const MAX_ATTEMPTS = 3;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          const ok = await (ProductService.CheckAuth as () => Promise<boolean>)();
+          if (!ok) setSessionExpired(true);
+          return;
+        } catch {
+          if (attempt < MAX_ATTEMPTS) {
+            await new Promise(r => setTimeout(r, attempt * 500));
+            continue;
+          }
+          // RPC still failing after retries: fall back to the cheap on-disk
+          // credentials check. Only prompt re-login if credentials are truly
+          // gone; otherwise assume a transient bridge issue and leave the
+          // session intact for the next poll/focus to re-verify.
+          try {
+            const loggedIn = await (ProductService.IsLoggedIn as () => Promise<boolean>)();
+            if (!loggedIn) setSessionExpired(true);
+          } catch {
+            // Bridge unavailable for both calls — do nothing; not evidence of expiry.
+          }
+        }
       }
     }
 
