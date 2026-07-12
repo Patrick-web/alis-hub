@@ -30,6 +30,7 @@ import {
   type CommandResult,
   type CommandResultAction,
 } from '../stores/commandPalette';
+import { commandScore } from '../lib/commandScore';
 
 // ── Navigation commands (core built-in) ───────────────────────────────────────
 
@@ -118,10 +119,56 @@ function CommandBadge({ text, variant }: { text: string; variant: 'warning' | 'e
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// Unified command shape covering both core navigation and extension commands.
+interface UnifiedCommand {
+  id: string;
+  title: string;
+  subtitle?: string;
+  group: string;
+  groupOrder: number;
+  icon?: React.ComponentType<{ className?: string }>;
+  keywords: string[];
+  badge?: { text: string; variant: 'warning' | 'error' | 'info' };
+  isNav: boolean;
+  run: (ctx: CommandPaletteContext, navigate: ReturnType<typeof useNavigate>) => void;
+}
+
+function CommandRow({
+  cmd,
+  ctx,
+  navigate,
+}: {
+  cmd: UnifiedCommand;
+  ctx: CommandPaletteContext;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const IconComp = cmd.icon;
+  return (
+    <CommandItem
+      value={cmd.id}
+      keywords={[cmd.title, ...cmd.keywords]}
+      onSelect={() => cmd.run(ctx, navigate)}
+    >
+      {IconComp ? (
+        <IconComp className="text-muted-foreground size-4" />
+      ) : (
+        <PackageIcon className="text-muted-foreground size-4" />
+      )}
+      <span>{cmd.title}</span>
+      {cmd.subtitle && (
+        <span className="text-muted-foreground ml-1 text-xs">{cmd.subtitle}</span>
+      )}
+      {cmd.isNav && <NavigationIcon className="text-muted-foreground ml-auto size-3 opacity-50" />}
+      {cmd.badge && <CommandBadge text={cmd.badge.text} variant={cmd.badge.variant} />}
+    </CommandItem>
+  );
+}
+
 export function CommandPalette() {
   const { isOpen, close, extensions } = useCommandPalette();
   const navigate = useNavigate();
   const [resultView, setResultView] = useState<CommandResult | null>(null);
+  const [query, setQuery] = useState('');
 
   const showResult = useCallback((result: CommandResult) => setResultView(result), []);
 
@@ -131,79 +178,100 @@ export function CommandPalette() {
     if (!open) {
       close();
       setResultView(null);
+      setQuery('');
     }
   }
 
-  // Aggregate and sort extension commands by groupOrder then group name
-  const extensionGroups = useMemo(() => {
-    const allCommands = Object.values(extensions).flatMap(ext => ext.commands);
-    const grouped = new Map<string, { order: number; items: PaletteCommandItem[] }>();
+  // Flatten all commands (core navigation + extensions) into a single list.
+  const allCommands = useMemo<UnifiedCommand[]>(() => {
+    const nav: UnifiedCommand[] = NAV_COMMANDS.map(cmd => ({
+      id: cmd.id,
+      title: cmd.title,
+      group: 'Navigation',
+      groupOrder: 0,
+      icon: cmd.icon,
+      keywords: cmd.keywords,
+      isNav: true,
+      run: (_ctx, nav) => { nav(cmd.path); close(); },
+    }));
+
+    const ext: UnifiedCommand[] = Object.values(extensions)
+      .flatMap(e => e.commands)
+      .map((cmd: PaletteCommandItem) => ({
+        id: cmd.id,
+        title: cmd.title,
+        subtitle: cmd.subtitle,
+        group: cmd.group,
+        groupOrder: cmd.groupOrder ?? 99,
+        icon: cmd.icon,
+        keywords: cmd.keywords ?? [],
+        badge: cmd.badge,
+        isNav: false,
+        run: (ctx) => cmd.onSelect(ctx),
+      }));
+
+    return [...nav, ...ext];
+  }, [extensions, close]);
+
+  // Grouped view for the empty query, preserving category order.
+  const groups = useMemo(() => {
+    const map = new Map<string, { order: number; items: UnifiedCommand[] }>();
     for (const cmd of allCommands) {
-      if (!grouped.has(cmd.group)) {
-        grouped.set(cmd.group, { order: cmd.groupOrder ?? 99, items: [] });
-      }
-      grouped.get(cmd.group)!.items.push(cmd);
+      if (!map.has(cmd.group)) map.set(cmd.group, { order: cmd.groupOrder, items: [] });
+      map.get(cmd.group)!.items.push(cmd);
     }
-    return Array.from(grouped.entries())
+    return Array.from(map.entries())
       .sort(([, a], [, b]) => a.order - b.order)
       .map(([heading, { items }]) => ({ heading, items }));
-  }, [extensions]);
+  }, [allCommands]);
+
+  // Flat relevance-ranked results while searching — ignores category boundaries.
+  const results = useMemo(() => {
+    const q = query.trim();
+    if (!q) return [];
+    return allCommands
+      .map(cmd => ({ cmd, score: commandScore(cmd.title, q, cmd.keywords) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score || a.cmd.groupOrder - b.cmd.groupOrder || a.cmd.title.localeCompare(b.cmd.title))
+      .map(({ cmd }) => cmd);
+  }, [allCommands, query]);
+
+  const searching = query.trim().length > 0;
 
   return (
     <CommandDialog
       open={isOpen}
       onOpenChange={handleOpenChange}
       contentClassName="sm:max-w-[620px]"
+      shouldFilter={false}
     >
       {resultView ? (
         <ResultPanel result={resultView} onDismiss={() => { setResultView(null); close(); }} />
       ) : (
         <>
-          <CommandInput placeholder="Search commands..." />
+          <CommandInput
+            placeholder="Search commands..."
+            value={query}
+            onValueChange={setQuery}
+          />
           <CommandList className="max-h-[420px]">
             <CommandEmpty>No commands found.</CommandEmpty>
 
-            {/* Navigation — core built-in */}
-            <CommandGroup heading="Navigation">
-              {NAV_COMMANDS.map(cmd => (
-                <CommandItem
-                  key={cmd.id}
-                  value={`${cmd.title} ${cmd.keywords.join(' ')}`}
-                  onSelect={() => {
-                    navigate(cmd.path);
-                    close();
-                  }}
-                >
-                  <cmd.icon className="text-muted-foreground size-4" />
-                  <span>{cmd.title}</span>
-                  <NavigationIcon className="text-muted-foreground ml-auto size-3 opacity-50" />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-
-            {/* Extension groups */}
-            {extensionGroups.map(group => (
-              <CommandGroup key={group.heading} heading={group.heading}>
-                {group.items.map(cmd => (
-                  <CommandItem
-                    key={cmd.id}
-                    value={`${cmd.title} ${(cmd.keywords ?? []).join(' ')}`}
-                    onSelect={() => cmd.onSelect(ctx)}
-                  >
-                    {cmd.icon ? (
-                      <cmd.icon className="text-muted-foreground size-4" />
-                    ) : (
-                      <PackageIcon className="text-muted-foreground size-4" />
-                    )}
-                    <span>{cmd.title}</span>
-                    {cmd.subtitle && (
-                      <span className="text-muted-foreground ml-1 text-xs">{cmd.subtitle}</span>
-                    )}
-                    {cmd.badge && <CommandBadge text={cmd.badge.text} variant={cmd.badge.variant} />}
-                  </CommandItem>
+            {searching ? (
+              <CommandGroup>
+                {results.map(cmd => (
+                  <CommandRow key={cmd.id} cmd={cmd} ctx={ctx} navigate={navigate} />
                 ))}
               </CommandGroup>
-            ))}
+            ) : (
+              groups.map(group => (
+                <CommandGroup key={group.heading} heading={group.heading}>
+                  {group.items.map(cmd => (
+                    <CommandRow key={cmd.id} cmd={cmd} ctx={ctx} navigate={navigate} />
+                  ))}
+                </CommandGroup>
+              ))
+            )}
           </CommandList>
         </>
       )}

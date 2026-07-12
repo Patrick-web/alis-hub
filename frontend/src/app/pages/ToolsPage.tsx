@@ -40,8 +40,7 @@ function isAuthError(e: unknown): boolean {
 
 export function ToolsPanel() {
   const { state, setPhase } = useWorkspace();
-  const { ready: gcloudReady, setReady: setGcloudReady, handleError: handleGCloudError } = useGCloud();
-  const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
+  const { ready: gcloudReady, setReady: setGcloudReady, activeTab, setActiveTab, handleError: handleGCloudError } = useGCloud();
 
   const [contexts, setContexts] = useState<ProjectContext[]>([]);
   const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
