@@ -1,5 +1,5 @@
-import { LearningModule } from '../types';
-import { GcpProvisioningDiagram } from '../diagrams/GcpProvisioningDiagram';
+import { LearningModule } from "../types";
+import { GcpProvisioningDiagram } from "../diagrams/GcpProvisioningDiagram";
 
 const endpointsConfigExample = `# Generated Endpoints config (grpc-service.yaml)
 type: google.api.Service
@@ -21,20 +21,21 @@ authentication:
         - provider_id: google_service_account`;
 
 export const module4: LearningModule = {
-  id: 'module4',
-  title: 'Deploy',
-  subtitle: 'Provisioning GCP resources',
-  icon: 'solar:cloud-upload-linear',
+  id: "module4",
+  title: "Deploy",
+  subtitle: "Provisioning GCP resources",
+  icon: "solar:cloud-upload-linear",
   steps: [
     {
-      id: 'm4-s0',
-      title: 'What alis deploy provisions',
+      id: "m4-s0",
+      title: "What Alis deploy provisions",
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <code className="text-brand text-[11px]">alis deploy</code> is a declarative operation.
-            You describe the desired state (which image version, which environment) and alis figures out which
-            GCP resources need to be created, updated, or left alone.
+            <code className="text-brand text-[11px]">Alis deploy</code> is a
+            declarative operation. You describe the desired state (which image
+            version, which environment) and Alis figures out which GCP resources
+            need to be created, updated, or left alone.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             A single deploy operation touches four categories of GCP resources:
@@ -42,31 +43,39 @@ export const module4: LearningModule = {
           <div className="flex flex-col gap-[8px]">
             {[
               {
-                name: 'Cloud Run',
-                colour: '#f881a9',
-                desc: 'Creates or updates the Cloud Run service that runs your container. Configures CPU, memory limits, concurrency, and min/max instances.',
+                name: "Cloud Run",
+                colour: "#f881a9",
+                desc: "Creates or updates the Cloud Run service that runs your container. Configures CPU, memory limits, concurrency, and min/max instances.",
               },
               {
-                name: 'Cloud Endpoints',
-                colour: 'rgba(255,255,255,0.7)',
-                desc: 'Deploys an Endpoints service configuration that acts as the API gateway. Handles JWT validation, request routing, and transcoding between HTTP/REST and gRPC.',
+                name: "Cloud Endpoints",
+                colour: "rgba(255,255,255,0.7)",
+                desc: "Deploys an Endpoints service configuration that acts as the API gateway. Handles JWT validation, request routing, and transcoding between HTTP/REST and gRPC.",
               },
               {
-                name: 'IAM Bindings',
-                colour: 'rgba(255,255,255,0.7)',
-                desc: 'Grants the Cloud Run service account the minimum permissions it needs: read secrets, call downstream services, write logs.',
+                name: "IAM Bindings",
+                colour: "rgba(255,255,255,0.7)",
+                desc: "Grants the Cloud Run service account the minimum permissions it needs: read secrets, call downstream services, write logs.",
               },
               {
-                name: 'Service APIs',
-                colour: 'rgba(255,255,255,0.7)',
-                desc: 'Enables required GCP APIs (Cloud Run, Cloud Build, Artifact Registry, etc.) if they are not already active in the project.',
+                name: "Service APIs",
+                colour: "rgba(255,255,255,0.7)",
+                desc: "Enables required GCP APIs (Cloud Run, Cloud Build, Artifact Registry, etc.) if they are not already active in the project.",
               },
             ].map(({ name, colour, desc }) => (
-              <div key={name} className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]">
-                <p className="text-[11px] font-bold font-mono mb-[4px]" style={{ color: colour }}>
+              <div
+                key={name}
+                className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]"
+              >
+                <p
+                  className="text-[11px] font-bold font-mono mb-[4px]"
+                  style={{ color: colour }}
+                >
                   {name}
                 </p>
-                <p className="text-[11px] text-foreground/55 leading-[1.5]">{desc}</p>
+                <p className="text-[11px] text-foreground/55 leading-[1.5]">
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
@@ -75,29 +84,56 @@ export const module4: LearningModule = {
       diagram: <GcpProvisioningDiagram />,
     },
     {
-      id: 'm4-s1',
-      title: 'Cloud Run — the runtime',
+      id: "m4-s1",
+      title: "Cloud Run — the runtime",
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <strong className="text-foreground">Cloud Run</strong> is Google's serverless container runtime. Your Docker
-            image is deployed as a Cloud Run service — a managed HTTPS endpoint that scales automatically
-            from zero instances (when there's no traffic) to hundreds (under load).
+            <strong className="text-foreground">Cloud Run</strong> is Google's
+            serverless container runtime. Your Docker image is deployed as a
+            Cloud Run service — a managed HTTPS endpoint that scales
+            automatically from zero instances (when there's no traffic) to
+            hundreds (under load).
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Key properties of a Cloud Run service deployed by alis:
+            Key properties of a Cloud Run service deployed by Alis:
           </p>
           <div className="flex flex-col gap-[6px]">
             {[
-              { label: 'URL pattern', value: 'https://{neuron}-{hash}-{region}.run.app' },
-              { label: 'Protocol', value: 'HTTP/2 (gRPC) and HTTP/1.1 (REST via transcoding)' },
-              { label: 'Scaling', value: 'Min 0 (dev/staging) or 1 (production), max configurable' },
-              { label: 'Region', value: 'Matches the environment region — set at product creation time' },
-              { label: 'Identity', value: 'Runs as a dedicated service account with least-privilege IAM' },
+              {
+                label: "URL pattern",
+                value: "https://{neuron}-{hash}-{region}.run.app",
+              },
+              {
+                label: "Protocol",
+                value: "HTTP/2 (gRPC) and HTTP/1.1 (REST via transcoding)",
+              },
+              {
+                label: "Scaling",
+                value:
+                  "Min 0 (dev/staging) or 1 (production), max configurable",
+              },
+              {
+                label: "Region",
+                value:
+                  "Matches the environment region — set at product creation time",
+              },
+              {
+                label: "Identity",
+                value:
+                  "Runs as a dedicated service account with least-privilege IAM",
+              },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
-                <span className="text-[10px] font-mono text-foreground/40 w-[110px] shrink-0">{label}</span>
-                <span className="text-[10px] font-mono text-foreground/70">{value}</span>
+              <div
+                key={label}
+                className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]"
+              >
+                <span className="text-[10px] font-mono text-foreground/40 w-[110px] shrink-0">
+                  {label}
+                </span>
+                <span className="text-[10px] font-mono text-foreground/70">
+                  {value}
+                </span>
               </div>
             ))}
           </div>
@@ -105,30 +141,55 @@ export const module4: LearningModule = {
       ),
     },
     {
-      id: 'm4-s2',
-      title: 'Cloud Endpoints — the API gateway',
+      id: "m4-s2",
+      title: "Cloud Endpoints — the API gateway",
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Every alis service sits behind{' '}
-            <strong className="text-foreground">Google Cloud Endpoints</strong> (specifically the ESP — Extensible Service Proxy).
-            The ESP is a sidecar container that runs alongside your Cloud Run service and intercepts every request.
+            Every Alis service sits behind{" "}
+            <strong className="text-foreground">Google Cloud Endpoints</strong>{" "}
+            (specifically the ESP — Extensible Service Proxy). The ESP is a
+            sidecar container that runs alongside your Cloud Run service and
+            intercepts every request.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             The ESP handles:
           </p>
           <div className="flex flex-col gap-[6px]">
             {[
-              { task: 'Authentication', detail: 'Validates Google service account JWTs before requests reach your code.' },
-              { task: 'Transcoding', detail: 'Converts REST/JSON requests to gRPC and responses back to JSON.' },
-              { task: 'API metrics', detail: 'Reports latency, error rates, and quota usage to Cloud Monitoring.' },
-              { task: 'Rate limiting', detail: 'Can enforce per-consumer quotas defined in your Endpoints config.' },
+              {
+                task: "Authentication",
+                detail:
+                  "Validates Google service account JWTs before requests reach your code.",
+              },
+              {
+                task: "Transcoding",
+                detail:
+                  "Converts REST/JSON requests to gRPC and responses back to JSON.",
+              },
+              {
+                task: "API metrics",
+                detail:
+                  "Reports latency, error rates, and quota usage to Cloud Monitoring.",
+              },
+              {
+                task: "Rate limiting",
+                detail:
+                  "Can enforce per-consumer quotas defined in your Endpoints config.",
+              },
             ].map(({ task, detail }) => (
-              <div key={task} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]">
+              <div
+                key={task}
+                className="flex items-start gap-[10px] px-[10px] py-[8px] bg-muted border border-border rounded-[4px]"
+              >
                 <div className="size-[6px] rounded-full bg-brand-fill mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-foreground font-mono">{task} </span>
-                  <span className="text-[11px] text-foreground/50">— {detail}</span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">
+                    {task}{" "}
+                  </span>
+                  <span className="text-[11px] text-foreground/50">
+                    — {detail}
+                  </span>
                 </div>
               </div>
             ))}
@@ -147,34 +208,58 @@ export const module4: LearningModule = {
       ),
     },
     {
-      id: 'm4-s3',
-      title: 'IAM — who can call what',
+      id: "m4-s3",
+      title: "IAM — who can call what",
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <strong className="text-foreground">Identity and Access Management</strong> (IAM) is Google Cloud's
-            permission system. alis configures IAM so that each service can only access what it needs —
-            a principle called <em className="text-foreground">least privilege</em>.
+            <strong className="text-foreground">
+              Identity and Access Management
+            </strong>{" "}
+            (IAM) is Google Cloud's permission system. Alis configures IAM so
+            that each service can only access what it needs — a principle called{" "}
+            <em className="text-foreground">least privilege</em>.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Each neuron gets its own <strong className="text-foreground">service account</strong> — a Google-managed
-            identity used to authenticate service-to-service calls. When service A calls service B, it presents
-            a short-lived JWT signed by its service account. Service B's Endpoints proxy validates the JWT
-            against Google's key servers.
+            Each neuron gets its own{" "}
+            <strong className="text-foreground">service account</strong> — a
+            Google-managed identity used to authenticate service-to-service
+            calls. When service A calls service B, it presents a short-lived JWT
+            signed by its service account. Service B's Endpoints proxy validates
+            the JWT against Google's key servers.
           </p>
           <div className="flex flex-col gap-[8px]">
             <p className="text-[11px] text-foreground/45 uppercase font-bold font-mono tracking-wide">
-              Common IAM roles alis assigns:
+              Common IAM roles Alis assigns:
             </p>
             {[
-              { role: 'roles/run.invoker', desc: 'Allows other services to invoke this Cloud Run service.' },
-              { role: 'roles/secretmanager.secretAccessor', desc: 'Allows the service to read its secrets (API keys, DB passwords).' },
-              { role: 'roles/logging.logWriter', desc: 'Allows the service to write structured logs to Cloud Logging.' },
-              { role: 'roles/cloudtrace.agent', desc: 'Allows the service to emit distributed traces to Cloud Trace.' },
+              {
+                role: "roles/run.invoker",
+                desc: "Allows other services to invoke this Cloud Run service.",
+              },
+              {
+                role: "roles/secretmanager.secretAccessor",
+                desc: "Allows the service to read its secrets (API keys, DB passwords).",
+              },
+              {
+                role: "roles/logging.logWriter",
+                desc: "Allows the service to write structured logs to Cloud Logging.",
+              },
+              {
+                role: "roles/cloudtrace.agent",
+                desc: "Allows the service to emit distributed traces to Cloud Trace.",
+              },
             ].map(({ role, desc }) => (
-              <div key={role} className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]">
-                <code className="text-[9px] font-mono text-brand shrink-0 w-[220px] leading-[1.4]">{role}</code>
-                <p className="text-[10px] text-foreground/50 leading-[1.4]">{desc}</p>
+              <div
+                key={role}
+                className="flex items-start gap-[10px] px-[10px] py-[8px] bg-background border border-border rounded-[4px]"
+              >
+                <code className="text-[9px] font-mono text-brand shrink-0 w-[220px] leading-[1.4]">
+                  {role}
+                </code>
+                <p className="text-[10px] text-foreground/50 leading-[1.4]">
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
