@@ -218,7 +218,7 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
   WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\DefaultIcon" "" "${ICON}"
   WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell" "" ""
   WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell\open" "" ""
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell\open\command" "" "${COMMAND}"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${PROTOCOL}\shell\open\command" "" '${COMMAND}'
 !macroend
 
 !macro CUSTOM_PROTOCOL_UNASSOCIATE PROTOCOL
