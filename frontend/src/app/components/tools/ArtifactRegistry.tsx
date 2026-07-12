@@ -4,6 +4,7 @@ import { Loader } from '../Loader';
 import { Button } from '../Button';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { ARRepository, ARPackage, ARVersion } from '../../../../bindings/alis-hub-v3/models';
+import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   projectID: string;
@@ -55,7 +56,7 @@ export function ArtifactRegistry({ projectID, region }: Props) {
     setError(null);
     GS.ListRepositories(projectID, region)
       .then(setRepos)
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
   }, [projectID, region]);
 

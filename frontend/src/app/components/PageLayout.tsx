@@ -8,9 +8,10 @@ export interface PageLayoutProps {
   children: ReactNode;
   actions?: ReactNode;
   parentRoute?: string;
+  onBack?: () => void;
 }
 
-export function PageLayout({ title, subtitle, children, actions, parentRoute }: PageLayoutProps) {
+export function PageLayout({ title, subtitle, children, actions, parentRoute, onBack }: PageLayoutProps) {
   const navigate = useNavigate();
 
   return (
@@ -18,7 +19,7 @@ export function PageLayout({ title, subtitle, children, actions, parentRoute }: 
       <div className="border-b border-border px-[20px] py-[10px] flex items-center justify-between shrink-0 h-[51px]">
         <div className="flex items-center gap-[12px]">
           <button
-            onClick={() => (parentRoute ? navigate(parentRoute) : navigate(-1))}
+            onClick={() => (onBack ? onBack() : parentRoute ? navigate(parentRoute) : navigate(-1))}
             className="text-foreground opacity-50 hover:opacity-100 transition-opacity flex items-center"
           >
             <Icon icon="solar:alt-arrow-left-linear" className="text-xl" />

@@ -12,6 +12,7 @@ import { SecretManager } from '../components/tools/SecretManager';
 import { SpannerExplorer } from '../components/tools/SpannerExplorer';
 import { SpannerBackupsExplorer } from '../components/tools/SpannerBackupsExplorer';
 import { GCloudSetup } from '../components/tools/GCloudSetup';
+import { useGCloud } from '../stores/gcloud';
 import * as PS from '../../../bindings/alis-hub-v3/productservice';
 
 type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner' | 'backups';
@@ -39,8 +40,8 @@ function isAuthError(e: unknown): boolean {
 
 export function ToolsPanel() {
   const { state, setPhase } = useWorkspace();
+  const { ready: gcloudReady, setReady: setGcloudReady, handleError: handleGCloudError } = useGCloud();
   const [activeTab, setActiveTab] = useState<ToolTab>('buckets');
-  const [gcloudReady, setGcloudReady] = useState(false);
 
   const [contexts, setContexts] = useState<ProjectContext[]>([]);
   const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
@@ -88,6 +89,7 @@ export function ToolsPanel() {
         setContexts(list);
       })
       .catch((e: unknown) => {
+        if (handleGCloudError(e)) return;
         if (isAuthError(e)) { setPhase('login'); return; }
         setContextsError(String(e));
       })
@@ -116,6 +118,7 @@ export function ToolsPanel() {
       title="GCloud Tools"
       subtitle="Cloud Storage, Logging, Artifact Registry & Secret Manager"
       parentRoute="/"
+      onBack={gcloudReady ? () => setGcloudReady(false) : undefined}
     >
       <div className="flex h-full">
         {gcloudReady && (

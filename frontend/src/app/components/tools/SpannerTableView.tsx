@@ -13,6 +13,7 @@ import {
 } from '../ui/alert-dialog';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { SpannerQueryResult } from '../../../../bindings/alis-hub-v3/models';
+import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   tableName: string;
@@ -159,7 +160,7 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           setColumns((prev) => (prev.length ? prev : r.columns));
         }
       })
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
   }
 

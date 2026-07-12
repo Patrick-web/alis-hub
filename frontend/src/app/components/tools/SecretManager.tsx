@@ -4,6 +4,7 @@ import { Loader } from '../Loader';
 import { Button } from '../Button';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { SMSecret, SMSecretVersion } from '../../../../bindings/alis-hub-v3/models';
+import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   projectID: string;
@@ -44,7 +45,7 @@ export function SecretManager({ projectID }: Props) {
     setError(null);
     GS.ListSecrets(projectID)
       .then(setSecrets)
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
   }, [projectID]);
 
