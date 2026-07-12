@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.14.1] - 2026-07-12
+
+### What's New
+- The command palette now opens faster, looks better, and ranks search results more intelligently
+- You'll now be redirected to Google Cloud authentication when navigating back or encountering auth errors
+- Copying an environment variable value now shows a success notification
+- You can now deep link into Alis Hub using the `alishub://` custom URL scheme
+- File logging, a log viewer and inspector, and a Linux title bar have been added
+- A new Tabs settings page lets you reorder tabs and set a default tab
+- A new workflow run history tab lets you view, delete, and clear past runs
+
+### Bug Fixes
+- Fixed an issue where transient token refresh failures would prompt you to re-login
+
 ## [v0.14.0] - 2026-07-09
 
 ### What's New
