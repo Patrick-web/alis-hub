@@ -8,6 +8,7 @@ import { FilterSelect, type FilterSelectOption } from '../FilterSelect';
 import { LogsServicesTab } from './LogsServicesTab';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { LogEntry, CloudRunService } from '../../../../bindings/alis-hub-v3/models';
+import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   projectID: string;
@@ -146,6 +147,7 @@ export function LogsExplorer({ projectID }: Props) {
         setCrServiceList(svcs.filter((s) => s.serviceName));
       })
       .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
         setCrServices([{ label: 'All services', value: '' }]);
         setCrServiceList([]);
         setCrError(String(e));
@@ -183,7 +185,7 @@ export function LogsExplorer({ projectID }: Props) {
         setNextPageToken(page.nextPageToken ?? '');
         setHasLoaded(true);
       })
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
   }, [projectID, severity, timeRange, searchText, resourceType, cloudRunService, logName, nextPageToken]);
 
@@ -203,7 +205,7 @@ export function LogsExplorer({ projectID }: Props) {
         });
         latestTimestampRef.current = incoming[0].timestamp || latestTimestampRef.current;
       })
-      .catch((e: unknown) => setError(String(e)));
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); });
   }, [projectID, severity, searchText, resourceType, cloudRunService, logName]);
 
   const pollStreamRef = useRef(pollStream);

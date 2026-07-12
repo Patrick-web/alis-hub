@@ -5,6 +5,7 @@ import { Button } from '../Button';
 import { FilePreview, detectKind, b64ToText, kindIcon } from '../FilePreview';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { GCSBucket, GCSObject, GCSObjectMetadata } from '../../../../bindings/alis-hub-v3/models';
+import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   projectID: string;
@@ -130,7 +131,7 @@ export function BucketsExplorer({ projectID }: Props) {
     setBucketsError(null);
     GS.ListBuckets(projectID)
       .then(setBuckets)
-      .catch((e: unknown) => setBucketsError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setBucketsError(String(e)); })
       .finally(() => setBucketsLoading(false));
   }, [projectID]);
 
@@ -143,7 +144,7 @@ export function BucketsExplorer({ projectID }: Props) {
         setObjects(res.items ?? []);
         setPrefixes(res.prefixes ?? []);
       })
-      .catch((e: unknown) => setObjectsError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setObjectsError(String(e)); })
       .finally(() => setObjectsLoading(false));
   }, [selectedBucket, prefix]);
 
@@ -158,7 +159,7 @@ export function BucketsExplorer({ projectID }: Props) {
     setMetaError(null);
     GS.GetObjectMetadata(selectedBucket, selectedObject.name)
       .then(setObjectMeta)
-      .catch((e: unknown) => setMetaError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setMetaError(String(e)); })
       .finally(() => setMetaLoading(false));
 
     // Load content eagerly for the mini preview (skip unsupported types)
@@ -174,7 +175,7 @@ export function BucketsExplorer({ projectID }: Props) {
     setContentError(null);
     GS.GetObjectContent(selectedBucket, selectedObject.name)
       .then(setObjectContent)
-      .catch((e: unknown) => setContentError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setContentError(String(e)); })
       .finally(() => setContentLoading(false));
   }, [selectedObject, selectedBucket]);
 
@@ -223,7 +224,7 @@ export function BucketsExplorer({ projectID }: Props) {
           <button
             onClick={() => {
               setBucketsLoading(true);
-              GS.ListBuckets(projectID).then(setBuckets).catch((e: unknown) => setBucketsError(String(e))).finally(() => setBucketsLoading(false));
+              GS.ListBuckets(projectID).then(setBuckets).catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setBucketsError(String(e)); }).finally(() => setBucketsLoading(false));
             }}
             className="text-foreground/40 hover:text-foreground transition-colors"
           >
@@ -322,7 +323,7 @@ export function BucketsExplorer({ projectID }: Props) {
                   <p className="text-[11px] text-red-400 font-mono mb-[8px]">{objectsError}</p>
                   <Button variant="secondary" onClick={() => {
                     setObjectsLoading(true);
-                    GS.ListObjects(selectedBucket, prefix, '').then((res) => { setObjects(res.items ?? []); setPrefixes(res.prefixes ?? []); }).catch((e: unknown) => setObjectsError(String(e))).finally(() => setObjectsLoading(false));
+                    GS.ListObjects(selectedBucket, prefix, '').then((res) => { setObjects(res.items ?? []); setPrefixes(res.prefixes ?? []); }).catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setObjectsError(String(e)); }).finally(() => setObjectsLoading(false));
                   }}>Retry</Button>
                 </div>
               </div>

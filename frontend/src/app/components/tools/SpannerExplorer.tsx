@@ -23,6 +23,7 @@ import type {
   SpannerQueryResult,
 } from "../../../../bindings/alis-hub-v3/models";
 import { useLabs } from "../../stores/labs";
+import { useGCloud } from "../../stores/gcloud";
 
 interface Props {
   projectID: string;
@@ -126,7 +127,7 @@ export function SpannerExplorer({ projectID }: Props) {
     setError(null);
     GS.ListSpannerInstances(projectID)
       .then((items: SpannerInstance[]) => setInstances(items || []))
-      .catch((e: unknown) => setError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
   }, [projectID]);
 
@@ -389,7 +390,7 @@ export function SpannerExplorer({ projectID }: Props) {
           openRWTxnsRef.current.set(tabId, txn);
           updateTabQuery(tabId, { pendingRWTxn: txn });
         })
-        .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     } else if (isDMLSQL(sqlTrimmed)) {
       GS.ExecuteSpannerDML(selectedDatabase, sqlTrimmed)
@@ -398,7 +399,7 @@ export function SpannerExplorer({ projectID }: Props) {
             dmlResult: { rowsAffected: Number(r?.rowsAffected ?? 0) },
           }),
         )
-        .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     } else if (isDestructiveSQL(sqlTrimmed)) {
       updateTabQuery(tabId, {
@@ -411,7 +412,7 @@ export function SpannerExplorer({ projectID }: Props) {
         .then((r: SpannerQueryResult | null) =>
           updateTabQuery(tabId, { queryResult: r }),
         )
-        .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     }
   }
@@ -428,7 +429,7 @@ export function SpannerExplorer({ projectID }: Props) {
           dmlResult: { rowsAffected: txn.rowsAffected },
         });
       })
-      .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
       .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
   }
 
@@ -441,7 +442,7 @@ export function SpannerExplorer({ projectID }: Props) {
         openRWTxnsRef.current.delete(tabId);
         updateTabQuery(tabId, { pendingRWTxn: null, dmlResult: null });
       })
-      .catch((e: unknown) => updateTabQuery(tabId, { queryError: String(e) }))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
       .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
   }
 

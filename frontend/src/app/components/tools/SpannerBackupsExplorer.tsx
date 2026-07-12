@@ -8,6 +8,7 @@ import type {
   SpannerInstance,
   SpannerBackup,
 } from "../../../../bindings/alis-hub-v3/models";
+import { useGCloud } from "../../stores/gcloud";
 
 interface Props {
   projectID: string;
@@ -65,7 +66,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
     setBackups([]);
     GS.ListSpannerInstances(projectID)
       .then((items: SpannerInstance[]) => setInstances(items || []))
-      .catch((e: unknown) => setInstancesError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setInstancesError(String(e)); })
       .finally(() => setInstancesLoading(false));
   }, [projectID]);
 
@@ -76,7 +77,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
     setBackups([]);
     GS.ListSpannerBackups(instance.name)
       .then((items: SpannerBackup[]) => setBackups(items || []))
-      .catch((e: unknown) => setBackupsError(String(e)))
+      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setBackupsError(String(e)); })
       .finally(() => setBackupsLoading(false));
   }
 
