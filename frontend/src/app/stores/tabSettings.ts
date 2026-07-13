@@ -57,15 +57,27 @@ function load(): TabSettings {
   return { order, defaultTab };
 }
 
-let state: TabSettings = load();
+// Not initialized eagerly at module scope: this module is pulled in by the
+// static import graph (App -> ... -> TopNav) and evaluated before
+// settingsClient.init() has loaded SQLite into its cache, so calling load()
+// here would always see an empty cache and silently fall back to defaults —
+// with nothing ever reloading it afterward. Deferring to first real access
+// (which happens once React actually renders, after init() has resolved)
+// avoids that race.
+let state: TabSettings | null = null;
 const listeners = new Set<() => void>();
+
+function ensureLoaded(): TabSettings {
+  if (state === null) state = load();
+  return state;
+}
 
 function emit() {
   for (const listener of listeners) listener();
 }
 
 function persist() {
-  settingsClient.set(STORAGE_KEY, JSON.stringify(state));
+  settingsClient.set(STORAGE_KEY, JSON.stringify(ensureLoaded()));
 }
 
 function subscribe(listener: () => void): () => void {
@@ -74,26 +86,26 @@ function subscribe(listener: () => void): () => void {
 }
 
 function getSnapshot(): TabSettings {
-  return state;
+  return ensureLoaded();
 }
 
 export function getTabOrder(): string[] {
-  return state.order;
+  return ensureLoaded().order;
 }
 
 export function setTabOrder(order: string[]): void {
-  state = { ...state, order: reconcileOrder(order) };
+  state = { ...ensureLoaded(), order: reconcileOrder(order) };
   persist();
   emit();
 }
 
 export function getDefaultTab(): string {
-  return state.defaultTab;
+  return ensureLoaded().defaultTab;
 }
 
 export function setDefaultTab(id: string): void {
   if (!REGISTRY_IDS.includes(id)) return;
-  state = { ...state, defaultTab: id };
+  state = { ...ensureLoaded(), defaultTab: id };
   persist();
   emit();
 }
@@ -101,14 +113,15 @@ export function setDefaultTab(id: string): void {
 /** Route to open when entering a landing zone. Falls back to About when the
  * default tab is Workflows but the Workflows feature is disabled. */
 export function getDefaultRoute(workflowsEnabled: boolean): string {
-  const tab = TAB_REGISTRY.find(t => t.id === state.defaultTab);
+  const s = ensureLoaded();
+  const tab = TAB_REGISTRY.find(t => t.id === s.defaultTab);
   if (tab?.requiresWorkflows && !workflowsEnabled) return `/${DEFAULT_TAB}`;
-  return `/${state.defaultTab}`;
+  return `/${s.defaultTab}`;
 }
 
 /** Ordered, feature-filtered tab definitions for rendering the nav. */
 export function getVisibleTabs(workflowsEnabled: boolean): TabDefinition[] {
-  return state.order
+  return ensureLoaded().order
     .map(id => TAB_REGISTRY.find(t => t.id === id))
     .filter((t): t is TabDefinition => !!t)
     .filter(t => (t.requiresWorkflows ? workflowsEnabled : true));
