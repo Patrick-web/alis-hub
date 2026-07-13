@@ -111,7 +111,14 @@ export function RootLayout() {
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
           const ok = await (ProductService.CheckAuth as () => Promise<boolean>)();
-          if (!ok) setSessionExpired(true);
+          // Clear a previously-set expiry on a definitive success too — a
+          // one-off auth_error from a background git fetch (network blip,
+          // misclassified remote error, etc.) may have already flipped
+          // sessionExpired to true. Without this, that flag is a one-way
+          // latch: only a full manual re-login clears it, so the modal would
+          // keep showing indefinitely even though the session is actually
+          // fine, as confirmed by this very poll.
+          setSessionExpired(!ok);
           return;
         } catch {
           if (attempt < MAX_ATTEMPTS) {
@@ -139,7 +146,14 @@ export function RootLayout() {
     }
     document.addEventListener('visibilitychange', onVisibilityChange);
 
-    const offAuthExpired = Events.On('auth:expired', () => setSessionExpired(true));
+    // Treat the backend event as a hint to re-verify, not as ground truth: it's
+    // raised by any git op (including the periodic background fetch) on a
+    // classified auth failure, which can be a transient network blip or a
+    // remote error unrelated to the token. Routing it through the same
+    // checkAuth() used for polling/focus means the re-login modal only shows
+    // once CheckAuth itself — the authoritative, retry-hardened path —
+    // confirms the session is actually dead.
+    const offAuthExpired = Events.On('auth:expired', () => { checkAuth(); });
 
     return () => {
       if (authPollRef.current) clearInterval(authPollRef.current);
