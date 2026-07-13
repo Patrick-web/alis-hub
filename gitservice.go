@@ -896,6 +896,35 @@ func (g *GitService) DiscardFile(repoPath, filePath string) error {
 	return err
 }
 
+// DiscardFiles discards working tree changes for multiple tracked files in a
+// single git invocation, avoiding the .git/index.lock race of concurrent
+// per-file calls.
+func (g *GitService) DiscardFiles(repoPath string, paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	args := append([]string{"git", "restore", "--"}, paths...)
+	out, err := gitCmd(repoPath, args...)
+	if err != nil {
+		return fmt.Errorf("git restore: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
+}
+
+// DiscardUntracked deletes untracked files from the working tree. git restore
+// only touches tracked files, so untracked paths are removed with git clean.
+func (g *GitService) DiscardUntracked(repoPath string, paths []string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	args := append([]string{"git", "clean", "-f", "-d", "--"}, paths...)
+	out, err := gitCmd(repoPath, args...)
+	if err != nil {
+		return fmt.Errorf("git clean: %w\n%s", err, strings.TrimSpace(out))
+	}
+	return nil
+}
+
 // StageAll stages all changes.
 func (g *GitService) StageAll(repoPath string) error {
 	out, err := gitCmd(repoPath, "git", "add", "-A")

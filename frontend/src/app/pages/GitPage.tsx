@@ -179,9 +179,11 @@ function RepoSection({
     if (!discardPending) return;
     setDiscarding(true);
     try {
-      for (const path of discardPending) {
-        await GitService.DiscardFile(repoPath, path);
-      }
+      const untrackedSet = new Set(gitStatus.untracked);
+      const tracked = discardPending.filter(p => !untrackedSet.has(p));
+      const untracked = discardPending.filter(p => untrackedSet.has(p));
+      if (tracked.length > 0) await GitService.DiscardFiles(repoPath, tracked);
+      if (untracked.length > 0) await GitService.DiscardUntracked(repoPath, untracked);
       refresh();
     } catch (e: any) {
       setError(String(e));

@@ -12,18 +12,21 @@ interface SourceControlState {
   fileListView: 'list' | 'tree';
   diffView: 'unified' | 'split';
   fetchIntervalMinutes: number;
+  mergeUntracked: boolean;
 }
 
 type SourceControlAction =
   | { type: 'SET_FILE_LIST_VIEW'; payload: 'list' | 'tree' }
   | { type: 'SET_DIFF_VIEW'; payload: 'unified' | 'split' }
-  | { type: 'SET_FETCH_INTERVAL'; payload: number };
+  | { type: 'SET_FETCH_INTERVAL'; payload: number }
+  | { type: 'SET_MERGE_UNTRACKED'; payload: boolean };
 
 interface SourceControlContextValue {
   state: SourceControlState;
   setFileListView: (view: 'list' | 'tree') => void;
   setDiffView: (view: 'unified' | 'split') => void;
   setFetchIntervalMinutes: (minutes: number) => void;
+  setMergeUntracked: (merge: boolean) => void;
 }
 
 const STORAGE_KEY = 'alis:source-control';
@@ -32,6 +35,7 @@ const DEFAULT_STATE: SourceControlState = {
   fileListView: 'list',
   diffView: 'unified',
   fetchIntervalMinutes: 5,
+  mergeUntracked: false,
 };
 
 function loadFromStorage(): SourceControlState {
@@ -56,6 +60,8 @@ function reducer(state: SourceControlState, action: SourceControlAction): Source
       return { ...state, diffView: action.payload };
     case 'SET_FETCH_INTERVAL':
       return { ...state, fetchIntervalMinutes: action.payload };
+    case 'SET_MERGE_UNTRACKED':
+      return { ...state, mergeUntracked: action.payload };
     default:
       return state;
   }
@@ -82,8 +88,12 @@ export function SourceControlProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_FETCH_INTERVAL', payload: minutes });
   }, []);
 
+  const setMergeUntracked = useCallback((merge: boolean) => {
+    dispatch({ type: 'SET_MERGE_UNTRACKED', payload: merge });
+  }, []);
+
   return (
-    <SourceControlContext.Provider value={{ state, setFileListView, setDiffView, setFetchIntervalMinutes }}>
+    <SourceControlContext.Provider value={{ state, setFileListView, setDiffView, setFetchIntervalMinutes, setMergeUntracked }}>
       {children}
     </SourceControlContext.Provider>
   );

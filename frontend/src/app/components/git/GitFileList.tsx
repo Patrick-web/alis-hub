@@ -73,6 +73,7 @@ function statusIcon(code: string) {
     case 'A': return <span className="text-green-400 text-[10px] font-bold w-3 shrink-0">A</span>;
     case 'D': return <span className="text-red-400 text-[10px] font-bold w-3 shrink-0">D</span>;
     case 'R': return <span className="text-blue-400 text-[10px] font-bold w-3 shrink-0">R</span>;
+    case '?': return <span className="text-green-400/70 text-[10px] font-bold w-3 shrink-0">U</span>;
     default:  return <span className="text-yellow-400 text-[10px] font-bold w-3 shrink-0">M</span>;
   }
 }
@@ -258,13 +259,14 @@ function TreeDir({
 }
 
 function Section({
-  title, count, defaultOpen, children, headerAction,
+  title, count, defaultOpen, children, headerAction, hideCount,
 }: {
   title: string;
   count: number;
   defaultOpen?: boolean;
   children: React.ReactNode;
   headerAction?: React.ReactNode;
+  hideCount?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? true);
   return (
@@ -273,8 +275,8 @@ function Section({
         <div className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 group">
           {open ? <ChevronDown size={11} className="text-foreground/40 shrink-0" /> : <ChevronRight size={11} className="text-foreground/40 shrink-0" />}
           <span className="text-[10px] uppercase tracking-wider text-foreground/50 font-semibold flex-1">{title}</span>
-          <span className="text-[10px] text-foreground/30">{count}</span>
-          {headerAction && <div onClick={e => e.stopPropagation()}>{headerAction}</div>}
+          {!hideCount && <span className="text-[10px] text-foreground/30">{count}</span>}
+          {headerAction && <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>{headerAction}</div>}
         </div>
       </Collapsible.Trigger>
       <Collapsible.Content>{children}</Collapsible.Content>
@@ -290,12 +292,18 @@ export function GitFileList({
 }: Props) {
   const { state: scState, setFileListView } = useSourceControl();
   const treeMode = scState.fileListView === 'tree';
+  const mergeUntracked = scState.mergeUntracked;
   const canCommit = status.staged.length > 0 && commitMessage.trim().length > 0 && !committing;
   const canContinue = isMerging && status.conflicted.length === 0 && !committing;
 
+  const changesItems: Array<GitFileStatus | string> = mergeUntracked
+    ? [...status.unstaged, ...status.untracked]
+    : status.unstaged;
+  const changesPaths = changesItems.map(f => (typeof f === 'string' ? f : f.path));
+
   const conflictedTree = buildTree(status.conflicted);
   const stagedTree = buildTree(status.staged);
-  const unstagedTree = buildTree(status.unstaged);
+  const unstagedTree = buildTree(changesItems);
   const untrackedTree = buildTree(status.untracked);
 
   return (
@@ -460,16 +468,26 @@ export function GitFileList({
         {/* Unstaged */}
         <Section
           title="Changes"
-          count={status.unstaged.length}
+          count={changesItems.length}
+          hideCount={changesItems.length > 0}
           headerAction={
-            status.unstaged.length > 0 ? (
-              <button
-                title="Stage all changes"
-                onClick={onStageAll}
-                className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
-              >
-                <Plus size={11} />
-              </button>
+            changesItems.length > 0 ? (
+              <>
+                <button
+                  title="Discard all changes"
+                  onClick={() => onDiscard(changesPaths)}
+                  className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
+                >
+                  <RotateCcw size={11} />
+                </button>
+                <button
+                  title="Stage all changes"
+                  onClick={onStageAll}
+                  className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
+                >
+                  <Plus size={11} />
+                </button>
+              </>
             ) : undefined
           }
         >
@@ -491,29 +509,32 @@ export function GitFileList({
               onFolderAction2={onDiscard}
             />
           ) : (
-            status.unstaged.map(f => (
-              <FileRow
-                key={f.path}
-                file={f}
-                staged={false}
-                selected={selectedFile === f.path && !selectedStaged}
-                onSelect={() => onSelectFile(f.path, false)}
-                onAction1={() => onStage(f.path)}
-                onAction2={() => onDiscard([f.path])}
-                action1Icon={<Plus size={11} />}
-                action2Icon={<RotateCcw size={11} />}
-                action1Title="Stage"
-                action2Title="Discard changes"
-              />
-            ))
+            changesItems.map(f => {
+              const path = typeof f === 'string' ? f : f.path;
+              return (
+                <FileRow
+                  key={path}
+                  file={f}
+                  staged={false}
+                  selected={selectedFile === path && !selectedStaged}
+                  onSelect={() => onSelectFile(path, false)}
+                  onAction1={() => onStage(path)}
+                  onAction2={() => onDiscard([path])}
+                  action1Icon={<Plus size={11} />}
+                  action2Icon={<RotateCcw size={11} />}
+                  action1Title="Stage"
+                  action2Title="Discard changes"
+                />
+              );
+            })
           )}
-          {status.unstaged.length === 0 && (
+          {changesItems.length === 0 && (
             <div className="px-3 py-1 text-[11px] text-foreground/20 italic">No changes</div>
           )}
         </Section>
 
         {/* Untracked */}
-        {status.untracked.length > 0 && (
+        {!mergeUntracked && status.untracked.length > 0 && (
           <Section title="Untracked" count={status.untracked.length} defaultOpen={false}>
             {treeMode ? (
               <TreeDir
