@@ -166,8 +166,13 @@ func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 		return nil, fmt.Errorf("console token refresh: %w", err)
 	}
 	if err := s.write(newCreds); err != nil {
-		log.Printf("[auth] refresh succeeded but writing credentials FAILED: %v", err)
-		return nil, fmt.Errorf("writing console credentials: %w", err)
+		// The refresh itself succeeded — newCreds is a valid, usable token even
+		// though persisting it to disk failed (e.g. a transient disk I/O error).
+		// Serve it rather than surfacing a spurious "session expired": failing
+		// here would tell the caller the session is dead when it's actually
+		// fine, and the next successful write will catch disk back up.
+		log.Printf("[auth] refresh succeeded but writing credentials FAILED (serving in-memory token): %v", err)
+		return newCreds, nil
 	}
 	log.Printf("[auth] console token refreshed OK (newExpiry=%s, rotatedRefreshToken=%t)",
 		formatExpiry(newCreds.Expiry), newCreds.RefreshToken != creds.RefreshToken)

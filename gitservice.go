@@ -173,7 +173,13 @@ func classifyGitOutput(output string, err error) (kind, message string) {
 		return "uncommitted_changes", "Local changes would be overwritten by checkout. Commit, stash, or discard them first."
 	case strings.Contains(lower, "could not read from remote") || strings.Contains(lower, "unable to access") || strings.Contains(lower, "failed to connect"):
 		return "network_error", "Could not reach the remote repository. Check your network connection."
-	case strings.Contains(lower, "authentication failed") || strings.Contains(lower, "token has expired") || strings.Contains(output, "403"):
+	case strings.Contains(lower, "authentication failed") || strings.Contains(lower, "token has expired") ||
+		strings.Contains(lower, "returned error: 403") || strings.Contains(lower, "returned error: 401"):
+		// Matched against the "returned error: <code>" form git itself prints for
+		// HTTP-level rejections, not a bare "403"/"401" substring — a bare match
+		// can appear incidentally (commit messages, branch-protection errors
+		// unrelated to the token) and would misclassify an unrelated failure as
+		// auth_error, spuriously popping the re-login modal.
 		return "auth_error", "Authentication failed. Your session may have expired."
 	default:
 		msg := strings.TrimSpace(output)
@@ -1034,7 +1040,18 @@ func (g *GitService) authedGitCmd(args ...string) *exec.Cmd {
 		g.tokens, _ = NewConsoleTokenSource()
 	}
 	if g.tokens != nil {
-		if token, err := g.tokens.AccessToken(); err == nil && token != "" {
+		token, err := g.tokens.AccessToken()
+		if err != nil {
+			// One short retry before concluding the session is dead: this call
+			// runs on whatever fired the git op (including the periodic
+			// background fetch), and a single transient blip here — e.g. the
+			// network still reconnecting right as the laptop wakes, the exact
+			// moment the fetch poll timer happens to fire — would otherwise pop
+			// the re-login modal even though the token is fine a moment later.
+			time.Sleep(300 * time.Millisecond)
+			token, err = g.tokens.AccessToken()
+		}
+		if err == nil && token != "" {
 			cmdArgs = append(cmdArgs, "-c", "http.extraHeader=Authorization: Bearer "+token)
 		} else if err != nil {
 			g.mu.Lock()
