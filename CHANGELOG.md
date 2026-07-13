@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.14.2] - 2026-07-13
+
+### Bug Fixes
+- Fixed an issue where the login screen could reappear even though you were still signed in, caused by a background git sync momentarily mistaking a network hiccup for an expired session
+
 ## [v0.14.1] - 2026-07-12
 
 ### What's New
