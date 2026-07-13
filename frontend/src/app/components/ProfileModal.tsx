@@ -557,6 +557,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
     setFileListView,
     setDiffView,
     setFetchIntervalMinutes,
+    setMergeUntracked,
   } = useSourceControl();
   const {
     settings: devSettings,
@@ -1503,6 +1504,24 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
                                   Tree
                                 </button>
                               </div>
+                            </SettingRow>
+                            <SettingRow
+                              id="setting-sc-merge-untracked"
+                              highlighted={
+                                highlightedId === "setting-sc-merge-untracked"
+                              }
+                              label="Show untracked in Changes"
+                            >
+                              <button
+                                onClick={() =>
+                                  setMergeUntracked(!scState.mergeUntracked)
+                                }
+                                className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${scState.mergeUntracked ? "bg-success" : "bg-foreground/[0.1]"}`}
+                              >
+                                <span
+                                  className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${scState.mergeUntracked ? "left-[16px]" : "left-[2px]"}`}
+                                />
+                              </button>
                             </SettingRow>
                           </SettingsCard>
                         </div>

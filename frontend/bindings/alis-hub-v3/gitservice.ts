@@ -81,6 +81,23 @@ export function DiscardFile(repoPath: string, filePath: string): $CancellablePro
 }
 
 /**
+ * DiscardFiles discards working tree changes for multiple tracked files in a
+ * single git invocation, avoiding the .git/index.lock race of concurrent
+ * per-file calls.
+ */
+export function DiscardFiles(repoPath: string, paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(1192302380, repoPath, paths);
+}
+
+/**
+ * DiscardUntracked deletes untracked files from the working tree. git restore
+ * only touches tracked files, so untracked paths are removed with git clean.
+ */
+export function DiscardUntracked(repoPath: string, paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(2687364988, repoPath, paths);
+}
+
+/**
  * FetchOrigin fetches from origin (updating remote-tracking refs and ahead/behind
  * state) without touching the working tree or local branch. Used both for manual
  * refresh and periodic background polling.
