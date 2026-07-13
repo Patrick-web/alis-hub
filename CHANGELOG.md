@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.14.3] - 2026-07-13
+
+### Bug Fixes
+- Fixed an issue where your custom tab order and default tab would silently reset back to the default every time you restarted the app
+
 ## [v0.14.2] - 2026-07-13
 
 ### Bug Fixes
