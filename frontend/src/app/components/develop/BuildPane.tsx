@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Button } from '../Button';
 import { Loader } from '../Loader';
+import { CheckCircle } from './CheckCircle';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
@@ -607,9 +608,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                             : 'bg-background border-border text-foreground/50 hover:text-foreground/70'
                         }`}
                       >
-                        <span className={`size-[12px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
-                          {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[8px]" />}
-                        </span>
+                        <CheckCircle selected={selected} size={13} />
                         <span className="text-[11px] font-medium flex-1">{env.displayName || env.name}</span>
                       </button>
                     );

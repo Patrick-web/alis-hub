@@ -6,6 +6,12 @@ import type { TaskType, TaskStatus, AppNotification } from '../stores/notificati
 import { useLocalAI } from '../stores/localai';
 import { NotificationCenter } from './NotificationCenter';
 import { HoverCard, HoverCardTrigger, HoverCardContent } from './ui/hover-card';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from './ui/context-menu';
 
 const TASK_ICON: Record<TaskType, string> = {
   define: 'solar:magic-stick-linear',
@@ -61,14 +67,20 @@ export function StatusStrip() {
     navigate(n.task?.type === 'workflow' ? '/workflows' : '/develop');
   }
 
+  function closeAllChips() {
+    taskNotifs.forEach(n => dismiss(n.id));
+  }
+
   return (
     <div
       className="shrink-0 flex items-center border-t border-border bg-background"
       style={{ height: hasContent ? '36px' : '22px' }}
     >
       {/* Task chips */}
-      <div className="flex items-center gap-[4px] px-[8px] flex-1 min-w-0 overflow-x-auto">
-        {aiGenerating && (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div className="flex items-center gap-[4px] px-[8px] flex-1 min-w-0 overflow-x-auto">
+            {aiGenerating && (
           <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>
               <div className="flex items-center gap-[5px] pl-[7px] pr-[7px] h-[22px] rounded-[3px] border border-purple-500/20 bg-purple-500/[0.08] shrink-0">
@@ -154,7 +166,17 @@ export function StatusStrip() {
             </HoverCard>
           );
         })}
-      </div>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="min-w-[120px]">
+          <ContextMenuItem
+            disabled={taskNotifs.length === 0}
+            onClick={closeAllChips}
+          >
+            Close All
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
 
       {/* Right section */}
       <div className="shrink-0 flex items-center h-full">
