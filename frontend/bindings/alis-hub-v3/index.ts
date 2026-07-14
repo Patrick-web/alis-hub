@@ -113,6 +113,7 @@ export {
     ProductOverview,
     ProductRepoPaths,
     ProductSummary,
+    ProtoFieldInfo,
     ProtoMessageInfo,
     RemoteMergeResult,
     RunBuildResult,

@@ -394,6 +394,82 @@ func collectMessageTypes(msgs protoreflect.MessageDescriptors, filePath string, 
 	}
 }
 
+// ProtoFieldInfo describes one field of a proto message, for the Spanner "query by
+// field" drill-down UI. Only one level is returned per call — for Kind=="message"
+// fields, the frontend calls GetMessageFields again with TypeName to drill further,
+// since message graphs can be deep or self-referential.
+type ProtoFieldInfo struct {
+	Name       string   `json:"name"`       // proto source field name (snake_case) — exactly what Spanner's dot-path SQL syntax uses
+	Number     int32    `json:"number"`
+	Kind       string   `json:"kind"`       // "scalar" | "message" | "enum"
+	ScalarType string   `json:"scalarType"` // set when Kind=="scalar": "string" | "bytes" | "bool" | "int" | "float"
+	TypeName   string   `json:"typeName"`   // set when Kind=="message"/"enum": fully-qualified type name
+	Repeated   bool     `json:"repeated"`
+	IsMap      bool     `json:"isMap"`
+	EnumValues []string `json:"enumValues"` // set when Kind=="enum"
+}
+
+// GetMessageFields returns the direct (one-level) fields of a proto message type found
+// in the org's cloned define repo, for the Spanner "query by field" drill-down UI.
+func (s *ProtoDecodeService) GetMessageFields(org, messageFullName string) ([]ProtoFieldInfo, error) {
+	files, err := s.filesForOrg(org)
+	if err != nil {
+		return nil, err
+	}
+	desc, err := files.AsResolver().FindDescriptorByName(protoreflect.FullName(messageFullName))
+	if err != nil {
+		return nil, fmt.Errorf("message type %q not found: %w", messageFullName, err)
+	}
+	msgDesc, ok := desc.(protoreflect.MessageDescriptor)
+	if !ok {
+		return nil, fmt.Errorf("%q is not a message type", messageFullName)
+	}
+
+	fields := msgDesc.Fields()
+	out := make([]ProtoFieldInfo, 0, fields.Len())
+	for i := 0; i < fields.Len(); i++ {
+		f := fields.Get(i)
+		info := ProtoFieldInfo{
+			Name:     string(f.Name()),
+			Number:   int32(f.Number()),
+			Repeated: f.IsList(),
+			IsMap:    f.IsMap(),
+		}
+		switch f.Kind() {
+		case protoreflect.MessageKind, protoreflect.GroupKind:
+			info.Kind = "message"
+			info.TypeName = string(f.Message().FullName())
+		case protoreflect.EnumKind:
+			info.Kind = "enum"
+			info.TypeName = string(f.Enum().FullName())
+			values := f.Enum().Values()
+			info.EnumValues = make([]string, values.Len())
+			for j := 0; j < values.Len(); j++ {
+				info.EnumValues[j] = string(values.Get(j).Name())
+			}
+		case protoreflect.BoolKind:
+			info.Kind = "scalar"
+			info.ScalarType = "bool"
+		case protoreflect.StringKind:
+			info.Kind = "scalar"
+			info.ScalarType = "string"
+		case protoreflect.BytesKind:
+			info.Kind = "scalar"
+			info.ScalarType = "bytes"
+		case protoreflect.FloatKind, protoreflect.DoubleKind:
+			info.Kind = "scalar"
+			info.ScalarType = "float"
+		default:
+			// Int32Kind, Sint32Kind, Uint32Kind, Int64Kind, Sint64Kind, Uint64Kind,
+			// Sfixed32Kind, Fixed32Kind, Sfixed64Kind, Fixed64Kind
+			info.Kind = "scalar"
+			info.ScalarType = "int"
+		}
+		out = append(out, info)
+	}
+	return out, nil
+}
+
 // DecodeProtoBytes decodes a base64-encoded Spanner BYTES value as the given proto
 // message type (found in the org's cloned define repo) and returns pretty JSON.
 // Decoding an unrelated message type will not necessarily error — proto3's wire format

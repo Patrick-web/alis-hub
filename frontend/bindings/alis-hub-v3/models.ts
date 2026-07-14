@@ -2888,6 +2888,84 @@ export class ProductSummary {
 }
 
 /**
+ * ProtoFieldInfo describes one field of a proto message, for the Spanner "query by
+ * field" drill-down UI. Only one level is returned per call — for Kind=="message"
+ * fields, the frontend calls GetMessageFields again with TypeName to drill further,
+ * since message graphs can be deep or self-referential.
+ */
+export class ProtoFieldInfo {
+    /**
+     * proto source field name (snake_case) — exactly what Spanner's dot-path SQL syntax uses
+     */
+    "name": string;
+    "number": number;
+
+    /**
+     * "scalar" | "message" | "enum"
+     */
+    "kind": string;
+
+    /**
+     * set when Kind=="scalar": "string" | "bytes" | "bool" | "int" | "float"
+     */
+    "scalarType": string;
+
+    /**
+     * set when Kind=="message"/"enum": fully-qualified type name
+     */
+    "typeName": string;
+    "repeated": boolean;
+    "isMap": boolean;
+
+    /**
+     * set when Kind=="enum"
+     */
+    "enumValues": string[];
+
+    /** Creates a new ProtoFieldInfo instance. */
+    constructor($$source: Partial<ProtoFieldInfo> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("number" in $$source)) {
+            this["number"] = 0;
+        }
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+        if (!("scalarType" in $$source)) {
+            this["scalarType"] = "";
+        }
+        if (!("typeName" in $$source)) {
+            this["typeName"] = "";
+        }
+        if (!("repeated" in $$source)) {
+            this["repeated"] = false;
+        }
+        if (!("isMap" in $$source)) {
+            this["isMap"] = false;
+        }
+        if (!("enumValues" in $$source)) {
+            this["enumValues"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProtoFieldInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProtoFieldInfo {
+        const $$createField7_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("enumValues" in $$parsedSource) {
+            $$parsedSource["enumValues"] = $$createField7_0($$parsedSource["enumValues"]);
+        }
+        return new ProtoFieldInfo($$parsedSource as Partial<ProtoFieldInfo>);
+    }
+}
+
+/**
  * ProtoMessageInfo describes a message type discovered in an org's define repo.
  */
 export class ProtoMessageInfo {

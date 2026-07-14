@@ -28,6 +28,16 @@ export function DecodeProtoBytes(org: string, base64Data: string, messageFullNam
 }
 
 /**
+ * GetMessageFields returns the direct (one-level) fields of a proto message type found
+ * in the org's cloned define repo, for the Spanner "query by field" drill-down UI.
+ */
+export function GetMessageFields(org: string, messageFullName: string): $CancellablePromise<$models.ProtoFieldInfo[]> {
+    return $Call.ByID(1081669243, org, messageFullName).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * GetSpannerColumnProtoTypes returns the column -> proto message type mapping declared
  * in spanner.tf (infra/spanner.tf under the product's build repo) for the given table.
  * Spanner's own PROTO<> column metadata only covers columns using that native type;
@@ -36,7 +46,7 @@ export function DecodeProtoBytes(org: string, base64Data: string, messageFullNam
  */
 export function GetSpannerColumnProtoTypes(org: string, product: string, table: string): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(2320030373, org, product, table).then(($result: any) => {
-        return $$createType0($result);
+        return $$createType2($result);
     });
 }
 
@@ -46,7 +56,7 @@ export function GetSpannerColumnProtoTypes(org: string, product: string, table: 
  */
 export function ListProtoMessageTypes(org: string): $CancellablePromise<$models.ProtoMessageInfo[]> {
     return $Call.ByID(3806347165, org).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType4($result);
     });
 }
 
@@ -67,6 +77,8 @@ export function RefreshSpannerSchemaIndex(org: string, product: string): $Cancel
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-const $$createType1 = $models.ProtoMessageInfo.createFrom;
-const $$createType2 = $Create.Array($$createType1);
+const $$createType0 = $models.ProtoFieldInfo.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $models.ProtoMessageInfo.createFrom;
+const $$createType4 = $Create.Array($$createType3);
