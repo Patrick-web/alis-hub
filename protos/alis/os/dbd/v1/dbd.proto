@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package alis.os.dbd.v1;
+
+import "alis/os/neurons/v1/neurons.proto";
+import "alis/os/protos/v1/protos.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/longrunning/operations.proto";
+
+message RunDefineRequest {
+  string neuron = 1;
+  string commit = 2;
+  .alis.os.protos.v1.Definition.ReleaseType release_type = 3;  // enum (heuristically resolved)
+}
+
+message RunDefineMetadata {
+  string definition = 1;
+  string version = 2;
+  string notes = 3;
+  repeated string definition_artifacts = 4;
+}
+
+message RunDefineResponse {
+  string definition = 1;
+  string version = 2;
+  repeated string definition_artifacts = 3;
+}
+
+message RunBuildRequest {
+  enum Action {
+    UNSPECIFIED = 0;
+    BUILD = 1;
+    RETAG = 2;
+    BUILT_LOCALLY = 3;
+  }
+  string neuron = 1;
+  string commit = 2;
+  map<string, int32> images = 3;  // map value enum type not recoverable from bundle (wire-compatible int32)
+  .alis.os.dbd.v1.RunDeployRequest deploy = 4;
+}
+
+message RunBuildMetadata {
+  string logs_url = 1;
+  string version = 2;
+  string notes = 3;
+  .alis.os.dbd.v1.RunDeployMetadata deploy_metadata = 4;
+}
+
+message RunBuildResponse {
+  message Deployment {
+    string name = 1;
+    int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    string logs_url = 3;
+  }
+  string neuron_version = 1;
+  string build_logs_url = 2;
+  repeated .alis.os.dbd.v1.RunBuildResponse.Deployment deployments = 3;
+  string version = 4;
+}
+
+message RunDeployRequest {
+  message Envs {
+    repeated .alis.os.neurons.v1.Deployment.Env updated_envs = 1;
+  }
+  repeated string environments = 1;
+  string neuron = 2;
+  string version = 3;
+  bool plan_only = 4;
+  bool beta = 5;
+  map<string, .alis.os.dbd.v1.RunDeployRequest.Envs> envs = 6;
+}
+
+message RunDeployMetadata {
+  message Deployment {
+    string name = 1;
+    int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    string logs_url = 3;
+  }
+  string version = 1;
+  repeated .alis.os.dbd.v1.RunDeployMetadata.Deployment deployments = 2;
+  string notes = 3;
+}
+
+message RunDeployResponse {
+  message Deployment {
+    string name = 1;
+    int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    string logs_url = 3;
+  }
+  string version = 1;
+  repeated .alis.os.dbd.v1.RunDeployResponse.Deployment deployments = 2;
+}
+
+service DbdService {
+  rpc RunDefine(.alis.os.dbd.v1.RunDefineRequest) returns (.google.longrunning.Operation);
+  rpc RunBuild(.alis.os.dbd.v1.RunBuildRequest) returns (.google.longrunning.Operation);
+  rpc RunDeploy(.alis.os.dbd.v1.RunDeployRequest) returns (.google.longrunning.Operation);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+}

@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package alis.open.validation.v1;
+message RetrieveRulesRequest {
+  string msg_type = 1;
+}
+
+message RetrieveRulesResponse {
+  repeated .alis.open.validation.v1.Rule rules = 1;
+}
+
+message ValidateMessageRequest {
+  string msg_type = 1;
+  bytes msg = 2;
+  repeated string field_paths = 3;
+}
+
+message ValidateMessageResponse {
+  repeated .alis.open.validation.v1.Rule violated_rules = 1;
+  repeated .alis.open.validation.v1.FieldViolation violated_fields = 2;
+}
+
+message Rule {
+  string id = 1;
+  string description = 2;
+  repeated string field_paths = 3;
+  repeated .alis.open.validation.v1.Rule nested_rules = 4;
+}
+
+message FieldViolation {
+  string field_path = 1;
+  repeated .alis.open.validation.v1.Rule violated_rules = 2;
+}

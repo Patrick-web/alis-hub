@@ -1,0 +1,316 @@
+syntax = "proto3";
+
+package alis.os.neurons.v1;
+
+import "google/longrunning/operations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message RetrieveDeploymentEnvsRequest {
+  string environment = 1;
+  repeated string neuron_ids = 2;
+  bool migrated = 3;
+}
+
+message RetrieveDeploymentEnvsResponse {
+  message DeploymentEnvs {
+    string neuron_id = 1;
+    repeated .alis.os.neurons.v1.RetrieveDeploymentEnvsResponse.Env envs = 2;
+  }
+  message Env {
+    string name = 1;
+    string value = 2;
+    bool managed = 3;
+  }
+  repeated .alis.os.neurons.v1.RetrieveDeploymentEnvsResponse.DeploymentEnvs deployment_envs = 1;
+  repeated .alis.os.neurons.v1.RetrieveDeploymentEnvsResponse.Env envs = 2;
+}
+
+message UpdateDeploymentMetadata {
+  string logs_url = 1;
+}
+
+message DeleteDeploymentMetadata {
+  string deployment = 1;
+  string cloudbuild_operation = 2;
+  string logs_url = 3;
+}
+
+message DeleteDeploymentResponse {
+}
+
+message Deployment {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    RUNNING = 1;
+    DEPLOYING = 2;
+    DEPLOY_FAILED = 3;
+    PLANNING = 4;
+    PLANNED = 5;
+    PLAN_FAILED = 6;
+    PLANNING_DESTROY = 7;
+    PLAN_DESTROY_FAILED = 8;
+    PLANNED_DESTROY = 9;
+    DESTROYING = 10;
+    DESTROY_FAILED = 11;
+    DESTROYED = 12;
+  }
+  message Env {
+    string name = 1;
+    string value = 2;
+  }
+  string name = 1;
+  string version = 2;
+  repeated .alis.os.neurons.v1.Deployment.Env envs = 3;
+  .alis.os.neurons.v1.Deployment.State state = 4;
+  string logs_url = 5;
+  string operation = 6;
+  string package = 7;
+  string beta_version = 8;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetDeploymentRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateDeploymentRequest {
+  string parent = 1;
+  .alis.os.neurons.v1.Deployment deployment = 2;
+  string deployment_id = 3;
+}
+
+message UpdateDeploymentRequest {
+  .alis.os.neurons.v1.Deployment deployment = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool plan_only = 3;
+}
+
+message DeleteDeploymentRequest {
+  string name = 1;
+  bool skip_destroy = 2;
+  bool plan_only = 3;
+}
+
+message ListDeploymentsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListDeploymentsResponse {
+  repeated .alis.os.neurons.v1.Deployment deployments = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetDeploymentsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message BatchGetDeploymentsResponse {
+  repeated .alis.os.neurons.v1.Deployment deployments = 1;
+}
+
+message CreateNeuronVersionMetadata {
+  string logs_url = 1;
+  string version = 2;
+  string notes = 3;
+}
+
+message NeuronVersion {
+  enum State {
+    UNSPECIFIED = 0;
+    BUILT = 1;
+    RETAGGED = 2;
+    BUILDING = 3;
+    FAILED = 4;
+  }
+  message Image {
+    string path = 1;
+    .alis.os.neurons.v1.NeuronVersion.State state = 2;
+  }
+  string name = 1;
+  string version = 2;
+  string proto_commit = 3;
+  string build_commit = 4;
+  string created_by = 5;
+  repeated .alis.os.neurons.v1.NeuronVersion.Image images = 6;
+  .alis.os.neurons.v1.NeuronVersion.State state = 7;
+  string logs_url = 8;
+  string operation = 9;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetNeuronVersionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateNeuronVersionRequest {
+  string parent = 1;
+  .alis.os.neurons.v1.NeuronVersion neuron_version = 2;
+}
+
+message UpdateNeuronVersionRequest {
+  .alis.os.neurons.v1.NeuronVersion neuron_version = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteNeuronVersionRequest {
+  string name = 1;
+}
+
+message ListNeuronVersionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListNeuronVersionsResponse {
+  repeated .alis.os.neurons.v1.NeuronVersion neuron_versions = 1;
+  string next_page_token = 2;
+}
+
+message Test {
+  string test = 1;
+}
+
+message DeleteNeuronMetadata {
+  string neuron = 1;
+  repeated string deployment_delete_operations = 2;
+}
+
+message DeleteNeuronResponse {
+}
+
+message Neuron {
+  string name = 1;
+  string version = 2;
+  string build_commit = 3;
+  string package = 4;
+  int32 latest_version_state = 5;  // enum type not recoverable from bundle (wire-compatible int32)
+  string last_version_logs_uri = 6;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetNeuronRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateNeuronRequest {
+  string parent = 1;
+  .alis.os.neurons.v1.Neuron neuron = 2;
+  string neuron_id = 3;
+}
+
+message UpdateNeuronRequest {
+  .alis.os.neurons.v1.Neuron neuron = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteNeuronRequest {
+  enum DeploymentActions {
+    UNSPECIFIED = 0;
+    SKIP_DESTROY = 1;
+    DESTROY = 2;
+  }
+  string name = 1;
+  .alis.os.neurons.v1.DeleteNeuronRequest.DeploymentActions deployment_actions = 2;
+}
+
+message ListNeuronsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListNeuronsResponse {
+  repeated .alis.os.neurons.v1.Neuron neurons = 1;
+  string next_page_token = 2;
+}
+
+message DeploymentVersion {
+  string name = 1;
+  string version = 2;
+  repeated .alis.os.neurons.v1.Deployment.Env envs = 3;
+  int32 state = 4;  // enum type not recoverable from bundle (wire-compatible int32)
+  string created_by = 5;
+  string logs_url = 6;
+  string operation = 7;
+  string beta_version = 8;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetDeploymentVersionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateDeploymentVersionRequest {
+  string parent = 1;
+  .alis.os.neurons.v1.DeploymentVersion deployment_version = 2;
+}
+
+message UpdateDeploymentVersionRequest {
+  .alis.os.neurons.v1.DeploymentVersion deployment_version = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteDeploymentVersionRequest {
+  string name = 1;
+}
+
+message ListDeploymentVersionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListDeploymentVersionsResponse {
+  repeated .alis.os.neurons.v1.DeploymentVersion deployment_versions = 1;
+  string next_page_token = 2;
+}
+
+service DeploymentsService {
+  rpc GetDeployment(.alis.os.neurons.v1.GetDeploymentRequest) returns (.alis.os.neurons.v1.Deployment);
+  rpc UpdateDeployment(.alis.os.neurons.v1.UpdateDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc DeleteDeployment(.alis.os.neurons.v1.DeleteDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc ListDeployments(.alis.os.neurons.v1.ListDeploymentsRequest) returns (.alis.os.neurons.v1.ListDeploymentsResponse);
+  rpc BatchGetDeployments(.alis.os.neurons.v1.BatchGetDeploymentsRequest) returns (.alis.os.neurons.v1.BatchGetDeploymentsResponse);
+  rpc RetrieveDeploymentEnvs(.alis.os.neurons.v1.RetrieveDeploymentEnvsRequest) returns (.alis.os.neurons.v1.RetrieveDeploymentEnvsResponse);
+}
+
+service NeuronsService {
+  rpc GetNeuron(.alis.os.neurons.v1.GetNeuronRequest) returns (.alis.os.neurons.v1.Neuron);
+  rpc CreateNeuron(.alis.os.neurons.v1.CreateNeuronRequest) returns (.alis.os.neurons.v1.Neuron);
+  rpc DeleteNeuron(.alis.os.neurons.v1.DeleteNeuronRequest) returns (.google.longrunning.Operation);
+  rpc ListNeurons(.alis.os.neurons.v1.ListNeuronsRequest) returns (.alis.os.neurons.v1.ListNeuronsResponse);
+}
+
+service NeuronVersionsService {
+  rpc GetNeuronVersion(.alis.os.neurons.v1.GetNeuronVersionRequest) returns (.alis.os.neurons.v1.NeuronVersion);
+  rpc CreateNeuronVersion(.alis.os.neurons.v1.CreateNeuronVersionRequest) returns (.google.longrunning.Operation);
+  rpc DeleteNeuronVersion(.alis.os.neurons.v1.DeleteNeuronVersionRequest) returns (.google.protobuf.Empty);
+  rpc ListNeuronVersions(.alis.os.neurons.v1.ListNeuronVersionsRequest) returns (.alis.os.neurons.v1.ListNeuronVersionsResponse);
+}
+
+service DeploymentVersionsService {
+  rpc GetDeploymentVersion(.alis.os.neurons.v1.GetDeploymentVersionRequest) returns (.alis.os.neurons.v1.DeploymentVersion);
+  rpc ListDeploymentVersions(.alis.os.neurons.v1.ListDeploymentVersionsRequest) returns (.alis.os.neurons.v1.ListDeploymentVersionsResponse);
+}

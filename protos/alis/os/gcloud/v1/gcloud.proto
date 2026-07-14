@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package alis.os.gcloud.v1;
+message AuthGitRequest {
+  string resource = 1;
+}
+
+message AuthGitResponse {
+  string id_token = 1;
+}
+
+message AuthArtifactRegistryRequest {
+  string product = 1;
+}
+
+message AuthArtifactRegistryResponse {
+  string access_token = 1;
+}
+
+message AuthDartRequest {
+  string product = 1;
+}
+
+message AuthDartResponse {
+  string id_token = 1;
+}
+
+service AuthService {
+  rpc AuthGit(.alis.os.gcloud.v1.AuthGitRequest) returns (.alis.os.gcloud.v1.AuthGitResponse);
+  rpc AuthArtifactRegistry(.alis.os.gcloud.v1.AuthArtifactRegistryRequest) returns (.alis.os.gcloud.v1.AuthArtifactRegistryResponse);
+  rpc AuthDart(.alis.os.gcloud.v1.AuthDartRequest) returns (.alis.os.gcloud.v1.AuthDartResponse);
+}

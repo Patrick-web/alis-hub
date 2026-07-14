@@ -1,0 +1,1395 @@
+syntax = "proto3";
+
+package alis.os.resources.solutions.v1;
+
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/type/date.proto";
+import "google/type/money.proto";
+
+message Solution {
+  enum Stage {
+    STAGE_UNSPECIFIED = 0;
+    CONTEXT = 1;
+    DEFINE_I = 2;
+    DEFINE_II = 3;
+    BUILD = 4;
+    DEPLOY = 5;
+    ACCEPTED = 6;
+    DEFINING = 7;
+    AWAITING_APPROVAL = 8;
+    BUILDING = 9;
+    AWAITING_FEEDBACK = 10;
+    AWAITING_ACCEPTANCE = 11;
+    DEPLOYED = 12;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    RUNNING = 1;
+    ARCHIVED = 2;
+    COMPLETED = 3;
+    PENDING = 4;
+  }
+  message Ideate {
+    string idea = 1;
+    string rfp = 2;
+  }
+  message Context {
+    string requester = 1;
+    repeated string categories = 2;
+    string overview = 3;
+    string recording_uri = 4;
+    string suggested_title = 5;
+  }
+  message Deliverable {
+    string title = 1;
+    string description = 2;
+    repeated string reference_uris = 3;
+    bool is_complete = 4;
+  }
+  message Scope {
+    enum Size {
+      SIZE_UNSPECIFIED = 0;
+      SMALL = 1;
+      MEDIUM = 2;
+      LARGE = 3;
+    }
+    string description = 1;
+    string video_uri = 2;
+    int32 expected_duration = 3;
+    .alis.os.resources.solutions.v1.Solution.Scope.Size size = 4;
+  }
+  message Team {
+    string build_partner = 1;
+    string account_partner = 2;
+    string solution_sponsor = 3;
+    string solution_manager = 4;
+  }
+  message Billing {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      FIXED = 1;
+      HOURLY = 2;
+      FIXED_AND_RECURRING = 3;
+    }
+    message FixedAndRecurring {
+      .google.type.Money min_upfront_payment = 1;
+      .google.type.Money max_upfront_payment = 2;
+      .google.type.Money target_lifetime_value = 3;
+      .google.protobuf.DoubleValue discount = 4;
+      .google.type.Money upfront_fee = 5;
+      .google.type.Money monthly_fee = 6;
+    }
+    .google.type.Money fixed_fee = 1;
+    .google.type.Money hourly_rate = 2;
+    .google.protobuf.Duration time_logged = 3;
+    .google.protobuf.DoubleValue discount = 4;
+    .google.type.Money budget = 5;
+    .alis.os.resources.solutions.v1.Solution.Billing.Type type = 6;
+    .alis.os.resources.solutions.v1.Solution.Billing.FixedAndRecurring fixed_and_recurring = 7;
+    repeated string invoice_line_items = 8;
+  }
+  message Attachment {
+    string title = 1;
+    string download_uri = 2;
+    string filename = 3;
+  }
+  message Approval {
+    bool approved = 1;
+    string builder = 2;
+    .google.protobuf.Timestamp approval_time = 3;
+    string user = 4;
+  }
+  message Acceptance {
+    bool accepted = 1;
+    string builder = 2;
+    .google.protobuf.Timestamp acceptance_time = 3;
+    string user = 4;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.resources.solutions.v1.Solution.Scope scope = 3;
+  .alis.os.resources.solutions.v1.Solution.Billing billing = 4;
+  .alis.os.resources.solutions.v1.Solution.Stage stage = 5;
+  repeated .alis.os.resources.solutions.v1.Solution.Attachment attachments = 6;
+  string builder = 7;
+  .alis.os.resources.solutions.v1.Solution.Approval approval = 8;
+  .alis.os.resources.solutions.v1.Solution.State state = 9;
+  string proposal_uri = 10;
+  string account = 11;
+  .alis.os.resources.solutions.v1.Solution.Acceptance acceptance = 12;
+  repeated string products = 13;
+  bool is_proof_of_concept = 14;
+  .alis.os.resources.solutions.v1.Solution.Team team = 19;
+  .alis.os.resources.solutions.v1.Solution.Context context = 20;
+  repeated .alis.os.resources.solutions.v1.Solution.Deliverable deliverables = 21;
+  .alis.os.resources.solutions.v1.Solution.Ideate ideate = 22;
+  .google.type.Date target_commencement_date = 96;
+  .google.type.Date due_date = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp deployed_time = 100;
+}
+
+message Activity {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    PUBLISHED = 2;
+  }
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    HOURS = 1;
+    PROGRESS_UPDATE = 2;
+    SOLUTION_APPROVED = 3;
+    SOLUTION_ACCEPTED = 4;
+    MILESTONE_ACHIEVED = 5;
+    APPROVAL_REQUESTED = 6;
+    PROPOSAL_SIGNED = 7;
+    ACCEPTANCE_REQUESTED = 8;
+    SOLUTION_REQUESTED = 9;
+    COMMENT = 10;
+  }
+  message TimeTracked {
+    string builder = 1;
+    .google.protobuf.Duration duration = 2;
+    string notes = 3;
+    .google.protobuf.Timestamp start_time = 4;
+    .google.protobuf.Timestamp end_time = 5;
+    string builder_display_name = 6;
+    string builder_profile_picture_uri = 7;
+  }
+  message Progress {
+    message Team {
+      message Stakeholder {
+        string builder = 1;
+        string display_name = 2;
+        string profile_picture_uri = 3;
+        string email = 4;
+        string user = 5;
+      }
+      .alis.os.resources.solutions.v1.Activity.Progress.Team.Stakeholder build_partner = 1;
+      .alis.os.resources.solutions.v1.Activity.Progress.Team.Stakeholder account_partner = 2;
+      .alis.os.resources.solutions.v1.Activity.Progress.Team.Stakeholder solution_sponsor = 3;
+      .alis.os.resources.solutions.v1.Activity.Progress.Team.Stakeholder solution_manager = 4;
+    }
+    message ContentBlock {
+      enum Type {
+        TYPE_UNSPECIFIED = 0;
+        TITLE = 1;
+        SUBTITLE = 2;
+        TEXT_BODY = 3;
+        IMAGE = 4;
+        VIDEO = 5;
+        DIVIDER = 6;
+        MILESTONES_OVERVIEW = 8;
+        HOURS_WORKED = 9;
+        LINK_PREVIEW = 10;
+      }
+      message Title {
+      }
+      message Subtitle {
+      }
+      message TextBody {
+      }
+      message Image {
+        string source_uri = 1;
+        string caption = 2;
+      }
+      message Video {
+        string source_uri = 1;
+        string caption = 2;
+      }
+      message Divider {
+      }
+      message MilestonesOverview {
+        message MilestoneOverview {
+          string display_name = 2;
+          string description = 3;
+          .alis.os.resources.solutions.v1.Activity.State state = 4;
+          .google.type.Date due_date = 5;
+        }
+      }
+      message HoursWorked {
+        message HoursOverview {
+          message WeeklyHours {
+            .google.type.Date start_date = 1;
+            float total_hours_spent = 2;
+          }
+          float total_hours_spent = 1;
+          repeated .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.HoursWorked.HoursOverview.WeeklyHours weekly_hours_overview = 2;
+        }
+        .google.type.Date start_date = 1;
+        .google.type.Date end_date = 2;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.HoursWorked.HoursOverview hours_overview = 3;
+      }
+      message LinkPreview {
+        string uri = 1;
+        string avatar_uri = 2;
+        string title = 3;
+        string body = 4;
+      }
+      .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Type type = 1;
+      string id = 20;
+      oneof block {
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Title title = 2;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Subtitle subtitle = 3;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.TextBody text_body = 4;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Image image = 5;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Video video = 6;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.Divider divider = 7;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.MilestonesOverview milestones_overview = 8;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.HoursWorked hours_worked = 9;
+        .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock.LinkPreview link_preview = 10;
+      }
+    }
+    message ProgressView {
+      string builder = 1;
+      string builder_display_name = 2;
+      string builder_masked_email = 3;
+      string builder_profile_picture_uri = 4;
+      .google.protobuf.Timestamp last_viewed = 5;
+      string user = 6;
+    }
+    string builder = 1;
+    string notes = 2;
+    .google.protobuf.StringValue context_uri = 3;
+    .alis.os.resources.solutions.v1.Solution.Stage stage = 4;  // enum (heuristically resolved)
+    repeated string attachment_uris = 5;
+    string builder_display_name = 6;
+    string builder_profile_picture_uri = 7;
+    repeated .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock rich_text = 8;
+    .alis.os.resources.solutions.v1.Activity.Progress.Team team = 9;
+    .google.protobuf.Timestamp publish_time = 10;
+    repeated .alis.os.resources.solutions.v1.Activity.Progress.ProgressView views = 11;
+  }
+  message SolutionRequested {
+    string builder = 1;
+    string builder_display_name = 2;
+    string builder_profile_picture_uri = 3;
+  }
+  message ApprovalRequested {
+    string builder = 1;
+    string builder_display_name = 2;
+    string builder_profile_picture_uri = 3;
+  }
+  message ProposalSigned {
+    enum SignatoryType {
+      SIGNATORY_UNSPECIFIED = 0;
+      SOLUTION_SPONSOR = 1;
+      ACCOUNT_PARTNER = 2;
+      CLIENT_SIGNATORY = 3;
+    }
+    .alis.os.resources.solutions.v1.Activity.ProposalSigned.SignatoryType signatory_type = 1;
+    string builder = 2;
+    string builder_display_name = 3;
+    string builder_profile_picture_uri = 4;
+  }
+  message Approved {
+    string builder = 1;
+    string builder_display_name = 2;
+    string builder_profile_picture_uri = 3;
+  }
+  message AcceptanceRequested {
+    string builder = 1;
+    string builder_display_name = 2;
+    string builder_profile_picture_uri = 3;
+  }
+  message Accepted {
+    string builder = 1;
+    string builder_display_name = 2;
+    string builder_profile_picture_uri = 3;
+  }
+  message MilestoneAchieved {
+    string milestone = 1;
+    string notes = 2;
+    string builder = 3;
+    string builder_display_name = 4;
+    string builder_profile_picture_uri = 5;
+  }
+  message Comment {
+    enum SubjectType {
+      SUBJECT_TYPE_UNSPECIFIED = 0;
+      PROGRESS_UPDATE = 1;
+      PROGRESS_UPDATE_CONTENT_BLOCK = 2;
+    }
+    message ProgressUpdate {
+    }
+    message ProgressUpdateContentBlock {
+      string progress_update = 1;
+      string content_block_id = 2;
+    }
+    .alis.os.resources.solutions.v1.Activity.Comment.SubjectType subject_type = 1;
+    string content = 10;
+    string builder = 11;
+    string builder_display_name = 12;
+    string builder_profile_picture_uri = 13;
+    oneof subject {
+      .alis.os.resources.solutions.v1.Activity.Comment.ProgressUpdate progress_update = 2;
+      .alis.os.resources.solutions.v1.Activity.Comment.ProgressUpdateContentBlock progress_update_content_block = 3;
+    }
+  }
+  string name = 1;
+  .alis.os.resources.solutions.v1.Activity.Type type = 2;
+  .alis.os.resources.solutions.v1.Activity.State state = 3;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp publish_time = 100;
+  oneof data {
+    .alis.os.resources.solutions.v1.Activity.TimeTracked time_tracked = 10;
+    .alis.os.resources.solutions.v1.Activity.Progress progress = 11;
+    .alis.os.resources.solutions.v1.Activity.MilestoneAchieved milestone_achieved = 12;
+    .alis.os.resources.solutions.v1.Activity.Approved approved = 13;
+    .alis.os.resources.solutions.v1.Activity.Accepted accepted = 14;
+    .alis.os.resources.solutions.v1.Activity.ApprovalRequested approval_requested = 15;
+    .alis.os.resources.solutions.v1.Activity.ProposalSigned proposal_signed = 16;
+    .alis.os.resources.solutions.v1.Activity.AcceptanceRequested acceptance_requested = 17;
+    .alis.os.resources.solutions.v1.Activity.SolutionRequested solution_requested = 18;
+    .alis.os.resources.solutions.v1.Activity.Comment comment = 19;
+  }
+}
+
+message Milestone {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_INCOMPLETE = 1;
+    STATE_COMPLETED = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  .google.type.Date due_date = 4;
+  .alis.os.resources.solutions.v1.Milestone.State state = 5;
+  string assignee = 6;
+  bool is_internal = 7;
+}
+
+message CreateSolutionRequest {
+}
+
+message GetSolutionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateSolutionRequest {
+  .alis.os.resources.solutions.v1.Solution solution = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteSolutionRequest {
+}
+
+message ListSolutionsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListSolutionsResponse {
+  repeated .alis.os.resources.solutions.v1.Solution solutions = 1;
+  string next_page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message CreateActivityRequest {
+  string parent = 1;
+  .alis.os.resources.solutions.v1.Activity activity = 2;
+}
+
+message GetActivityRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateActivityRequest {
+  .alis.os.resources.solutions.v1.Activity activity = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteActivityRequest {
+}
+
+message ListActivitiesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListActivitiesResponse {
+  repeated .alis.os.resources.solutions.v1.Activity activities = 1;
+  string next_page_token = 2;
+}
+
+message CreateMilestoneRequest {
+  string parent = 1;
+  .alis.os.resources.solutions.v1.Milestone milestone = 2;
+}
+
+message GetMilestoneRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateMilestoneRequest {
+  .alis.os.resources.solutions.v1.Milestone milestone = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteMilestoneRequest {
+}
+
+message ListMilestonesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListMilestonesResponse {
+  repeated .alis.os.resources.solutions.v1.Milestone milestones = 1;
+  string next_page_token = 2;
+}
+
+message AddInternalMilestoneRequest {
+  string solution = 1;
+  string display_name = 2;
+  string description = 3;
+  .google.type.Date due_date = 4;
+  string assignee = 6;
+}
+
+message AddInternalMilestoneResponse {
+}
+
+message AddExternalMilestoneRequest {
+  string solution = 1;
+  string display_name = 2;
+  string description = 3;
+  .google.type.Date due_date = 4;
+  string assignee = 6;
+}
+
+message AddExternalMilestoneResponse {
+}
+
+message TimeEntry {
+  message TimeLog {
+    .google.protobuf.Timestamp start_time = 1;
+    .google.protobuf.Timestamp stop_time = 2;
+    .google.protobuf.Duration duration = 3;
+  }
+  message Reflection {
+    int32 productivity_scale = 1;
+    string productivity_hindrances = 2;
+    bool experienced_flow = 3;
+  }
+  string name = 1;
+  bool running = 2;
+  repeated .alis.os.resources.solutions.v1.TimeEntry.TimeLog time_logs = 3;
+  .google.protobuf.Duration duration = 4;
+  string solution = 5;
+  string notes = 6;
+  .alis.os.resources.solutions.v1.TimeEntry.Reflection reflection = 7;
+  bool submitted = 8;
+  bool paused = 9;
+  .google.protobuf.Timestamp start_time = 98;
+  .google.protobuf.Timestamp stop_time = 100;
+}
+
+message GetTimeEntryRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateTimeEntryRequest {
+}
+
+message UpdateTimeEntryRequest {
+  .alis.os.resources.solutions.v1.TimeEntry time_entry = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteTimeEntryRequest {
+}
+
+message ListTimeEntriesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListTimeEntriesResponse {
+  repeated .alis.os.resources.solutions.v1.TimeEntry time_entries = 1;
+  string next_page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message SignProposalRequest {
+}
+
+message SignProposalResponse {
+}
+
+message GenerateProposalExecutionSignedUrlRequest {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  string proposal = 1;
+  .alis.os.resources.solutions.v1.GenerateProposalExecutionSignedUrlRequest.Signatory signatory = 2;
+  .google.type.Money upfront_fee = 3;
+}
+
+message GenerateProposalExecutionSignedUrlResponse {
+}
+
+message SendProposalExecutionVerificationEmailRequest {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  string proposal = 1;
+  .alis.os.resources.solutions.v1.SendProposalExecutionVerificationEmailRequest.Signatory signatory = 2;
+  .google.type.Money upfront_fee = 3;
+}
+
+message SendProposalExecutionVerificationEmailResponse {
+}
+
+message RetrieveProposalExecutionInfoRequest {
+}
+
+message RetrieveProposalExecutionInfoResponse {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  .alis.os.resources.solutions.v1.Proposal proposal = 1;
+  string solution_display_name = 2;
+  .alis.os.resources.solutions.v1.RetrieveProposalExecutionInfoResponse.Signatory signatory = 3;
+  .google.protobuf.Timestamp issued_time = 4;
+  .google.protobuf.Timestamp expiry_time = 5;
+}
+
+message SignProposalWithTokenRequest {
+}
+
+message SignProposalWithTokenResponse {
+  .alis.os.resources.solutions.v1.Proposal proposal = 1;
+  string signed_proposal_uri = 2;
+}
+
+message CalculateSolutionUpfrontAndMonthlyFeeRequest {
+  string solution = 1;
+  .google.type.Money upfront_fee = 2;
+}
+
+message CalculateSolutionUpfrontAndMonthlyFeeResponse {
+}
+
+message SetSolutionUpfrontAndMonthlyFeeRequest {
+  string solution = 1;
+  .google.type.Money upfront_fee = 2;
+}
+
+message SetSolutionUpfrontAndMonthlyFeeResponse {
+  .google.type.Money upfront_fee = 1;
+  .google.type.Money monthly_fee = 2;
+}
+
+message CalculateSolutionBusinessCaseValueRequest {
+  string solution = 1;
+  .google.protobuf.Duration monthly_time_saved = 2;
+  .google.type.Money average_cost_per_hour = 3;
+  .google.type.Money monthly_operational_cost = 4;
+  .google.type.Money monthly_revenue_impact = 5;
+  bool overwrite_proposal = 6;
+}
+
+message CalculateSolutionBusinessCaseValueResponse {
+  .google.type.Money monthly_savings = 1;
+  int64 payback_period = 2;
+}
+
+message InitialiseProposalRequest {
+}
+
+message InitialiseProposalResponse {
+}
+
+message RefreshProposalReferenceInformationRequest {
+}
+
+message RefreshProposalReferenceInformationResponse {
+}
+
+message GenerateProposalDeliverablesContentBlockRequest {
+}
+
+message GenerateProposalDeliverablesContentBlockResponse {
+}
+
+message GenerateProposalMilestonesOverviewContentBlockRequest {
+}
+
+message GenerateProposalMilestonesOverviewContentBlockResponse {
+}
+
+message GenerateProposalTargetDatesContentBlockRequest {
+}
+
+message GenerateProposalTargetDatesContentBlockResponse {
+}
+
+message ProposalGenerateProposalTeamContentBlockRequest {
+}
+
+message ProposalGenerateProposalTeamContentBlockResponse {
+}
+
+message GenerateProposalBillingContentBlockRequest {
+}
+
+message GenerateProposalBillingContentBlockResponse {
+}
+
+message RetrieveProductSolutionsRequest {
+}
+
+message RetrieveProductSolutionsResponse {
+  message SolutionOverview {
+    string solution = 1;
+    string solution_display_name = 2;
+    int32 solution_state = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+    string solution_description = 4;
+    bool is_proof_of_concept = 5;
+  }
+}
+
+message RetrieveBuilderLatestTimeEntryRequest {
+}
+
+message RetrieveBuilderLatestTimeEntryResponse {
+}
+
+message StartTimeLoggingRequest {
+}
+
+message StartTimeLoggingResponse {
+}
+
+message PauseTimeLoggingRequest {
+}
+
+message PauseTimeLoggingResponse {
+}
+
+message StopTimeLoggingRequest {
+}
+
+message StopTimeLoggingResponse {
+}
+
+message DiscardTimeEntryRequest {
+}
+
+message DiscardTimeEntryResponse {
+}
+
+message RetrieveSolutionProgressUpdatesRequest {
+}
+
+message RetrieveSolutionProgressUpdatesResponse {
+}
+
+message RetrieveProgressUpdateCommentsRequest {
+}
+
+message RetrieveProgressUpdateCommentsResponse {
+}
+
+message AddProgressUpdateCommentRequest {
+  string progress_update = 1;
+  string comment_content = 2;
+}
+
+message AddProgressUpdateCommentResponse {
+}
+
+message RetrieveProgressUpdateContentBlocksCommentsRequest {
+}
+
+message RetrieveProgressUpdateContentBlocksCommentsResponse {
+}
+
+message AddProgressUpdateContentBlockCommentRequest {
+  string progress_update = 1;
+  string content_block_id = 2;
+  string comment_content = 3;
+}
+
+message AddProgressUpdateContentBlockCommentResponse {
+}
+
+message SubmitProgressUpdateRequest {
+  string solution = 1;
+  string notes = 2;
+  string context_uri = 3;
+  repeated string attachment_uris = 4;
+  repeated .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock rich_text = 5;
+}
+
+message SubmitProgressUpdateResponse {
+}
+
+message GenerateDraftProgressUpdateRequest {
+  string solution = 1;
+  string reference_progress_update = 2;
+}
+
+message GenerateDraftProgressUpdateResponse {
+}
+
+message DiscardDraftProgressUpdateRequest {
+}
+
+message DiscardDraftProgressUpdateResponse {
+}
+
+message AmendProgressUpdateRequest {
+  string activity = 1;
+  repeated .alis.os.resources.solutions.v1.Activity.Progress.ContentBlock rich_text = 2;
+}
+
+message AmendProgressUpdateResponse {
+}
+
+message PublishProgressUpdateRequest {
+}
+
+message PublishProgressUpdateResponse {
+}
+
+message SubmitTimeEntryRequest {
+  string solution = 1;
+  string notes = 2;
+  .alis.os.resources.solutions.v1.TimeEntry.Reflection reflection = 3;
+}
+
+message SubmitTimeEntryResponse {
+}
+
+message SubmitManualTimeEntryRequest {
+  .google.protobuf.Duration duration = 1;
+  string notes = 2;
+  string solution = 3;
+}
+
+message SubmitManualTimeEntryResponse {
+}
+
+message RetrieveSolutionsToApproveRequest {
+}
+
+message RetrieveSolutionsToApproveResponse {
+}
+
+message RetrieveSolutionsToAcceptRequest {
+}
+
+message RetrieveSolutionsToAcceptResponse {
+}
+
+message RequestSolutionRequest {
+  message Budget {
+    .google.type.Money fixed_fee = 1;
+    .google.type.Money hourly_rate = 2;
+  }
+  string title = 1;
+  .alis.os.resources.solutions.v1.Solution.Scope.Size scope_size = 2;  // enum (low-confidence heuristic)
+  .alis.os.resources.solutions.v1.RequestSolutionRequest.Budget budget = 3;
+  string details = 4;
+}
+
+message RequestSolutionResponse {
+}
+
+message SetSolutionTeamRequest {
+  string solution = 1;
+  .alis.os.resources.solutions.v1.Solution.Team team = 2;
+}
+
+message SetSolutionTeamResponse {
+}
+
+message GenerateActivityReportRequest {
+}
+
+message GenerateActivityReportResponse {
+  message ActivityReport {
+    message HoursOverview {
+      message WeeklyHours {
+        .google.type.Date start_date = 1;
+        repeated float individual_hours = 2;
+        float total_hours_spent = 3;
+      }
+      float total_hours_spent = 1;
+      repeated .alis.os.resources.solutions.v1.GenerateActivityReportResponse.ActivityReport.HoursOverview.WeeklyHours weekly_hours_overview = 2;
+    }
+    message MilestoneAchievement {
+      int32 milestones_achieved = 1;
+      int32 milestones = 2;
+    }
+    string solution = 1;
+    .alis.os.resources.solutions.v1.GenerateActivityReportResponse.ActivityReport.HoursOverview hours_overview = 2;
+    .alis.os.resources.solutions.v1.GenerateActivityReportResponse.ActivityReport.MilestoneAchievement milestone_achievement = 4;
+  }
+}
+
+message GenerateMilestonesOverviewContentBlockRequest {
+  string solution = 1;
+  repeated string milestones = 2;
+}
+
+message GenerateMilestonesOverviewContentBlockResponse {
+}
+
+message GenerateHoursWorkedContentBlockRequest {
+  string solution = 1;
+  .google.type.Date start_date = 2;
+  .google.type.Date end_date = 3;
+}
+
+message GenerateHoursWorkedContentBlockResponse {
+}
+
+message SetProgressUpdateLastViewedRequest {
+}
+
+message SetProgressUpdateLastViewedResponse {
+}
+
+message ShareSolutionWithNewUserRequest {
+  message NewUser {
+    string email = 1;
+    string given_name = 2;
+    string family_name = 3;
+  }
+  string solution = 1;
+  .alis.os.resources.solutions.v1.ShareSolutionWithNewUserRequest.NewUser user = 2;
+}
+
+message ShareSolutionWithNewUserResponse {
+}
+
+message GenerateSolutionFromRfpRequest {
+  string rfp = 1;
+  bool omit_proposal = 2;
+}
+
+message GenerateSolutionFromRfpMetadata {
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      RUNNING = 1;
+      SUCCEEDED = 2;
+      FAILED = 3;
+    }
+    string description = 1;
+    .alis.os.resources.solutions.v1.GenerateSolutionFromRfpMetadata.Step.State state = 2;
+    string notes = 3;
+    .google.protobuf.Timestamp start_time = 4;
+    .google.protobuf.Timestamp end_time = 5;
+  }
+}
+
+message GenerateSolutionFromRfpResponse {
+}
+
+message RequestSolutionProposalRequest {
+  repeated string categories = 1;
+  string overview = 2;
+  string recording_uri = 3;
+  string suggested_title = 4;
+}
+
+message RequestSolutionProposalResponse {
+  string solution = 1;
+  string notes = 2;
+}
+
+message RequestSolutionApprovalRequest {
+}
+
+message RequestSolutionApprovalResponse {
+}
+
+message ApproveSolutionRequest {
+}
+
+message ApproveSolutionResponse {
+}
+
+message RequestSolutionAcceptanceRequest {
+}
+
+message RequestSolutionAcceptanceResponse {
+}
+
+message AcceptSolutionRequest {
+}
+
+message AcceptSolutionResponse {
+}
+
+message BackfillSolutionAcceptanceRequest {
+  string solution = 1;
+  string builder = 2;
+  .google.type.Date acceptance_date = 3;
+}
+
+message BackfillSolutionAcceptanceResponse {
+}
+
+message ArchiveSolutionRequest {
+}
+
+message ArchiveSolutionResponse {
+}
+
+message UnarchiveSolutionRequest {
+}
+
+message UnarchiveSolutionResponse {
+}
+
+message DuplicateSolutionRequest {
+}
+
+message DuplicateSolutionResponse {
+}
+
+message GenerateSolutionProposalSignedUrlRequest {
+}
+
+message GenerateSolutionProposalSignedUrlResponse {
+}
+
+message RetrieveSolutionProposalRequest {
+}
+
+message RetrieveSolutionProposalResponse {
+  .alis.os.resources.solutions.v1.Proposal proposal = 1;
+  string solution_display_name = 2;
+  .google.protobuf.Timestamp issued_time = 3;
+  .google.protobuf.Timestamp expiry_time = 4;
+}
+
+message Proposal {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    UNDER_REVIEW = 2;
+    FINALISED = 3;
+  }
+  message Description {
+  }
+  message Objectives {
+  }
+  message Deliverables {
+    repeated .alis.os.resources.solutions.v1.Solution.Deliverable deliverables = 1;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 2;
+  }
+  message Timeline {
+    repeated .alis.os.resources.solutions.v1.Milestone milestones = 1;
+    .google.type.Date target_commencement_date = 2;
+    .google.type.Date target_completion_date = 3;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 4;
+  }
+  message KeyPersonnel {
+    .alis.os.resources.solutions.v1.Solution.Team team = 1;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 2;
+  }
+  message FeesAndPayment {
+    message FixedFee {
+      .google.type.Money fixed_fee = 1;
+      .google.protobuf.DoubleValue discount = 2;
+    }
+    message HourlyFee {
+      .google.type.Money budget = 1;
+      .google.type.Money hourly_fee = 2;
+      .google.protobuf.DoubleValue discount = 3;
+    }
+    message FixedAndRecurring {
+      .google.type.Money min_upfront_payment = 1;
+      .google.type.Money max_upfront_payment = 2;
+      .google.type.Money upfront_fee = 3;
+      .google.type.Money monthly_fee = 4;
+    }
+    int32 type = 1;  // enum type not recoverable from bundle (wire-compatible int32)
+    .alis.os.resources.solutions.v1.Proposal.FeesAndPayment.FixedFee fixed = 2;
+    .alis.os.resources.solutions.v1.Proposal.FeesAndPayment.HourlyFee hourly = 3;
+    .alis.os.resources.solutions.v1.Proposal.FeesAndPayment.FixedAndRecurring fixed_and_recurring = 4;
+    string account = 5;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 6;
+  }
+  message BusinessCase {
+    .google.protobuf.Duration monthly_time_saved = 1;
+    .google.type.Money average_cost_per_hour = 2;
+    .google.type.Money monthly_operational_cost = 3;
+    .google.type.Money monthly_revenue_impact = 4;
+    .google.type.Money monthly_savings = 5;
+    int64 payback_period = 7;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 8;
+  }
+  message Reporting {
+  }
+  message Execution {
+    .alis.os.resources.solutions.v1.ElectronicSignature account_partner = 1;
+    .alis.os.resources.solutions.v1.ElectronicSignature solution_sponsor = 2;
+    repeated .alis.os.resources.solutions.v1.Proposal.ContentBlock content = 3;
+    .alis.os.resources.solutions.v1.ElectronicSignature client_signatory = 4;
+  }
+  message ContentBlock {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      TITLE = 1;
+      SUBTITLE = 2;
+      TEXT_BODY = 3;
+      IMAGE = 4;
+      VIDEO = 5;
+      DIVIDER = 6;
+      SOLUTION_DELIVERABLES = 7;
+      MILESTONES_OVERVIEW = 8;
+      TARGET_DATES = 9;
+      SOLUTION_TEAM = 10;
+      SOLUTION_BILLING = 11;
+      PROPOSAL_EXECUTION = 12;
+      FOOTNOTE = 13;
+      LINK_PREVIEW = 14;
+      BUSINESS_CASE_CALCULATOR = 15;
+    }
+    message Title {
+    }
+    message Subtitle {
+    }
+    message TextBody {
+    }
+    message Image {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    message Video {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    message Divider {
+    }
+    message SolutionDeliverables {
+      message SolutionDeliverableOverview {
+        string title = 1;
+        string description = 2;
+        repeated string reference_uris = 3;
+      }
+    }
+    message MilestonesOverview {
+      message MilestoneOverview {
+        string display_name = 2;
+        string description = 3;
+        .alis.os.resources.solutions.v1.Proposal.State state = 4;
+        .google.type.Date due_date = 5;
+      }
+    }
+    message TargetDates {
+      .google.type.Date target_commencement_date = 1;
+      .google.type.Date target_completion_date = 2;
+    }
+    message SolutionTeam {
+      message Stakeholder {
+        string builder = 1;
+        string display_name = 2;
+        string profile_picture_uri = 3;
+        string email = 4;
+      }
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionTeam.Stakeholder build_partner = 1;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionTeam.Stakeholder account_partner = 2;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionTeam.Stakeholder solution_sponsor = 3;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionTeam.Stakeholder solution_manager = 4;
+    }
+    message SolutionBilling {
+      message FixedFee {
+        .google.type.Money fixed_fee = 1;
+        .google.protobuf.DoubleValue discount = 2;
+      }
+      message HourlyFee {
+        .google.type.Money budget = 1;
+        .google.type.Money hourly_fee = 2;
+        .google.protobuf.DoubleValue discount = 3;
+      }
+      message FixedAndRecurring {
+        .google.type.Money min_upfront_payment = 1;
+        .google.type.Money max_upfront_payment = 2;
+        .google.type.Money upfront_fee = 3;
+        .google.type.Money monthly_fee = 4;
+      }
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Type type = 1;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionBilling.FixedFee fixed = 2;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionBilling.HourlyFee hourly = 3;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionBilling.FixedAndRecurring fixed_and_recurring = 4;
+    }
+    message ProposalExecution {
+      .alis.os.resources.solutions.v1.ElectronicSignature account_partner = 1;
+      .alis.os.resources.solutions.v1.ElectronicSignature solution_sponsor = 2;
+      .alis.os.resources.solutions.v1.ElectronicSignature client_signatory = 3;
+    }
+    message Footnote {
+    }
+    message LinkPreview {
+      string uri = 1;
+      string avatar_uri = 2;
+      string title = 3;
+      string body = 4;
+    }
+    message BusinessCaseCalculator {
+      .google.protobuf.Duration monthly_time_saved = 1;
+      .google.type.Money average_cost_per_hour = 2;
+      .google.type.Money monthly_operational_cost = 3;
+      .google.type.Money monthly_revenue_impact = 4;
+      .google.type.Money monthly_savings = 5;
+      int64 payback_period = 7;
+    }
+    .alis.os.resources.solutions.v1.Proposal.ContentBlock.Type type = 1;
+    oneof block {
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Title title = 2;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Subtitle subtitle = 3;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.TextBody text_body = 4;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Image image = 5;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Video video = 6;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Divider divider = 7;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionDeliverables solution_deliverables = 8;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.MilestonesOverview milestones_overview = 9;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.TargetDates target_dates = 10;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionTeam solution_team = 11;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.SolutionBilling solution_billing = 12;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.ProposalExecution execution = 13;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.Footnote footnote = 14;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.LinkPreview link_preview = 15;
+      .alis.os.resources.solutions.v1.Proposal.ContentBlock.BusinessCaseCalculator business_case_calculator = 16;
+    }
+  }
+  string name = 1;
+  .alis.os.resources.solutions.v1.Proposal.State state = 2;
+  .alis.os.resources.solutions.v1.Proposal.Description description = 3;
+  .alis.os.resources.solutions.v1.Proposal.Objectives objectives = 4;
+  .alis.os.resources.solutions.v1.Proposal.Deliverables deliverables = 5;
+  .alis.os.resources.solutions.v1.Proposal.Timeline timeline = 6;
+  .alis.os.resources.solutions.v1.Proposal.KeyPersonnel key_personnel = 7;
+  .alis.os.resources.solutions.v1.Proposal.FeesAndPayment fees_and_payment = 8;
+  .alis.os.resources.solutions.v1.Proposal.Execution execution = 9;
+  .alis.os.resources.solutions.v1.Proposal.Reporting reporting = 10;
+  .google.protobuf.Timestamp last_updated = 11;
+  .alis.os.resources.solutions.v1.Proposal.BusinessCase business_case = 12;
+}
+
+message GetProposalRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateProposalRequest {
+  .alis.os.resources.solutions.v1.Proposal proposal = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message ElectronicSignature {
+  string builder = 1;
+  string full_name = 2;
+  bytes signature = 3;
+  .google.protobuf.Timestamp signed_time = 4;
+  string email = 5;
+  string token_signature = 6;
+  string designation = 7;
+}
+
+message SuggestSolutionDisplayNameRequest {
+}
+
+message SuggestSolutionDisplayNameResponse {
+}
+
+message SuggestTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  string text = 1;
+  .alis.os.resources.solutions.v1.SuggestTextEnhancementRequest.Type type = 2;
+}
+
+message SuggestTextEnhancementResponse {
+}
+
+message SuggestSolutionInfoTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  enum Target {
+    TARGET_UNSPECIFIED = 0;
+    DESCRIPTION = 1;
+    DELIVERABLE_BODY = 2;
+    MILESTONE_BODY = 3;
+  }
+  string text = 1;
+  .alis.os.resources.solutions.v1.SuggestSolutionInfoTextEnhancementRequest.Type type = 2;
+  .alis.os.resources.solutions.v1.SuggestSolutionInfoTextEnhancementRequest.Target target = 3;
+}
+
+message SuggestSolutionInfoTextEnhancementResponse {
+}
+
+message SuggestProposalTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  string text = 1;
+  .alis.os.resources.solutions.v1.SuggestProposalTextEnhancementRequest.Type type = 2;
+}
+
+message SuggestProposalTextEnhancementResponse {
+}
+
+message SuggestProgressUpdateTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  string text = 1;
+  .alis.os.resources.solutions.v1.SuggestProgressUpdateTextEnhancementRequest.Type type = 2;
+}
+
+message SuggestProgressUpdateTextEnhancementResponse {
+}
+
+message GenerateSolutionAttachmentUploadUriRequest {
+  string solution = 1;
+  string filename = 2;
+}
+
+message GenerateSolutionAttachmentUploadUriResponse {
+}
+
+message GenerateSolutionAttachmentDownloadUrisRequest {
+}
+
+message GenerateSolutionAttachmentDownloadUrisResponse {
+}
+
+service SolutionsService {
+  rpc CreateSolution(.alis.os.resources.solutions.v1.CreateSolutionRequest) returns (.alis.os.resources.solutions.v1.Solution);
+  rpc GetSolution(.alis.os.resources.solutions.v1.GetSolutionRequest) returns (.alis.os.resources.solutions.v1.Solution);
+  rpc UpdateSolution(.alis.os.resources.solutions.v1.UpdateSolutionRequest) returns (.alis.os.resources.solutions.v1.Solution);
+  rpc DeleteSolution(.alis.os.resources.solutions.v1.DeleteSolutionRequest) returns (.google.protobuf.Empty);
+  rpc ListSolutions(.alis.os.resources.solutions.v1.ListSolutionsRequest) returns (.alis.os.resources.solutions.v1.ListSolutionsResponse);
+  rpc GetProposal(.alis.os.resources.solutions.v1.GetProposalRequest) returns (.alis.os.resources.solutions.v1.Proposal);
+  rpc UpdateProposal(.alis.os.resources.solutions.v1.UpdateProposalRequest) returns (.alis.os.resources.solutions.v1.Proposal);
+  rpc CalculateSolutionUpfrontAndMonthlyFee(.alis.os.resources.solutions.v1.CalculateSolutionUpfrontAndMonthlyFeeRequest) returns (.alis.os.resources.solutions.v1.CalculateSolutionUpfrontAndMonthlyFeeResponse);
+  rpc SetSolutionUpfrontAndMonthlyFee(.alis.os.resources.solutions.v1.SetSolutionUpfrontAndMonthlyFeeRequest) returns (.alis.os.resources.solutions.v1.SetSolutionUpfrontAndMonthlyFeeResponse);
+  rpc CalculateSolutionBusinessCaseValue(.alis.os.resources.solutions.v1.CalculateSolutionBusinessCaseValueRequest) returns (.alis.os.resources.solutions.v1.CalculateSolutionBusinessCaseValueResponse);
+  rpc SignProposal(.alis.os.resources.solutions.v1.SignProposalRequest) returns (.alis.os.resources.solutions.v1.SignProposalResponse);
+  rpc GenerateProposalExecutionSignedUrl(.alis.os.resources.solutions.v1.GenerateProposalExecutionSignedUrlRequest) returns (.alis.os.resources.solutions.v1.GenerateProposalExecutionSignedUrlResponse);
+  rpc SendProposalExecutionVerificationEmail(.alis.os.resources.solutions.v1.SendProposalExecutionVerificationEmailRequest) returns (.alis.os.resources.solutions.v1.SendProposalExecutionVerificationEmailResponse);
+  rpc RetrieveProposalExecutionInfo(.alis.os.resources.solutions.v1.RetrieveProposalExecutionInfoRequest) returns (.alis.os.resources.solutions.v1.RetrieveProposalExecutionInfoResponse);
+  rpc SignProposalWithToken(.alis.os.resources.solutions.v1.SignProposalWithTokenRequest) returns (.alis.os.resources.solutions.v1.SignProposalWithTokenResponse);
+  rpc InitialiseProposal(.alis.os.resources.solutions.v1.InitialiseProposalRequest) returns (.alis.os.resources.solutions.v1.InitialiseProposalResponse);
+  rpc RefreshProposalReferenceInformation(.alis.os.resources.solutions.v1.RefreshProposalReferenceInformationRequest) returns (.alis.os.resources.solutions.v1.RefreshProposalReferenceInformationResponse);
+  rpc GenerateSolutionProposalSignedUrl(.alis.os.resources.solutions.v1.GenerateSolutionProposalSignedUrlRequest) returns (.alis.os.resources.solutions.v1.GenerateSolutionProposalSignedUrlResponse);
+  rpc RetrieveSolutionProposal(.alis.os.resources.solutions.v1.RetrieveSolutionProposalRequest) returns (.alis.os.resources.solutions.v1.RetrieveSolutionProposalResponse);
+  rpc GenerateProposalDeliverablesContentBlock(.alis.os.resources.solutions.v1.GenerateProposalDeliverablesContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateProposalDeliverablesContentBlockResponse);
+  rpc GenerateProposalMilestonesOverviewContentBlock(.alis.os.resources.solutions.v1.GenerateProposalMilestonesOverviewContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateProposalMilestonesOverviewContentBlockResponse);
+  rpc GenerateProposalTargetDatesContentBlock(.alis.os.resources.solutions.v1.GenerateProposalTargetDatesContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateProposalTargetDatesContentBlockResponse);
+  rpc ProposalGenerateProposalTeamContentBlock(.alis.os.resources.solutions.v1.ProposalGenerateProposalTeamContentBlockRequest) returns (.alis.os.resources.solutions.v1.ProposalGenerateProposalTeamContentBlockResponse);
+  rpc GenerateProposalBillingContentBlock(.alis.os.resources.solutions.v1.GenerateProposalBillingContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateProposalBillingContentBlockResponse);
+  rpc CreateActivity(.alis.os.resources.solutions.v1.CreateActivityRequest) returns (.alis.os.resources.solutions.v1.Activity);
+  rpc GetActivity(.alis.os.resources.solutions.v1.GetActivityRequest) returns (.alis.os.resources.solutions.v1.Activity);
+  rpc UpdateActivity(.alis.os.resources.solutions.v1.UpdateActivityRequest) returns (.alis.os.resources.solutions.v1.Activity);
+  rpc DeleteActivity(.alis.os.resources.solutions.v1.DeleteActivityRequest) returns (.google.protobuf.Empty);
+  rpc ListActivities(.alis.os.resources.solutions.v1.ListActivitiesRequest) returns (.alis.os.resources.solutions.v1.ListActivitiesResponse);
+  rpc CreateMilestone(.alis.os.resources.solutions.v1.CreateMilestoneRequest) returns (.alis.os.resources.solutions.v1.Milestone);
+  rpc GetMilestone(.alis.os.resources.solutions.v1.GetMilestoneRequest) returns (.alis.os.resources.solutions.v1.Milestone);
+  rpc UpdateMilestone(.alis.os.resources.solutions.v1.UpdateMilestoneRequest) returns (.alis.os.resources.solutions.v1.Milestone);
+  rpc DeleteMilestone(.alis.os.resources.solutions.v1.DeleteMilestoneRequest) returns (.google.protobuf.Empty);
+  rpc ListMilestones(.alis.os.resources.solutions.v1.ListMilestonesRequest) returns (.alis.os.resources.solutions.v1.ListMilestonesResponse);
+  rpc AddInternalMilestone(.alis.os.resources.solutions.v1.AddInternalMilestoneRequest) returns (.alis.os.resources.solutions.v1.AddInternalMilestoneResponse);
+  rpc AddExternalMilestone(.alis.os.resources.solutions.v1.AddExternalMilestoneRequest) returns (.alis.os.resources.solutions.v1.AddExternalMilestoneResponse);
+  rpc GetTimeEntry(.alis.os.resources.solutions.v1.GetTimeEntryRequest) returns (.alis.os.resources.solutions.v1.TimeEntry);
+  rpc CreateTimeEntry(.alis.os.resources.solutions.v1.CreateTimeEntryRequest) returns (.alis.os.resources.solutions.v1.TimeEntry);
+  rpc UpdateTimeEntry(.alis.os.resources.solutions.v1.UpdateTimeEntryRequest) returns (.alis.os.resources.solutions.v1.TimeEntry);
+  rpc DeleteTimeEntry(.alis.os.resources.solutions.v1.DeleteTimeEntryRequest) returns (.google.protobuf.Empty);
+  rpc ListTimeEntries(.alis.os.resources.solutions.v1.ListTimeEntriesRequest) returns (.alis.os.resources.solutions.v1.ListTimeEntriesResponse);
+  rpc RetrieveProductSolutions(.alis.os.resources.solutions.v1.RetrieveProductSolutionsRequest) returns (.alis.os.resources.solutions.v1.RetrieveProductSolutionsResponse);
+  rpc RetrieveBuilderLatestTimeEntry(.alis.os.resources.solutions.v1.RetrieveBuilderLatestTimeEntryRequest) returns (.alis.os.resources.solutions.v1.RetrieveBuilderLatestTimeEntryResponse);
+  rpc StartTimeLogging(.alis.os.resources.solutions.v1.StartTimeLoggingRequest) returns (.alis.os.resources.solutions.v1.StartTimeLoggingResponse);
+  rpc PauseTimeLogging(.alis.os.resources.solutions.v1.PauseTimeLoggingRequest) returns (.alis.os.resources.solutions.v1.PauseTimeLoggingResponse);
+  rpc StopTimeLogging(.alis.os.resources.solutions.v1.StopTimeLoggingRequest) returns (.alis.os.resources.solutions.v1.StopTimeLoggingResponse);
+  rpc SubmitTimeEntry(.alis.os.resources.solutions.v1.SubmitTimeEntryRequest) returns (.alis.os.resources.solutions.v1.SubmitTimeEntryResponse);
+  rpc SubmitManualTimeEntry(.alis.os.resources.solutions.v1.SubmitManualTimeEntryRequest) returns (.alis.os.resources.solutions.v1.SubmitManualTimeEntryResponse);
+  rpc DiscardTimeEntry(.alis.os.resources.solutions.v1.DiscardTimeEntryRequest) returns (.alis.os.resources.solutions.v1.DiscardTimeEntryResponse);
+  rpc RetrieveSolutionProgressUpdates(.alis.os.resources.solutions.v1.RetrieveSolutionProgressUpdatesRequest) returns (.alis.os.resources.solutions.v1.RetrieveSolutionProgressUpdatesResponse);
+  rpc RetrieveProgressUpdateComments(.alis.os.resources.solutions.v1.RetrieveProgressUpdateCommentsRequest) returns (.alis.os.resources.solutions.v1.RetrieveProgressUpdateCommentsResponse);
+  rpc AddProgressUpdateComment(.alis.os.resources.solutions.v1.AddProgressUpdateCommentRequest) returns (.alis.os.resources.solutions.v1.AddProgressUpdateCommentResponse);
+  rpc RetrieveProgressUpdateContentBlocksComments(.alis.os.resources.solutions.v1.RetrieveProgressUpdateContentBlocksCommentsRequest) returns (.alis.os.resources.solutions.v1.RetrieveProgressUpdateContentBlocksCommentsResponse);
+  rpc AddProgressUpdateContentBlockComment(.alis.os.resources.solutions.v1.AddProgressUpdateContentBlockCommentRequest) returns (.alis.os.resources.solutions.v1.AddProgressUpdateContentBlockCommentResponse);
+  rpc SubmitProgressUpdate(.alis.os.resources.solutions.v1.SubmitProgressUpdateRequest) returns (.alis.os.resources.solutions.v1.SubmitProgressUpdateResponse);
+  rpc GenerateDraftProgressUpdate(.alis.os.resources.solutions.v1.GenerateDraftProgressUpdateRequest) returns (.alis.os.resources.solutions.v1.GenerateDraftProgressUpdateResponse);
+  rpc DiscardDraftProgressUpdate(.alis.os.resources.solutions.v1.DiscardDraftProgressUpdateRequest) returns (.alis.os.resources.solutions.v1.DiscardDraftProgressUpdateResponse);
+  rpc AmendProgressUpdate(.alis.os.resources.solutions.v1.AmendProgressUpdateRequest) returns (.alis.os.resources.solutions.v1.AmendProgressUpdateResponse);
+  rpc PublishProgressUpdate(.alis.os.resources.solutions.v1.PublishProgressUpdateRequest) returns (.alis.os.resources.solutions.v1.PublishProgressUpdateResponse);
+  rpc GenerateMilestonesOverviewContentBlock(.alis.os.resources.solutions.v1.GenerateMilestonesOverviewContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateMilestonesOverviewContentBlockResponse);
+  rpc GenerateHoursWorkedContentBlock(.alis.os.resources.solutions.v1.GenerateHoursWorkedContentBlockRequest) returns (.alis.os.resources.solutions.v1.GenerateHoursWorkedContentBlockResponse);
+  rpc SetProgressUpdateLastViewed(.alis.os.resources.solutions.v1.SetProgressUpdateLastViewedRequest) returns (.alis.os.resources.solutions.v1.SetProgressUpdateLastViewedResponse);
+  rpc GenerateActivityReport(.alis.os.resources.solutions.v1.GenerateActivityReportRequest) returns (.alis.os.resources.solutions.v1.GenerateActivityReportResponse);
+  rpc SetSolutionTeam(.alis.os.resources.solutions.v1.SetSolutionTeamRequest) returns (.alis.os.resources.solutions.v1.SetSolutionTeamResponse);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc ShareSolutionWithNewUser(.alis.os.resources.solutions.v1.ShareSolutionWithNewUserRequest) returns (.alis.os.resources.solutions.v1.ShareSolutionWithNewUserResponse);
+  rpc GenerateSolutionFromRfp(.alis.os.resources.solutions.v1.GenerateSolutionFromRfpRequest) returns (.google.longrunning.Operation);
+  rpc RequestSolutionProposal(.alis.os.resources.solutions.v1.RequestSolutionProposalRequest) returns (.alis.os.resources.solutions.v1.RequestSolutionProposalResponse);
+  rpc RequestSolutionApproval(.alis.os.resources.solutions.v1.RequestSolutionApprovalRequest) returns (.alis.os.resources.solutions.v1.RequestSolutionApprovalResponse);
+  rpc ApproveSolution(.alis.os.resources.solutions.v1.ApproveSolutionRequest) returns (.alis.os.resources.solutions.v1.ApproveSolutionResponse);
+  rpc RequestSolutionAcceptance(.alis.os.resources.solutions.v1.RequestSolutionAcceptanceRequest) returns (.alis.os.resources.solutions.v1.RequestSolutionAcceptanceResponse);
+  rpc AcceptSolution(.alis.os.resources.solutions.v1.AcceptSolutionRequest) returns (.alis.os.resources.solutions.v1.AcceptSolutionResponse);
+  rpc BackfillSolutionAcceptance(.alis.os.resources.solutions.v1.BackfillSolutionAcceptanceRequest) returns (.alis.os.resources.solutions.v1.BackfillSolutionAcceptanceResponse);
+  rpc RequestSolution(.alis.os.resources.solutions.v1.RequestSolutionRequest) returns (.alis.os.resources.solutions.v1.RequestSolutionResponse);
+  rpc RetrieveSolutionsToApprove(.alis.os.resources.solutions.v1.RetrieveSolutionsToApproveRequest) returns (.alis.os.resources.solutions.v1.RetrieveSolutionsToApproveResponse);
+  rpc RetrieveSolutionsToAccept(.alis.os.resources.solutions.v1.RetrieveSolutionsToAcceptRequest) returns (.alis.os.resources.solutions.v1.RetrieveSolutionsToAcceptResponse);
+  rpc ArchiveSolution(.alis.os.resources.solutions.v1.ArchiveSolutionRequest) returns (.alis.os.resources.solutions.v1.ArchiveSolutionResponse);
+  rpc UnarchiveSolution(.alis.os.resources.solutions.v1.UnarchiveSolutionRequest) returns (.alis.os.resources.solutions.v1.UnarchiveSolutionResponse);
+  rpc DuplicateSolution(.alis.os.resources.solutions.v1.DuplicateSolutionRequest) returns (.alis.os.resources.solutions.v1.DuplicateSolutionResponse);
+  rpc SuggestSolutionDisplayName(.alis.os.resources.solutions.v1.SuggestSolutionDisplayNameRequest) returns (.alis.os.resources.solutions.v1.SuggestSolutionDisplayNameResponse);
+  rpc SuggestTextEnhancement(.alis.os.resources.solutions.v1.SuggestTextEnhancementRequest) returns (.alis.os.resources.solutions.v1.SuggestTextEnhancementResponse);
+  rpc SuggestSolutionInfoTextEnhancement(.alis.os.resources.solutions.v1.SuggestSolutionInfoTextEnhancementRequest) returns (.alis.os.resources.solutions.v1.SuggestSolutionInfoTextEnhancementResponse);
+  rpc SuggestProposalTextEnhancement(.alis.os.resources.solutions.v1.SuggestProposalTextEnhancementRequest) returns (.alis.os.resources.solutions.v1.SuggestProposalTextEnhancementResponse);
+  rpc SuggestProgressUpdateTextEnhancement(.alis.os.resources.solutions.v1.SuggestProgressUpdateTextEnhancementRequest) returns (.alis.os.resources.solutions.v1.SuggestProgressUpdateTextEnhancementResponse);
+  rpc GenerateSolutionAttachmentUploadUri(.alis.os.resources.solutions.v1.GenerateSolutionAttachmentUploadUriRequest) returns (.alis.os.resources.solutions.v1.GenerateSolutionAttachmentUploadUriResponse);
+  rpc GenerateSolutionAttachmentDownloadUris(.alis.os.resources.solutions.v1.GenerateSolutionAttachmentDownloadUrisRequest) returns (.alis.os.resources.solutions.v1.GenerateSolutionAttachmentDownloadUrisResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+}

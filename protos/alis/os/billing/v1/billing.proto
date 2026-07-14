@@ -1,0 +1,555 @@
+syntax = "proto3";
+
+package alis.os.billing.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
+import "google/type/money.proto";
+
+enum BillingAccountView {
+  BILLING_ACCOUNT_VIEW_UNSPECIFIED = 0;
+  BILLING_ACCOUNT_VIEW_BASIC = 1;
+  BILLING_ACCOUNT_VIEW_FULL = 2;
+  BILLING_ACCOUNT_VIEW_FULL_INCLUDING_SPEND = 3;
+}
+
+enum BudgetView {
+  BUDGET_VIEW_UNSPECIFIED = 0;
+  BUDGET_VIEW_BASIC = 1;
+  BUDGET_VIEW_FULL = 2;
+}
+
+message BillingAccount {
+  enum BillingAccountStatus {
+    BILLING_ACCOUNT_STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVE = 2;
+    KILL_SWITCH_ACTIVATED = 3;
+    ERROR = 4;
+  }
+  enum UsageType {
+    USAGE_TYPE_UNSPECIFIED = 0;
+    INTERNAL_PLATFORM = 1;
+    ALIS_PLATFORM_CLIENT_ACCOUNT_UNASSIGNED = 2;
+    ALIS_PLATFORM_CLIENT_ACCOUNT_ASSIGNED = 3;
+    ARCHIVED = 99;
+  }
+  enum BillingAccountProvenance {
+    PROVENANCE_UNSPECIFIED = 0;
+    DIRECT = 1;
+    DISTI_INGRAM_UK = 2;
+    DISTI_DIGICLOUD = 3;
+    DISTI_TDSYNNEX_BENELUX = 4;
+  }
+  message BillingExportConfig {
+    enum BillingExportStatus {
+      EXPORT_STATUS_UNSPECIFIED = 0;
+      ACTIVE = 1;
+      PROVISIONING = 2;
+      ERROR = 3;
+    }
+    .alis.os.billing.v1.BillingAccount.BillingExportConfig.BillingExportStatus billing_export_status = 1;
+    string project_id = 2;
+    string dataset_id = 3;
+    string error_message = 99;
+  }
+  message KillSwitchConfig {
+    bool enabled = 1;
+    string trigger_budget_id = 2;
+    int32 grace_period_minutes = 3;
+  }
+  message Spend {
+    .google.type.Money current_calendar_month = 1;
+    .google.type.Money previous_calendar_month = 2;
+    .google.type.Money current_calendar_quarter = 3;
+    .google.type.Money previous_calendar_quarter = 4;
+    .google.type.Money current_calendar_year = 5;
+    .google.type.Money previous_calendar_year = 6;
+    .google.type.Money last7_days = 7;
+    .google.type.Money last30_days = 8;
+  }
+  string name = 1;
+  string billing_account_name = 2;
+  string display_name = 3;
+  bool active = 4;
+  .alis.os.billing.v1.BillingAccount.BillingExportConfig export_config = 5;
+  repeated string attached_projects = 6;
+  .alis.os.billing.v1.BillingAccount.KillSwitchConfig kill_switch_config = 7;
+  .alis.os.billing.v1.BillingAccount.BillingAccountStatus status = 8;  // enum (heuristically resolved)
+  .alis.os.billing.v1.BillingAccount.UsageType usage_type = 9;
+  string alis_platform_account = 10;
+  .alis.os.billing.v1.BillingAccount.Spend spend = 11;
+  .alis.os.billing.v1.BillingAccount.BillingAccountProvenance billing_account_provenance = 12;
+  string google_cloud_display_name = 91;
+  string google_cloud_currency_code = 92;
+  string google_cloud_master_billing_account = 93;
+  string google_cloud_parent_billing_account = 95;
+  string provisioning_operation = 96;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+  .google.protobuf.Timestamp google_cloud_as_of_time = 101;
+  .google.protobuf.Timestamp has_permissions_as_of_time = 102;
+  bool has_permissions = 121;
+}
+
+message Budget {
+  enum BudgetStatus {
+    BUDGET_STATUS_UNSPECIFIED = 0;
+    BUDGET_ACTIVE = 1;
+    BUDGET_INACTIVE = 2;
+    BUDGET_EXCEEDED = 3;
+    BUDGET_ERROR = 4;
+  }
+  message BudgetAmount {
+    message SpecifiedAmount {
+    }
+    message LastPeriodAmount {
+    }
+    oneof budget_amount {
+      .alis.os.billing.v1.Budget.BudgetAmount.SpecifiedAmount specified_amount = 1;
+      .alis.os.billing.v1.Budget.BudgetAmount.LastPeriodAmount last_period_amount = 2;
+    }
+  }
+  message ThresholdRule {
+    enum SpendBasis {
+      SPEND_BASIS_UNSPECIFIED = 0;
+      CURRENT_SPEND = 1;
+      FORECASTED_SPEND = 2;
+    }
+    double threshold_percent = 1;
+    .alis.os.billing.v1.Budget.ThresholdRule.SpendBasis spend_basis = 2;
+    bool exceeded = 3;
+  }
+  message BudgetFilter {
+    enum CalendarPeriod {
+      CALENDAR_PERIOD_UNSPECIFIED = 0;
+      MONTH = 1;
+      QUARTER = 2;
+      YEAR = 3;
+    }
+    message CreditTypesFilter {
+      enum CreditTypesTreatment {
+        CREDIT_TYPES_TREATMENT_UNSPECIFIED = 0;
+        INCLUDE_ALL_CREDITS = 1;
+        EXCLUDE_ALL_CREDITS = 2;
+        INCLUDE_SPECIFIED_CREDITS = 3;
+      }
+      .alis.os.billing.v1.Budget.BudgetFilter.CreditTypesFilter.CreditTypesTreatment treatment = 1;  // enum (heuristically resolved)
+      repeated string credit_types = 2;
+    }
+    message CustomPeriod {
+      .google.type.Date start_date = 1;
+      .google.type.Date end_date = 2;
+    }
+    repeated string projects = 1;
+    repeated string services = 2;
+    .alis.os.billing.v1.Budget.BudgetFilter.CreditTypesFilter credit_types = 3;
+    oneof usage_period {
+      .alis.os.billing.v1.Budget.BudgetFilter.CalendarPeriod calendar_period = 4;
+      .alis.os.billing.v1.Budget.BudgetFilter.CustomPeriod custom_period = 5;
+    }
+  }
+  message BudgetAlertMessage {
+    string budget_display_name = 1;
+    double cost_amount = 2;
+    .google.protobuf.Timestamp cost_interval_start = 3;
+    double budget_amount = 4;
+    string budget_amount_type = 5;
+    string currency_code = 6;
+    double alert_threshold_exceeded = 7;
+    double forecasted_cost_amount = 8;
+    double forecast_threshold_exceeded = 9;
+  }
+  string name = 1;
+  string display_name = 2;
+  string cloud_budget_name = 3;
+  .alis.os.billing.v1.Budget.BudgetAmount amount = 4;
+  repeated .alis.os.billing.v1.Budget.ThresholdRule threshold_rules = 5;
+  .alis.os.billing.v1.Budget.BudgetFilter budget_filter = 6;
+  bool is_kill_switch = 7;
+  repeated string notification_channels = 8;
+  .alis.os.billing.v1.Budget.BudgetStatus status = 9;  // enum (heuristically resolved)
+  .alis.os.billing.v1.Budget.BudgetAlertMessage latest_budget_alert_message = 81;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateBillingAccountRequest {
+  .alis.os.billing.v1.BillingAccount billingaccount = 2;
+  string billingaccount_id = 3;
+}
+
+message GetBillingAccountRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateBillingAccountRequest {
+  .alis.os.billing.v1.BillingAccount billingaccount = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteBillingAccountRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteBillingAccountRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListBillingAccountsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListBillingAccountsResponse {
+  repeated .alis.os.billing.v1.BillingAccount billing_accounts = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateBillingAccountsRequest {
+}
+
+message BatchCreateBillingAccountsResponse {
+}
+
+message BatchGetBillingAccountsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetBillingAccountsResponse {
+}
+
+message BatchUpdateBillingAccountsRequest {
+  repeated .alis.os.billing.v1.UpdateBillingAccountRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateBillingAccountsResponse {
+}
+
+message BatchDeleteBillingAccountsRequest {
+}
+
+message BatchDeleteBillingAccountsResponse {
+}
+
+message BatchUndeleteBillingAccountsRequest {
+}
+
+message BatchUndeleteBillingAccountsResponse {
+}
+
+message StreamBillingAccountsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message CreateBudgetRequest {
+  string parent = 1;
+  .alis.os.billing.v1.Budget budget = 2;
+}
+
+message GetBudgetRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateBudgetRequest {
+  .alis.os.billing.v1.Budget budget = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteBudgetRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteBudgetRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListBudgetsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListBudgetsResponse {
+  repeated .alis.os.billing.v1.Budget budgets = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateBudgetsRequest {
+  string parent = 1;
+  repeated .alis.os.billing.v1.CreateBudgetRequest requests = 2;
+}
+
+message BatchCreateBudgetsResponse {
+}
+
+message BatchGetBudgetsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetBudgetsResponse {
+}
+
+message BatchUpdateBudgetsRequest {
+  string parent = 1;
+  repeated .alis.os.billing.v1.UpdateBudgetRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateBudgetsResponse {
+}
+
+message BatchDeleteBudgetsRequest {
+  string parent = 1;
+  repeated .alis.os.billing.v1.DeleteBudgetRequest requests = 2;
+}
+
+message BatchDeleteBudgetsResponse {
+}
+
+message BatchUndeleteBudgetsRequest {
+  string parent = 1;
+  repeated .alis.os.billing.v1.UndeleteBudgetRequest requests = 2;
+}
+
+message BatchUndeleteBudgetsResponse {
+}
+
+message StreamBudgetsRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message CheckBillingAccountPermissionsRequest {
+}
+
+message CheckBillingAccountPermissionsResponse {
+  bool has_permissions = 1;
+  repeated string missing_permissions = 2;
+  repeated string available_permissions = 3;
+}
+
+message ActivateKillSwitchRequest {
+  string name = 1;
+  repeated string projects_to_detach = 2;
+}
+
+message ActivateKillSwitchResponse {
+  int32 projects_detached = 1;
+  repeated string detached_project_ids = 2;
+  .google.protobuf.Timestamp activation_time = 3;
+}
+
+message ProvisionCloudBudgetRequest {
+}
+
+message ProvisionCloudBudgetResponse {
+}
+
+message RemoveCloudBudgetRequest {
+}
+
+message RemoveCloudBudgetResponse {
+}
+
+message SetupBillingExportBigQueryDatasetRequest {
+  enum DatasetLocation {
+    DATASET_LOCATION_UNSPECIFIED = 0;
+    EU = 1;
+    US = 2;
+  }
+  message PrincipalByEmail {
+    enum PrincipalType {
+      PRINCIPAL_TYPE_UNSPECIFIED = 0;
+      USER = 1;
+      GROUP = 2;
+      SERVICE_ACCOUNT = 3;
+    }
+    string email = 1;
+    .alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest.PrincipalByEmail.PrincipalType principal_type = 2;
+  }
+  string name = 1;
+  repeated string owners = 2;
+  repeated string editors = 3;
+  repeated string viewers = 4;
+  repeated .alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest.PrincipalByEmail owner_principals = 5;
+  repeated .alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest.PrincipalByEmail editors_principals = 6;
+  repeated .alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest.PrincipalByEmail viewers_principals = 7;
+  .alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest.DatasetLocation dataset_location = 21;
+  string google_cloud_folder = 22;
+}
+
+message SetupBillingExportBigQueryDatasetResponse {
+}
+
+message SetupBillingExportBigQueryDatasetMetadata {
+}
+
+message RemoveBillingExportBigQueryDatasetRequest {
+}
+
+message CheckBillingExportRequest {
+}
+
+message CheckBillingExportResponse {
+  enum BillingExportStatus {
+    EXPORT_STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    PROVISIONING = 2;
+    ERROR = 3;
+  }
+  .alis.os.billing.v1.CheckBillingExportResponse.BillingExportStatus billing_export_status = 1;
+  string error_message = 2;
+}
+
+message AssignBillingAccountToPlatformAccountRequest {
+  string platform_account = 1;
+  string platform_account_display_name = 2;
+}
+
+message AssignBillingAccountToPlatformAccountResponse {
+}
+
+message GetPlatformAccountBillingAccountRequest {
+  string platform_account = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message QuerySpendRequest {
+  enum GroupBy {
+    GROUP_BY_UNSPECIFIED = 0;
+    GROUP_BY_PROJECT = 1;
+    GROUP_BY_SERVICE = 2;
+    GROUP_BY_SKU = 3;
+    GROUP_BY_BILLING_ACCOUNT = 4;
+    GROUP_BY_DAY = 5;
+    GROUP_BY_MONTH = 6;
+    GROUP_BY_LABEL = 7;
+  }
+  message DateRange {
+    .google.type.Date start_date = 1;
+    .google.type.Date end_date = 2;
+  }
+  message SpendFilter {
+    repeated string project_ids = 1;
+    repeated string service_ids = 2;
+    repeated string sku_ids = 3;
+    map<string, string> labels = 4;
+  }
+  string billing_account = 1;
+  .alis.os.billing.v1.QuerySpendRequest.DateRange date_range = 2;
+  .alis.os.billing.v1.QuerySpendRequest.SpendFilter filter = 3;
+  repeated .alis.os.billing.v1.QuerySpendRequest.GroupBy group_by = 4;
+}
+
+message QuerySpendResponse {
+  message SpendResult {
+    map<string, string> dimensions = 1;
+    .google.type.Money total_cost = 2;
+    double usage_amount = 3;
+    string usage_unit = 4;
+    .google.type.Money credits = 5;
+    .google.type.Money net_cost = 6;
+  }
+  message SpendSummary {
+    .google.type.Money total_cost = 1;
+    .google.type.Money total_credits = 2;
+    .google.type.Money net_total = 3;
+    int32 project_count = 4;
+    int32 service_count = 5;
+  }
+  repeated .alis.os.billing.v1.QuerySpendResponse.SpendResult results = 1;
+  .alis.os.billing.v1.QuerySpendResponse.SpendSummary summary = 2;
+}
+
+service BillingAccountsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateBillingAccount(.alis.os.billing.v1.CreateBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc GetBillingAccount(.alis.os.billing.v1.GetBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc UpdateBillingAccount(.alis.os.billing.v1.UpdateBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc ListBillingAccounts(.alis.os.billing.v1.ListBillingAccountsRequest) returns (.alis.os.billing.v1.ListBillingAccountsResponse);
+  rpc DeleteBillingAccount(.alis.os.billing.v1.DeleteBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc UndeleteBillingAccount(.alis.os.billing.v1.UndeleteBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc BatchCreateBillingAccounts(.alis.os.billing.v1.BatchCreateBillingAccountsRequest) returns (.alis.os.billing.v1.BatchCreateBillingAccountsResponse);
+  rpc BatchGetBillingAccounts(.alis.os.billing.v1.BatchGetBillingAccountsRequest) returns (.alis.os.billing.v1.BatchGetBillingAccountsResponse);
+  rpc BatchUpdateBillingAccounts(.alis.os.billing.v1.BatchUpdateBillingAccountsRequest) returns (.alis.os.billing.v1.BatchUpdateBillingAccountsResponse);
+  rpc BatchDeleteBillingAccounts(.alis.os.billing.v1.BatchDeleteBillingAccountsRequest) returns (.alis.os.billing.v1.BatchDeleteBillingAccountsResponse);
+  rpc BatchUndeleteBillingAccounts(.alis.os.billing.v1.BatchUndeleteBillingAccountsRequest) returns (.alis.os.billing.v1.BatchUndeleteBillingAccountsResponse);
+  rpc StreamBillingAccounts(.alis.os.billing.v1.StreamBillingAccountsRequest) returns (stream .alis.os.billing.v1.BillingAccount);
+  rpc CreateBudget(.alis.os.billing.v1.CreateBudgetRequest) returns (.alis.os.billing.v1.Budget);
+  rpc GetBudget(.alis.os.billing.v1.GetBudgetRequest) returns (.alis.os.billing.v1.Budget);
+  rpc UpdateBudget(.alis.os.billing.v1.UpdateBudgetRequest) returns (.alis.os.billing.v1.Budget);
+  rpc ListBudgets(.alis.os.billing.v1.ListBudgetsRequest) returns (.alis.os.billing.v1.ListBudgetsResponse);
+  rpc DeleteBudget(.alis.os.billing.v1.DeleteBudgetRequest) returns (.alis.os.billing.v1.Budget);
+  rpc UndeleteBudget(.alis.os.billing.v1.UndeleteBudgetRequest) returns (.alis.os.billing.v1.Budget);
+  rpc BatchCreateBudgets(.alis.os.billing.v1.BatchCreateBudgetsRequest) returns (.alis.os.billing.v1.BatchCreateBudgetsResponse);
+  rpc BatchGetBudgets(.alis.os.billing.v1.BatchGetBudgetsRequest) returns (.alis.os.billing.v1.BatchGetBudgetsResponse);
+  rpc BatchUpdateBudgets(.alis.os.billing.v1.BatchUpdateBudgetsRequest) returns (.alis.os.billing.v1.BatchUpdateBudgetsResponse);
+  rpc BatchDeleteBudgets(.alis.os.billing.v1.BatchDeleteBudgetsRequest) returns (.alis.os.billing.v1.BatchDeleteBudgetsResponse);
+  rpc BatchUndeleteBudgets(.alis.os.billing.v1.BatchUndeleteBudgetsRequest) returns (.alis.os.billing.v1.BatchUndeleteBudgetsResponse);
+  rpc StreamBudgets(.alis.os.billing.v1.StreamBudgetsRequest) returns (stream .alis.os.billing.v1.Budget);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc AssignBillingAccountToPlatformAccount(.alis.os.billing.v1.AssignBillingAccountToPlatformAccountRequest) returns (.alis.os.billing.v1.AssignBillingAccountToPlatformAccountResponse);
+  rpc GetPlatformAccountBillingAccount(.alis.os.billing.v1.GetPlatformAccountBillingAccountRequest) returns (.alis.os.billing.v1.BillingAccount);
+  rpc CheckBillingAccountPermissions(.alis.os.billing.v1.CheckBillingAccountPermissionsRequest) returns (.alis.os.billing.v1.CheckBillingAccountPermissionsResponse);
+  rpc ActivateKillSwitch(.alis.os.billing.v1.ActivateKillSwitchRequest) returns (.alis.os.billing.v1.ActivateKillSwitchResponse);
+  rpc ProvisionCloudBudget(.alis.os.billing.v1.ProvisionCloudBudgetRequest) returns (.alis.os.billing.v1.ProvisionCloudBudgetResponse);
+  rpc RemoveCloudBudget(.alis.os.billing.v1.RemoveCloudBudgetRequest) returns (.alis.os.billing.v1.RemoveCloudBudgetResponse);
+  rpc SetupBillingExportBigQueryDataset(.alis.os.billing.v1.SetupBillingExportBigQueryDatasetRequest) returns (.alis.os.billing.v1.SetupBillingExportBigQueryDatasetResponse);
+  rpc RemoveBillingExportBigQueryDataset(.alis.os.billing.v1.RemoveBillingExportBigQueryDatasetRequest) returns (.google.protobuf.Empty);
+  rpc CheckBillingExport(.alis.os.billing.v1.CheckBillingExportRequest) returns (.alis.os.billing.v1.CheckBillingExportResponse);
+  rpc QuerySpend(.alis.os.billing.v1.QuerySpendRequest) returns (.alis.os.billing.v1.QuerySpendResponse);
+}

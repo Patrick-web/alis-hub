@@ -2887,6 +2887,34 @@ export class ProductSummary {
     }
 }
 
+/**
+ * ProtoMessageInfo describes a message type discovered in an org's define repo.
+ */
+export class ProtoMessageInfo {
+    "fullName": string;
+    "filePath": string;
+
+    /** Creates a new ProtoMessageInfo instance. */
+    constructor($$source: Partial<ProtoMessageInfo> = {}) {
+        if (!("fullName" in $$source)) {
+            this["fullName"] = "";
+        }
+        if (!("filePath" in $$source)) {
+            this["filePath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProtoMessageInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProtoMessageInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ProtoMessageInfo($$parsedSource as Partial<ProtoMessageInfo>);
+    }
+}
+
 export class RemoteMergeResult {
     "repoPath": string;
     "branchName": string;
@@ -3575,12 +3603,24 @@ export class SpannerInstance {
 
 export class SpannerQueryResult {
     "columns": string[];
+    "columnTypes": string[];
+
+    /**
+     * fully-qualified proto message name for columns of type PROTO; empty otherwise
+     */
+    "columnProtoTypes": string[];
     "rows": string[][];
 
     /** Creates a new SpannerQueryResult instance. */
     constructor($$source: Partial<SpannerQueryResult> = {}) {
         if (!("columns" in $$source)) {
             this["columns"] = [];
+        }
+        if (!("columnTypes" in $$source)) {
+            this["columnTypes"] = [];
+        }
+        if (!("columnProtoTypes" in $$source)) {
+            this["columnProtoTypes"] = [];
         }
         if (!("rows" in $$source)) {
             this["rows"] = [];
@@ -3594,13 +3634,21 @@ export class SpannerQueryResult {
      */
     static createFrom($$source: any = {}): SpannerQueryResult {
         const $$createField0_0 = $$createType4;
-        const $$createField1_0 = $$createType53;
+        const $$createField1_0 = $$createType4;
+        const $$createField2_0 = $$createType4;
+        const $$createField3_0 = $$createType53;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
         }
+        if ("columnTypes" in $$parsedSource) {
+            $$parsedSource["columnTypes"] = $$createField1_0($$parsedSource["columnTypes"]);
+        }
+        if ("columnProtoTypes" in $$parsedSource) {
+            $$parsedSource["columnProtoTypes"] = $$createField2_0($$parsedSource["columnProtoTypes"]);
+        }
         if ("rows" in $$parsedSource) {
-            $$parsedSource["rows"] = $$createField1_0($$parsedSource["rows"]);
+            $$parsedSource["rows"] = $$createField3_0($$parsedSource["rows"]);
         }
         return new SpannerQueryResult($$parsedSource as Partial<SpannerQueryResult>);
     }

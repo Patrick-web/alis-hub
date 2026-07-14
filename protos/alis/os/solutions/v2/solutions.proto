@@ -1,0 +1,727 @@
+syntax = "proto3";
+
+package alis.os.solutions.v2;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/validation/v1/validation.proto";
+import "alis/os/ideas/v1/ideas.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/type/date.proto";
+import "google/type/money.proto";
+import "google/type/phone_number.proto";
+import "google/type/postal_address.proto";
+
+enum ProposalView {
+  PROPOSAL_VIEW_UNSPECIFIED = 0;
+  PROPOSAL_VIEW_BASIC = 1;
+  PROPOSAL_VIEW_FULL = 2;
+}
+
+enum BillingView {
+  BILLING_VIEW_UNSPECIFIED = 0;
+  BILLING_VIEW_BASIC = 1;
+  BILLING_VIEW_FULL = 2;
+}
+
+enum SolutionView {
+  SOLUTION_VIEW_UNSPECIFIED = 0;
+  SOLUTION_VIEW_BASIC = 1;
+  SOLUTION_VIEW_FULL = 2;
+}
+
+enum WireframeView {
+  WIREFRAME_VIEW_UNSPECIFIED = 0;
+  WIREFRAME_VIEW_BASIC = 1;
+  WIREFRAME_VIEW_FULL = 2;
+}
+
+message Proposal {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    UNDER_REVIEW = 2;
+    FINALISED = 3;
+  }
+  message Branding {
+    bool hide_default_details = 1;
+    string primary_colour = 2;
+    string secondary_colour = 3;
+    string company_display_name = 4;
+    string website_uri = 5;
+    string logo_uri = 6;
+    string email = 7;
+    .google.type.PhoneNumber phone = 8;
+    .google.type.PostalAddress address = 9;
+  }
+  string name = 1;
+  .alis.os.solutions.v2.Proposal.State state = 2;
+  string content = 3;
+  .alis.os.solutions.v2.ElectronicSignature build_partner_signatory = 4;
+  .alis.os.solutions.v2.ElectronicSignature client_signatory = 5;
+  string summary = 6;
+  .alis.os.solutions.v2.Proposal.Branding branding = 7;
+  .google.protobuf.Timestamp update_time = 98;
+  string etag = 99;
+}
+
+message GenerateProposalRequest {
+}
+
+message InitialiseProposalAttributesRequest {
+}
+
+message GetProposalRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateProposalRequest {
+  .alis.os.solutions.v2.Proposal proposal = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message GenerateProposalExecutionSignedUrlRequest {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  string proposal = 1;
+  .alis.os.solutions.v2.GenerateProposalExecutionSignedUrlRequest.Signatory signatory = 2;
+}
+
+message GenerateProposalExecutionSignedUrlResponse {
+}
+
+message SendProposalExecutionVerificationEmailRequest {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  string proposal = 1;
+  .alis.os.solutions.v2.SendProposalExecutionVerificationEmailRequest.Signatory signatory = 2;
+}
+
+message SendProposalExecutionVerificationEmailResponse {
+}
+
+message RetrieveProposalExecutionInfoRequest {
+}
+
+message RetrieveProposalExecutionInfoResponse {
+  message Signatory {
+    string full_name = 1;
+    string email = 2;
+    string designation = 3;
+  }
+  .alis.os.solutions.v2.Proposal proposal = 1;
+  string solution_display_name = 2;
+  .alis.os.solutions.v2.RetrieveProposalExecutionInfoResponse.Signatory signatory = 3;
+  .google.protobuf.Timestamp issued_time = 4;
+  .google.protobuf.Timestamp expiry_time = 5;
+}
+
+message AddClientSignatureWithTokenRequest {
+}
+
+message AddClientSignatureWithTokenResponse {
+  .alis.os.solutions.v2.Proposal proposal = 1;
+  string signed_proposal_uri = 2;
+}
+
+message AddClientSignatureRequest {
+}
+
+message AddClientSignatureResponse {
+}
+
+message AddBuildPartnerSignatureWithTokenRequest {
+}
+
+message AddBuildPartnerSignatureWithTokenResponse {
+  .alis.os.solutions.v2.Proposal proposal = 1;
+  string signed_proposal_uri = 2;
+}
+
+message AddBuildPartnerSignatureRequest {
+}
+
+message AddBuildPartnerSignatureResponse {
+}
+
+message GenerateProposalSignedUrlRequest {
+}
+
+message GenerateProposalSignedUrlResponse {
+}
+
+message ElectronicSignature {
+  string builder = 1;
+  string full_name = 2;
+  bytes signature = 3;
+  .google.protobuf.Timestamp signed_time = 4;
+  string email = 5;
+  string token_signature = 6;
+  string designation = 7;
+}
+
+message GenerateProposalContentRequest {
+}
+
+message GenerateProposalContentResponse {
+}
+
+message GenerateProposalSummaryRequest {
+}
+
+message GenerateProposalSummaryResponse {
+}
+
+message ProposalRevision {
+  string name = 1;
+  .alis.os.solutions.v2.Proposal snapshot = 2;
+  .google.protobuf.FieldMask updated_fields = 3;
+  .google.protobuf.Timestamp create_time = 4;
+  string notes = 5;
+  string user = 6;
+  string user_display_name = 7;
+  string user_profile_picture_uri = 8;
+}
+
+message CreateProposalRevisionRequest {
+  string parent = 1;
+  .alis.os.solutions.v2.Proposal revision = 2;
+  string revision_id = 3;
+  .google.protobuf.FieldMask updated_fields = 4;
+  string notes = 5;
+}
+
+message Billing {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    FIXED = 1;
+    HOURLY = 2;
+    DELIVERABLE_BASED = 3;
+    INSTALLMENT_BASED = 4;
+  }
+  enum ProgressStatus {
+    PROGRESS_STATUS_UNSPECIFIED = 0;
+    NOT_STARTED = 1;
+    IN_PROGRESS = 2;
+    COMPLETED = 3;
+  }
+  enum PaymentStatus {
+    PAYMENT_STATUS_UNSPECIFIED = 0;
+    INVOICED = 1;
+    PAID = 2;
+    READY_FOR_INVOICING = 3;
+  }
+  message FixedFee {
+    .google.type.Money fee = 1;
+    .google.protobuf.DoubleValue discount = 2;
+    .alis.os.solutions.v2.Billing.ProgressStatus progress_status = 3;
+    .alis.os.solutions.v2.Billing.PaymentStatus payment_status = 4;
+    string invoice = 5;
+  }
+  message HourlyRate {
+    message Sprint {
+      .alis.os.solutions.v2.Billing.ProgressStatus progress_status = 1;
+      .alis.os.solutions.v2.Billing.PaymentStatus payment_status = 2;
+      string invoice = 3;
+      .google.protobuf.Duration time_logged = 4;
+      string description = 5;
+      .google.type.Date start_date = 6;
+      .google.type.Date end_date = 7;
+      .google.type.Money amount = 8;
+    }
+    .google.type.Money hourly_rate = 1;
+    .google.protobuf.DoubleValue discount = 2;
+    .google.type.Money budget_cap = 3;
+    repeated .alis.os.solutions.v2.Billing.HourlyRate.Sprint sprints = 4;
+  }
+  message DeliverableBased {
+    message Deliverable {
+      string title = 1;
+      string description = 2;
+      .alis.os.solutions.v2.Billing.ProgressStatus progress_status = 3;
+      .alis.os.solutions.v2.Billing.PaymentStatus payment_status = 4;
+      .google.type.Date date = 5;
+      .google.type.Money fixed_fee = 6;
+      .alis.os.solutions.v2.ElectronicSignature e_signature = 7;
+      string invoice = 8;
+    }
+  }
+  message InstallmentBased {
+    message Installment {
+      string title = 1;
+      .google.type.Money amount = 2;
+      .google.type.Date due_date = 3;
+      string description = 4;
+      .alis.os.solutions.v2.Billing.PaymentStatus payment_status = 5;
+      string invoice = 6;
+    }
+    .google.type.Money full_amount = 1;
+    .google.protobuf.DoubleValue discount = 2;
+    .alis.os.solutions.v2.Billing.ProgressStatus progress_status = 3;
+    repeated .alis.os.solutions.v2.Billing.InstallmentBased.Installment installments = 5;
+  }
+  string name = 1;
+  string summary = 2;
+  string vendor_account = 3;
+  string client_account = 4;
+  bool bill_through_alis = 5;
+  .alis.os.solutions.v2.Billing.Type type = 6;
+  string etag = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  oneof option {
+    .alis.os.solutions.v2.Billing.FixedFee fixed_fee = 7;
+    .alis.os.solutions.v2.Billing.HourlyRate hourly_rate = 8;
+    .alis.os.solutions.v2.Billing.DeliverableBased deliverable_based = 9;
+    .alis.os.solutions.v2.Billing.InstallmentBased installment_based = 10;
+  }
+}
+
+message GetBillingRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateBillingRequest {
+  .alis.os.solutions.v2.Billing billing = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message GenerateBillingSummaryRequest {
+}
+
+message GenerateBillingSummaryResponse {
+}
+
+message BillingRevision {
+  string name = 1;
+  .alis.os.solutions.v2.Billing snapshot = 2;
+  .google.protobuf.FieldMask updated_fields = 3;
+  .google.protobuf.Timestamp create_time = 4;
+  string notes = 5;
+  string user = 6;
+  string user_display_name = 7;
+  string user_profile_picture_uri = 8;
+}
+
+message CreateBillingRevisionRequest {
+  string parent = 1;
+  .alis.os.solutions.v2.Billing revision = 2;
+  string revision_id = 3;
+  .google.protobuf.FieldMask updated_fields = 4;
+  string notes = 5;
+}
+
+message BuildSpec {
+  string name = 1;
+  string content = 2;
+  string summary = 3;
+  .google.protobuf.Timestamp update_time = 98;
+  string etag = 99;
+}
+
+message GetBuildSpecRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateBuildSpecRequest {
+  .alis.os.solutions.v2.BuildSpec build_spec = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message GenerateBuildSpecContentRequest {
+}
+
+message GenerateBuildSpecContentResponse {
+}
+
+message GenerateBuildSpecSummaryRequest {
+}
+
+message GenerateBuildSpecSummaryResponse {
+}
+
+message InitialiseBuildSpecAttributesRequest {
+}
+
+message Solution {
+  enum Status {
+    STATE_UNSPECIFIED = 0;
+    PENDING = 1;
+    ACTIVE = 2;
+    COMPLETED = 3;
+  }
+  enum Module {
+    MODULE_UNSPECIFIED = 0;
+    BILLING = 1;
+    TEAM = 2;
+    PROPOSAL = 3;
+    BUILD_PLAN = 4;
+    WIREFRAME = 5;
+  }
+  message Ideate {
+    string idea = 1;
+    string rfp = 2;
+    string spec = 3;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.solutions.v2.Solution.Status status = 3;
+  string summary = 4;
+  .alis.os.solutions.v2.Solution.Ideate ideate = 5;
+  repeated string products = 6;
+  repeated int32 modules_enabled = 7;  // enum type not recoverable from bundle (wire-compatible int32)
+  string account = 14;
+  .google.protobuf.Timestamp delete_time = 93;
+  string etag = 94;
+  .google.protobuf.Timestamp commencement_time = 95;
+  .google.type.Date target_completion_date = 96;
+  .google.protobuf.Timestamp completion_time = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message CreateSolutionRequest {
+  .alis.os.solutions.v2.Solution solution = 2;
+}
+
+message GetSolutionRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateSolutionRequest {
+  .alis.os.solutions.v2.Solution solution = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteSolutionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteSolutionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListSolutionsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateSolutionsRequest {
+  repeated .alis.os.solutions.v2.CreateSolutionRequest requests = 2;
+}
+
+message BatchCreateSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+}
+
+message BatchGetSolutionsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+}
+
+message BatchUpdateSolutionsRequest {
+  repeated .alis.os.solutions.v2.UpdateSolutionRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+}
+
+message BatchDeleteSolutionsRequest {
+  repeated .alis.os.solutions.v2.DeleteSolutionRequest requests = 2;
+}
+
+message BatchDeleteSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+}
+
+message BatchUndeleteSolutionsRequest {
+  repeated .alis.os.solutions.v2.UndeleteSolutionRequest requests = 2;
+}
+
+message BatchUndeleteSolutionsResponse {
+  repeated .alis.os.solutions.v2.Solution solutions = 1;
+}
+
+message StreamSolutionsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message GenerateSolutionFromRfpRequest {
+  string rfp = 1;
+  string account = 2;
+}
+
+message GenerateSolutionFromRfpResponse {
+  .alis.os.solutions.v2.Solution solution = 1;
+}
+
+message GenerateSolutionFromSpecRequest {
+  string spec = 1;
+  string account = 2;
+}
+
+message GenerateSolutionFromSpecResponse {
+  .alis.os.solutions.v2.Solution solution = 1;
+}
+
+message DuplicateSolutionRequest {
+  string solution = 1;
+}
+
+message DuplicateSolutionResponse {
+  .alis.os.solutions.v2.Solution solution = 1;
+}
+
+message GenerateSolutionSummaryRequest {
+  string solution = 1;
+}
+
+message GenerateSolutionSummaryResponse {
+  string summary = 1;
+}
+
+message SolutionRevision {
+  string name = 1;
+  .alis.os.solutions.v2.Solution snapshot = 2;
+  .google.protobuf.FieldMask updated_fields = 3;
+  .google.protobuf.Timestamp create_time = 4;
+  string note = 5;
+  string user = 6;
+  string user_display_name = 7;
+  string user_profile_picture_uri = 8;
+  string etag = 94;
+  .google.protobuf.Timestamp delete_time = 95;
+}
+
+message CreateSolutionRevisionRequest {
+  string parent = 1;
+  .alis.os.solutions.v2.Solution revision = 2;
+  string revision_id = 3;
+  .google.protobuf.FieldMask updated_fields = 4;
+  string notes = 5;
+}
+
+message RetrievePendingSpecsRequest {
+  string account = 1;
+}
+
+message RetrievePendingSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message SuggestTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  string text = 1;
+  .alis.os.solutions.v2.SuggestTextEnhancementRequest.Type type = 2;
+}
+
+message SuggestTextEnhancementResponse {
+  string text = 1;
+}
+
+message Wireframe {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PROCESSING = 1;
+    READY = 2;
+    FAILED = 3;
+  }
+  string name = 1;
+  .alis.os.solutions.v2.Wireframe.State state = 2;
+  string design_spec = 3;
+  string design_summary = 4;
+  repeated string design_spec_links = 5;
+  .google.protobuf.Timestamp update_time = 98;
+  string etag = 99;
+}
+
+message GetWireframeRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateWireframeRequest {
+  .alis.os.solutions.v2.Wireframe wireframe = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message GenerateWireframeSpecRequest {
+  enum DeviceType {
+    DEVICE_TYPE_UNSPECIFIED = 0;
+    DESKTOP = 1;
+    MOBILE = 2;
+  }
+  string solution = 1;
+  .alis.os.solutions.v2.GenerateWireframeSpecRequest.DeviceType device_type = 2;
+}
+
+message GenerateWireframeSpecResponse {
+}
+
+message GenerateWireframeSummaryRequest {
+}
+
+message GenerateWireframeSummaryResponse {
+}
+
+service BillingsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetBilling(.alis.os.solutions.v2.GetBillingRequest) returns (.alis.os.solutions.v2.Billing);
+  rpc UpdateBilling(.alis.os.solutions.v2.UpdateBillingRequest) returns (.alis.os.solutions.v2.Billing);
+  rpc GenerateBillingSummary(.alis.os.solutions.v2.GenerateBillingSummaryRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc CreateBillingRevision(.alis.os.solutions.v2.CreateBillingRevisionRequest) returns (.alis.os.solutions.v2.BillingRevision);
+}
+
+service BuildSpecsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetBuildSpec(.alis.os.solutions.v2.GetBuildSpecRequest) returns (.alis.os.solutions.v2.BuildSpec);
+  rpc UpdateBuildSpec(.alis.os.solutions.v2.UpdateBuildSpecRequest) returns (.alis.os.solutions.v2.BuildSpec);
+  rpc GenerateBuildSpecContent(.alis.os.solutions.v2.GenerateBuildSpecContentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateBuildSpecSummary(.alis.os.solutions.v2.GenerateBuildSpecSummaryRequest) returns (.google.longrunning.Operation);
+  rpc InitialiseBuildSpecAttributes(.alis.os.solutions.v2.InitialiseBuildSpecAttributesRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+}
+
+service OperationsService {
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+}
+
+service ProposalsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetProposal(.alis.os.solutions.v2.GetProposalRequest) returns (.alis.os.solutions.v2.Proposal);
+  rpc UpdateProposal(.alis.os.solutions.v2.UpdateProposalRequest) returns (.alis.os.solutions.v2.Proposal);
+  rpc GenerateProposalSignedUrl(.alis.os.solutions.v2.GenerateProposalSignedUrlRequest) returns (.alis.os.solutions.v2.GenerateProposalSignedUrlResponse);
+  rpc GenerateProposalExecutionSignedUrl(.alis.os.solutions.v2.GenerateProposalExecutionSignedUrlRequest) returns (.alis.os.solutions.v2.GenerateProposalExecutionSignedUrlResponse);
+  rpc SendProposalExecutionVerificationEmail(.alis.os.solutions.v2.SendProposalExecutionVerificationEmailRequest) returns (.alis.os.solutions.v2.SendProposalExecutionVerificationEmailResponse);
+  rpc RetrieveProposalExecutionInfo(.alis.os.solutions.v2.RetrieveProposalExecutionInfoRequest) returns (.alis.os.solutions.v2.RetrieveProposalExecutionInfoResponse);
+  rpc AddClientSignatureWithToken(.alis.os.solutions.v2.AddClientSignatureWithTokenRequest) returns (.alis.os.solutions.v2.AddClientSignatureWithTokenResponse);
+  rpc AddClientSignature(.alis.os.solutions.v2.AddClientSignatureRequest) returns (.alis.os.solutions.v2.AddClientSignatureResponse);
+  rpc AddBuildPartnerSignatureWithToken(.alis.os.solutions.v2.AddBuildPartnerSignatureWithTokenRequest) returns (.alis.os.solutions.v2.AddBuildPartnerSignatureWithTokenResponse);
+  rpc AddBuildPartnerSignature(.alis.os.solutions.v2.AddBuildPartnerSignatureRequest) returns (.alis.os.solutions.v2.AddBuildPartnerSignatureResponse);
+  rpc GenerateProposalContent(.alis.os.solutions.v2.GenerateProposalContentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateProposalSummary(.alis.os.solutions.v2.GenerateProposalSummaryRequest) returns (.google.longrunning.Operation);
+  rpc CreateProposalRevision(.alis.os.solutions.v2.CreateProposalRevisionRequest) returns (.alis.os.solutions.v2.ProposalRevision);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc InitialiseProposalAttributes(.alis.os.solutions.v2.InitialiseProposalAttributesRequest) returns (.google.longrunning.Operation);
+}
+
+service SolutionsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetSolution(.alis.os.solutions.v2.GetSolutionRequest) returns (.alis.os.solutions.v2.Solution);
+  rpc CreateSolution(.alis.os.solutions.v2.CreateSolutionRequest) returns (.alis.os.solutions.v2.Solution);
+  rpc UpdateSolution(.alis.os.solutions.v2.UpdateSolutionRequest) returns (.alis.os.solutions.v2.Solution);
+  rpc DeleteSolution(.alis.os.solutions.v2.DeleteSolutionRequest) returns (.alis.os.solutions.v2.Solution);
+  rpc UndeleteSolution(.alis.os.solutions.v2.UndeleteSolutionRequest) returns (.alis.os.solutions.v2.Solution);
+  rpc ListSolutions(.alis.os.solutions.v2.ListSolutionsRequest) returns (.alis.os.solutions.v2.ListSolutionsResponse);
+  rpc BatchCreateSolutions(.alis.os.solutions.v2.BatchCreateSolutionsRequest) returns (.alis.os.solutions.v2.BatchCreateSolutionsResponse);
+  rpc BatchGetSolutions(.alis.os.solutions.v2.BatchGetSolutionsRequest) returns (.alis.os.solutions.v2.BatchGetSolutionsResponse);
+  rpc BatchUpdateSolutions(.alis.os.solutions.v2.BatchUpdateSolutionsRequest) returns (.alis.os.solutions.v2.BatchUpdateSolutionsResponse);
+  rpc BatchDeleteSolutions(.alis.os.solutions.v2.BatchDeleteSolutionsRequest) returns (.alis.os.solutions.v2.BatchDeleteSolutionsResponse);
+  rpc BatchUndeleteSolutions(.alis.os.solutions.v2.BatchUndeleteSolutionsRequest) returns (.alis.os.solutions.v2.BatchUndeleteSolutionsResponse);
+  rpc StreamSolutions(.alis.os.solutions.v2.StreamSolutionsRequest) returns (stream .alis.os.solutions.v2.Solution);
+  rpc CreateSolutionRevision(.alis.os.solutions.v2.CreateSolutionRevisionRequest) returns (.alis.os.solutions.v2.SolutionRevision);
+  rpc GenerateSolutionSummary(.alis.os.solutions.v2.GenerateSolutionSummaryRequest) returns (.google.longrunning.Operation);
+  rpc GenerateSolutionFromRfp(.alis.os.solutions.v2.GenerateSolutionFromRfpRequest) returns (.google.longrunning.Operation);
+  rpc GenerateSolutionFromSpec(.alis.os.solutions.v2.GenerateSolutionFromSpecRequest) returns (.google.longrunning.Operation);
+  rpc DuplicateSolution(.alis.os.solutions.v2.DuplicateSolutionRequest) returns (.alis.os.solutions.v2.DuplicateSolutionResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc RetrievePendingSpecs(.alis.os.solutions.v2.RetrievePendingSpecsRequest) returns (.alis.os.solutions.v2.RetrievePendingSpecsResponse);
+  rpc SuggestTextEnhancement(.alis.os.solutions.v2.SuggestTextEnhancementRequest) returns (.alis.os.solutions.v2.SuggestTextEnhancementResponse);
+}
+
+service WireframesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetWireframe(.alis.os.solutions.v2.GetWireframeRequest) returns (.alis.os.solutions.v2.Wireframe);
+  rpc UpdateWireframe(.alis.os.solutions.v2.UpdateWireframeRequest) returns (.alis.os.solutions.v2.Wireframe);
+  rpc GenerateWireframeSpec(.alis.os.solutions.v2.GenerateWireframeSpecRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc GenerateWireframeSummary(.alis.os.solutions.v2.GenerateWireframeSummaryRequest) returns (.google.longrunning.Operation);
+}

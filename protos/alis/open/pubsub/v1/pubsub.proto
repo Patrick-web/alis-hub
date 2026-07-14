@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package alis.open.pubsub.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message PubSubMessage {
+  message Message {
+    bytes data = 1;
+    map<string, string> attributes = 2;
+    string message_id = 3;
+    .google.protobuf.Timestamp publish_time = 4;
+    string ordering_key = 5;
+    string message_id1 = 6;
+    .google.protobuf.Timestamp publish_time1 = 7;
+  }
+  .alis.open.pubsub.v1.PubSubMessage.Message message = 1;
+  string subscription = 2;
+}

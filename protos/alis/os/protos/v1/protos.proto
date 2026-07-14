@@ -1,0 +1,419 @@
+syntax = "proto3";
+
+package alis.os.protos.v1;
+
+import "google/longrunning/operations.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message RetrieveDefinitionOverviewRequest {
+  enum ExternalRefs {
+    UNSPECIFIED = 0;
+    DIRECT = 1;
+    ALL = 2;
+  }
+  string product = 1;
+  .alis.os.protos.v1.RetrieveDefinitionOverviewRequest.ExternalRefs external_refs = 2;
+}
+
+message RetrieveDefinitionOverviewResponse {
+  message Overview {
+    repeated .alis.os.protos.v1.RetrieveDefinitionOverviewResponse.Service services = 1;
+  }
+  message Service {
+    string name = 1;
+    string description = 2;
+    repeated .alis.os.protos.v1.RetrieveDefinitionOverviewResponse.Method methods = 3;
+  }
+  message Method {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+  }
+  .alis.os.protos.v1.RetrieveDefinitionOverviewResponse.Overview overview = 1;
+  repeated string packages = 2;
+}
+
+message RetrievePackageDetailsRequest {
+  string package = 1;
+}
+
+message RetrievePackageDetailsResponse {
+  message Service {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Method methods = 4;
+  }
+  message Method {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    string request_message = 4;
+    string request_message_display_name = 5;
+    string response_message = 6;
+    string response_message_display_name = 7;
+  }
+  message Resource {
+    string display_name = 1;
+    string description = 2;
+    string message = 3;
+  }
+  message Event {
+    string display_name = 1;
+    string description = 2;
+    string message = 3;
+  }
+  message Message {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Field fields = 4;
+  }
+  message Field {
+    string id = 1;
+    string description = 2;
+    string type = 3;
+    string message = 4;
+    string enum = 5;
+  }
+  message Enum {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.EnumValue values = 4;
+  }
+  message EnumValue {
+    string id = 1;
+    string description = 2;
+  }
+  repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Service services = 1;
+  repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Resource resources = 2;
+  repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Event events = 3;
+  repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Message messages = 4;
+  repeated .alis.os.protos.v1.RetrievePackageDetailsResponse.Enum enums = 5;
+}
+
+message Package {
+  message PublishConfig {
+    message Go {
+      string github_repo = 1;
+      string access_token = 2;
+    }
+    message Javascript {
+      string npm_package = 1;
+      string access_token = 2;
+      string github_repo = 3;
+      string github_access_token = 4;
+    }
+    message ProtocolBuffer {
+      string github_repo = 1;
+      string access_token = 2;
+    }
+    message Ecmascript {
+      string npm_package = 1;
+      string access_token = 2;
+      string github_repo = 3;
+      string github_access_token = 4;
+    }
+    string package_id_override = 1;
+    .alis.os.protos.v1.Package.PublishConfig.Go go = 2;
+    .alis.os.protos.v1.Package.PublishConfig.Javascript javascript = 3;
+    .alis.os.protos.v1.Package.PublishConfig.ProtocolBuffer protocol_buffer = 4;
+    .alis.os.protos.v1.Package.PublishConfig.Ecmascript ecmascript = 5;
+  }
+  string name = 1;
+  .google.protobuf.FileDescriptorSet fds = 2;
+  .alis.os.protos.v1.Package.PublishConfig publish_config = 3;
+  bool common = 4;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetPackageRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdatePackageRequest {
+  .alis.os.protos.v1.Package package = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeletePackageRequest {
+  string name = 1;
+}
+
+message SetPublishConfigRequest {
+  string package = 1;
+  .alis.os.protos.v1.Package.PublishConfig publish_config = 2;
+}
+
+message SyncCommonProtosRequest {
+}
+
+message SyncCommonProtosResponse {
+}
+
+message DeleteDefinitionMetadata {
+}
+
+message ArtifactErrors {
+  string go = 1;
+  string javascript = 2;
+  string python = 3;
+  string dart = 4;
+  string protobundle = 5;
+  string pubsub = 6;
+}
+
+message Definition {
+  enum State {
+    UNSPECIFIED = 0;
+    READY = 1;
+    COMPILING = 2;
+    COMPILING_FAILED = 3;
+    GENERATING_ARTIFACTS = 4;
+    GENERATING_ARTIFACTS_FAILED = 5;
+  }
+  enum ReleaseType {
+    RELEASE_TYPE_UNSPECIFIED = 0;
+    PATCH = 1;
+    MINOR = 2;
+  }
+  string name = 1;
+  string commit = 2;
+  string version = 4;
+  .alis.os.protos.v1.Definition.State state = 5;
+  string operation = 6;
+  .alis.os.protos.v1.ArtifactErrors artifact_errors = 7;
+  .alis.os.protos.v1.Definition.ReleaseType release_type = 9;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message DefinitionArtifact {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    GENERATING = 1;
+    READY = 2;
+    FAILED = 3;
+    QUEUED = 4;
+  }
+  message Golang {
+    string location_uri = 1;
+    string package_import_path = 2;
+  }
+  message Javascript {
+    string location_uri = 1;
+    string package_name = 2;
+  }
+  message Python {
+    string location_uri = 1;
+    string package_name = 2;
+  }
+  message Dart {
+    string location_uri = 1;
+  }
+  message GoogleCloudSpanner {
+    message Database {
+      string database = 1;
+      repeated string types = 2;
+      string location_uri = 3;
+    }
+    repeated .alis.os.protos.v1.DefinitionArtifact.GoogleCloudSpanner.Database databases = 1;
+  }
+  message GoogleCloudPubSub {
+    message Environment {
+      string name = 1;
+      string location_uri = 2;
+      repeated string topics = 3;
+    }
+    repeated .alis.os.protos.v1.DefinitionArtifact.GoogleCloudPubSub.Environment environments = 1;
+  }
+  message DotNet {
+    string location_uri = 1;
+  }
+  message OpenAPI {
+    string location_uri = 1;
+  }
+  message Postman {
+    string collection_uri = 1;
+  }
+  message GolangPublic {
+    string package = 1;
+    string github_repo = 2;
+  }
+  message JavascriptPublic {
+    string package = 1;
+    string npm_package = 2;
+  }
+  message ProtosPublic {
+    string package_id = 1;
+    string github_repo = 2;
+  }
+  message EcmascriptPublic {
+    string package = 1;
+    string npm_package = 2;
+  }
+  string name = 1;
+  .alis.os.protos.v1.DefinitionArtifact.State state = 2;
+  string notes = 3;
+  oneof artifact {
+    .alis.os.protos.v1.DefinitionArtifact.Golang golang = 10;
+    .alis.os.protos.v1.DefinitionArtifact.Javascript javascript = 11;
+    .alis.os.protos.v1.DefinitionArtifact.Python python = 12;
+    .alis.os.protos.v1.DefinitionArtifact.Dart dart = 13;
+    .alis.os.protos.v1.DefinitionArtifact.GoogleCloudSpanner google_cloud_spanner = 14;
+    .alis.os.protos.v1.DefinitionArtifact.GoogleCloudPubSub google_cloud_pubsub = 15;
+    .alis.os.protos.v1.DefinitionArtifact.DotNet dot_net = 16;
+    .alis.os.protos.v1.DefinitionArtifact.OpenAPI open_api = 17;
+    .alis.os.protos.v1.DefinitionArtifact.Postman postman = 18;
+    .alis.os.protos.v1.DefinitionArtifact.GolangPublic golang_public = 21;
+    .alis.os.protos.v1.DefinitionArtifact.JavascriptPublic javascript_public = 22;
+    .alis.os.protos.v1.DefinitionArtifact.ProtosPublic protos_public = 23;
+    .alis.os.protos.v1.DefinitionArtifact.EcmascriptPublic ecmascript_public = 24;
+  }
+}
+
+message GetDefinitionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateDefinitionRequest {
+  .alis.os.protos.v1.Definition definition = 2;
+  string definition_id = 3;
+}
+
+message UpdateDefinitionRequest {
+  .alis.os.protos.v1.Definition definition = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateDefinitionMetadata {
+  message DefinitionArtifactUpdate {
+    string definition_artifact = 1;
+    int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    string notes = 3;
+  }
+  string definition = 1;
+  string version = 2;
+  repeated string definition_artifacts = 3;
+  string notes = 4;
+  repeated .alis.os.protos.v1.UpdateDefinitionMetadata.DefinitionArtifactUpdate definition_artifact_updates = 5;
+}
+
+message DeleteDefinitionRequest {
+  string name = 1;
+}
+
+message ListDefinitionsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListDefinitionsResponse {
+  repeated .alis.os.protos.v1.Definition definitions = 1;
+  string next_page_token = 2;
+}
+
+message GetDefinitionArtifactRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateDefinitionArtifactRequest {
+  .alis.os.protos.v1.DefinitionArtifact definition_artrifact = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message BatchUpdateDefinitionArtifactsRequest {
+  string parent = 1;
+  repeated .alis.os.protos.v1.UpdateDefinitionArtifactRequest requests = 2;
+}
+
+message BatchUpdateDefinitionArtifactsResponse {
+  repeated .alis.os.protos.v1.DefinitionArtifact definition_artifacts = 1;
+}
+
+message BatchGetDefinitionArtifactsRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetDefinitionArtifactsResponse {
+  repeated .alis.os.protos.v1.DefinitionArtifact definition_artifacts = 1;
+}
+
+message DefinitionVersion {
+  string name = 1;
+  string commit = 2;
+  string version = 4;
+  int32 state = 5;  // enum type not recoverable from bundle (wire-compatible int32)
+  string operation = 6;
+  .alis.os.protos.v1.ArtifactErrors artifact_errors = 7;
+  .alis.os.protos.v1.Definition.ReleaseType release_type = 9;  // enum (heuristically resolved)
+  string created_by = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetDefinitionVersionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateDefinitionVersionRequest {
+  string parent = 1;
+  .alis.os.protos.v1.DefinitionVersion definition_version = 2;
+  string definition_version_id = 3;
+}
+
+message UpdateDefinitionVersionRequest {
+  .alis.os.protos.v1.DefinitionVersion definition_version = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteDefinitionVersionRequest {
+  string name = 1;
+}
+
+message ListDefinitionVersionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListDefinitionVersionsResponse {
+  repeated .alis.os.protos.v1.DefinitionVersion definition_versions = 1;
+  string next_page_token = 2;
+}
+
+service PackagesService {
+  rpc GetPackage(.alis.os.protos.v1.GetPackageRequest) returns (.alis.os.protos.v1.Package);
+  rpc RetrieveDefinitionOverview(.alis.os.protos.v1.RetrieveDefinitionOverviewRequest) returns (.alis.os.protos.v1.RetrieveDefinitionOverviewResponse);
+  rpc RetrievePackageDetails(.alis.os.protos.v1.RetrievePackageDetailsRequest) returns (.alis.os.protos.v1.RetrievePackageDetailsResponse);
+  rpc SetPublishConfig(.alis.os.protos.v1.SetPublishConfigRequest) returns (.alis.os.protos.v1.Package);
+  rpc SyncCommonProtos(.alis.os.protos.v1.SyncCommonProtosRequest) returns (.alis.os.protos.v1.SyncCommonProtosResponse);
+}
+
+service DefinitionsService {
+  rpc GetDefinition(.alis.os.protos.v1.GetDefinitionRequest) returns (.alis.os.protos.v1.Definition);
+  rpc UpdateDefinition(.alis.os.protos.v1.UpdateDefinitionRequest) returns (.google.longrunning.Operation);
+  rpc DeleteDefinition(.alis.os.protos.v1.DeleteDefinitionRequest) returns (.google.longrunning.Operation);
+  rpc GetDefinitionArtifact(.alis.os.protos.v1.GetDefinitionArtifactRequest) returns (.alis.os.protos.v1.DefinitionArtifact);
+  rpc BatchGetDefinitionArtifacts(.alis.os.protos.v1.BatchGetDefinitionArtifactsRequest) returns (.alis.os.protos.v1.BatchGetDefinitionArtifactsResponse);
+  rpc UpdateDefinitionArtifact(.alis.os.protos.v1.UpdateDefinitionArtifactRequest) returns (.alis.os.protos.v1.DefinitionArtifact);
+  rpc BatchUpdateDefinitionArtifacts(.alis.os.protos.v1.BatchUpdateDefinitionArtifactsRequest) returns (.alis.os.protos.v1.BatchUpdateDefinitionArtifactsResponse);
+}
+
+service DefinitionVersionsService {
+  rpc GetDefinitionVersion(.alis.os.protos.v1.GetDefinitionVersionRequest) returns (.alis.os.protos.v1.DefinitionVersion);
+  rpc ListDefinitionVersions(.alis.os.protos.v1.ListDefinitionVersionsRequest) returns (.alis.os.protos.v1.ListDefinitionVersionsResponse);
+}

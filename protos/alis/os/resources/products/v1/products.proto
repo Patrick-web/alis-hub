@@ -1,0 +1,1684 @@
+syntax = "proto3";
+
+package alis.os.resources.products.v1;
+
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/pubsub/v1/pubsub.proto";
+import "alis/os/resources/solutions/v1/solutions.proto";
+import "google/api/resource.proto";
+import "google/iam/admin/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/descriptor.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message RetrieveAlisManagedDeploymentEnvsRequest {
+  string deployment = 1;
+  string neuron = 2;
+}
+
+message RetrieveAlisManagedDeploymentEnvsResponse {
+  message Env {
+    string name = 1;
+    string value = 2;
+  }
+  repeated .alis.os.resources.products.v1.RetrieveAlisManagedDeploymentEnvsResponse.Env envs = 1;
+}
+
+message FinishLocalBuildRequest {
+  string neuron_version = 1;
+  bool failed = 2;
+}
+
+message FinishLocalBuildResponse {
+}
+
+message RetrieveOpenPackagesRequest {
+  string organisation = 1;
+}
+
+message RetrieveOpenPackagesResponse {
+  repeated string packages = 1;
+}
+
+message RemoveOpenPackageRequest {
+  string pkg = 1;
+}
+
+message RemoveOpenPackageResponse {
+}
+
+message RetrieveGoogleCloudRegionsRequest {
+}
+
+message RetrieveGoogleCloudRegionsResponse {
+  repeated string regions = 1;
+}
+
+message BatchTestIamPermissionsRequest {
+  repeated string resources = 1;
+  repeated string permissions = 2;
+}
+
+message BatchTestIamPermissionsResponse {
+  message Permissions {
+    string resource = 1;
+    repeated string permissions = 2;
+  }
+  repeated .alis.os.resources.products.v1.BatchTestIamPermissionsResponse.Permissions permissions = 1;
+}
+
+message ProtocolBuffer {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    CREATING = 5;
+    UPDATING = 6;
+    FAILED = 7;
+  }
+  message ProtoFile {
+    string filename = 1;
+    bytes content = 2;
+  }
+  message MethodAvailability {
+    enum Availability {
+      AVAILABILITY_UNSPECIFIED = 0;
+      INTERNAL = 1;
+      GA = 2;
+    }
+    string method = 1;
+    .alis.os.resources.products.v1.ProtocolBuffer.MethodAvailability.Availability availability = 2;
+  }
+  string name = 1;
+  .google.protobuf.FileDescriptorSet file_descriptor_set = 2;
+  string commit_sha = 3;
+  .google.protobuf.Timestamp update_time = 4;
+  .alis.os.resources.products.v1.ProtocolBuffer.State state = 5;
+  bytes proto_lock = 6;
+  repeated .alis.os.resources.products.v1.ProtocolBuffer.ProtoFile proto_files = 9;
+  repeated .alis.os.resources.products.v1.ProtocolBuffer.MethodAvailability method_availability = 10;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 7;
+    .google.protobuf.Duration ttl = 8;
+  }
+}
+
+message Artifact {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PROVISIONING = 1;
+    ARCHIVED = 2;
+    FAILED = 3;
+    ACTIVE = 4;
+    BUILDING = 5;
+    BUILT = 6;
+    DEPLOYING = 7;
+    DEPLOYED = 8;
+  }
+  enum Stability {
+    STABILITY_UNSPECIFIED = 0;
+    STABLE = 1;
+    BETA = 2;
+    ALPHA = 3;
+  }
+  message GoProtobufs {
+    string version = 1;
+    string go_package = 2;
+    string commit_sha = 3;
+  }
+  message PythonProtobufs {
+    string version = 1;
+    string commit_sha = 2;
+  }
+  message NodeProtobufs {
+    string version = 1;
+    string commit_sha = 2;
+  }
+  message ExternalGoProtobufs {
+    string version = 1;
+    string go_package = 2;
+  }
+  message ExternalPythonProtobufs {
+    string version = 1;
+  }
+  message ExternalNodeProtobufs {
+    string version = 1;
+  }
+  message Gateways {
+    message Gateway {
+      .alis.os.resources.products.v1.Artifact.State state = 1;
+      string product_deployment = 2;
+      string notes = 3;
+    }
+    repeated .alis.os.resources.products.v1.Artifact.Gateways.Gateway product_deployments = 1;
+  }
+  message CSharpProtobufs {
+    string commit_sha = 1;
+  }
+  message CppProtobufs {
+    string commit_sha = 1;
+  }
+  message DartProtobufs {
+    string commit_sha = 1;
+  }
+  message JavaProtobufs {
+    string commit_sha = 1;
+  }
+  message KotlinProtobufs {
+    string commit_sha = 1;
+  }
+  message ObjectiveCProtobufs {
+  }
+  message PhpProtobufs {
+    string commit_sha = 1;
+  }
+  message RubyProtobufs {
+    string commit_sha = 1;
+  }
+  message RProjectProtobufs {
+    string commit_sha = 1;
+  }
+  message PostmanCollection {
+    string version = 1;
+    bytes collection_json = 2;
+    repeated bytes environment_json = 3;
+    string icon_uri = 4;
+  }
+  message Swagger {
+  }
+  message Markdown {
+  }
+  message Html {
+  }
+  message BigQuerySchemas {
+  }
+  message SnowflakeSchemas {
+  }
+  message GasProtobufs {
+  }
+  message ExternalGasProtobufs {
+  }
+  message ScriptEnvironments {
+    enum ProgrammingLanguage {
+      PROGRAMMING_LANGUAGE_UNSPECIFIED = 0;
+      GO = 1;
+      PYTHON = 2;
+      NODE = 3;
+      C_SHARP = 4;
+      R_PROJECT = 5;
+    }
+    message Image {
+      .alis.os.resources.products.v1.Artifact.ScriptEnvironments.ProgrammingLanguage programming_language = 1;
+      repeated string docker_tags = 2;
+      string docker_path = 3;
+      string docker_digest = 4;
+    }
+    repeated .alis.os.resources.products.v1.Artifact.ScriptEnvironments.Image images = 1;
+  }
+  message MsExcelAddIns {
+    message AddIn {
+      bytes manifest = 1;
+      string product_deployment = 2;
+      .alis.os.resources.products.v1.Artifact.State state = 3;
+      string google_project_id = 4;
+      repeated string warnings = 5;
+      string product_deployment_display_name = 6;
+    }
+    message MethodConfig {
+      enum ParameterConfig {
+        PARAMETER_CONFIG_UNSPECIFIED = 0;
+        PARAMETERS_SYSTEM_GENERATED = 1;
+        PARAMETERS_CUSTOM_DEFINED = 2;
+      }
+      message Example {
+        string description = 1;
+        string formula = 2;
+      }
+      message Parameter {
+        enum Type {
+          TYPE_UNSPECIFIED = 0;
+          STRING = 1;
+          NUMBER = 2;
+          BOOLEAN = 3;
+          ANY = 4;
+        }
+        enum Dimensionality {
+          DIMENSIONALITY_UNSPECIFIED = 0;
+          SCALAR = 1;
+          MATRIX = 2;
+        }
+        string name = 1;
+        string description = 2;
+        bool required = 3;
+        .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig.Parameter.Type type = 4;
+        .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig.Parameter.Dimensionality dimensionality = 5;
+        string corresponding_request_message_field = 6;
+      }
+      string method = 1;
+      .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig.ParameterConfig parameter_config = 2;
+      string description = 3;
+      repeated .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig.Example examples = 4;
+      repeated .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig.Parameter parameters = 5;
+    }
+    repeated .alis.os.resources.products.v1.Artifact.MsExcelAddIns.AddIn product_deployments = 1;
+    repeated .alis.os.resources.products.v1.Artifact.MsExcelAddIns.MethodConfig method_configs = 2;
+  }
+  message RustProtobufs {
+    string commit_sha = 1;
+  }
+  message SwiftProtobufs {
+    string commit_sha = 1;
+  }
+  string name = 1;
+  .google.protobuf.Timestamp update_time = 2;
+  .alis.os.resources.products.v1.Artifact.State state = 3;
+  .alis.os.resources.products.v1.Artifact.Stability stability = 4;
+  string display_name = 5;
+  string description = 6;
+  string notes = 7;
+  oneof artifact_id {
+    .alis.os.resources.products.v1.Artifact.GoProtobufs go_protobufs = 10;
+    .alis.os.resources.products.v1.Artifact.PythonProtobufs python_protobufs = 11;
+    .alis.os.resources.products.v1.Artifact.NodeProtobufs node_protobufs = 12;
+    .alis.os.resources.products.v1.Artifact.ExternalGoProtobufs external_go_protobufs = 13;
+    .alis.os.resources.products.v1.Artifact.ExternalPythonProtobufs external_python_protobufs = 14;
+    .alis.os.resources.products.v1.Artifact.ExternalNodeProtobufs external_node_protobufs = 15;
+    .alis.os.resources.products.v1.Artifact.Gateways gateways = 16;
+    .alis.os.resources.products.v1.Artifact.CSharpProtobufs csharp_protobufs = 17;
+    .alis.os.resources.products.v1.Artifact.CppProtobufs cpp_protobufs = 18;
+    .alis.os.resources.products.v1.Artifact.DartProtobufs dart_protobufs = 19;
+    .alis.os.resources.products.v1.Artifact.JavaProtobufs java_protobufs = 20;
+    .alis.os.resources.products.v1.Artifact.KotlinProtobufs kotlin_protobufs = 21;
+    .alis.os.resources.products.v1.Artifact.ObjectiveCProtobufs objective_c_protobufs = 22;
+    .alis.os.resources.products.v1.Artifact.PhpProtobufs php_protobufs = 23;
+    .alis.os.resources.products.v1.Artifact.RubyProtobufs ruby_protobufs = 24;
+    .alis.os.resources.products.v1.Artifact.RProjectProtobufs r_project_protobufs = 25;
+    .alis.os.resources.products.v1.Artifact.PostmanCollection postman_collection = 26;
+    .alis.os.resources.products.v1.Artifact.Swagger swagger = 27;
+    .alis.os.resources.products.v1.Artifact.Markdown markdown = 28;
+    .alis.os.resources.products.v1.Artifact.Html html = 29;
+    .alis.os.resources.products.v1.Artifact.BigQuerySchemas bigquery_schemas = 30;
+    .alis.os.resources.products.v1.Artifact.SnowflakeSchemas snowflake_schemas = 31;
+    .alis.os.resources.products.v1.Artifact.GasProtobufs gas_protobufs = 32;
+    .alis.os.resources.products.v1.Artifact.ExternalGasProtobufs external_gas_protobufs = 33;
+    .alis.os.resources.products.v1.Artifact.ScriptEnvironments script_environments = 34;
+    .alis.os.resources.products.v1.Artifact.MsExcelAddIns ms_excel_addins = 35;
+    .alis.os.resources.products.v1.Artifact.Gateways external_gateways = 36;
+    .alis.os.resources.products.v1.Artifact.SwiftProtobufs swift_protobufs = 37;
+    .alis.os.resources.products.v1.Artifact.RustProtobufs rust_protobufs = 38;
+  }
+}
+
+message Resource {
+  string name = 1;
+  .google.api.ResourceDescriptor descriptor = 2;
+}
+
+message Organisation {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    CREATING = 5;
+    UPDATING = 6;
+    FAILED = 7;
+    DETACHED = 8;
+  }
+  enum GitProvider {
+    GIT_PROVIDER_UNSPECIFIED = 0;
+    ALIS_MANAGED = 1;
+  }
+  message EnvEntry {
+    string name = 1;
+    string value = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.resources.products.v1.Organisation.State state = 3;
+  string owner = 4;
+  repeated .alis.os.resources.products.v1.Organisation.EnvEntry env = 5;
+  string domain = 6;
+  string google_project_id = 7;
+  .google.protobuf.Timestamp update_time = 8;
+  string identity_uri = 9;
+  string billing_account = 10;
+  string folder = 11;
+  string google_customer_id = 12;
+  string version = 13;
+  string description = 16;
+  bool ai_enabled = 17;
+  .alis.os.resources.products.v1.Organisation.GitProvider git_provider = 18;
+  bool lb_enabled = 19;
+  string run_hash = 20;
+  .google.protobuf.Timestamp create_time = 21;
+  .google.protobuf.Timestamp managed_dns_switchover_time = 22;
+  string google_project_number = 23;
+  string managed_spanner_db_instance = 24;
+  .alis.os.resources.products.v1.ManagedSpannerDbConfig managed_spanner_db_config = 25;
+  string logo_uri = 26;
+  .alis.os.resources.products.v1.ManagedSpannerInstanceConfig managed_spanner_instance_config = 27;
+  string region = 28;
+  bool migrated = 90;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 14;
+    .google.protobuf.Duration ttl = 15;
+  }
+}
+
+message Product {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    CREATING = 5;
+    UPDATING = 6;
+    FAILED = 7;
+  }
+  enum Availability {
+    AVAILABILITY_UNSPECIFIED = 0;
+    PRIVATE = 1;
+    GA = 2;
+    BETA = 3;
+    ALPHA = 4;
+    GA_ORG = 5;
+  }
+  message Dependency {
+    string product = 1;
+    bool required = 2;
+  }
+  message Env {
+    string name = 1;
+    string value = 2;
+  }
+  message Documentation {
+    message Page {
+      enum State {
+        STATE_UNSPECIFIED = 0;
+        DRAFT = 1;
+        PUBLISHED = 2;
+        ARCHIVED = 3;
+      }
+      message ContentBlock {
+        enum Type {
+          TYPE_UNSPECIFIED = 0;
+          TITLE = 1;
+          SUBTITLE = 2;
+          TEXT_BODY = 3;
+          IMAGE = 4;
+          VIDEO = 5;
+          DIVIDER = 6;
+          LINK_PREVIEW = 7;
+        }
+        message Title {
+          string text = 1;
+        }
+        message Subtitle {
+          string text = 1;
+        }
+        message TextBody {
+          string text = 1;
+        }
+        message Image {
+          string source_uri = 1;
+          string caption = 2;
+        }
+        message Video {
+          string source_uri = 1;
+          string caption = 2;
+        }
+        message Divider {
+        }
+        message LinkPreview {
+          string uri = 1;
+          string avatar_uri = 2;
+          string title = 3;
+          string body = 4;
+        }
+        .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Type type = 1;
+        oneof block {
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Title title = 2;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Subtitle subtitle = 3;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.TextBody text_body = 4;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Image image = 5;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Video video = 6;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.Divider divider = 7;
+          .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock.LinkPreview link_preview = 8;
+        }
+      }
+      string id = 4;
+      string title = 5;
+      string subtitle = 6;
+      repeated .alis.os.resources.products.v1.Product.Documentation.Page.ContentBlock contents = 7;
+      .google.protobuf.Timestamp create_time = 8;
+      .google.protobuf.Timestamp update_time = 9;
+      string builder = 10;
+      .alis.os.resources.products.v1.Product.Documentation.Page.State state = 11;
+    }
+    repeated .alis.os.resources.products.v1.Product.Documentation.Page pages = 1;
+  }
+  message BuildConfig {
+    string repository = 1;
+  }
+  message LandingPage {
+    message Feature {
+      string title = 1;
+      string description = 2;
+      string image_uri = 3;
+    }
+    string title = 1;
+    string overview = 2;
+    repeated string highlights = 3;
+    repeated .alis.os.resources.products.v1.Product.LandingPage.Feature features = 4;
+    string intro_video_uri = 5;
+  }
+  string name = 1;
+  string display_name = 2;
+  string google_project_id = 3;
+  .alis.os.resources.products.v1.Product.State state = 4;
+  string owner = 5;
+  string description = 6;
+  string version = 7;
+  .google.protobuf.Timestamp update_time = 8;
+  repeated string labels = 9;
+  string overview = 10;
+  string documentation_uri = 11;
+  .alis.os.resources.products.v1.Product.Availability availability = 12;
+  repeated .alis.os.resources.products.v1.Product.Dependency dependencies = 13;
+  string base_uri = 14;
+  string billing_account = 15;
+  .alis.os.resources.products.v1.Product.Documentation documentation = 16;
+  bool managed_terraform = 19;
+  .alis.os.resources.products.v1.Product.BuildConfig build_config = 20;
+  string google_doc_description_uri = 21;
+  .alis.os.resources.products.v1.Product.LandingPage landing_page = 22;
+  bool fast_builds = 23;
+  string run_hash = 24;
+  string managed_spanner_db_instance = 25;
+  string google_project_number = 26;
+  .alis.os.resources.products.v1.ManagedSpannerDbConfig managed_spanner_db_config = 27;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 17;
+    .google.protobuf.Duration ttl = 18;
+  }
+}
+
+message Role {
+  enum RoleLaunchStage {
+    ALPHA = 0;
+    BETA = 1;
+    GA = 2;
+    DEPRECATED = 4;
+    DISABLED = 5;
+    EAP = 6;
+  }
+  string name = 1;
+  string title = 2;
+  string description = 3;
+  repeated string included_permissions = 7;
+  .alis.os.resources.solutions.v1.Solution.Stage stage = 8;  // enum (heuristically resolved)
+  bytes etag = 9;
+  bool deleted = 11;
+}
+
+message Neuron {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    RESOURCE = 1;
+    SERVICE = 2;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    CREATING = 5;
+    UPDATING = 6;
+    FAILED = 7;
+    LOCKED = 8;
+    DELETING = 9;
+  }
+  message Env {
+    string name = 1;
+    string value = 2;
+    string description = 3;
+    bool optional = 4;
+  }
+  string name = 1;
+  .alis.os.resources.products.v1.Neuron.Type type = 2;
+  .alis.os.resources.products.v1.Neuron.State state = 5;
+  repeated .alis.os.resources.products.v1.Neuron.Env envs = 6;
+  .google.protobuf.Timestamp update_time = 8;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 9;
+    .google.protobuf.Duration ttl = 10;
+  }
+}
+
+message NeuronVersion {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    UPDATING = 5;
+    FAILED = 6;
+    PROVISIONING = 7;
+  }
+  string name = 1;
+  string version = 2;
+  .alis.os.resources.products.v1.NeuronVersion.State state = 3;
+  .google.protobuf.Timestamp update_time = 4;
+  string repository_tag = 5;
+  string commit_sha = 6;
+  string proto_commit_sha = 7;
+  repeated string dockerfile_paths = 8;
+  .google.protobuf.FileDescriptorSet file_descriptor_set = 9;
+  .google.protobuf.Timestamp create_time = 12;
+  string fast_build_name = 13;
+  repeated string retag_paths = 14;
+  repeated string locally_built_paths = 15;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 10;
+    .google.protobuf.Duration ttl = 11;
+  }
+}
+
+message ProductDeployment {
+  enum EnvironmentType {
+    ENVIRONMENT_TYPE_UNSPECIFIED = 0;
+    DEV = 1;
+    STAGING = 2;
+    PROD = 3;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    RUNNING = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    CREATING = 4;
+    FAILED = 5;
+    UPDATING = 6;
+    LOCKED = 7;
+  }
+  message Gateway {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      CONSUMER = 1;
+      INTERNAL = 2;
+    }
+    string display_name = 1;
+    string host = 2;
+    .alis.os.resources.products.v1.ProductDeployment.Gateway.Type type = 3;
+  }
+  message GuidesConfig {
+    bool enabled = 1;
+  }
+  message IssuesConfig {
+    bool enabled = 1;
+  }
+  message SupportConfig {
+    message GuidesConfig {
+    }
+    message IssuesConfig {
+    }
+    bool enabled = 1;
+    .alis.os.resources.products.v1.ProductDeployment.SupportConfig.GuidesConfig guides_config = 2;
+    .alis.os.resources.products.v1.ProductDeployment.SupportConfig.IssuesConfig issues_config = 3;
+  }
+  string name = 1;
+  string google_project_id = 2;
+  .alis.os.resources.products.v1.ProductDeployment.EnvironmentType environment = 3;  // enum (heuristically resolved)
+  .alis.os.resources.products.v1.ProductDeployment.State state = 4;
+  string owner = 5;
+  string version = 6;
+  .google.protobuf.Timestamp update_time = 7;
+  string display_name = 8;
+  repeated .alis.os.resources.products.v1.Product.Env envs = 9;
+  string infrastructure_uri = 10;
+  string billing_account = 15;
+  bool gateway_enabled = 16;
+  bool workflows_enabled = 17;
+  repeated .alis.os.resources.products.v1.ProductDeployment.Gateway gateways = 20;
+  string service_account = 21;
+  string console_uri = 22;
+  string run_hash = 23;
+  string region = 24;
+  string managed_spanner_db_instance = 25;
+  bool flows_enabled = 26;
+  bool operations_enabled = 27;
+  string google_project_number = 28;
+  .google.protobuf.Any oauth_config = 29;
+  .alis.open.iam.v1.IamConfig iam_config = 30;
+  .alis.os.resources.products.v1.ManagedSpannerDbConfig managed_spanner_db_config = 31;
+  .alis.os.resources.products.v1.ProductDeployment.GuidesConfig guides_config = 32;
+  .alis.os.resources.products.v1.ProductDeployment.IssuesConfig issues_config = 33;
+  .alis.os.resources.products.v1.ProductDeployment.SupportConfig support_config = 34;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 18;
+    .google.protobuf.Duration ttl = 19;
+  }
+}
+
+message NeuronDeployment {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    RUNNING = 1;
+    ARCHIVED = 2;
+    DELETED = 3;
+    DEV = 4;
+    CREATING = 5;
+    UPDATING = 6;
+    FAILED = 7;
+    DESTROYED = 8;
+  }
+  string name = 1;
+  string version = 2;
+  .alis.os.resources.products.v1.NeuronDeployment.State state = 3;
+  repeated .alis.os.resources.products.v1.Neuron.Env envs = 6;
+  .google.protobuf.Timestamp update_time = 7;
+  string infrastructure_uri = 8;
+  bytes terraform_tfvars = 11;
+  oneof expiration {
+    .google.protobuf.Timestamp expire_time = 9;
+    .google.protobuf.Duration ttl = 10;
+  }
+}
+
+message GetResourceRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListResourcesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+}
+
+message ListResourcesResponse {
+  repeated .alis.os.resources.products.v1.Resource resources = 1;
+  string next_page_token = 2;
+}
+
+message CreateProtocolBufferRequest {
+  .alis.os.resources.products.v1.ProtocolBuffer protocol_buffer = 1;
+  string protocol_buffer_id = 2;
+}
+
+message CreateProtocolBufferMetadata {
+}
+
+message GetProtocolBufferRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+  bool exclude_imports = 3;
+}
+
+message UpdateProtocolBufferRequest {
+  .alis.os.resources.products.v1.ProtocolBuffer protocol_buffer = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool force = 3;
+}
+
+message UpdateProtocolBufferMetadata {
+}
+
+message DeleteProtocolBufferRequest {
+  string name = 1;
+}
+
+message ListProtocolBuffersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  bool exclude_imports = 5;
+}
+
+message ListProtocolBuffersResponse {
+  repeated .alis.os.resources.products.v1.ProtocolBuffer protocol_buffers = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetProtocolBuffersRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+  bool exclude_imports = 3;
+}
+
+message BatchGetProtocolBuffersResponse {
+  repeated .alis.os.resources.products.v1.ProtocolBuffer protocol_buffers = 1;
+}
+
+message StreamProtocolBuffersRequest {
+  .google.protobuf.FieldMask read_mask = 1;
+  string filter = 2;
+  bool exclude_imports = 3;
+}
+
+message SetMethodsAvailabilityRequest {
+  repeated .alis.os.resources.products.v1.ProtocolBuffer.MethodAvailability methods = 1;
+  string protocol_buffer = 2;
+}
+
+message SetMethodsAvailabilityResponse {
+}
+
+message UpdateArtifactRequest {
+  .alis.os.resources.products.v1.Artifact artifact = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message GetArtifactRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetArtifactsRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetArtifactsResponse {
+  repeated .alis.os.resources.products.v1.Artifact artifacts = 1;
+}
+
+message BatchUpdateArtifactsRequest {
+  repeated .alis.os.resources.products.v1.UpdateArtifactRequest requests = 1;
+}
+
+message BatchUpdateArtifactsResponse {
+  repeated .alis.os.resources.products.v1.Artifact artifacts = 1;
+}
+
+message ListArtifactsRequest {
+  string parent = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+  string filter = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+message ListArtifactsResponse {
+  repeated .alis.os.resources.products.v1.Artifact artifacts = 1;
+  string next_page_token = 2;
+}
+
+message CreateOrganisationRequest {
+  .alis.os.resources.products.v1.Organisation organisation = 1;
+  string organisation_id = 2;
+}
+
+message CreateOrganisationMetadata {
+  string message = 1;
+}
+
+message GetOrganisationRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateOrganisationRequest {
+  .alis.os.resources.products.v1.Organisation organisation = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool validate_only = 3;
+}
+
+message DeleteOrganisationRequest {
+  string name = 1;
+  bool force = 2;
+}
+
+message DeleteOrganisationMetadata {
+}
+
+message ListOrganisationsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  bool show_deleted = 4;
+}
+
+message ListOrganisationsResponse {
+  repeated .alis.os.resources.products.v1.Organisation organisations = 1;
+  string next_page_token = 2;
+}
+
+message InitialiseOrganisationRequest {
+  string organisation = 1;
+}
+
+message InitialiseOrganisationResponse {
+}
+
+message InitialiseOrganisationMetadata {
+}
+
+message CreateProductRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.Product product = 2;
+  string product_id = 3;
+}
+
+message CreateProductMetadata {
+}
+
+message GetProductRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateProductRequest {
+  .alis.os.resources.products.v1.Product product = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool validate_only = 3;
+}
+
+message UpdateProductMetadata {
+}
+
+message DeleteProductMetadata {
+}
+
+message DeleteProductRequest {
+  string name = 1;
+  bool force = 2;
+}
+
+message ListProductsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message ListProductsResponse {
+  repeated .alis.os.resources.products.v1.Product products = 1;
+  string next_page_token = 2;
+}
+
+message InitialiseProductRequest {
+  string product = 1;
+}
+
+message InitialiseProductResponse {
+}
+
+message RetrieveProductGuidePagesRequest {
+  string product = 1;
+}
+
+message RetrieveProductGuidePagesResponse {
+  repeated .alis.os.resources.products.v1.Product.Documentation.Page pages = 1;
+}
+
+message GenerateProductGuidePageRequest {
+  string product = 1;
+  .alis.os.resources.products.v1.Product.Documentation.Page page = 2;
+}
+
+message GenerateProductGuidePageResponse {
+  .alis.os.resources.products.v1.Product.Documentation.Page page = 1;
+}
+
+message AmendProductGuidePageRequest {
+  string product = 1;
+  .alis.os.resources.products.v1.Product.Documentation.Page page = 2;
+}
+
+message AmendProductGuidePageResponse {
+  .alis.os.resources.products.v1.Product.Documentation.Page page = 1;
+}
+
+message SetProductGuidePageStateRequest {
+  string product = 1;
+  string page_id = 2;
+  int32 state = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message SetProductGuidePageStateResponse {
+  .alis.os.resources.products.v1.Product.Documentation.Page page = 1;
+}
+
+message InitialiseProductMetadata {
+}
+
+message CreateRoleRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.Role role = 2;
+  string role_id = 3;
+}
+
+message GetRoleRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateRoleRequest {
+  .alis.os.resources.products.v1.Role role = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteRoleRequest {
+  string name = 1;
+}
+
+message ListRolesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListRolesResponse {
+  repeated .alis.os.resources.products.v1.Role roles = 1;
+  string next_page_token = 2;
+}
+
+message CreateNeuronRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.Neuron neuron = 2;
+  string neuron_id = 3;
+}
+
+message CreateNeuronMetadata {
+}
+
+message GetNeuronRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateNeuronRequest {
+  .alis.os.resources.products.v1.Neuron neuron = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateNeuronMetadata {
+}
+
+message DeleteNeuronMetadata {
+  message DeleteNeuronProgress {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      PENDING = 1;
+      RUNNING = 2;
+      SUCCEEDED = 3;
+      FAILED = 4;
+    }
+    string message = 1;
+    .alis.os.resources.products.v1.DeleteNeuronMetadata.DeleteNeuronProgress.State state = 2;
+    int32 position_in_sequence = 3;
+  }
+  repeated .alis.os.resources.products.v1.DeleteNeuronMetadata.DeleteNeuronProgress progress = 1;
+}
+
+message DeleteNeuronRequest {
+  string name = 1;
+  bool force = 2;
+  bool skip_terraform_destroy = 3;
+}
+
+message StreamNeuronsRequest {
+  .google.protobuf.FieldMask read_mask = 1;
+  string filter = 2;
+}
+
+message PlanDestroyNeuronMetadata {
+}
+
+message PlanDestroyNeuronRequest {
+  string name = 1;
+}
+
+message ListNeuronsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message ListNeuronsResponse {
+  repeated .alis.os.resources.products.v1.Neuron neurons = 1;
+  string next_page_token = 2;
+}
+
+message CreateNeuronVersionRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.NeuronVersion neuron_version = 2;
+  string neuron_version_id = 3;
+}
+
+message CreateNeuronVersionMetadata {
+}
+
+message GetNeuronVersionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateNeuronVersionRequest {
+  .alis.os.resources.products.v1.NeuronVersion neuron_version = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateNeuronVersionMetadata {
+}
+
+message DeleteNeuronVersionMetadata {
+}
+
+message DeleteNeuronVersionRequest {
+  string name = 1;
+}
+
+message ListNeuronVersionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message ListNeuronVersionsResponse {
+  repeated .alis.os.resources.products.v1.NeuronVersion neuron_versions = 1;
+  string next_page_token = 2;
+}
+
+message CreateProductDeploymentRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.ProductDeployment product_deployment = 2;
+  string product_deployment_id = 3;
+}
+
+message CreateProductDeploymentMetadata {
+}
+
+message GetProductDeploymentRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateProductDeploymentRequest {
+  .alis.os.resources.products.v1.ProductDeployment product_deployment = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool validate_only = 3;
+}
+
+message UpdateProductDeploymentMetadata {
+}
+
+message DeleteProductDeploymentMetadata {
+}
+
+message DeleteProductDeploymentRequest {
+  string name = 1;
+  bool force = 2;
+}
+
+message ListProductDeploymentsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message ListProductDeploymentsResponse {
+  repeated .alis.os.resources.products.v1.ProductDeployment product_deployments = 1;
+  string next_page_token = 2;
+}
+
+message PlanProductDeploymentRequest {
+  string product_deployment = 1;
+  string commit_sha = 2;
+}
+
+message PlanProductDeploymentResponse {
+  string logs_url = 1;
+}
+
+message PlanProductDeploymentMetadata {
+}
+
+message CreateNeuronDeploymentRequest {
+  string parent = 1;
+  .alis.os.resources.products.v1.NeuronDeployment neuron_deployment = 2;
+  string neuron_deployment_id = 3;
+}
+
+message CreateNeuronDeploymentMetadata {
+}
+
+message GetNeuronDeploymentRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateNeuronDeploymentRequest {
+  .alis.os.resources.products.v1.NeuronDeployment neuron_deployment = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+  bool validate_only = 4;
+}
+
+message UpdateNeuronDeploymentMetadata {
+}
+
+message DeleteNeuronDeploymentRequest {
+  string name = 1;
+}
+
+message DeleteNeuronDeploymentMetadata {
+}
+
+message BatchGetNeuronDeploymentsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message BatchGetNeuronDeploymentsResponse {
+  repeated .alis.os.resources.products.v1.NeuronDeployment neuron_deployments = 1;
+}
+
+message ListNeuronDeploymentsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message ListNeuronDeploymentsResponse {
+  repeated .alis.os.resources.products.v1.NeuronDeployment neuron_deployments = 1;
+  string next_page_token = 2;
+}
+
+message PlanNeuronDeploymentRequest {
+  string neuron_deployment = 1;
+  string commit_sha = 2;
+}
+
+message PlanNeuronDeploymentResponse {
+  string logs_url = 1;
+}
+
+message PlanNeuronDeploymentMetadata {
+}
+
+message GenerateProductDeploymentServiceAccountKeyRequest {
+  string product_deployment = 1;
+}
+
+message GenerateProductDeploymentServiceAccountKeyResponse {
+  .google.iam.admin.v1.ServiceAccountKey service_account_key = 1;
+}
+
+message RetrieveConsumptionOrganisationsRequest {
+}
+
+message RetrieveConsumptionOrganisationsResponse {
+  message Organisation {
+    string name = 1;
+    string display_name = 2;
+    bool ai_enabled = 3;
+    string domain = 4;
+  }
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionOrganisationsResponse.Organisation organisations = 1;
+}
+
+message RetrieveConsumptionProductsRequest {
+}
+
+message RetrieveConsumptionProductsResponse {
+  message Product {
+    string name = 1;
+    string display_name = 2;
+    string overview = 3;
+    string description = 4;
+    bool ai_enabled = 6;
+    string google_doc_description_uri = 7;
+  }
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductsResponse.Product products = 1;
+}
+
+message RetrieveConsumptionProductDefinitionsRequest {
+  string product = 1;
+}
+
+message RetrieveConsumptionProductDefinitionsResponse {
+  message Service {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Method methods = 4;
+  }
+  message Method {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    string request_message_type = 4;
+    string response_message_type = 5;
+    string metadata_message_type = 6;
+    bool client_streaming = 7;
+    bool server_streaming = 8;
+    .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Message response_message = 12;
+    .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Message request_message = 13;
+  }
+  message Message {
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Field fields = 5;
+    repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Enum enums = 6;
+    repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Message messages = 7;
+  }
+  message Enum {
+    message Value {
+      string name = 1;
+      int32 number = 2;
+      string description = 3;
+    }
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Enum.Value values = 4;
+  }
+  message Field {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      TYPE_DOUBLE = 1;
+      TYPE_FLOAT = 2;
+      TYPE_INT64 = 3;
+      TYPE_UINT64 = 4;
+      TYPE_INT32 = 5;
+      TYPE_FIXED64 = 6;
+      TYPE_FIXED32 = 7;
+      TYPE_BOOL = 8;
+      TYPE_STRING = 9;
+      TYPE_GROUP = 10;
+      TYPE_MESSAGE = 11;
+      TYPE_BYTES = 12;
+      TYPE_UINT32 = 13;
+      TYPE_ENUM = 14;
+      TYPE_SFIXED32 = 15;
+      TYPE_SFIXED64 = 16;
+      TYPE_SINT32 = 17;
+      TYPE_SINT64 = 18;
+    }
+    enum FieldLabel {
+      FIELD_LABEL_UNSPECIFIED = 0;
+      FIELD_LABEL_OPTIONAL = 1;
+      FIELD_LABEL_REQUIRED = 2;
+      FIELD_LABEL_REPEATED = 3;
+    }
+    string name = 1;
+    string display_name = 2;
+    string description = 3;
+    string number = 4;
+    .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Field.Type type = 5;
+    string type_name = 8;
+    .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Field.FieldLabel label = 9;
+  }
+  .alis.os.resources.products.v1.RetrieveConsumptionProductsResponse.Product product = 1;
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Service services = 2;
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Message resources = 3;
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Enum enums = 4;
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse.Message events = 5;
+}
+
+message RetrieveConsumptionProductDeploymentsRequest {
+  string product = 1;
+}
+
+message RetrieveConsumptionProductDeploymentsResponse {
+  message ProductDeployment {
+    message Gateway {
+      string display_name = 1;
+      string host = 2;
+    }
+    string name = 1;
+    string display_name = 2;
+    .alis.os.resources.products.v1.RetrieveConsumptionProductDeploymentsResponse.ProductDeployment.Gateway consumer_gateway = 3;
+  }
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionProductDeploymentsResponse.ProductDeployment product_deployments = 1;
+}
+
+message LookupProductDeploymentRequest {
+  string google_project_id = 1;
+}
+
+message LookupProductDeploymentResponse {
+  string product_deployment = 1;
+}
+
+message RetrieveConsumptionArtifactsRequest {
+  string proto_package = 1;
+}
+
+message RetrieveConsumptionArtifactsResponse {
+  message ConsumptionArtifact {
+    string name = 1;
+    .google.protobuf.Timestamp update_time = 2;
+    .alis.os.resources.products.v1.Artifact.Stability stability = 4;  // enum (heuristically resolved)
+    string display_name = 5;
+    string description = 6;
+    oneof artifact_id {
+      .alis.os.resources.products.v1.Artifact.ExternalGoProtobufs go_protobufs = 7;
+      .alis.os.resources.products.v1.Artifact.MsExcelAddIns ms_excel_addins = 10;
+    }
+  }
+  repeated .alis.os.resources.products.v1.RetrieveConsumptionArtifactsResponse.ConsumptionArtifact artifacts = 1;
+}
+
+message SendSupportEmailRequest {
+  string product = 1;
+  string product_deployment_gcp_id = 4;
+  string builder_display_name = 5;
+  string builder_primary_email = 6;
+  string support_request_body = 7;
+}
+
+message SendSupportEmailResponse {
+  message HeaderValue {
+    repeated string value = 1;
+  }
+  int32 status_code = 1;
+  string body = 2;
+  map<string, .alis.os.resources.products.v1.SendSupportEmailResponse.HeaderValue> headers = 3;
+}
+
+message MaskedOrganisation {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    VIEWER = 1;
+    BUILDER = 2;
+    ADMIN = 3;
+  }
+  .alis.os.resources.products.v1.Organisation organisation = 1;
+  .alis.os.resources.products.v1.MaskedOrganisation.Role role = 2;
+}
+
+message RetrieveMaskedOrganisationsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  bool show_deleted = 4;
+}
+
+message RetrieveMaskedOrganisationsResponse {
+  repeated .alis.os.resources.products.v1.MaskedOrganisation masked_organisations = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMaskedOrganisationRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message DetachOrganisationRequest {
+  string name = 1;
+}
+
+message MaskedProduct {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    CONSUMER = 2;
+    BUILDER = 3;
+    ADMIN = 4;
+  }
+  .alis.os.resources.products.v1.Product product = 1;
+  .alis.os.resources.products.v1.MaskedProduct.Role role = 2;
+}
+
+message RetrieveMaskedProductsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message RetrieveMaskedProductsResponse {
+  repeated .alis.os.resources.products.v1.MaskedProduct masked_products = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMaskedProductRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message MaskedDeployment {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    CONSUMER = 1;
+    DEPLOYER = 2;
+    ADMIN = 3;
+  }
+  .alis.os.resources.products.v1.ProductDeployment deployment = 1;
+  .alis.os.resources.products.v1.MaskedDeployment.Role role = 3;
+}
+
+message RetrieveMaskedDeploymentsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  bool show_deleted = 5;
+}
+
+message RetrieveMaskedDeploymentsResponse {
+  repeated .alis.os.resources.products.v1.MaskedDeployment masked_deployments = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMaskedDeploymentRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ManageAlisAccessToDomainRequest {
+  string domain = 1;
+  bool force_return_cname = 2;
+}
+
+message ManageAlisAccessToDomainResponse {
+  bool has_access = 1;
+  string cname_name = 2;
+  string cname_value = 3;
+}
+
+message RetrieveOrgDnsAddressesRequest {
+  string organisation = 1;
+}
+
+message RetrieveOrgDnsAddressesResponse {
+  repeated string addresses = 1;
+}
+
+message SuggestProductDocumentationTextEnhancementRequest {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    CHECK_GRAMMAR = 1;
+    EXPAND = 2;
+  }
+  string text = 1;
+  .alis.os.resources.products.v1.SuggestProductDocumentationTextEnhancementRequest.Type type = 2;
+}
+
+message SuggestProductDocumentationTextEnhancementResponse {
+  string text = 1;
+}
+
+message SuggestProductDocumentationInstructionsRequest {
+  string media_uri = 1;
+  string mime_type = 2;
+  repeated string sections = 3;
+}
+
+message SuggestProductDocumentationInstructionsResponse {
+  string instructions = 1;
+}
+
+message ManagedSpannerDbConfig {
+  enum Frequency {
+    FREQUENCY_UNSPECIFIED = 0;
+    FREQUENCY_12_HOURS = 1;
+    FREQUENCY_DAILY = 2;
+    FREQUENCY_WEEKLY = 3;
+    FREQUENCY_MONTHLY = 4;
+  }
+  message BackupConfig {
+    bool enabled = 1;
+    .alis.os.resources.products.v1.ManagedSpannerDbConfig.Frequency frequency = 2;
+    .google.protobuf.Duration retention_period = 5;
+    oneof backup_spec {
+      bool full_backup = 6;
+    }
+  }
+  message ExportConfig {
+    enum ExportFormat {
+      EXPORT_FORMAT_UNSPECIFIED = 0;
+      EXPORT_FORMAT_AVRO = 1;
+      EXPORT_FORMAT_CSV = 2;
+    }
+    message GcsBucket {
+      string bucket = 1;
+      string prefix = 2;
+    }
+    bool enabled = 1;
+    .alis.os.resources.products.v1.ManagedSpannerDbConfig.Frequency frequency = 2;
+    .alis.os.resources.products.v1.ManagedSpannerDbConfig.ExportConfig.ExportFormat export_format = 5;
+    oneof destination {
+      .alis.os.resources.products.v1.ManagedSpannerDbConfig.ExportConfig.GcsBucket gcs_bucket = 6;
+    }
+  }
+  bool enabled = 1;
+  string instance = 2;
+  .google.protobuf.Duration version_retention_period = 7;
+  .alis.os.resources.products.v1.ManagedSpannerDbConfig.BackupConfig backup_config = 8;
+  .alis.os.resources.products.v1.ManagedSpannerDbConfig.ExportConfig export_config = 9;
+}
+
+message ManagedSpannerInstanceConfig {
+  bool enabled = 1;
+  string instance = 2;
+  string config = 3;
+  string display_name = 4;
+  int32 processing_units = 5;
+}
+
+service Service {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.os.resources.products.v1.BatchTestIamPermissionsRequest) returns (.alis.os.resources.products.v1.BatchTestIamPermissionsResponse);
+  rpc ListResources(.alis.os.resources.products.v1.ListResourcesRequest) returns (.alis.os.resources.products.v1.ListResourcesResponse);
+  rpc GetResource(.alis.os.resources.products.v1.GetResourceRequest) returns (.alis.os.resources.products.v1.Resource);
+  rpc CreateProtocolBuffer(.alis.os.resources.products.v1.CreateProtocolBufferRequest) returns (.google.longrunning.Operation);
+  rpc GetProtocolBuffer(.alis.os.resources.products.v1.GetProtocolBufferRequest) returns (.alis.os.resources.products.v1.ProtocolBuffer);
+  rpc UpdateProtocolBuffer(.alis.os.resources.products.v1.UpdateProtocolBufferRequest) returns (.google.longrunning.Operation);
+  rpc DeleteProtocolBuffer(.alis.os.resources.products.v1.DeleteProtocolBufferRequest) returns (.google.protobuf.Empty);
+  rpc ListProtocolBuffers(.alis.os.resources.products.v1.ListProtocolBuffersRequest) returns (.alis.os.resources.products.v1.ListProtocolBuffersResponse);
+  rpc BatchGetProtocolBuffers(.alis.os.resources.products.v1.BatchGetProtocolBuffersRequest) returns (.alis.os.resources.products.v1.BatchGetProtocolBuffersResponse);
+  rpc StreamProtocolBuffers(.alis.os.resources.products.v1.StreamProtocolBuffersRequest) returns (stream .alis.os.resources.products.v1.ProtocolBuffer);
+  rpc SetMethodsAvailability(.alis.os.resources.products.v1.SetMethodsAvailabilityRequest) returns (.alis.os.resources.products.v1.SetMethodsAvailabilityResponse);
+  rpc UpdateArtifact(.alis.os.resources.products.v1.UpdateArtifactRequest) returns (.alis.os.resources.products.v1.Artifact);
+  rpc GetArtifact(.alis.os.resources.products.v1.GetArtifactRequest) returns (.alis.os.resources.products.v1.Artifact);
+  rpc BatchGetArtifacts(.alis.os.resources.products.v1.BatchGetArtifactsRequest) returns (.alis.os.resources.products.v1.BatchGetArtifactsResponse);
+  rpc BatchUpdateArtifacts(.alis.os.resources.products.v1.BatchUpdateArtifactsRequest) returns (.alis.os.resources.products.v1.BatchUpdateArtifactsResponse);
+  rpc ListArtifacts(.alis.os.resources.products.v1.ListArtifactsRequest) returns (.alis.os.resources.products.v1.ListArtifactsResponse);
+  rpc ManageAlisAccessToDomain(.alis.os.resources.products.v1.ManageAlisAccessToDomainRequest) returns (.alis.os.resources.products.v1.ManageAlisAccessToDomainResponse);
+  rpc RetrieveOrgDnsAddresses(.alis.os.resources.products.v1.RetrieveOrgDnsAddressesRequest) returns (.alis.os.resources.products.v1.RetrieveOrgDnsAddressesResponse);
+  rpc CreateOrganisation(.alis.os.resources.products.v1.CreateOrganisationRequest) returns (.google.longrunning.Operation);
+  rpc GetOrganisation(.alis.os.resources.products.v1.GetOrganisationRequest) returns (.alis.os.resources.products.v1.Organisation);
+  rpc UpdateOrganisation(.alis.os.resources.products.v1.UpdateOrganisationRequest) returns (.google.longrunning.Operation);
+  rpc DeleteOrganisation(.alis.os.resources.products.v1.DeleteOrganisationRequest) returns (.google.longrunning.Operation);
+  rpc ListOrganisations(.alis.os.resources.products.v1.ListOrganisationsRequest) returns (.alis.os.resources.products.v1.ListOrganisationsResponse);
+  rpc RetrieveMaskedOrganisation(.alis.os.resources.products.v1.RetrieveMaskedOrganisationRequest) returns (.alis.os.resources.products.v1.MaskedOrganisation);
+  rpc RetrieveMaskedOrganisations(.alis.os.resources.products.v1.RetrieveMaskedOrganisationsRequest) returns (.alis.os.resources.products.v1.RetrieveMaskedOrganisationsResponse);
+  rpc DetachOrganisation(.alis.os.resources.products.v1.DetachOrganisationRequest) returns (.alis.os.resources.products.v1.Organisation);
+  rpc InitialiseOrganisation(.alis.os.resources.products.v1.InitialiseOrganisationRequest) returns (.google.longrunning.Operation);
+  rpc CreateProduct(.alis.os.resources.products.v1.CreateProductRequest) returns (.google.longrunning.Operation);
+  rpc GetProduct(.alis.os.resources.products.v1.GetProductRequest) returns (.alis.os.resources.products.v1.Product);
+  rpc UpdateProduct(.alis.os.resources.products.v1.UpdateProductRequest) returns (.google.longrunning.Operation);
+  rpc DeleteProduct(.alis.os.resources.products.v1.DeleteProductRequest) returns (.google.longrunning.Operation);
+  rpc ListProducts(.alis.os.resources.products.v1.ListProductsRequest) returns (.alis.os.resources.products.v1.ListProductsResponse);
+  rpc RetrieveMaskedProduct(.alis.os.resources.products.v1.RetrieveMaskedProductRequest) returns (.alis.os.resources.products.v1.MaskedProduct);
+  rpc RetrieveMaskedProducts(.alis.os.resources.products.v1.RetrieveMaskedProductsRequest) returns (.alis.os.resources.products.v1.RetrieveMaskedProductsResponse);
+  rpc InitialiseProduct(.alis.os.resources.products.v1.InitialiseProductRequest) returns (.google.longrunning.Operation);
+  rpc RetrieveProductGuidePages(.alis.os.resources.products.v1.RetrieveProductGuidePagesRequest) returns (.alis.os.resources.products.v1.RetrieveProductGuidePagesResponse);
+  rpc GenerateProductGuidePage(.alis.os.resources.products.v1.GenerateProductGuidePageRequest) returns (.alis.os.resources.products.v1.GenerateProductGuidePageResponse);
+  rpc AmendProductGuidePage(.alis.os.resources.products.v1.AmendProductGuidePageRequest) returns (.alis.os.resources.products.v1.AmendProductGuidePageResponse);
+  rpc SetProductGuidePageState(.alis.os.resources.products.v1.SetProductGuidePageStateRequest) returns (.alis.os.resources.products.v1.SetProductGuidePageStateResponse);
+  rpc CreateRole(.alis.os.resources.products.v1.CreateRoleRequest) returns (.alis.os.resources.products.v1.Role);
+  rpc GetRole(.alis.os.resources.products.v1.GetRoleRequest) returns (.alis.os.resources.products.v1.Role);
+  rpc UpdateRole(.alis.os.resources.products.v1.UpdateRoleRequest) returns (.alis.os.resources.products.v1.Role);
+  rpc DeleteRole(.alis.os.resources.products.v1.DeleteRoleRequest) returns (.google.protobuf.Empty);
+  rpc ListRoles(.alis.os.resources.products.v1.ListRolesRequest) returns (.alis.os.resources.products.v1.ListRolesResponse);
+  rpc CreateNeuron(.alis.os.resources.products.v1.CreateNeuronRequest) returns (.google.longrunning.Operation);
+  rpc GetNeuron(.alis.os.resources.products.v1.GetNeuronRequest) returns (.alis.os.resources.products.v1.Neuron);
+  rpc UpdateNeuron(.alis.os.resources.products.v1.UpdateNeuronRequest) returns (.google.longrunning.Operation);
+  rpc DeleteNeuron(.alis.os.resources.products.v1.DeleteNeuronRequest) returns (.google.longrunning.Operation);
+  rpc PlanDestroyNeuron(.alis.os.resources.products.v1.PlanDestroyNeuronRequest) returns (.google.longrunning.Operation);
+  rpc ListNeurons(.alis.os.resources.products.v1.ListNeuronsRequest) returns (.alis.os.resources.products.v1.ListNeuronsResponse);
+  rpc StreamNeurons(.alis.os.resources.products.v1.StreamNeuronsRequest) returns (stream .alis.os.resources.products.v1.Neuron);
+  rpc CreateNeuronVersion(.alis.os.resources.products.v1.CreateNeuronVersionRequest) returns (.google.longrunning.Operation);
+  rpc GetNeuronVersion(.alis.os.resources.products.v1.GetNeuronVersionRequest) returns (.alis.os.resources.products.v1.NeuronVersion);
+  rpc UpdateNeuronVersion(.alis.os.resources.products.v1.UpdateNeuronVersionRequest) returns (.google.longrunning.Operation);
+  rpc DeleteNeuronVersion(.alis.os.resources.products.v1.DeleteNeuronVersionRequest) returns (.google.longrunning.Operation);
+  rpc ListNeuronVersions(.alis.os.resources.products.v1.ListNeuronVersionsRequest) returns (.alis.os.resources.products.v1.ListNeuronVersionsResponse);
+  rpc CreateProductDeployment(.alis.os.resources.products.v1.CreateProductDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc GetProductDeployment(.alis.os.resources.products.v1.GetProductDeploymentRequest) returns (.alis.os.resources.products.v1.ProductDeployment);
+  rpc UpdateProductDeployment(.alis.os.resources.products.v1.UpdateProductDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc DeleteProductDeployment(.alis.os.resources.products.v1.DeleteProductDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc ListProductDeployments(.alis.os.resources.products.v1.ListProductDeploymentsRequest) returns (.alis.os.resources.products.v1.ListProductDeploymentsResponse);
+  rpc RetrieveMaskedDeployment(.alis.os.resources.products.v1.RetrieveMaskedDeploymentRequest) returns (.alis.os.resources.products.v1.MaskedDeployment);
+  rpc RetrieveMaskedDeployments(.alis.os.resources.products.v1.RetrieveMaskedDeploymentsRequest) returns (.alis.os.resources.products.v1.RetrieveMaskedDeploymentsResponse);
+  rpc PlanProductDeployment(.alis.os.resources.products.v1.PlanProductDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateProductDeploymentServiceAccountKey(.alis.os.resources.products.v1.GenerateProductDeploymentServiceAccountKeyRequest) returns (.alis.os.resources.products.v1.GenerateProductDeploymentServiceAccountKeyResponse);
+  rpc CreateNeuronDeployment(.alis.os.resources.products.v1.CreateNeuronDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc GetNeuronDeployment(.alis.os.resources.products.v1.GetNeuronDeploymentRequest) returns (.alis.os.resources.products.v1.NeuronDeployment);
+  rpc UpdateNeuronDeployment(.alis.os.resources.products.v1.UpdateNeuronDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc DeleteNeuronDeployment(.alis.os.resources.products.v1.DeleteNeuronDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc ListNeuronDeployments(.alis.os.resources.products.v1.ListNeuronDeploymentsRequest) returns (.alis.os.resources.products.v1.ListNeuronDeploymentsResponse);
+  rpc BatchGetNeuronDeployments(.alis.os.resources.products.v1.BatchGetNeuronDeploymentsRequest) returns (.alis.os.resources.products.v1.BatchGetNeuronDeploymentsResponse);
+  rpc PlanNeuronDeployment(.alis.os.resources.products.v1.PlanNeuronDeploymentRequest) returns (.google.longrunning.Operation);
+  rpc RetrieveConsumptionOrganisations(.alis.os.resources.products.v1.RetrieveConsumptionOrganisationsRequest) returns (.alis.os.resources.products.v1.RetrieveConsumptionOrganisationsResponse);
+  rpc RetrieveConsumptionProducts(.alis.os.resources.products.v1.RetrieveConsumptionProductsRequest) returns (.alis.os.resources.products.v1.RetrieveConsumptionProductsResponse);
+  rpc RetrieveConsumptionProductDeployments(.alis.os.resources.products.v1.RetrieveConsumptionProductDeploymentsRequest) returns (.alis.os.resources.products.v1.RetrieveConsumptionProductDeploymentsResponse);
+  rpc RetrieveConsumptionProductDefinitions(.alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsRequest) returns (.alis.os.resources.products.v1.RetrieveConsumptionProductDefinitionsResponse);
+  rpc RetrieveConsumptionArtifacts(.alis.os.resources.products.v1.RetrieveConsumptionArtifactsRequest) returns (.alis.os.resources.products.v1.RetrieveConsumptionArtifactsResponse);
+  rpc LookupProductDeployment(.alis.os.resources.products.v1.LookupProductDeploymentRequest) returns (.alis.os.resources.products.v1.LookupProductDeploymentResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc SendSupportEmail(.alis.os.resources.products.v1.SendSupportEmailRequest) returns (.alis.os.resources.products.v1.SendSupportEmailResponse);
+  rpc RetrieveGoogleCloudRegions(.alis.os.resources.products.v1.RetrieveGoogleCloudRegionsRequest) returns (.alis.os.resources.products.v1.RetrieveGoogleCloudRegionsResponse);
+  rpc RetrieveOpenPackages(.alis.os.resources.products.v1.RetrieveOpenPackagesRequest) returns (.alis.os.resources.products.v1.RetrieveOpenPackagesResponse);
+  rpc RemoveOpenPackage(.alis.os.resources.products.v1.RemoveOpenPackageRequest) returns (.alis.os.resources.products.v1.RemoveOpenPackageResponse);
+  rpc FinishLocalBuild(.alis.os.resources.products.v1.FinishLocalBuildRequest) returns (.alis.os.resources.products.v1.FinishLocalBuildResponse);
+  rpc RetrieveAlisManagedDeploymentEnvs(.alis.os.resources.products.v1.RetrieveAlisManagedDeploymentEnvsRequest) returns (.alis.os.resources.products.v1.RetrieveAlisManagedDeploymentEnvsResponse);
+  rpc SuggestProductDocumentationTextEnhancement(.alis.os.resources.products.v1.SuggestProductDocumentationTextEnhancementRequest) returns (.alis.os.resources.products.v1.SuggestProductDocumentationTextEnhancementResponse);
+  rpc SuggestProductDocumentationInstructions(.alis.os.resources.products.v1.SuggestProductDocumentationInstructionsRequest) returns (.alis.os.resources.products.v1.SuggestProductDocumentationInstructionsResponse);
+  rpc HandleEvent(.alis.open.pubsub.v1.PubSubMessage) returns (.google.protobuf.Empty);
+  rpc HandleDeadLetter(.alis.open.pubsub.v1.PubSubMessage) returns (.google.protobuf.Empty);
+}
