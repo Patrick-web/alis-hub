@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Button } from '../Button';
 import { Loader } from '../Loader';
+import { CheckCircle } from './CheckCircle';
 import { Browser } from '@wailsio/runtime';
 import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
@@ -351,9 +352,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                           selected ? 'bg-brand-fill/8' : 'hover:bg-foreground/[2%]'
                         }`}
                       >
-                        <span className={`size-[14px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
-                          {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
-                        </span>
+                        <CheckCircle selected={selected} size={14} />
                         <span className={`text-[12px] font-bold font-mono ${selected ? 'text-brand' : 'text-foreground'}`}>{v.version}</span>
                         {ago && <span className="ml-auto text-[9px] text-foreground/30 shrink-0">{ago}</span>}
                       </button>
@@ -381,9 +380,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                       onClick={() => setSelectedEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
                       className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${selected ? 'bg-brand-fill/5' : 'hover:bg-foreground/[2%]'}`}
                     >
-                      <span className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-brand-fill border-brand-fill' : 'border-border'}`}>
-                        {selected && <Icon icon="solar:check-linear" className="text-brand-foreground text-[9px]" />}
-                      </span>
+                      <CheckCircle selected={selected} size={15} />
                       <div className="flex-1 min-w-0">
                         <p className="text-[11px] font-medium text-foreground leading-tight">{env.displayName || env.name}</p>
                       </div>
