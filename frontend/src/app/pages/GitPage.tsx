@@ -78,6 +78,7 @@ function RepoSection({
   const [behind, setBehind] = useState(0);
   const [error, setError] = useState('');
   const [syncResult, setSyncResult] = useState<{ kind: string; message: string; conflictFiles?: string[] } | null>(null);
+  const [lastSyncOp, setLastSyncOp] = useState<'push' | 'pull' | null>(null);
   const [isMerging, setIsMerging] = useState(false);
   const [showConflictEditor, setShowConflictEditor] = useState(false);
   const [conflictEditorInitialFile, setConflictEditorInitialFile] = useState<string | null>(null);
@@ -246,6 +247,7 @@ function RepoSection({
 
   async function handlePush() {
     setPushing(true);
+    setLastSyncOp('push');
     setSyncResult(null);
     const pushedCommits = commits.slice(0, ahead);
     const result = await GitService.PushOrigin(repoPath) as any;
@@ -288,6 +290,7 @@ function RepoSection({
 
   async function handlePull() {
     setPulling(true);
+    setLastSyncOp('pull');
     setSyncResult(null);
     const oldHead = commits[0]?.hash ?? null;
     const result = await GitService.PullOrigin(repoPath) as any;
@@ -440,7 +443,11 @@ function RepoSection({
         result={syncResult}
         onSync={handleSync}
         onResolve={() => setShowConflictEditor(true)}
-        onRetry={syncResult?.kind === 'network_error' ? (pushing ? handlePush : handlePull) : undefined}
+        onRetry={
+          syncResult?.kind === 'network_error' || syncResult?.kind === 'auth_error'
+            ? (lastSyncOp === 'push' ? handlePush : handlePull)
+            : undefined
+        }
         onDismiss={() => setSyncResult(null)}
       />
 

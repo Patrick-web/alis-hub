@@ -173,23 +173,41 @@ func writeGitAuthConfig(token string, repos []forgejoRepo) (string, error) {
 	return authPath, nil
 }
 
+// staleVSCodeIncludeRe matches an [include] block left behind by the old VS
+// Code "alis-build" extension, which wrote its own per-repo git-auth config
+// under the extension's globalStorage directory. That file is never touched
+// again once a repo has moved to Alis Hub, so its embedded Bearer token
+// eventually gets signed by a key the identity server has since rotated out.
+// Git sends http.extraHeader from every matching [include], so as long as
+// this stale block stays in the repo config, the request carries both the
+// extension's dead token and this app's current one — and the server can
+// reject the whole request over the dead one even though the live token is
+// fine.
+var staleVSCodeIncludeRe = regexp.MustCompile(`(?m)^\[include\]\n\s*path\s*=.*alisexchange\.alis-build.*\n?`)
+
 // migrateRepoConfig ensures the hub's authConfigPath is included in the repo's
-// .git/config without disturbing any existing entries (including those managed
-// by the VS Code extension).
+// .git/config, removing any stale [include] left by the old VS Code extension
+// (see staleVSCodeIncludeRe) so it can't keep shadowing the current token with
+// a dead one.
 func migrateRepoConfig(configPath, authConfigPath string) error {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return err
 	}
 
+	cleaned := staleVSCodeIncludeRe.ReplaceAllString(string(data), "")
+
 	// Git requires forward slashes in [include] path values on all platforms.
 	gitConfigPath := filepath.ToSlash(authConfigPath)
 
-	if strings.Contains(string(data), gitConfigPath) || strings.Contains(string(data), authConfigPath) {
-		return nil
+	if strings.Contains(cleaned, gitConfigPath) || strings.Contains(cleaned, authConfigPath) {
+		if cleaned == string(data) {
+			return nil
+		}
+		return os.WriteFile(configPath, []byte(cleaned), 0600)
 	}
 
-	appended := string(data)
+	appended := cleaned
 	if !strings.HasSuffix(appended, "\n") {
 		appended += "\n"
 	}

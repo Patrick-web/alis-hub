@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Icon } from '@iconify/react';
+import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 
 interface GitSyncResult {
   kind: string;
@@ -88,8 +89,26 @@ const CONFIG: Record<string, {
 
 export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, onRetry, onDismiss }: Props) {
   const [expanded, setExpanded] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [signInError, setSignInError] = useState<string | null>(null);
 
   if (!result || result.kind === 'ok') return null;
+
+  async function handleSignIn() {
+    setSigningIn(true);
+    setSignInError(null);
+    try {
+      await (ProductService.Login as () => Promise<void>)();
+      // Re-authenticated: retry the operation that hit the auth error if the
+      // caller gave us one, otherwise just clear the banner.
+      if (onRetry) onRetry();
+      else onDismiss?.();
+    } catch (e) {
+      setSignInError(String(e));
+    } finally {
+      setSigningIn(false);
+    }
+  }
 
   const cfg = CONFIG[result.kind] ?? CONFIG.other_error;
   const label = cfg.getActionLabel ? cfg.getActionLabel(result) : (cfg.label || result.message);
@@ -121,13 +140,15 @@ export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, 
           </button>
         ) : null;
       case 'auth_error':
-        // Re-auth modal is triggered automatically by the Go-side auth:expired event.
-        // This button just clears the banner.
-        return onDismiss ? (
-          <button onClick={onDismiss} className="text-[10px] px-[8px] py-[2px] rounded-[3px] border border-red-400/30 hover:border-red-400/60 text-red-400 transition-colors">
-            Sign In
+        return (
+          <button
+            onClick={handleSignIn}
+            disabled={signingIn}
+            className="text-[10px] px-[8px] py-[2px] rounded-[3px] border border-red-400/30 hover:border-red-400/60 text-red-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {signingIn ? 'Signing in…' : 'Sign In'}
           </button>
-        ) : null;
+        );
       case 'other_error':
         return result.message.length > 80 ? (
           <button
@@ -142,7 +163,9 @@ export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, 
     }
   })();
 
-  const displayMessage = result.kind === 'other_error'
+  const displayMessage = result.kind === 'auth_error' && signInError
+    ? `Sign-in failed: ${signInError}`
+    : result.kind === 'other_error'
     ? (expanded ? result.message : result.message.slice(0, 120) + (result.message.length > 120 ? '…' : ''))
     : label;
 

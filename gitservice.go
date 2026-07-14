@@ -22,22 +22,24 @@ import (
 
 // GitService provides local git operations for the block merge flow.
 type GitService struct {
-	tokens         *ConsoleTokenSource
-	mu             sync.Mutex
-	app            *application.App
-	watcher        *fsnotify.Watcher
-	pathToRepo     map[string]string // watched fs path → repoPath
-	debounceTimers map[string]*time.Timer
+	tokens          *ConsoleTokenSource
+	mu              sync.Mutex
+	app             *application.App
+	watcher         *fsnotify.Watcher
+	pathToRepo      map[string]string // watched fs path → repoPath
+	debounceTimers  map[string]*time.Timer
+	configFixTimers map[string]*time.Timer // debounced SyncGitAuth reruns on .git/config writes
 }
 
 func NewGitService() *GitService {
 	w, _ := fsnotify.NewWatcher()
 	tokens, _ := NewConsoleTokenSource() // nil if not logged in yet
 	svc := &GitService{
-		tokens:         tokens,
-		watcher:        w,
-		pathToRepo:     make(map[string]string),
-		debounceTimers: make(map[string]*time.Timer),
+		tokens:          tokens,
+		watcher:         w,
+		pathToRepo:      make(map[string]string),
+		debounceTimers:  make(map[string]*time.Timer),
+		configFixTimers: make(map[string]*time.Timer),
 	}
 	go svc.watchLoop()
 	return svc
@@ -62,6 +64,22 @@ func (g *GitService) watchLoop() {
 				rp := repoPath
 				g.debounceTimers[repoPath] = time.AfterFunc(400*time.Millisecond, func() {
 					g.emitChanged(rp)
+				})
+			}
+			// .git/config itself changed — an external tool (e.g. the old VS
+			// Code "alis-build" extension) may have just reintroduced its own
+			// git-auth include. Re-run SyncGitAuth so it gets stripped right
+			// away instead of waiting for this app's own next credential-helper
+			// invocation, which could be minutes away or never (if the next git
+			// command also happens to come from that same external tool).
+			if found && filepath.Base(event.Name) == "config" && filepath.Dir(event.Name) == filepath.Join(repoPath, ".git") {
+				if t, exists := g.configFixTimers[repoPath]; exists {
+					t.Stop()
+				}
+				g.configFixTimers[repoPath] = time.AfterFunc(300*time.Millisecond, func() {
+					if err := SyncGitAuth(); err != nil {
+						fmt.Fprintf(os.Stderr, "alis-hub: re-sync git auth after external .git/config change: %v\n", err)
+					}
 				})
 			}
 			g.mu.Unlock()
