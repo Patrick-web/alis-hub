@@ -13,7 +13,7 @@ import {
 } from '../ui/alert-dialog';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import * as PD from '../../../../bindings/alis-hub-v3/protodecodeservice';
-import type { SpannerQueryResult, ProtoMessageInfo } from '../../../../bindings/alis-hub-v3/models';
+import type { SpannerQueryResult, ProtoMessageInfo, ProtoFieldInfo } from '../../../../bindings/alis-hub-v3/models';
 import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
@@ -30,6 +30,13 @@ interface ProtoDecodeView {
   loading: boolean;
   json: string | null;
   error: string | null;
+}
+
+interface FieldQueryState {
+  col: string;
+  path: string[];       // proto field names drilled so far (not including the final picked field)
+  pathLabels: string[]; // breadcrumb display labels; [0] is the root message's short name
+  typeStack: string[];  // message type at each breadcrumb depth; last entry is the current one
 }
 
 type WhereOp = '=' | '!=' | '>' | '<' | '>=' | '<=' | 'LIKE' | 'IS NULL' | 'IS NOT NULL';
@@ -126,6 +133,16 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
   const [protoTypesLoading, setProtoTypesLoading] = useState(false);
   const [protoTypesError, setProtoTypesError] = useState<string | null>(null);
   const [protoDecodeView, setProtoDecodeView] = useState<ProtoDecodeView | null>(null);
+
+  // Query-by-proto-field drill-down (native PROTO<> columns only — Spanner supports
+  // dot-path field access in SQL for these, not for plain BYTES columns)
+  const [fieldQuery, setFieldQuery] = useState<FieldQueryState | null>(null);
+  const [fieldQueryFields, setFieldQueryFields] = useState<ProtoFieldInfo[]>([]);
+  const [fieldQueryLoading, setFieldQueryLoading] = useState(false);
+  const [fieldQueryError, setFieldQueryError] = useState<string | null>(null);
+  const [fieldQueryPicked, setFieldQueryPicked] = useState<ProtoFieldInfo | null>(null);
+  const [fieldQueryOp, setFieldQueryOp] = useState<WhereOp>('=');
+  const [fieldQueryValue, setFieldQueryValue] = useState('');
 
   // Close column picker on outside click
   useEffect(() => {
@@ -257,6 +274,66 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
       .catch((e: unknown) => setProtoDecodeView({ col, loading: false, json: null, error: String(e) }));
   }
 
+  function loadFieldsFor(messageType: string) {
+    setFieldQueryLoading(true);
+    setFieldQueryError(null);
+    setFieldQueryFields([]);
+    setFieldQueryPicked(null);
+    PD.GetMessageFields(org, messageType)
+      .then((fields: ProtoFieldInfo[] | null) => setFieldQueryFields(fields ?? []))
+      .catch((e: unknown) => setFieldQueryError(String(e)))
+      .finally(() => setFieldQueryLoading(false));
+  }
+
+  function openFieldQuery(col: string, messageType: string) {
+    setContextMenu(null);
+    setFieldQuery({ col, path: [], pathLabels: [messageType.split('.').pop() ?? messageType], typeStack: [messageType] });
+    loadFieldsFor(messageType);
+  }
+
+  function drillIntoField(field: ProtoFieldInfo) {
+    if (!fieldQuery || field.kind !== 'message' || field.repeated || field.isMap) return;
+    setFieldQuery({
+      ...fieldQuery,
+      path: [...fieldQuery.path, field.name],
+      pathLabels: [...fieldQuery.pathLabels, field.name],
+      typeStack: [...fieldQuery.typeStack, field.typeName],
+    });
+    loadFieldsFor(field.typeName);
+  }
+
+  function goBackTo(index: number) {
+    if (!fieldQuery) return;
+    const newPath = fieldQuery.path.slice(0, index);
+    const newLabels = fieldQuery.pathLabels.slice(0, index + 1);
+    const newTypeStack = fieldQuery.typeStack.slice(0, index + 1);
+    setFieldQuery({ ...fieldQuery, path: newPath, pathLabels: newLabels, typeStack: newTypeStack });
+    loadFieldsFor(newTypeStack[newTypeStack.length - 1]);
+  }
+
+  function pickField(field: ProtoFieldInfo) {
+    if (field.repeated || field.isMap) return;
+    if (field.kind === 'message') {
+      drillIntoField(field);
+      return;
+    }
+    setFieldQueryPicked(field);
+    setFieldQueryOp('=');
+    setFieldQueryValue('');
+  }
+
+  function runFieldQuery() {
+    if (!fieldQuery || !fieldQueryPicked) return;
+    const fieldPath = [...fieldQuery.path, fieldQueryPicked.name].join('.');
+    const expr = `${ident(fieldQuery.col)}.${fieldPath}`;
+    const t = ident(tableName);
+    const sql = NO_VALUE_OPS.includes(fieldQueryOp)
+      ? `SELECT *\nFROM ${t}\nWHERE ${expr} ${fieldQueryOp}\nLIMIT 50`
+      : `SELECT *\nFROM ${t}\nWHERE ${expr} ${fieldQueryOp} ${quoted(fieldQueryValue)}\nLIMIT 50`;
+    setFieldQuery(null);
+    onNavigateToQuery(sql);
+  }
+
   function isOrderableColumn(col: string): boolean {
     const idx = result?.columns.indexOf(col) ?? -1;
     if (idx < 0) return true;
@@ -341,7 +418,22 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
     const t = ident(tableName);
     const c = ident(col);
     const v = quoted(val);
-    return [
+    const items: ContextItem[] = [];
+
+    // Only native Spanner PROTO<> columns support dot-path field access in SQL —
+    // plain BYTES columns (even ones we've mapped to a proto type for decoding) have
+    // no structure Spanner's query engine can see.
+    const colIdx = result?.columns.indexOf(col) ?? -1;
+    const isNativeProtoColumn = colIdx >= 0 && result?.columnTypes?.[colIdx] === 'PROTO';
+    const messageType = protoColumnTypes[col];
+    if (protoDecodeEnabled && isNativeProtoColumn && messageType) {
+      items.push(
+        { label: 'Query by field…', onClick: () => openFieldQuery(col, messageType) },
+        'divider',
+      );
+    }
+
+    items.push(
       { label: `SELECT WHERE ${col} = ${val}`, onClick: () => navigate(`SELECT *\nFROM ${t}\nWHERE ${c} = ${v}\nLIMIT 50`) },
       { label: `SELECT WHERE ${col} != ${val}`, onClick: () => navigate(`SELECT *\nFROM ${t}\nWHERE ${c} != ${v}\nLIMIT 50`) },
       { label: `SELECT WHERE ${col} IS NULL`, onClick: () => navigate(`SELECT *\nFROM ${t}\nWHERE ${c} IS NULL\nLIMIT 50`) },
@@ -350,7 +442,8 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
       { label: `UPDATE SET ? WHERE ${col} = ${val}`, destructive: true, onClick: () => navigateDestructive(`UPDATE ${t}\nSET ? = ?\nWHERE ${c} = ${v}`) },
       'divider',
       { label: 'Copy value', onClick: () => { setContextMenu(null); navigator.clipboard.writeText(val); } },
-    ];
+    );
+    return items;
   }
 
   function copyRowAsJSON(row: string[]) {
@@ -626,13 +719,14 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
                         {cell === 'NULL' ? (
                           <span className="text-foreground/20 italic">NULL</span>
                         ) : messageType ? (
-                          <button
+                          <Button
+                            variant="ghost"
+                            icon={<Icon icon="solar:code-2-linear"  />}
                             onClick={(e) => { e.stopPropagation(); openProtoDecodedView(col, cell); }}
-                            className="flex items-center gap-[4px] text-brand hover:text-brand/80 transition-colors truncate max-w-full"
+                            className="!h-[18px] !px-[6px] !py-0 justify-start max-w-full"
                           >
-                            <Icon icon="solar:code-2-linear" className="text-[10px] shrink-0" />
-                            <span className="truncate">View JSON</span>
-                          </button>
+                            View JSON
+                          </Button>
                         ) : (
                           <span className="text-foreground/72 truncate block">{cell}</span>
                         )}
@@ -827,6 +921,134 @@ export function SpannerTableView({ tableName, dbName, org, product, protoDecodeE
               </button>
             </div>
           )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Query by proto field (Labs) ── */}
+      <Sheet open={!!fieldQuery} onOpenChange={(open) => { if (!open) { setFieldQuery(null); setFieldQueryPicked(null); } }}>
+        <SheetContent
+          side="right"
+          className="w-[400px] bg-background border-l border-border p-0 flex flex-col gap-0 text-foreground"
+        >
+          <SheetHeader className="px-[16px] py-[12px] border-b border-border">
+            <SheetTitle className="text-[11px] text-foreground font-mono uppercase tracking-wider">
+              Query by field · {fieldQuery?.col}
+            </SheetTitle>
+            {fieldQuery && (
+              <div className="flex items-center flex-wrap gap-[3px] pt-[4px]">
+                {fieldQuery.pathLabels.map((label, i) => (
+                  <span key={i} className="flex items-center gap-[3px]">
+                    {i > 0 && <Icon icon="solar:alt-arrow-right-linear" className="text-[8px] text-foreground/25" />}
+                    <button
+                      onClick={() => goBackTo(i)}
+                      disabled={i === fieldQuery.pathLabels.length - 1}
+                      className="text-[9px] font-mono text-foreground/50 hover:text-brand disabled:text-foreground disabled:hover:text-foreground transition-colors"
+                    >
+                      {label}
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto">
+            {fieldQueryLoading ? (
+              <div className="flex items-center justify-center h-full"><Loader size={24} /></div>
+            ) : fieldQueryError ? (
+              <p className="p-[14px] text-[10px] text-red-400 font-mono whitespace-pre-wrap">{fieldQueryError}</p>
+            ) : fieldQueryPicked ? (
+              <div className="p-[14px] flex flex-col gap-[10px]">
+                <button
+                  onClick={() => setFieldQueryPicked(null)}
+                  className="flex items-center gap-[4px] text-[9px] font-mono text-foreground/40 hover:text-foreground transition-colors w-fit"
+                >
+                  <Icon icon="solar:alt-arrow-left-linear" className="text-[9px]" />
+                  Back to fields
+                </button>
+
+                <p className="text-[10px] font-mono text-foreground/70 break-all">
+                  {[...(fieldQuery?.path ?? []), fieldQueryPicked.name].join('.')}
+                </p>
+
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[8px] uppercase text-foreground/35 font-mono font-bold shrink-0">Op</span>
+                  <SearchableSelect
+                    value={fieldQueryOp}
+                    options={[...OPS]}
+                    onChange={(val) => setFieldQueryOp(val as WhereOp)}
+                    className="flex-1"
+                  />
+                </div>
+
+                {!NO_VALUE_OPS.includes(fieldQueryOp) && (
+                  <div className="flex items-center gap-[6px]">
+                    <span className="text-[8px] uppercase text-foreground/35 font-mono font-bold shrink-0">Value</span>
+                    {fieldQueryPicked.kind === 'enum' ? (
+                      <SearchableSelect
+                        value={fieldQueryValue}
+                        options={fieldQueryPicked.enumValues ?? []}
+                        onChange={setFieldQueryValue}
+                        className="flex-1"
+                      />
+                    ) : fieldQueryPicked.scalarType === 'bool' ? (
+                      <SearchableSelect
+                        value={fieldQueryValue}
+                        options={['true', 'false']}
+                        onChange={setFieldQueryValue}
+                        className="flex-1"
+                      />
+                    ) : (
+                      <input
+                        type={fieldQueryPicked.scalarType === 'int' || fieldQueryPicked.scalarType === 'float' ? 'number' : 'text'}
+                        value={fieldQueryValue}
+                        onChange={(e) => setFieldQueryValue(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') runFieldQuery(); }}
+                        placeholder="value"
+                        className="flex-1 bg-muted border border-border text-foreground text-[10px] font-mono px-[8px] h-[26px] rounded-[3px] focus:outline-none focus:border-brand-fill/40"
+                      />
+                    )}
+                  </div>
+                )}
+
+                <Button variant="primary" onClick={runFieldQuery} icon={<Icon icon="solar:play-linear" className="text-xs" />}>
+                  Run query
+                </Button>
+              </div>
+            ) : fieldQueryFields.length === 0 ? (
+              <p className="p-[14px] text-[10px] text-foreground/30 font-mono">No fields</p>
+            ) : (
+              <div className="py-[4px]">
+                {fieldQueryFields.map((field) => {
+                  const disabled = field.repeated || field.isMap;
+                  const kindLabel = field.isMap ? 'map' : field.repeated ? `repeated ${field.kind}` : (field.kind === 'scalar' ? field.scalarType : field.kind);
+                  return (
+                    <button
+                      key={field.name}
+                      onClick={() => pickField(field)}
+                      disabled={disabled}
+                      title={disabled ? "Repeated/map fields aren't supported yet" : undefined}
+                      className="w-full flex items-center justify-between gap-[8px] px-[14px] py-[7px] hover:bg-foreground/[4%] disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed text-left transition-colors"
+                    >
+                      <span className="flex items-center gap-[6px] min-w-0">
+                        <Icon
+                          icon={field.kind === 'message' ? 'solar:folder-linear' : field.kind === 'enum' ? 'solar:list-linear' : 'solar:hashtag-linear'}
+                          className="text-[11px] text-foreground/35 shrink-0"
+                        />
+                        <span className="text-[10px] font-mono text-foreground/80 truncate">{field.name}</span>
+                      </span>
+                      <span className="flex items-center gap-[4px] shrink-0">
+                        <span className="text-[8px] uppercase text-foreground/30 font-mono">{kindLabel}</span>
+                        {field.kind === 'message' && !disabled && (
+                          <Icon icon="solar:alt-arrow-right-linear" className="text-[9px] text-foreground/25" />
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </div>
