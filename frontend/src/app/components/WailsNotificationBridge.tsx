@@ -40,6 +40,7 @@ export function WailsNotificationBridge() {
         title: payload.title,
         body: payload.body,
         persistent: payload.persistent ?? true,
+        deeplink: payload.deeplink,
         actions: payload.actions?.map(a => ({
           label: a.label,
           variant: a.variant,
@@ -48,8 +49,18 @@ export function WailsNotificationBridge() {
           },
         })),
       });
-      notify[payload.severity](payload.title, { description: payload.body });
-      systemNotify(payload.title, payload.body ?? '');
+      notify[payload.severity](payload.title, {
+        description: payload.body,
+        ...(payload.deeplink
+          ? {
+              action: {
+                label: 'View',
+                onClick: () => Events.Emit('deep-link', payload.deeplink),
+              },
+            }
+          : {}),
+      });
+      systemNotify(payload.title, payload.body ?? '', payload.deeplink);
     });
 
     return () => {

@@ -51,6 +51,7 @@ export interface AppNotification {
   persistent: boolean;
   actions?: NotificationAction[];
   task?: TaskProgress;
+  deeplink?: string;
 }
 
 export interface WailsNotificationPayload {
@@ -59,6 +60,7 @@ export interface WailsNotificationPayload {
   title: string;
   body?: string;
   persistent?: boolean;
+  deeplink?: string;
   actions?: {
     label: string;
     variant: 'primary' | 'destructive' | 'ghost';
@@ -83,7 +85,7 @@ type StoreAction =
   | { type: 'CLEAR_ALL' };
 
 export interface PendingPaneOpen {
-  type: 'deploy' | 'build' | 'define';
+  type: 'deploy' | 'build' | 'define' | 'packages';
   neuron: string;
 }
 
