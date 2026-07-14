@@ -8,6 +8,7 @@ import {
   ContextMenuTrigger,
 } from "./context-menu";
 import { cn } from "./utils";
+import { MarqueeLabel } from "./MarqueeLabel";
 
 export interface TabBarItem {
   id: string;
@@ -164,14 +165,10 @@ export function TabBar({
                   </span>
                 )}
                 {typeof item.label === "string" ? (
-                  <span
-                    className="truncate min-w-0"
-                    style={{
-                      maxWidth: variant === "underline" ? 110 : 160,
-                    }}
-                  >
-                    {item.label}
-                  </span>
+                  <MarqueeLabel
+                    text={item.label}
+                    maxWidth={variant === "underline" ? 110 : 160}
+                  />
                 ) : (
                   item.label
                 )}

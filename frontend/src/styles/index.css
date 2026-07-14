@@ -7,6 +7,17 @@ body {
     overscroll-behavior-y: none;
 }
 
+@keyframes marquee-scroll {
+    0%,
+    12% {
+        transform: translateX(0);
+    }
+    88%,
+    100% {
+        transform: translateX(var(--marquee-distance, 0));
+    }
+}
+
 @keyframes l7-0 {
     16.67% {
         background-size:

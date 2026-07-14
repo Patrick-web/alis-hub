@@ -15,6 +15,7 @@ import {
 } from "../ui/alert-dialog";
 import { SqlEditor } from "./SqlEditor";
 import { TabBar } from "../ui/TabBar";
+import { MarqueeLabel } from "../ui/MarqueeLabel";
 import * as GS from "../../../../bindings/alis-hub-v3/gcloudservice";
 import type {
   SpannerInstance,
@@ -747,8 +748,9 @@ export function SpannerExplorer({ projectID }: Props) {
                   className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-brand-fill/60"
                 />
               ) : (
-                <span
-                  className="max-w-[110px] truncate"
+                <MarqueeLabel
+                  text={label}
+                  maxWidth={110}
                   onDoubleClick={
                     isQTab
                       ? (e) => {
@@ -757,9 +759,7 @@ export function SpannerExplorer({ projectID }: Props) {
                         }
                       : undefined
                   }
-                >
-                  {label}
-                </span>
+                />
               ),
               closeable: !isQTab || tabs.filter(isQueryTab).length > 1,
             };
