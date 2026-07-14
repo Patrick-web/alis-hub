@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import * as settingsClient from '../lib/settingsClient';
-import { getAccessibleForeground, getAccessibleTextColor } from '../lib/colorContrast';
+import { getAccessibleForeground, getAccessibleTextColor, getAccentHoverFill } from '../lib/colorContrast';
 
 export interface AccentColor {
   id: string;
@@ -31,6 +31,7 @@ function currentPageBackground(): string {
 function applyAccent(brand: string) {
   const pageBackground = currentPageBackground();
   document.documentElement.style.setProperty('--brand-fill', brand);
+  document.documentElement.style.setProperty('--brand-fill-hover', getAccentHoverFill(brand));
   document.documentElement.style.setProperty('--brand-foreground', getAccessibleForeground(brand));
   document.documentElement.style.setProperty('--brand', getAccessibleTextColor(brand, pageBackground));
   document.documentElement.style.setProperty('--ring', brand);

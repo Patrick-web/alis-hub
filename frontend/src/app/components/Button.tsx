@@ -18,7 +18,7 @@ export function Button({
   const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
 
   const variants = {
-    primary: 'bg-brand-fill text-brand-foreground px-[10px] py-[5px] hover:bg-[#ff94ba]',
+    primary: 'bg-brand-fill text-brand-foreground px-[10px] py-[5px] hover:bg-brand-fill-hover',
     secondary: 'bg-card border border-border text-foreground px-[10px] py-[5px] hover:bg-accent',
     ghost: 'text-foreground px-[5px] py-[4px] hover:bg-foreground/10',
   };
