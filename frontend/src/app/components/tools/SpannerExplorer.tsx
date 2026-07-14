@@ -342,6 +342,7 @@ export function SpannerExplorer({ projectID }: Props) {
     string | null
   >(null);
   const [queryPanelHeight, setQueryPanelHeight] = useState(200);
+  const [treePaneWidth, setTreePaneWidth] = useState(220);
 
   function updateTabQuery(tabId: string, update: Partial<QueryTabState>) {
     setQueryTabStates((prev) => ({
@@ -472,11 +473,30 @@ export function SpannerExplorer({ projectID }: Props) {
     document.addEventListener("mouseup", onUp);
   }
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  function handleTreeResizerMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = treePaneWidth;
+    function onMove(ev: MouseEvent) {
+      setTreePaneWidth(
+        Math.max(180, Math.min(600, startWidth + ev.clientX - startX)),
+      );
+    }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* ── Left tree pane ──────────────────────────────────────────────── */}
-      <div className="w-[220px] shrink-0 border-r border-border flex flex-col overflow-hidden">
+      <div
+        className="shrink-0 border-r border-border flex flex-col overflow-hidden"
+        style={{ width: treePaneWidth }}
+      >
         <div className="flex items-center justify-between px-[12px] py-[9px] border-b border-border shrink-0">
           <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">
             {instances.length} instance{instances.length !== 1 ? "s" : ""}
@@ -680,6 +700,12 @@ export function SpannerExplorer({ projectID }: Props) {
           )}
         </div>
       </div>
+
+      {/* ── Resizer between tree pane and right pane ─────────────────────── */}
+      <div
+        onMouseDown={handleTreeResizerMouseDown}
+        className="w-[4px] shrink-0 cursor-col-resize bg-transparent hover:bg-brand-fill/40 transition-colors -ml-[2px] z-10"
+      />
 
       {/* ── Right pane with tabs ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">

@@ -234,12 +234,12 @@ export function ToolsPanel() {
             </div>
           ) : (
             <>
-              {activeTab === 'buckets' && <BucketsExplorer projectID={projectID} />}
-              {activeTab === 'logs' && <LogsExplorer projectID={projectID} />}
-              {activeTab === 'artifactregistry' && <ArtifactRegistry projectID={projectID} region={region} />}
-              {activeTab === 'secrets' && <SecretManager projectID={projectID} />}
-              {activeTab === 'spanner' && <SpannerExplorer projectID={projectID} />}
-              {activeTab === 'backups' && <SpannerBackupsExplorer projectID={projectID} />}
+              {activeTab === 'buckets' && <BucketsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === 'logs' && <LogsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === 'artifactregistry' && <ArtifactRegistry key={`${projectID}:${region}`} projectID={projectID} region={region} />}
+              {activeTab === 'secrets' && <SecretManager key={projectID} projectID={projectID} />}
+              {activeTab === 'spanner' && <SpannerExplorer key={projectID} projectID={projectID} />}
+              {activeTab === 'backups' && <SpannerBackupsExplorer key={projectID} projectID={projectID} />}
             </>
           )}
         </div>
