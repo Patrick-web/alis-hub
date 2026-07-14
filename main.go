@@ -83,7 +83,9 @@ func main() {
 		window.Focus()
 	}
 
-	app := application.New(application.Options{
+	// app is declared up front so the single-instance callback can emit events.
+	var app *application.App
+	app = application.New(application.Options{
 		Name:        "AlisHub",
 		Description: "AlisHub Desktop Application",
 		Icon:        appIcon,
@@ -119,7 +121,7 @@ func main() {
 				focusMainWindow()
 				for _, arg := range data.Args {
 					if strings.HasPrefix(arg, deepLinkScheme+"://") {
-						log.Printf("deep link (second instance): %s", arg)
+						app.Event.Emit("deep-link", arg)
 					}
 				}
 			},
@@ -148,9 +150,10 @@ func main() {
 	window.Maximise()
 
 	// Bring the app to the foreground when it is opened via its custom URL
-	// scheme (e.g. the "Return to Alis Hub" button on the login page).
+	// scheme (e.g. the "Return to Alis Hub" button on the login page), and
+	// forward the URL to the frontend for deep-link routing.
 	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
-		log.Printf("deep link: %s", e.Context().URL())
+		app.Event.Emit("deep-link", e.Context().URL())
 		focusMainWindow()
 	})
 

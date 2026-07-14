@@ -16,6 +16,7 @@ import { ProductPickerPage } from './pages/ProductPickerPage';
 import { ReloginModal } from './components/ReloginModal';
 import { CommandPalette } from './components/CommandPalette';
 import { DevSettingsModal } from './components/DevSettingsModal';
+import { DeepLinkHandler } from './components/DeepLinkHandler';
 import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
 import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
 import { useCommandPalette } from './stores/commandPalette';
@@ -198,6 +199,7 @@ export function RootLayout() {
     return (
       <div className="bg-background flex items-center justify-center h-screen w-full">
         <Loader />
+        <DeepLinkHandler />
       </div>
     );
   }
@@ -206,6 +208,7 @@ export function RootLayout() {
     return (
       <div className="bg-background flex flex-col h-screen w-full">
         <LoginPage />
+        <DeepLinkHandler />
       </div>
     );
   }
@@ -215,7 +218,7 @@ export function RootLayout() {
     : null;
 
   if (state.phase === 'hub') {
-    return <>{<HubPage />}{reloginModal}<DevSettingsModal /></>;
+    return <>{<HubPage />}{reloginModal}<DevSettingsModal /><DeepLinkHandler /></>;
   }
 
   if (state.phase === 'picking-org') {
@@ -224,6 +227,7 @@ export function RootLayout() {
         <LandingZonesPage />
         {reloginModal}
         <DevSettingsModal />
+        <DeepLinkHandler />
       </div>
     );
   }
@@ -234,6 +238,7 @@ export function RootLayout() {
         <ProductPickerPage />
         {reloginModal}
         <DevSettingsModal />
+        <DeepLinkHandler />
       </div>
     );
   }
@@ -255,6 +260,7 @@ export function RootLayout() {
         <StatusStrip />
         {reloginModal}
         <DevSettingsModal />
+        <DeepLinkHandler />
       </div>
     );
   }
@@ -304,6 +310,7 @@ export function RootLayout() {
       <DevelopCommandsExtension />
       <GCloudCommandsExtension />
       {reloginModal}
+      <DeepLinkHandler />
     </div>
   );
 }

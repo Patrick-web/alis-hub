@@ -24,15 +24,15 @@ export async function requestNotificationAuthorization(): Promise<boolean> {
  * Best-effort: silently swallows errors.
  * No-ops if the user has not opted in via alis:systemNotifications.
  */
-export async function systemNotify(title: string, body: string): Promise<void> {
+export async function systemNotify(title: string, body: string, deeplink?: string): Promise<void> {
   if (!isSystemNotificationsEnabled()) return;
   try {
     await NotificationService.SendNotification({
       id: crypto.randomUUID(),
       title,
       body,
+      ...(deeplink ? { data: { deeplink } } : {}),
     });
   } catch {
-    // best-effort — system notifications are never critical
   }
 }
