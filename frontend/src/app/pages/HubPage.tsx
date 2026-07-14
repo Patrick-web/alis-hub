@@ -5,7 +5,7 @@ import { useWorkspace } from '../stores/workspace';
 import { useLabs } from '../stores/labs';
 import { getDefaultRoute } from '../stores/tabSettings';
 import { NotificationCenter } from '../components/NotificationCenter';
-import { ProfileModal } from '../components/ProfileModal';
+import { useProfileModal } from '../stores/profileModal';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
 import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from '../components/WindowControls';
@@ -19,7 +19,7 @@ export function HubPage() {
   const isWindows = effective === 'windows';
   const isLinux = effective === 'linux';
   const isMac = effective === 'darwin';
-  const [profileOpen, setProfileOpen] = useState(false);
+  const { open: openProfile } = useProfileModal();
   const [avatarImgError, setAvatarImgError] = useState(false);
 
   const { profile } = useUserProfile();
@@ -84,7 +84,7 @@ export function HubPage() {
         <div className="flex items-center gap-[10px] px-[10px]">
           <NotificationCenter />
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => openProfile()}
             className="opacity-70 hover:opacity-100 transition-opacity"
             title="Open profile"
           >
@@ -187,8 +187,6 @@ export function HubPage() {
           </div>
         </div>
       </div>
-
-      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }

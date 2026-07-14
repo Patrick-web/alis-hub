@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -197,7 +198,7 @@ func main() {
 
 	tray.SetMenu(trayMenu)
 
-	installAppMenu(app)
+	installAppMenu(app, updaterSvc)
 
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
@@ -213,16 +214,117 @@ func main() {
 	}
 }
 
-func installAppMenu(app *application.App) {
+func installAppMenu(app *application.App, updaterSvc *updater.Service) {
 	menu := app.NewMenu()
-	menu.AddRole(application.AppMenu)
+
+	installAppRoleMenu(app, menu)
 	menu.AddRole(application.EditMenu)
 
 	view := menu.AddSubmenu("View")
 	view.Add("Command Palette").SetAccelerator("CmdOrCtrl+K").OnClick(func(_ *application.Context) {
 		app.Event.Emit("menu:command-palette", nil)
 	})
+	view.AddSeparator()
+	view.AddRole(application.Reload)
+	view.AddRole(application.ForceReload)
+	view.AddRole(application.OpenDevTools)
+	view.AddSeparator()
+	view.AddRole(application.ResetZoom)
+	view.AddRole(application.ZoomIn)
+	view.AddRole(application.ZoomOut)
+	view.AddSeparator()
+	view.AddRole(application.ToggleFullscreen)
+
+	installGoMenu(app, menu)
 
 	menu.AddRole(application.WindowMenu)
+
+	installHelpMenu(app, menu, updaterSvc)
+
 	app.Menu.Set(menu)
+}
+
+// installAppRoleMenu builds the primary application menu. On macOS this is the
+// bold app-named menu; on other platforms AppMenu is a no-op so the extra
+// entries (Preferences, Sign Out) are appended under a "File" submenu instead.
+func installAppRoleMenu(app *application.App, menu *application.Menu) {
+	if runtime.GOOS == "darwin" {
+		menu.AddRole(application.AppMenu)
+		if appMenu := menu.FindByRole(application.AppMenu); appMenu != nil {
+			sub := appMenu.GetSubmenu()
+			prefs := sub.Add("Preferences…").SetAccelerator("CmdOrCtrl+,")
+			prefs.OnClick(func(_ *application.Context) { app.Event.Emit("menu:preferences", nil) })
+			signOut := sub.Add("Sign Out")
+			signOut.OnClick(func(_ *application.Context) { app.Event.Emit("menu:sign-out", nil) })
+		}
+		return
+	}
+
+	file := menu.AddSubmenu("File")
+	file.Add("Preferences…").SetAccelerator("CmdOrCtrl+,").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:preferences", nil)
+	})
+	file.AddSeparator()
+	file.Add("Sign Out").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:sign-out", nil)
+	})
+	file.AddSeparator()
+	file.AddRole(application.Quit)
+}
+
+// installGoMenu mirrors the command palette's navigation group so the primary
+// workspace destinations are reachable (and discoverable) from the menu bar.
+func installGoMenu(app *application.App, menu *application.Menu) {
+	navItems := []struct {
+		label, route, accelerator string
+	}{
+		{"Develop", "/develop", "CmdOrCtrl+1"},
+		{"Builds", "/builds", "CmdOrCtrl+2"},
+		{"Deployments", "/deployments", "CmdOrCtrl+3"},
+		{"Environments", "/environments", "CmdOrCtrl+4"},
+		{"Tools", "/tools", "CmdOrCtrl+5"},
+		{"Source Control", "/git", "CmdOrCtrl+Shift+G"},
+		{"Workflows", "/workflows", ""},
+	}
+
+	goMenu := menu.AddSubmenu("Go")
+	for _, item := range navItems {
+		route := item.route
+		mi := goMenu.Add(item.label)
+		if item.accelerator != "" {
+			mi.SetAccelerator(item.accelerator)
+		}
+		mi.OnClick(func(_ *application.Context) {
+			app.Event.Emit("menu:navigate", route)
+		})
+	}
+}
+
+// installHelpMenu surfaces about/updates/logs/support actions that were
+// previously only reachable through the profile or hidden dev-settings modals.
+func installHelpMenu(app *application.App, menu *application.Menu, updaterSvc *updater.Service) {
+	help := menu.AddSubmenu("Help")
+
+	if runtime.GOOS != "darwin" {
+		help.Add("About AlisHub").OnClick(func(_ *application.Context) {
+			app.Event.Emit("menu:about", nil)
+		})
+		help.AddSeparator()
+	}
+
+	help.Add("Check for Updates…").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:check-updates", nil)
+	})
+	help.Add("Release Notes").OnClick(func(_ *application.Context) {
+		if err := updaterSvc.OpenReleasePage(); err != nil {
+			log.Printf("open release page: %v", err)
+		}
+	})
+	help.AddSeparator()
+	help.Add("View Logs").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:view-logs", nil)
+	})
+	help.Add("Report an Issue").OnClick(func(_ *application.Context) {
+		openBrowserURL("https://github.com/Patrick-web/alis-hub-v3/issues")
+	})
 }
