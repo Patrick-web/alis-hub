@@ -1,5 +1,24 @@
 # Changelog
 
+## [v0.14.4] - 2026-07-15
+
+### What's New
+- Right-clicking a status strip chip now lets you close all tabs at once
+- The app now has View, Go, and Help menus in the menu bar, wired to their respective actions
+- Expanded log entries now have a copy button with clipboard fallback support
+- Truncated tab titles now marquee-scroll on hover so you can read the full name
+- You can now drill down into Spanner PROTO columns by field in the query results
+- Notifications now deep-link directly to the relevant tab on the Develop page
+- Spanner BYTES and PROTO columns are now decoded as JSON in the Labs view
+- The Changes tab now has a discard-all button and the option to merge untracked files
+
+### Bug Fixes
+- Fixed an issue where logs pagination and streaming would break with errors in the Logs Explorer
+- Fixed an issue where primary button hover color wasn't derived from the active accent color
+- Fixed an issue where Git authentication failures could cause a storm of token-refresh attempts
+- Fixed an issue where tool data wasn't being cleared on context switch and the Spanner tree pane couldn't be resized
+- Fixed an issue where pages would flash an empty state before loading on the Develop, Builds, and Codeblock pages
+
 ## [v0.14.3] - 2026-07-13
 
 ### Bug Fixes
