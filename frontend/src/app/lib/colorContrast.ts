@@ -58,6 +58,16 @@ export function hslToHex(h: number, s: number, l: number): string {
   return rgbToHex(r, g, b);
 }
 
+/**
+ * Derives a hover shade for an accent fill: lighter on dark backgrounds, darker on
+ * light backgrounds, so the hover state stays visible against the fill itself.
+ */
+export function getAccentHoverFill(fillHex: string): string {
+  const [h, s, l] = hexToHsl(fillHex);
+  const delta = l >= 85 ? -8 : 6;
+  return hslToHex(h, s, l + delta);
+}
+
 function channelToLinear(c: number): number {
   const v = c / 255;
   return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
