@@ -31,7 +31,14 @@ var errAuthRejected = errors.New("refresh token rejected by identity server")
 
 const (
 	alisConsoleCredentialsPath = ".alis/console-credentials.json"
-	alisConsoleTokenRefGrace   = 5 * time.Minute
+	// alisConsoleTokenRefGrace must be smaller than the shortest access-token
+	// lifetime the identity server issues (currently 5m). Setting it equal to
+	// (or larger than) that lifetime means a freshly refreshed token's
+	// remaining life is never strictly greater than the grace window, so
+	// every caller sees "needs refresh" and immediately re-hits the identity
+	// server — a self-inflicted refresh storm that can trip its rate limits
+	// and surface as spurious auth failures.
+	alisConsoleTokenRefGrace = 1 * time.Minute
 )
 
 // alisConsoleIdentityURL is the OAuth2 token/authorize endpoint host. It is a
