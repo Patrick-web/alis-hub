@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
 import { Call } from '@wailsio/runtime';
-import { ProfileModal } from './ProfileModal';
+import { useProfileModal } from '../stores/profileModal';
 import { Dialog, DialogContent } from './ui/dialog';
 import { useCommandPalette } from '../stores/commandPalette';
 import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
@@ -24,7 +24,7 @@ export function TopNav() {
   const isWindows = effective === 'windows';
   const isLinux = effective === 'linux';
   const isMac = effective === 'darwin';
-  const [profileOpen, setProfileOpen] = useState(false);
+  const { open: openProfile } = useProfileModal();
   const [avatarImgError, setAvatarImgError] = useState(false);
   const [envModalOpen, setEnvModalOpen] = useState(false);
   const [switchingEnv, setSwitchingEnv] = useState(false);
@@ -97,8 +97,6 @@ export function TopNav() {
 
   const handleHomeClick = () => setPhase('hub');
   const handleOrgClick = () => setPhase('picking-product');
-
-  const openProfile = () => setProfileOpen(true);
 
   return (
     <div
@@ -192,7 +190,7 @@ export function TopNav() {
         </div>
 
         <button
-          onClick={openProfile}
+          onClick={() => openProfile()}
           className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
           title="Open profile"
         >
@@ -217,8 +215,6 @@ export function TopNav() {
       {isWindows && <WindowsWindowControls />}
       {isLinux && <LinuxWindowControls />}
       </div>
-
-      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
 
       {/* Environment picker modal */}
       <Dialog open={envModalOpen} onOpenChange={setEnvModalOpen}>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { Outlet, useLocation, useNavigate } from 'react-router';
 import { useTheme } from 'next-themes';
 import { TopNav } from './components/TopNav';
 import { StandaloneTopNav } from './components/StandaloneTopNav';
@@ -15,18 +15,22 @@ import { LandingZonesPage } from './pages/LandingZonesPage';
 import { ProductPickerPage } from './pages/ProductPickerPage';
 import { ReloginModal } from './components/ReloginModal';
 import { CommandPalette } from './components/CommandPalette';
+import { GlobalProfileModal } from './components/GlobalProfileModal';
 import { DevSettingsModal } from './components/DevSettingsModal';
 import { DeepLinkHandler } from './components/DeepLinkHandler';
 import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
 import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
 import { useCommandPalette } from './stores/commandPalette';
 import { useDevSettingsModal } from './stores/devSettingsModal';
+import { useProfileModal } from './stores/profileModal';
 import { Events } from '@wailsio/runtime';
 import { useWorkspace, type AppPhase } from './stores/workspace';
 import { usePackageSessions } from './stores/packageSessions';
 import { initAccentColor } from './stores/accent';
 import { useUserProfile } from './stores/userProfile';
+import { useUpdate } from './stores/update';
 import { useSourceControl } from './stores/sourceControl';
+import { notify } from './lib/notify';
 import * as ProductService from '../../bindings/alis-hub-v3/productservice';
 import * as GitService from '../../bindings/alis-hub-v3/gitservice';
 import { Loader } from './components/Loader';
@@ -35,15 +39,18 @@ const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function RootLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const { state, setPhase } = useWorkspace();
   const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
-  const { fetchProfile } = useUserProfile();
+  const { fetchProfile, clearProfile } = useUserProfile();
+  const { checkForUpdate } = useUpdate();
   const isOnDevelop = location.pathname === '/develop';
   const isOnTools = location.pathname === '/tools';
   const [sessionExpired, setSessionExpired] = useState(false);
   const { toggle } = useCommandPalette();
-  const { toggle: toggleDevSettings } = useDevSettingsModal();
+  const { toggle: toggleDevSettings, open: openDevSettings } = useDevSettingsModal();
+  const { open: openProfile, close: closeProfile } = useProfileModal();
   const { state: scState } = useSourceControl();
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fetchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -71,6 +78,38 @@ export function RootLayout() {
     const off = Events.On('menu:command-palette', () => toggle());
     return () => off();
   }, [toggle]);
+
+  useEffect(() => {
+    const offs = [
+      Events.On('menu:navigate', (ev) => {
+        const route = ev.data as string;
+        if (route) navigate(route);
+      }),
+      Events.On('menu:preferences', () => openProfile()),
+      Events.On('menu:about', () => openProfile('updates')),
+      Events.On('menu:sign-out', async () => {
+        try {
+          await ProductService.Logout();
+          clearProfile();
+          closeProfile();
+          setPhase('login');
+        } catch (e) {
+          notify.error(`Failed to sign out: ${String(e)}`);
+        }
+      }),
+      Events.On('menu:check-updates', async () => {
+        try {
+          const info = await checkForUpdate();
+          if (!info.available) notify.success("You're on the latest version.");
+        } catch (e) {
+          notify.error(`Update check failed: ${String(e)}`);
+        }
+        openProfile('updates');
+      }),
+      Events.On('menu:view-logs', () => openDevSettings('logs')),
+    ];
+    return () => offs.forEach(off => off());
+  }, [navigate, openProfile, closeProfile, openDevSettings, checkForUpdate, clearProfile, setPhase]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -218,7 +257,7 @@ export function RootLayout() {
     : null;
 
   if (state.phase === 'hub') {
-    return <>{<HubPage />}{reloginModal}<DevSettingsModal /><DeepLinkHandler /></>;
+    return <>{<HubPage />}{reloginModal}<DevSettingsModal /><GlobalProfileModal /><DeepLinkHandler /></>;
   }
 
   if (state.phase === 'picking-org') {
@@ -227,6 +266,7 @@ export function RootLayout() {
         <LandingZonesPage />
         {reloginModal}
         <DevSettingsModal />
+        <GlobalProfileModal />
         <DeepLinkHandler />
       </div>
     );
@@ -238,6 +278,7 @@ export function RootLayout() {
         <ProductPickerPage />
         {reloginModal}
         <DevSettingsModal />
+        <GlobalProfileModal />
         <DeepLinkHandler />
       </div>
     );
@@ -260,6 +301,7 @@ export function RootLayout() {
         <StatusStrip />
         {reloginModal}
         <DevSettingsModal />
+        <GlobalProfileModal />
         <DeepLinkHandler />
       </div>
     );
@@ -307,6 +349,7 @@ export function RootLayout() {
       <StatusStrip />
       <CommandPalette />
       <DevSettingsModal />
+      <GlobalProfileModal />
       <DevelopCommandsExtension />
       <GCloudCommandsExtension />
       {reloginModal}

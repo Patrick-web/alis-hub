@@ -17,6 +17,7 @@ import { WorkflowRunsProvider } from "./app/stores/workflowRuns.tsx";
 import { CommandPaletteProvider } from "./app/stores/commandPalette.tsx";
 import { PlatformProvider } from "./app/stores/platform.tsx";
 import { DevSettingsModalProvider } from "./app/stores/devSettingsModal.tsx";
+import { ProfileModalProvider } from "./app/stores/profileModal.tsx";
 import { LocalAIProvider } from "./app/stores/localai.tsx";
 import { Toaster } from "./app/components/ui/sonner.tsx";
 import { WailsNotificationBridge } from "./app/components/WailsNotificationBridge.tsx";
@@ -55,11 +56,13 @@ async function bootstrap() {
                   <CommandPaletteProvider>
                     <PlatformProvider>
                     <DevSettingsModalProvider>
+                    <ProfileModalProvider>
                       <ThemeSettingsSync />
                       <App />
                       <Toaster position="bottom-right" />
                       <WailsNotificationBridge />
                       <NetworkStatus />
+                    </ProfileModalProvider>
                     </DevSettingsModalProvider>
                     </PlatformProvider>
                   </CommandPaletteProvider>

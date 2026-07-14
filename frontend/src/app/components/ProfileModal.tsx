@@ -48,6 +48,7 @@ import { LocalAISetupCard } from "./LocalAISetupCard";
 interface ProfileModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialTab?: Tab | null;
 }
 
 type Tab =
@@ -541,7 +542,7 @@ function SearchResultsView({
   );
 }
 
-export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
+export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalProps) {
   const { state, setPhase } = useWorkspace();
   const { theme, setTheme } = useTheme();
   const { accentId, setAccent, customHex, setCustomAccent } = useAccentColor();
@@ -647,6 +648,10 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
       })
       .catch(() => {});
   }, [open, activeTab, state.organisation, state.product]);
+
+  useEffect(() => {
+    if (open && initialTab) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   useEffect(() => {
     if (!open) return;

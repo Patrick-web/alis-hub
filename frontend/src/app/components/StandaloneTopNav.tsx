@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
 import { useWorkspace } from '../stores/workspace';
-import { ProfileModal } from './ProfileModal';
+import { useProfileModal } from '../stores/profileModal';
 import { useUserProfile } from '../stores/userProfile';
 import { usePlatform } from '../stores/platform';
 import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from './WindowControls';
@@ -23,7 +23,7 @@ export function StandaloneTopNav() {
   const isWindows = effective === 'windows';
   const isLinux = effective === 'linux';
   const isMac = effective === 'darwin';
-  const [profileOpen, setProfileOpen] = useState(false);
+  const { open: openProfile } = useProfileModal();
   const [avatarImgError, setAvatarImgError] = useState(false);
 
   const { profile } = useUserProfile();
@@ -85,7 +85,7 @@ export function StandaloneTopNav() {
       >
         <div className="flex items-center h-full px-[10px]">
           <button
-            onClick={() => setProfileOpen(true)}
+            onClick={() => openProfile()}
             className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
             title="Open profile"
           >
@@ -110,8 +110,6 @@ export function StandaloneTopNav() {
         {isWindows && <WindowsWindowControls />}
         {isLinux && <LinuxWindowControls />}
       </div>
-
-      <ProfileModal open={profileOpen} onOpenChange={setProfileOpen} />
     </div>
   );
 }
