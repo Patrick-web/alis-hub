@@ -99,6 +99,7 @@ func main() {
 			application.NewService(updaterSvc),
 			application.NewService(notifSvc),
 			application.NewService(NewGCloudService()),
+			application.NewService(NewProtoDecodeService()),
 			application.NewService(gitSvc),
 			application.NewService(changelogSvc),
 			application.NewService(localAISvc),

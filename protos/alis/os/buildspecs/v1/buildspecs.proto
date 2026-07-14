@@ -1,0 +1,334 @@
+syntax = "proto3";
+
+package alis.os.buildspecs.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum BuildSpecView {
+  BUILD_SPEC_VIEW_UNSPECIFIED = 0;
+  BUILD_SPEC_VIEW_BASIC = 1;
+  BUILD_SPEC_VIEW_FULL = 2;
+}
+
+enum BuildSpecRevisionView {
+  BUILD_SPEC_REVISION_VIEW_UNSPECIFIED = 0;
+  BUILD_SPEC_REVISION_VIEW_BASIC = 1;
+  BUILD_SPEC_REVISION_VIEW_FULL = 2;
+}
+
+enum IdeateView {
+  IDEATE_VIEW_UNSPECIFIED = 0;
+  IDEATE_VIEW_BASIC = 1;
+  IDEATE_VIEW_FULL = 2;
+}
+
+message BuildSpec {
+  enum Status {
+    STATE_UNSPECIFIED = 0;
+    NEW = 1;
+    ACTIVE = 2;
+    COMPLETED = 3;
+  }
+  enum Extension {
+    EXTENSION_UNSPECIFIED = 0;
+    EXTENSION_BILLING = 1;
+    EXTENSION_PROPOSAL = 2;
+    EXTENSION_IDEATE = 3;
+    EXTENSION_WIREFRAME = 4;
+    EXTENSION_TIMESHEET = 5;
+    EXTENSION_FILE_SET = 6;
+    EXTENSION_GITHUB = 7;
+  }
+  message Content {
+    message Specify {
+      string markdown = 1;
+    }
+    message Plan {
+      string markdown = 1;
+    }
+    message Tasks {
+      string markdown = 1;
+    }
+    .alis.os.buildspecs.v1.BuildSpec.Content.Specify specify = 1;
+    .alis.os.buildspecs.v1.BuildSpec.Content.Plan plan = 2;
+    .alis.os.buildspecs.v1.BuildSpec.Content.Tasks tasks = 3;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.buildspecs.v1.BuildSpec.Status status = 3;
+  string summary = 4;
+  .alis.os.buildspecs.v1.BuildSpec.Content content = 5;
+  repeated string products = 6;
+  string account = 7;
+  repeated int32 extensions_enabled = 8;  // enum type not recoverable from bundle (wire-compatible int32)
+  repeated string neurons = 9;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message BuildSpecRevision {
+  string name = 1;
+  .alis.os.buildspecs.v1.BuildSpec snapshot = 2;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message CreateBuildSpecRequest {
+  .alis.os.buildspecs.v1.BuildSpec build_spec = 2;
+}
+
+message GetBuildSpecRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateBuildSpecRequest {
+  .alis.os.buildspecs.v1.BuildSpec build_spec = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteBuildSpecRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteBuildSpecRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListBuildSpecsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateBuildSpecsRequest {
+  repeated .alis.os.buildspecs.v1.CreateBuildSpecRequest requests = 2;
+}
+
+message BatchCreateBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+}
+
+message BatchGetBuildSpecsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+}
+
+message BatchUpdateBuildSpecsRequest {
+  repeated .alis.os.buildspecs.v1.UpdateBuildSpecRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+}
+
+message BatchDeleteBuildSpecsRequest {
+  repeated .alis.os.buildspecs.v1.DeleteBuildSpecRequest requests = 2;
+}
+
+message BatchDeleteBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+}
+
+message BatchUndeleteBuildSpecsRequest {
+  repeated .alis.os.buildspecs.v1.UndeleteBuildSpecRequest requests = 2;
+}
+
+message BatchUndeleteBuildSpecsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpec build_specs = 1;
+}
+
+message StreamBuildSpecsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message CreateBuildSpecRevisionRequest {
+  string parent = 1;
+  .alis.os.buildspecs.v1.BuildSpecRevision build_spec_revision = 2;
+}
+
+message GetBuildSpecRevisionRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateBuildSpecRevisionRequest {
+  .alis.os.buildspecs.v1.BuildSpecRevision build_spec_revision = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message ListBuildSpecRevisionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+}
+
+message ListBuildSpecRevisionsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpecRevision build_spec_revisions = 1;
+  string next_page_token = 2;
+}
+
+message DeleteBuildSpecRevisionRequest {
+  string name = 1;
+}
+
+message BatchCreateBuildSpecRevisionsRequest {
+  string parent = 1;
+  repeated .alis.os.buildspecs.v1.CreateBuildSpecRevisionRequest requests = 2;
+}
+
+message BatchCreateBuildSpecRevisionsResponse {
+  repeated .alis.os.buildspecs.v1.BuildSpecRevision build_spec_revisions = 1;
+}
+
+message RollbackBuildSpecRequest {
+  string name = 1;
+}
+
+message InitialiseBuildSpecRequest {
+  message Extensions {
+    message Ideate {
+      repeated string ideas = 1;
+    }
+    message Github {
+      repeated string issue_uris = 1;
+    }
+    .alis.os.buildspecs.v1.InitialiseBuildSpecRequest.Extensions.Ideate ideate = 1;
+    .alis.os.buildspecs.v1.InitialiseBuildSpecRequest.Extensions.Github github = 2;
+  }
+  string product = 1;
+  string specify = 2;
+  .alis.os.buildspecs.v1.InitialiseBuildSpecRequest.Extensions extensions = 3;
+}
+
+message InitialiseBuildSpecResponse {
+  string build_spec = 1;
+}
+
+message BuildSpecUpdatedEvent {
+  string build_spec = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message BuildSpecCreatedEvent {
+  string build_spec = 1;
+}
+
+message RequestAssistanceRequest {
+  string build_spec = 1;
+  string build_specialist = 2;
+}
+
+message RequestAssistanceResponse {
+}
+
+message Ideate {
+  string name = 1;
+  repeated string ideas = 2;
+  repeated string specs = 3;
+  .google.protobuf.Timestamp update_time = 98;
+  string etag = 99;
+}
+
+message GetIdeateRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateIdeateRequest {
+  .alis.os.buildspecs.v1.Ideate ideate = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message GenerateIdeateRequest {
+  string build_spec = 1;
+}
+
+message GenerateIdeateResponse {
+}
+
+service BuildSpecsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateBuildSpec(.alis.os.buildspecs.v1.CreateBuildSpecRequest) returns (.alis.os.buildspecs.v1.BuildSpec);
+  rpc GetBuildSpec(.alis.os.buildspecs.v1.GetBuildSpecRequest) returns (.alis.os.buildspecs.v1.BuildSpec);
+  rpc UpdateBuildSpec(.alis.os.buildspecs.v1.UpdateBuildSpecRequest) returns (.alis.os.buildspecs.v1.BuildSpec);
+  rpc ListBuildSpecs(.alis.os.buildspecs.v1.ListBuildSpecsRequest) returns (.alis.os.buildspecs.v1.ListBuildSpecsResponse);
+  rpc DeleteBuildSpec(.alis.os.buildspecs.v1.DeleteBuildSpecRequest) returns (.google.protobuf.Empty);
+  rpc UndeleteBuildSpec(.alis.os.buildspecs.v1.UndeleteBuildSpecRequest) returns (.alis.os.buildspecs.v1.BuildSpec);
+  rpc BatchCreateBuildSpecs(.alis.os.buildspecs.v1.BatchCreateBuildSpecsRequest) returns (.alis.os.buildspecs.v1.BatchCreateBuildSpecsResponse);
+  rpc BatchGetBuildSpecs(.alis.os.buildspecs.v1.BatchGetBuildSpecsRequest) returns (.alis.os.buildspecs.v1.BatchGetBuildSpecsResponse);
+  rpc BatchUpdateBuildSpecs(.alis.os.buildspecs.v1.BatchUpdateBuildSpecsRequest) returns (.alis.os.buildspecs.v1.BatchUpdateBuildSpecsResponse);
+  rpc BatchDeleteBuildSpecs(.alis.os.buildspecs.v1.BatchDeleteBuildSpecsRequest) returns (.alis.os.buildspecs.v1.BatchDeleteBuildSpecsResponse);
+  rpc BatchUndeleteBuildSpecs(.alis.os.buildspecs.v1.BatchUndeleteBuildSpecsRequest) returns (.alis.os.buildspecs.v1.BatchUndeleteBuildSpecsResponse);
+  rpc StreamBuildSpecs(.alis.os.buildspecs.v1.StreamBuildSpecsRequest) returns (stream .alis.os.buildspecs.v1.BuildSpec);
+  rpc CreateBuildSpecRevision(.alis.os.buildspecs.v1.CreateBuildSpecRevisionRequest) returns (.alis.os.buildspecs.v1.BuildSpecRevision);
+  rpc GetBuildSpecRevision(.alis.os.buildspecs.v1.GetBuildSpecRevisionRequest) returns (.alis.os.buildspecs.v1.BuildSpecRevision);
+  rpc UpdateBuildSpecRevision(.alis.os.buildspecs.v1.UpdateBuildSpecRevisionRequest) returns (.alis.os.buildspecs.v1.BuildSpecRevision);
+  rpc ListBuildSpecRevisions(.alis.os.buildspecs.v1.ListBuildSpecRevisionsRequest) returns (.alis.os.buildspecs.v1.ListBuildSpecRevisionsResponse);
+  rpc DeleteBuildSpecRevision(.alis.os.buildspecs.v1.DeleteBuildSpecRevisionRequest) returns (.google.protobuf.Empty);
+  rpc BatchCreateBuildSpecRevisions(.alis.os.buildspecs.v1.BatchCreateBuildSpecRevisionsRequest) returns (.alis.os.buildspecs.v1.BatchCreateBuildSpecRevisionsResponse);
+  rpc RollbackBuildSpec(.alis.os.buildspecs.v1.RollbackBuildSpecRequest) returns (.alis.os.buildspecs.v1.BuildSpecRevision);
+  rpc InitialiseBuildSpec(.alis.os.buildspecs.v1.InitialiseBuildSpecRequest) returns (.alis.os.buildspecs.v1.InitialiseBuildSpecResponse);
+  rpc RequestAssistance(.alis.os.buildspecs.v1.RequestAssistanceRequest) returns (.alis.os.buildspecs.v1.RequestAssistanceResponse);
+}
+
+service IdeateService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetIdeate(.alis.os.buildspecs.v1.GetIdeateRequest) returns (.alis.os.buildspecs.v1.InitialiseBuildSpecRequest.Extensions.Ideate);
+  rpc UpdateIdeate(.alis.os.buildspecs.v1.UpdateIdeateRequest) returns (.alis.os.buildspecs.v1.InitialiseBuildSpecRequest.Extensions.Ideate);
+  rpc GenerateIdeate(.alis.os.buildspecs.v1.GenerateIdeateRequest) returns (.alis.os.buildspecs.v1.GenerateIdeateResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+}

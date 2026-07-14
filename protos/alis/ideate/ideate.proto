@@ -1,0 +1,537 @@
+syntax = "proto3";
+
+package alis.ideate;
+
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message AgentInterface {
+  string url = 1;
+  string protocol_binding = 2;
+  string tenant = 3;
+  string protocol_version = 4;
+}
+
+message AgentCard {
+  string name = 1;
+  string description = 2;
+  .alis.ideate.AgentProvider provider = 4;
+  string version = 5;
+  string documentation_url = 6;
+  .alis.ideate.AgentCapabilities capabilities = 7;
+  map<string, .alis.ideate.SecurityScheme> security_schemes = 8;
+  repeated string default_input_modes = 10;
+  repeated string default_output_modes = 11;
+  repeated .alis.ideate.AgentSkill skills = 12;
+  repeated .alis.ideate.SecurityRequirement security_requirements = 13;
+  repeated .alis.ideate.AgentCardSignature signatures = 17;
+  string icon_url = 18;
+  repeated .alis.ideate.AgentInterface supported_interfaces = 19;
+}
+
+message AgentProvider {
+  string url = 1;
+  string organization = 2;
+}
+
+message AgentCapabilities {
+  bool streaming = 1;
+  bool push_notifications = 2;
+  repeated .alis.ideate.AgentExtension extensions = 3;
+  bool extended_agent_card = 5;
+}
+
+message AgentExtension {
+  string uri = 1;
+  string description = 2;
+  bool required = 3;
+  .google.protobuf.Struct params = 4;
+}
+
+message AgentSkill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string tags = 4;
+  repeated string examples = 5;
+  repeated string input_modes = 6;
+  repeated string output_modes = 7;
+  repeated .alis.ideate.SecurityRequirement security_requirements = 8;
+}
+
+message AgentCardSignature {
+  string protected = 1;
+  string signature = 2;
+  .google.protobuf.Struct header = 3;
+}
+
+message StringList {
+}
+
+message SecurityRequirement {
+}
+
+message SecurityScheme {
+  oneof scheme {
+    .alis.ideate.APIKeySecurityScheme api_key_security_scheme = 1;
+    .alis.ideate.HTTPAuthSecurityScheme http_auth_security_scheme = 2;
+    .alis.ideate.OAuth2SecurityScheme oauth2_security_scheme = 3;
+    .alis.ideate.OpenIdConnectSecurityScheme open_id_connect_security_scheme = 4;
+    .alis.ideate.MutualTlsSecurityScheme mtls_security_scheme = 5;
+  }
+}
+
+message APIKeySecurityScheme {
+  string description = 1;
+  string location = 2;
+  string name = 3;
+}
+
+message HTTPAuthSecurityScheme {
+  string description = 1;
+  string scheme = 2;
+  string bearer_format = 3;
+}
+
+message OAuth2SecurityScheme {
+  string description = 1;
+  .alis.ideate.OAuthFlows flows = 2;
+  string oauth2_metadata_url = 3;
+}
+
+message OpenIdConnectSecurityScheme {
+  string description = 1;
+  string open_id_connect_url = 2;
+}
+
+message MutualTlsSecurityScheme {
+}
+
+message OAuthFlows {
+  oneof flow {
+    .alis.ideate.AuthorizationCodeOAuthFlow authorization_code = 1;
+    .alis.ideate.ClientCredentialsOAuthFlow client_credentials = 2;
+    .alis.ideate.ImplicitOAuthFlow implicit = 3;
+    .alis.ideate.PasswordOAuthFlow password = 4;
+    .alis.ideate.DeviceCodeOAuthFlow device_code = 5;
+  }
+}
+
+message AuthorizationCodeOAuthFlow {
+  string authorization_url = 1;
+  string token_url = 2;
+  string refresh_url = 3;
+  map<string, string> scopes = 4;
+  bool pkce_required = 5;
+}
+
+message ClientCredentialsOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message ImplicitOAuthFlow {
+  string authorization_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message PasswordOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message DeviceCodeOAuthFlow {
+  string device_authorization_url = 1;
+  string token_url = 2;
+  string refresh_url = 3;
+  map<string, string> scopes = 4;
+}
+
+message Idea {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    NEW = 1;
+    PROCESSING = 2;
+    ACTIVE = 3;
+    ARCHIVED = 4;
+    STALE = 5;
+  }
+  message ManagedSpecs {
+    string idea_brief = 1;
+    string current_process = 2;
+    string stakeholder_map = 3;
+    string pain_points = 4;
+    string jargon = 5;
+    string technology_landscape = 6;
+  }
+  string name = 1;
+  string title = 2;
+  .alis.ideate.Idea.State state = 3;
+  .alis.ideate.Idea.ManagedSpecs managed_specs = 4;
+  string account = 96;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+}
+
+message GetIdeaRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message Spec {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    FULL_RFP = 1;
+    IDEA_BRIEF = 5;
+    UI_DESIGN = 6;
+    AI_PROTOTYPE = 7;
+    IDEATE_SPEC = 8;
+    BUSINESS_CASE = 9;
+    SOLUTION_FLOW_SPEC = 10;
+    CRAFTED_SPEC = 11;
+    CURRENT_PROCESS = 12;
+    JARGON = 13;
+    TECHNOLOGY_LANDSCAPE = 14;
+    PAIN_POINTS = 15;
+    STAKEHOLDER_MAP = 16;
+    FIGMA_MAKE = 17;
+    GEMINI_ENTERPRISE_CUSTOM_AGENT = 18;
+    AI_STUDIO = 19;
+    RESEARCH_PLAN = 20;
+    CUSTOM_AGENT = 21;
+    PRODUCT_REQUIREMENTS_DOCUMENT = 22;
+    AGENT_FEEDBACK = 23;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    PUBLISHED = 2;
+    ARCHIVED = 3;
+    PROCESSING = 4;
+    READY = 5;
+    FAILED = 6;
+    STALE = 7;
+  }
+  message FullRfp {
+  }
+  message IdeaBrief {
+  }
+  message UiDesign {
+  }
+  message AiPrototype {
+  }
+  message IdeateSpec {
+  }
+  message BusinessCase {
+  }
+  message SolutionFlowSpec {
+  }
+  message CraftedSpec {
+  }
+  message CurrentProcess {
+  }
+  message Jargon {
+  }
+  message TechnologyLandscape {
+  }
+  message PainPoints {
+  }
+  message StakeholderMap {
+  }
+  message FigmaMake {
+  }
+  message GeminiEnterpriseCustomAgentSpec {
+    string display_name = 1;
+    string description = 2;
+    string instructions = 3;
+  }
+  message AiStudio {
+    string content = 1;
+    string contribution_session = 2;
+    repeated string attachment_uris = 3;
+  }
+  message ResearchPlan {
+    string framing = 1;
+    repeated string research_questions = 2;
+    string leading_question = 3;
+  }
+  message CustomAgent {
+  }
+  message ProductRequirementsDocument {
+  }
+  message AgentFeedback {
+    message TargetAgent {
+      string agent_stream = 1;
+      .alis.ideate.AgentCard agent_card = 2;
+      string overview = 3;
+    }
+    repeated .alis.ideate.Spec.AgentFeedback.TargetAgent target_agents = 1;
+    string content = 2;
+  }
+  message GenerationContext {
+    string filter = 1;
+    string instructions = 2;
+  }
+  string name = 1;
+  string title = 2;
+  .alis.ideate.Spec.Type type = 3;
+  string idea = 4;
+  .alis.ideate.Spec.State state = 5;
+  .alis.ideate.Spec.GenerationContext generation_context = 95;
+  string operation = 96;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+  oneof output {
+    .alis.ideate.Spec.FullRfp full_rfp = 6;
+    .alis.ideate.Spec.IdeaBrief idea_brief = 7;
+    .alis.ideate.Spec.UiDesign ui_design = 8;
+    .alis.ideate.Spec.AiPrototype ai_prototype = 9;
+    .alis.ideate.Spec.IdeateSpec ideate_spec = 10;
+    .alis.ideate.Spec.BusinessCase business_case = 11;
+    .alis.ideate.Spec.CurrentProcess current_process = 12;
+    .alis.ideate.Spec.Jargon jargon = 13;
+    .alis.ideate.Spec.TechnologyLandscape technology_landscape = 14;
+    .alis.ideate.Spec.PainPoints pain_points = 15;
+    .alis.ideate.Spec.StakeholderMap stakeholder_map = 16;
+    .alis.ideate.Spec.FigmaMake figma_make = 17;
+    .alis.ideate.Spec.GeminiEnterpriseCustomAgentSpec gemini_enterprise_custom_agent = 18;
+    .alis.ideate.Spec.AiStudio ai_studio = 19;
+    .alis.ideate.Spec.SolutionFlowSpec solution_flow_spec = 20;
+    .alis.ideate.Spec.ResearchPlan research_plan = 21;
+    .alis.ideate.Spec.CustomAgent custom_agent = 22;
+    .alis.ideate.Spec.ProductRequirementsDocument product_requirements_document = 23;
+    .alis.ideate.Spec.AgentFeedback agent_feedback = 24;
+  }
+}
+
+message GetSpecRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message GenerateCustomAgentSpecRequest {
+  .alis.ideate.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateCustomAgentSpecMetadata {
+}
+
+message GenerateCustomAgentSpecResponse {
+}
+
+message RetrieveIdeaSpecsRequest {
+  string idea = 1;
+  .alis.ideate.Spec.Type spec_type = 2;  // enum (low-confidence heuristic)
+}
+
+message RetrieveIdeaSpecsResponse {
+}
+
+message GenerateAgentFeedbackSpecRequest {
+  .alis.ideate.Spec.GenerationContext generation_context = 3;
+  repeated string target_agents = 4;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateAgentFeedbackSpecMetadata {
+}
+
+message GenerateAgentFeedbackSpecResponse {
+}
+
+message Stream {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    UPLOAD_PENDING = 1;
+    NEW = 2;
+    PREPROCESSING = 3;
+    AUGMENTING = 4;
+    READY = 5;
+    FAILED = 6;
+    ARCHIVED = 7;
+  }
+  string name = 1;
+  string display_name = 2;
+  string contribution_session = 3;
+  .alis.ideate.Stream.State state = 4;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+}
+
+message GetStreamRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message AddNoteRequest {
+  string content = 5;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string token = 3;
+    string contribution_session = 4;
+    string collection_key = 6;
+  }
+}
+
+message AddNoteResponse {
+}
+
+message AddAudioNoteRequest {
+  string mime_type = 5;
+  string origin_uri = 6;
+  string content_uri = 7;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string token = 3;
+    string contribution_session = 4;
+    string collection_key = 8;
+  }
+}
+
+message AddAudioNoteResponse {
+  .alis.ideate.Stream stream = 1;
+  string upload_uri = 2;
+}
+
+message AddMultiFileUploadRequest {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+    string content_uri = 3;
+  }
+  string note = 5;
+  repeated .alis.ideate.AddMultiFileUploadRequest.File files = 6;
+  string origin_uri = 7;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string token = 3;
+    string contribution_session = 4;
+    string collection_key = 8;
+  }
+}
+
+message AddMultiFileUploadResponse {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+    string upload_uri = 3;
+  }
+  .alis.ideate.Stream stream = 1;
+  repeated .alis.ideate.AddMultiFileUploadResponse.File files = 2;
+}
+
+message AddAgentRequest {
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string token = 3;
+    string contribution_session = 4;
+    string collection_key = 8;
+  }
+  oneof agent_card_source {
+    .alis.ideate.AgentCard agent_card = 5;
+    string agent_card_uri = 6;
+  }
+}
+
+message AddAgentResponse {
+}
+
+message AddResearchInterviewRequest {
+  string title = 2;
+  string research_plan = 3;
+  repeated string participant_emails = 4;
+  oneof stream_target {
+    string idea = 1;
+  }
+}
+
+message AddResearchInterviewResponse {
+}
+
+message InitialiseAgentFeedbackRequest {
+  message AgentInteraction {
+    string conversation_history = 3;
+    oneof agent_card_source {
+      .alis.ideate.AgentCard agent_card = 1;
+      string agent_card_uri = 2;
+    }
+  }
+  message Note {
+  }
+  message AudioNote {
+    string mime_type = 1;
+    string origin_uri = 2;
+    string content_uri = 3;
+  }
+  message MultiFileUpload {
+    message File {
+      string filename = 1;
+      string mime_type = 2;
+      string content_uri = 3;
+    }
+    string note = 1;
+    repeated .alis.ideate.InitialiseAgentFeedbackRequest.MultiFileUpload.File files = 2;
+    string origin_uri = 3;
+  }
+  .alis.ideate.InitialiseAgentFeedbackRequest.AgentInteraction agent_interaction = 5;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string token = 3;
+    string collection_key = 4;
+  }
+  oneof feedback_content {
+    .alis.ideate.InitialiseAgentFeedbackRequest.Note note = 6;
+    .alis.ideate.InitialiseAgentFeedbackRequest.AudioNote audio_note = 7;
+    .alis.ideate.InitialiseAgentFeedbackRequest.MultiFileUpload multi_file_upload = 8;
+  }
+}
+
+message InitialiseAgentFeedbackResponse {
+  message Note {
+  }
+  message AudioNote {
+  }
+  message MultiFileUpload {
+    message File {
+      string filename = 1;
+      string mime_type = 2;
+      string upload_uri = 3;
+    }
+  }
+  .alis.ideate.Stream content_stream = 1;
+  .alis.ideate.Stream agent_stream = 2;
+  oneof response_details {
+    .alis.ideate.InitialiseAgentFeedbackResponse.Note note = 3;
+    .alis.ideate.InitialiseAgentFeedbackResponse.AudioNote audio_note = 4;
+    .alis.ideate.InitialiseAgentFeedbackResponse.MultiFileUpload multi_file_upload = 5;
+  }
+}
+
+message TestIdeateAccessRequest {
+}
+
+message TestIdeateAccessResponse {
+  enum Restriction {
+    RESTRICTION_UNSPECIFIED = 0;
+    NO_SEAT = 1;
+    TRIAL_EXPIRED = 2;
+    PLAN_LIMITS_REACHED = 3;
+  }
+}

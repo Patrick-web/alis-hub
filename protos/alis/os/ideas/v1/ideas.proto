@@ -1,0 +1,4359 @@
+syntax = "proto3";
+
+package alis.os.ideas.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/validation/v1/validation.proto";
+import "alis/os/billing/v1/billing.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/type/money.proto";
+
+enum ContributionSessionView {
+  CONTRIBUTION_SESSION_VIEW_UNSPECIFIED = 0;
+  CONTRIBUTION_SESSION_VIEW_BASIC = 1;
+  CONTRIBUTION_SESSION_VIEW_FULL = 2;
+}
+
+enum EmbeddingDimension {
+  EMBEDDING_DIMENSION_UNSPECIFIED = 0;
+  IDEA_BRIEF = 1;
+  CURRENT_PROCESS = 2;
+  STAKEHOLDER_MAP = 3;
+  PAIN_POINTS = 4;
+  TECHNOLOGY_LANDSCAPE = 5;
+  PROJECT_INTENT = 6;
+}
+
+enum LedgerView {
+  LEDGER_VIEW_UNSPECIFIED = 0;
+  LEDGER_VIEW_BASIC = 1;
+  LEDGER_VIEW_FULL = 2;
+}
+
+enum TransactionView {
+  TRANSACTION_VIEW_UNSPECIFIED = 0;
+  TRANSACTION_VIEW_BASIC = 1;
+  TRANSACTION_VIEW_FULL = 2;
+}
+
+enum SpecView {
+  SPEC_VIEW_UNSPECIFIED = 0;
+  SPEC_VIEW_BASIC = 1;
+  SPEC_VIEW_FULL = 2;
+}
+
+enum SpecRevisionView {
+  SPEC_REVISION_VIEW_UNSPECIFIED = 0;
+  SPEC_REVISION_VIEW_BASIC = 1;
+  SPEC_REVISION_VIEW_FULL = 2;
+}
+
+message ContentBlock {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    HEADING = 1;
+    TEXT_BODY = 2;
+    IMAGE = 3;
+    VIDEO = 4;
+    AUDIO = 5;
+    DIVIDER = 6;
+    LINK_PREVIEW = 7;
+    STREAMS_REFERENCE = 8;
+    PROMPT = 9;
+    DIAGRAM = 10;
+  }
+  message Heading {
+  }
+  message TextBody {
+  }
+  message Image {
+    string source_uri = 1;
+    string caption = 2;
+  }
+  message Video {
+    string source_uri = 1;
+    string caption = 2;
+  }
+  message Audio {
+    string source_uri = 1;
+    string caption = 2;
+  }
+  message Divider {
+  }
+  message LinkPreview {
+    string uri = 1;
+    string avatar_uri = 2;
+    string title = 3;
+    string body = 4;
+  }
+  message StreamReference {
+    string stream = 1;
+    string avatar_uri = 2;
+    string title = 3;
+    string body = 4;
+  }
+  message Prompt {
+    string prompt_request = 1;
+    repeated string streams = 2;
+  }
+  message Diagram {
+    string mermaid_diagram_code = 1;
+    string mermaid_rendered_diagram = 2;
+  }
+  .alis.os.ideas.v1.ContentBlock.Type type = 1;
+  oneof block {
+    .alis.os.ideas.v1.ContentBlock.Heading heading = 2;
+    .alis.os.ideas.v1.ContentBlock.TextBody text_body = 3;
+    .alis.os.ideas.v1.ContentBlock.Image image = 4;
+    .alis.os.ideas.v1.ContentBlock.Video video = 5;
+    .alis.os.ideas.v1.ContentBlock.Audio audio = 6;
+    .alis.os.ideas.v1.ContentBlock.Divider divider = 7;
+    .alis.os.ideas.v1.ContentBlock.LinkPreview link_preview = 8;
+    .alis.os.ideas.v1.ContentBlock.StreamReference stream_reference = 9;
+    .alis.os.ideas.v1.ContentBlock.Prompt prompt = 10;
+    .alis.os.ideas.v1.ContentBlock.Diagram diagram = 11;
+  }
+}
+
+message AgentInterface {
+  string url = 1;
+  string protocol_binding = 2;
+  string tenant = 3;
+  string protocol_version = 4;
+}
+
+message AgentCard {
+  string name = 1;
+  string description = 2;
+  .alis.os.ideas.v1.AgentProvider provider = 4;
+  string version = 5;
+  string documentation_url = 6;
+  .alis.os.ideas.v1.AgentCapabilities capabilities = 7;
+  map<string, .alis.os.ideas.v1.SecurityScheme> security_schemes = 8;
+  repeated string default_input_modes = 10;
+  repeated string default_output_modes = 11;
+  repeated .alis.os.ideas.v1.AgentSkill skills = 12;
+  repeated .alis.os.ideas.v1.SecurityRequirement security_requirements = 13;
+  repeated .alis.os.ideas.v1.AgentCardSignature signatures = 17;
+  string icon_url = 18;
+  repeated .alis.os.ideas.v1.AgentInterface supported_interfaces = 19;
+}
+
+message AgentProvider {
+  string url = 1;
+  string organization = 2;
+}
+
+message AgentCapabilities {
+  bool streaming = 1;
+  bool push_notifications = 2;
+  repeated .alis.os.ideas.v1.AgentExtension extensions = 3;
+  bool extended_agent_card = 5;
+}
+
+message AgentExtension {
+  string uri = 1;
+  string description = 2;
+  bool required = 3;
+  .google.protobuf.Struct params = 4;
+}
+
+message AgentSkill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string tags = 4;
+  repeated string examples = 5;
+  repeated string input_modes = 6;
+  repeated string output_modes = 7;
+  repeated .alis.os.ideas.v1.SecurityRequirement security_requirements = 8;
+}
+
+message AgentCardSignature {
+  string protected = 1;
+  string signature = 2;
+  .google.protobuf.Struct header = 3;
+}
+
+message StringList {
+  repeated string list = 1;
+}
+
+message SecurityRequirement {
+  map<string, .alis.os.ideas.v1.StringList> schemes = 1;
+}
+
+message SecurityScheme {
+  oneof scheme {
+    .alis.os.ideas.v1.APIKeySecurityScheme api_key_security_scheme = 1;
+    .alis.os.ideas.v1.HTTPAuthSecurityScheme http_auth_security_scheme = 2;
+    .alis.os.ideas.v1.OAuth2SecurityScheme oauth2_security_scheme = 3;
+    .alis.os.ideas.v1.OpenIdConnectSecurityScheme open_id_connect_security_scheme = 4;
+    .alis.os.ideas.v1.MutualTlsSecurityScheme mtls_security_scheme = 5;
+  }
+}
+
+message APIKeySecurityScheme {
+  string description = 1;
+  string location = 2;
+  string name = 3;
+}
+
+message HTTPAuthSecurityScheme {
+  string description = 1;
+  string scheme = 2;
+  string bearer_format = 3;
+}
+
+message OAuth2SecurityScheme {
+  string description = 1;
+  .alis.os.ideas.v1.OAuthFlows flows = 2;
+  string oauth2_metadata_url = 3;
+}
+
+message OpenIdConnectSecurityScheme {
+  string description = 1;
+  string open_id_connect_url = 2;
+}
+
+message MutualTlsSecurityScheme {
+  string description = 1;
+}
+
+message OAuthFlows {
+  oneof flow {
+    .alis.os.ideas.v1.AuthorizationCodeOAuthFlow authorization_code = 1;
+    .alis.os.ideas.v1.ClientCredentialsOAuthFlow client_credentials = 2;
+    .alis.os.ideas.v1.ImplicitOAuthFlow implicit = 3;
+    .alis.os.ideas.v1.PasswordOAuthFlow password = 4;
+    .alis.os.ideas.v1.DeviceCodeOAuthFlow device_code = 5;
+  }
+}
+
+message AuthorizationCodeOAuthFlow {
+  string authorization_url = 1;
+  string token_url = 2;
+  string refresh_url = 3;
+  map<string, string> scopes = 4;
+  bool pkce_required = 5;
+}
+
+message ClientCredentialsOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message ImplicitOAuthFlow {
+  string authorization_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message PasswordOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message DeviceCodeOAuthFlow {
+  string device_authorization_url = 1;
+  string token_url = 2;
+  string refresh_url = 3;
+  map<string, string> scopes = 4;
+}
+
+message Stream {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    NOTE = 1;
+    AUDIO_NOTE = 2;
+    VIDEO = 3;
+    UPLOADED_FILE = 4;
+    WEBSITE_LINK = 5;
+    COMMENT = 6;
+    REQUIREMENTS_SPECIFICATION = 7;
+    PRIME_FRAMEWORK = 8;
+    SIX_HATS = 9;
+    MULTI_FILE_UPLOAD = 10;
+    SPEC_FEEDBACK = 11;
+    FIGMA_MAKE = 12;
+    GOOGLE_AI_STUDIO = 13;
+    USABILITY_STUDY = 14;
+    AGENT = 15;
+    STREAM_FEEDBACK = 16;
+    FIREFLIES_TRANSCRIPT = 17;
+    RESEARCH = 18;
+    RESEARCH_TASK = 19;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    UPLOAD_PENDING = 1;
+    NEW = 2;
+    PROCESSING = 3;
+    READY = 4;
+    FAILED = 5;
+    ARCHIVED = 6;
+    PREPROCESSING = 7;
+    AUGMENTING = 8;
+  }
+  message Note {
+    repeated .alis.os.ideas.v1.ContentBlock content = 1;
+    string summary = 2;
+    .google.protobuf.StringValue concerns = 3;
+    .google.protobuf.StringValue pain_points = 4;
+    .google.protobuf.StringValue technology_used = 5;
+    .google.protobuf.StringValue key_concepts = 6;
+    .google.protobuf.StringValue goals = 7;
+    .google.protobuf.StringValue ideal_world = 8;
+    .google.protobuf.StringValue current_process = 9;
+  }
+  message AudioNote {
+    string download_uri = 1;
+    string summary = 2;
+    string transcript = 3;
+    string mime_type = 4;
+    .google.protobuf.StringValue concerns = 5;
+    .google.protobuf.StringValue pain_points = 6;
+    .google.protobuf.StringValue technology_used = 7;
+    .google.protobuf.StringValue key_concepts = 8;
+    .google.protobuf.StringValue goals = 9;
+    .google.protobuf.StringValue desired_outcome = 10;
+    .google.protobuf.StringValue current_process = 11;
+    string intent = 12;
+  }
+  message Video {
+    message Section {
+      string title = 1;
+      .google.protobuf.Duration start_offset = 2;
+    }
+    message Thumbnail {
+      bytes content = 1;
+      .google.protobuf.Duration start_offset = 2;
+      string annotation = 3;
+    }
+    string download_uri = 1;
+    string summary = 2;
+    string transcript = 3;
+    string note = 4;
+    string mime_type = 5;
+    repeated .alis.os.ideas.v1.Stream.Video.Section sections = 6;
+    repeated .alis.os.ideas.v1.Stream.Video.Thumbnail thumbnails = 7;
+    .google.protobuf.StringValue tone = 8;
+    .google.protobuf.StringValue ideal_world = 9;
+    .google.protobuf.StringValue jargon = 10;
+    .google.protobuf.StringValue technology_used = 11;
+    .google.protobuf.StringValue prioritisation = 12;
+    .google.protobuf.StringValue stakeholders = 13;
+    .google.protobuf.StringValue current_process = 14;
+    .google.protobuf.StringValue data_sources = 15;
+    .google.protobuf.StringValue challenges = 16;
+    .google.protobuf.StringValue demo = 17;
+    .google.protobuf.StringValue next_steps = 18;
+    .google.protobuf.StringValue signals = 19;
+  }
+  message UploadedFile {
+    string download_uri = 1;
+    string note = 2;
+    string overview = 3;
+    string title = 4;
+    string mime_type = 5;
+  }
+  message MultiFileUpload {
+    message File {
+      enum State {
+        STATE_UNSPECIFIED = 0;
+        STATE_PENDING_UPLOAD = 1;
+        STATE_UPLOADING = 2;
+        STATE_UPLOADED = 3;
+        STATE_UPLOAD_PAUSED = 4;
+        STATE_UPLOAD_FAILED = 5;
+        STATE_UPLOAD_CANCELED = 6;
+        STATE_UPLOAD_RESUMING = 7;
+        STATE_PROCESSING = 8;
+        STATE_READY = 9;
+        STATE_FAILED = 10;
+        STATE_FILETYPE_NOT_SUPPORTED = 11;
+        STATE_READY_FOR_PROCESSING = 12;
+        STATE_PREPROCESSING = 13;
+        STATE_READY_FOR_AUGMENTATION = 14;
+        STATE_AUGMENTING = 15;
+        STATE_NO_CREDITS = 16;
+      }
+      message Excel {
+        message Sheet {
+          string title = 1;
+          string overview = 2;
+        }
+      }
+      message Csv {
+      }
+      message Document {
+        message Section {
+          string title = 1;
+          string overview = 2;
+        }
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Document.Section sections = 1;
+        .google.protobuf.StringValue purpose = 2;
+        .google.protobuf.StringValue challenges = 3;
+        .google.protobuf.StringValue desired_outcome = 4;
+        .google.protobuf.StringValue jargon = 5;
+        .google.protobuf.StringValue technology_used = 6;
+        .google.protobuf.StringValue prioritisation = 7;
+        .google.protobuf.StringValue stakeholders = 8;
+        .google.protobuf.StringValue current_process = 9;
+        .google.protobuf.StringValue data_sources = 10;
+        .google.protobuf.StringValue next_steps = 11;
+      }
+      message Audio {
+        message Section {
+          string title = 1;
+          .google.protobuf.Duration start_offset = 2;
+        }
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Audio.Section sections = 1;
+        .google.protobuf.StringValue concerns = 2;
+        .google.protobuf.StringValue pain_points = 3;
+        .google.protobuf.StringValue technology_used = 4;
+        .google.protobuf.StringValue key_concepts = 5;
+        .google.protobuf.StringValue goals = 6;
+        .google.protobuf.StringValue desired_outcome = 7;
+        .google.protobuf.StringValue current_process = 8;
+        .google.protobuf.StringValue transcript = 9;
+      }
+      message Presentation {
+        message Slide {
+          .google.protobuf.StringValue normalised_title = 1;
+          .google.protobuf.StringValue key_takeaway = 2;
+          .google.protobuf.StringValue speaker_notes = 3;
+          .google.protobuf.StringValue visual_content_description = 4;
+          .google.protobuf.StringValue sentiment = 5;
+          .google.protobuf.StringValue references = 6;
+        }
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Presentation.Slide slides = 1;
+        .google.protobuf.StringValue agenda = 2;
+        .google.protobuf.StringValue named_entities = 3;
+        .google.protobuf.StringValue audience = 4;
+        .google.protobuf.StringValue glossary = 5;
+      }
+      message Video {
+        message Section {
+          string title = 1;
+          .google.protobuf.Duration start_offset = 2;
+        }
+        message Thumbnail {
+          bytes content = 1;
+          .google.protobuf.Duration start_offset = 2;
+          string annotation = 3;
+        }
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Video.Section sections = 1;
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Video.Thumbnail thumbnails = 2;
+        .google.protobuf.StringValue tone = 3;
+        .google.protobuf.StringValue ideal_world = 4;
+        .google.protobuf.StringValue jargon = 5;
+        .google.protobuf.StringValue technology_used = 6;
+        .google.protobuf.StringValue prioritisation = 7;
+        .google.protobuf.StringValue stakeholders = 8;
+        .google.protobuf.StringValue current_process = 9;
+        .google.protobuf.StringValue data_sources = 10;
+        .google.protobuf.StringValue challenges = 11;
+        .google.protobuf.StringValue demo = 12;
+        .google.protobuf.StringValue next_steps = 13;
+        .google.protobuf.StringValue signals = 14;
+        .google.protobuf.StringValue transcript = 15;
+      }
+      message Image {
+      }
+      message Code {
+        message Definition {
+          string name = 1;
+          string kind = 2;
+          string description = 3;
+        }
+        string language = 1;
+        .google.protobuf.StringValue package = 2;
+        repeated string imports = 3;
+        repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File.Code.Definition definitions = 4;
+        .google.protobuf.StringValue purpose = 5;
+        .google.protobuf.StringValue interfaces = 6;
+        .google.protobuf.StringValue technology_used = 7;
+        .google.protobuf.StringValue architecture_patterns = 8;
+        .google.protobuf.StringValue configuration = 9;
+        .google.protobuf.StringValue challenges = 10;
+      }
+      string download_uri = 1;
+      string overview = 2;
+      string title = 3;
+      string mime_type = 4;
+      .alis.os.ideas.v1.Stream.MultiFileUpload.File.State state = 5;
+      oneof structure {
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Excel excel = 6;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Csv csv = 7;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Document document = 8;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Audio audio = 9;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Presentation presentation = 10;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Video video = 11;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Image image = 12;
+        .alis.os.ideas.v1.Stream.MultiFileUpload.File.Code code = 13;
+      }
+    }
+    string note = 1;
+    repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File files = 2;
+    string summary = 3;
+  }
+  message WebsiteLink {
+    string parent = 1;
+    string uri = 2;
+    string parsed_html = 3;
+    string overview = 4;
+  }
+  message Comment {
+    string parent = 1;
+    string quote_comment = 2;
+    string text = 3;
+  }
+  message RequirementsSpecification {
+  }
+  message PrimeFramework {
+    message Potential {
+      enum ValueToUsers {
+        VALUE_TO_USERS_UNSPECIFIED = 0;
+        NONE = 1;
+        MINOR_IMPROVEMENT = 2;
+        CLEAR_BENEFIT = 3;
+        SIGNIFICANT_IMPROVEMENT = 4;
+        HIGH_IMPACT = 5;
+      }
+      .alis.os.ideas.v1.Stream.PrimeFramework.Potential.ValueToUsers value_to_users = 1;
+      string comment = 99;
+    }
+    message Return {
+      enum BusinessValue {
+        BUSINESS_VALUE_UNSPECIFIED = 0;
+        NONE = 1;
+        MINOR = 2;
+        MODERATE = 3;
+        STRONG = 4;
+        TRANSFORMATIVE = 5;
+      }
+      .alis.os.ideas.v1.Stream.PrimeFramework.Return.BusinessValue business_value = 1;
+      string comment = 99;
+    }
+    message Investment {
+      enum EaseOfImplementation {
+        EASE_OF_IMPLEMENTATION_UNSPECIFIED = 0;
+        EXTREMELY_DIFFICULT = 1;
+        DIFFICULT = 2;
+        MODERATE = 3;
+        EASY = 4;
+        VERY_EASY = 5;
+      }
+      .alis.os.ideas.v1.Stream.PrimeFramework.Investment.EaseOfImplementation ease_of_implementation = 1;
+      string comment = 99;
+    }
+    message Motivation {
+      enum StrategicAlignment {
+        STRATEGIC_ALIGNMENT_UNSPECIFIED = 0;
+        CONFLICTING = 1;
+        ISOLATED = 2;
+        GENERAL = 3;
+        STRONG = 4;
+        CORE = 5;
+      }
+      .alis.os.ideas.v1.Stream.PrimeFramework.Motivation.StrategicAlignment strategic_alignment = 1;
+      string comment = 99;
+    }
+    message Expertise {
+      enum InternalSkillsAvailability {
+        INTERNAL_SKILLS_AVAILABILITY_UNSPECIFIED = 0;
+        MAJOR_EXTERNAL_ACQUISITION_REQUIRED = 1;
+        SUBSTANTIAL_UPSKILLING_NEEDED = 2;
+        MODERATE_GAPS_EXIST = 3;
+        MINOR_GAPS_MANAGEABLE = 4;
+        ALL_SKILLS_AVAILABLE = 5;
+      }
+      enum TeamCapacity {
+        TEAM_CAPACITY_UNSPECIFIED = 0;
+        NONE = 1;
+        LIMITED = 2;
+        SOME = 3;
+        SUFFICIENT = 4;
+        AMPLE = 5;
+      }
+      .alis.os.ideas.v1.Stream.PrimeFramework.Expertise.InternalSkillsAvailability internal_skills_availability = 1;
+      .alis.os.ideas.v1.Stream.PrimeFramework.Expertise.TeamCapacity team_capacity = 2;
+      string comment = 99;
+    }
+    .alis.os.ideas.v1.Stream.PrimeFramework.Potential potential = 1;
+    .alis.os.ideas.v1.Stream.PrimeFramework.Return return = 2;
+    .alis.os.ideas.v1.Stream.PrimeFramework.Investment investment = 3;
+    .alis.os.ideas.v1.Stream.PrimeFramework.Motivation motivation = 4;
+    .alis.os.ideas.v1.Stream.PrimeFramework.Expertise expertise = 5;
+  }
+  message SixHatsFramework {
+    message WhiteHat {
+      message Facts {
+        string needed_fact = 1;
+        string known_fact = 2;
+      }
+    }
+    message YellowHat {
+      repeated string benefits = 1;
+      repeated string opportunities = 2;
+    }
+    message BlackHat {
+      repeated string risks = 1;
+      repeated string challenges = 2;
+    }
+    message RedHat {
+      repeated string fears = 1;
+      repeated string likes = 2;
+      repeated string dislikes = 3;
+      repeated string loves = 4;
+      repeated string hates = 5;
+    }
+    message GreenHat {
+      repeated string creative_ideas = 1;
+      repeated string innovative_solutions = 2;
+    }
+    .alis.os.ideas.v1.Stream.SixHatsFramework.WhiteHat white_hat = 1;
+    .alis.os.ideas.v1.Stream.SixHatsFramework.YellowHat yellow_hat = 2;
+    .alis.os.ideas.v1.Stream.SixHatsFramework.BlackHat black_hat = 3;
+    .alis.os.ideas.v1.Stream.SixHatsFramework.RedHat red_hat = 4;
+    .alis.os.ideas.v1.Stream.SixHatsFramework.GreenHat green_hat = 5;
+  }
+  message SpecFeedback {
+    message Entry {
+      string highlighted_text = 1;
+      oneof action {
+        string elaborate_text = 2;
+        string correction = 3;
+        bool liked = 4;
+      }
+    }
+    string spec_revision = 1;
+    string highlighted_text = 2;
+    repeated .alis.os.ideas.v1.Stream.SpecFeedback.Entry entries = 5;
+    string directive = 6;
+    oneof action {
+      string elaborate_text = 3;
+      string correction = 4;
+    }
+  }
+  message StreamFeedback {
+    message Entry {
+      string highlighted_text = 1;
+      string correction = 2;
+      string elaborate = 3;
+      string path = 4;
+    }
+    string target_stream = 1;
+    repeated .alis.os.ideas.v1.Stream.StreamFeedback.Entry entries = 2;
+    string directive = 3;
+  }
+  message FigmaMake {
+    enum PreviewType {
+      PREVIEW_TYPE_UNSPECIFIED = 0;
+      UPLOAD = 1;
+      PUBLISH_URI = 2;
+    }
+    message File {
+      string title = 1;
+      string download_uri = 2;
+      string mime_type = 3;
+    }
+    string preview_uri = 1;
+    string figma_make_file_uri = 2;
+    string note = 3;
+    .alis.os.ideas.v1.Stream.FigmaMake.File file = 4;
+    .alis.os.ideas.v1.Stream.FigmaMake.PreviewType preview_type = 5;
+  }
+  message GoogleAiStudio {
+    message File {
+      string title = 1;
+      string download_uri = 2;
+      string mime_type = 3;
+    }
+    string preview_uri = 1;
+    string ai_studio_app_uri = 2;
+    string note = 3;
+    .alis.os.ideas.v1.Stream.GoogleAiStudio.File file = 4;
+  }
+  message UsabilityStudy {
+    message File {
+      string download_uri = 1;
+      string mime_type = 2;
+      string filename = 3;
+    }
+    message Observation {
+      enum Impact {
+        IMPACT_UNSPECIFIED = 0;
+        BLOCKER = 1;
+        FRICTION = 2;
+        MINOR_ISSUE = 3;
+        NEUTRAL = 4;
+        EFFICIENCY = 5;
+        DELIGHT = 6;
+      }
+      .google.protobuf.Duration start_offset = 1;
+      string description = 2;
+      .google.protobuf.StringValue mechanics_insight = 3;
+      .google.protobuf.StringValue narrative_insight = 4;
+      .google.protobuf.StringValue physical_insight = 5;
+      .alis.os.ideas.v1.Stream.UsabilityStudy.Observation.Impact impact = 6;
+    }
+    .alis.os.ideas.v1.Stream.UsabilityStudy.File file = 1;
+    string summary = 2;
+    repeated .alis.os.ideas.v1.Stream.UsabilityStudy.Observation observations = 3;
+    .google.protobuf.StringValue cognitive_friction = 4;
+    .google.protobuf.StringValue emotional_response = 5;
+    .google.protobuf.StringValue intuitive_leaps = 6;
+    .google.protobuf.StringValue patterns = 7;
+    string synthesised_insights = 8;
+  }
+  message Agent {
+    string agent_card_uri = 1;
+    .alis.os.ideas.v1.AgentCard agent_card = 2;
+    string overview = 3;
+    .google.protobuf.StringValue competence = 4;
+    .google.protobuf.StringValue access = 5;
+    .google.protobuf.StringValue usage_guidance = 6;
+    string conversation_history = 7;
+  }
+  message FirefliesTranscript {
+    string id = 1;
+    string transcript = 2;
+    string summary = 3;
+    .google.protobuf.StringValue tone = 4;
+    .google.protobuf.StringValue ideal_world = 5;
+    .google.protobuf.StringValue jargon = 6;
+    .google.protobuf.StringValue technology_used = 7;
+    .google.protobuf.StringValue prioritisation = 8;
+    .google.protobuf.StringValue stakeholders = 9;
+    .google.protobuf.StringValue current_process = 10;
+    .google.protobuf.StringValue data_sources = 11;
+    .google.protobuf.StringValue challenges = 12;
+    .google.protobuf.StringValue demo = 13;
+    .google.protobuf.StringValue next_steps = 14;
+    .google.protobuf.StringValue signals = 15;
+    string transcript_uri = 16;
+  }
+  message Research {
+    enum Modality {
+      MODALITY_UNSPECIFIED = 0;
+      INTERNET = 1;
+      INTERVIEW = 2;
+    }
+    enum Mode {
+      MODE_UNSPECIFIED = 0;
+      DECISION_SUPPORT = 1;
+      FEEDBACK = 2;
+      PROCESS_DISCOVERY = 3;
+      VALIDATION = 4;
+    }
+    message Internet {
+      message Phase {
+        message Reference {
+          string source_uri = 1;
+          string title = 2;
+        }
+        string findings = 1;
+        repeated .alis.os.ideas.v1.Stream.Research.Internet.Phase.Reference references = 2;
+      }
+    }
+    message Interview {
+      message Participant {
+        enum State {
+          STATE_UNSPECIFIED = 0;
+          PENDING = 1;
+          OPENED = 2;
+          IN_PROGRESS = 3;
+          COMPLETED = 4;
+          ARCHIVED = 5;
+        }
+        message User {
+          string name = 1;
+          string display_name = 2;
+          string email = 3;
+          string picture_uri = 4;
+        }
+        .alis.os.ideas.v1.Stream.Research.Interview.Participant.User user = 1;
+        string findings = 2;
+        string contribution_session = 3;
+        .alis.os.ideas.v1.Stream.Research.Interview.Participant.State state = 4;
+      }
+      message ParticipantAccessCriteria {
+      }
+      repeated .alis.os.ideas.v1.Stream.Research.Interview.Participant participants = 1;
+      .alis.os.ideas.v1.Stream.Research.Interview.ParticipantAccessCriteria access_criteria = 2;
+    }
+    message ReferencedStream {
+      string stream = 1;
+      string filename = 2;
+      repeated int32 file_indexes = 3;
+    }
+    string plan = 1;
+    string report = 2;
+    .alis.os.ideas.v1.Stream.Research.Internet internet = 3;
+    repeated int32 modalities = 4;  // enum type not recoverable from bundle (wire-compatible int32)
+    .alis.os.ideas.v1.Stream.Research.Interview interview = 5;
+    repeated string referenced_specs = 6;
+    repeated .alis.os.ideas.v1.Stream.Research.ReferencedStream referenced_streams = 7;
+    .alis.os.ideas.v1.Stream.Research.Mode mode = 8;
+  }
+  message ResearchTask {
+    message Phase {
+      enum Modality {
+        MODALITY_UNSPECIFIED = 0;
+        INTERNET = 1;
+        INTERVIEW = 2;
+      }
+      message Internet {
+        message Reference {
+          string source_uri = 1;
+          string title = 2;
+        }
+        string findings = 1;
+        repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase.Internet.Reference references = 2;
+      }
+      message Interview {
+        enum Mode {
+          MODE_UNSPECIFIED = 0;
+          DECISION_SUPPORT = 1;
+          ARTIFACT_LED = 2;
+          LANDSCAPE = 3;
+          PROCESS_DISCOVERY = 4;
+          VALIDATION = 5;
+        }
+        message Participant {
+          enum State {
+            STATE_UNSPECIFIED = 0;
+            PENDING = 1;
+            OPENED = 2;
+            IN_PROGRESS = 3;
+            COMPLETED = 4;
+            ARCHIVED = 5;
+          }
+          message User {
+            string name = 1;
+            string display_name = 2;
+            string email = 3;
+            string picture_uri = 4;
+          }
+          .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Participant.User user = 1;
+          string findings = 2;
+          string contribution_session = 3;
+          .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Participant.State state = 4;
+        }
+        message ParticipantAccessCriteria {
+        }
+        message ArtifactReferences {
+          message ReferencedStream {
+            string stream = 1;
+            repeated int32 file_index = 2;
+          }
+          repeated string specs = 1;
+          repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.ArtifactReferences.ReferencedStream streams = 2;
+        }
+        .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Mode mode = 1;
+        repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Participant participants = 2;
+        .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.ParticipantAccessCriteria access_criteria = 3;
+        .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.ArtifactReferences artifact_references = 4;
+      }
+      string name = 1;
+      string plan = 2;
+      string brief = 3;
+      .alis.os.ideas.v1.Stream.ResearchTask.Phase.Modality modality = 10;
+      oneof body {
+        .alis.os.ideas.v1.Stream.ResearchTask.Phase.Internet internet = 30;
+        .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview interview = 31;
+      }
+    }
+    string plan_positioning = 1;
+    string report = 2;
+    repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase phases = 3;
+  }
+  message GenaiMetadata {
+    int32 text_token_count = 1;
+    int32 audio_token_count = 2;
+    int32 video_token_count = 3;
+    int32 document_token_count = 4;
+    int32 image_token_count = 5;
+    int32 total_token_count = 6;
+  }
+  message Contributor {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+    string picture = 4;
+  }
+  message ContextRequest {
+    .alis.os.ideas.v1.Stream.Contributor requester = 1;
+    .alis.os.ideas.v1.Stream.Contributor assignee = 2;
+    string request = 3;
+    repeated int32 allowed_formats = 4;  // enum type not recoverable from bundle (wire-compatible int32)
+    bool is_agent_request = 5;
+  }
+  message Embeddings {
+    repeated float clustering = 1;
+    repeated float retrieval_document = 2;
+  }
+  message RelativeImportance {
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.ideas.v1.Stream.Type type = 3;
+  string contribution_session = 19;
+  string state_notes = 88;
+  .alis.os.ideas.v1.Stream.GenaiMetadata genai_metadata = 89;
+  .alis.os.ideas.v1.Stream.State state = 90;
+  string description = 91;
+  .alis.os.ideas.v1.Stream.Contributor contributor = 92;
+  .alis.os.ideas.v1.Stream.ContextRequest context_request = 93;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+  .alis.os.ideas.v1.Stream.Embeddings embeddings = 100;
+  .alis.os.ideas.v1.Stream.RelativeImportance relative_importance = 101;
+  string etag = 102;
+  oneof body {
+    .alis.os.ideas.v1.Stream.Note note = 4;
+    .alis.os.ideas.v1.Stream.AudioNote audio_note = 5;
+    .alis.os.ideas.v1.Stream.Video video = 6;
+    .alis.os.ideas.v1.Stream.UploadedFile uploaded_file = 7;
+    .alis.os.ideas.v1.Stream.WebsiteLink website_link = 8;
+    .alis.os.ideas.v1.Stream.Comment comment = 9;
+    .alis.os.ideas.v1.Stream.RequirementsSpecification requirements_specification = 10;
+    .alis.os.ideas.v1.Stream.PrimeFramework prime_framework = 11;
+    .alis.os.ideas.v1.Stream.SixHatsFramework six_hats_framework = 12;
+    .alis.os.ideas.v1.Stream.MultiFileUpload multi_file_upload = 13;
+    .alis.os.ideas.v1.Stream.SpecFeedback spec_feedback = 14;
+    .alis.os.ideas.v1.Stream.FigmaMake figma_make = 15;
+    .alis.os.ideas.v1.Stream.GoogleAiStudio google_ai_studio = 16;
+    .alis.os.ideas.v1.Stream.UsabilityStudy usability_study = 17;
+    .alis.os.ideas.v1.Stream.Agent agent = 18;
+    .alis.os.ideas.v1.Stream.FirefliesTranscript fireflies_transcript = 20;
+    .alis.os.ideas.v1.Stream.Research research = 21;
+    .alis.os.ideas.v1.Stream.ResearchTask research_task = 22;
+  }
+}
+
+message GetStreamRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateStreamRequest {
+  string parent = 1;
+  .alis.os.ideas.v1.Stream stream = 2;
+}
+
+message UpdateStreamRequest {
+  .alis.os.ideas.v1.Stream stream = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteStreamRequest {
+}
+
+message ListStreamsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string order_by = 5;
+  string filter = 6;
+}
+
+message ListStreamsResponse {
+  repeated .alis.os.ideas.v1.Stream streams = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetStreamsRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetStreamsResponse {
+}
+
+message RetrieveCommentsRequest {
+  oneof parent {
+    string idea = 1;
+    string stream = 2;
+  }
+}
+
+message RetrieveCommentsResponse {
+}
+
+message RetrieveStreamOverviewsResponse {
+  message StreamOverview {
+    message File {
+      string title = 1;
+      string download_uri = 2;
+      string mime_type = 3;
+      string ai_summary = 7;
+    }
+    string stream = 1;
+    string stream_display_name = 2;
+    int32 type = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+    string idea_display_name = 4;
+    string content_text = 5;
+    string download_uri = 6;
+    string ai_summary = 7;
+    string contributor_user = 8;
+    string contributor_display_name = 9;
+    string contributor_masked_email = 10;
+    string contributor_picture = 11;
+    string contributor_role = 12;
+    string contribution_requestor_user = 13;
+    string contribution_requestor_display_name = 14;
+    string contribution_requestor_masked_email = 15;
+    string contribution_requestor_picture = 16;
+    string contribution_requestor_role = 17;
+    string contribution_request_content = 18;
+    int64 comment_count = 19;
+    repeated .alis.os.ideas.v1.RetrieveStreamOverviewsResponse.StreamOverview.File files = 20;
+    string contribution_assignee_user = 21;
+    string contribution_assignee_display_name = 22;
+    string contribution_assignee_masked_email = 23;
+    string contribution_assignee_picture = 24;
+    string contribution_assignee_role = 25;
+    int32 stream_state = 26;  // enum type not recoverable from bundle (wire-compatible int32)
+    string state_note = 27;
+    float relative_importance = 28;
+    .google.protobuf.Timestamp create_time = 97;
+    .google.protobuf.Timestamp update_time = 98;
+  }
+  repeated .alis.os.ideas.v1.RetrieveStreamOverviewsResponse.StreamOverview stream_overviews = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveStreamOverviewsRequest {
+  message Ideas {
+  }
+  message Filter {
+    string contributor = 1;
+    bool show_only_pending = 2;
+  }
+  int32 page_size = 3;
+  string page_token = 4;
+  .alis.os.ideas.v1.RetrieveStreamOverviewsRequest.Filter filter = 6;
+  oneof parent {
+    string account = 1;
+    .alis.os.ideas.v1.RetrieveStreamOverviewsRequest.Ideas ideas = 2;
+    string stream = 5;
+  }
+}
+
+message RetrievePendingRequestsForContextRequest {
+}
+
+message RetrievePendingRequestsForContextResponse {
+}
+
+message SearchStreamsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string order_by = 4;
+  string filter = 5;
+}
+
+message SearchStreamsResponse {
+  repeated .alis.os.ideas.v1.Stream streams = 1;
+  string next_page_token = 2;
+}
+
+message CopyStreamRequest {
+  string stream = 1;
+  string destination_idea = 2;
+}
+
+message CopyStreamResponse {
+}
+
+message ArchiveStreamRequest {
+}
+
+message ArchiveStreamResponse {
+}
+
+message BatchArchiveStreamsRequest {
+}
+
+message BatchArchiveStreamsResponse {
+}
+
+message ContributionSession {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    PENDING = 2;
+    IN_PROGRESS = 3;
+    COMPLETED = 4;
+    EXPIRED = 5;
+    SUBMITTED_FOR_REVIEW = 6;
+    ARCHIVED = 7;
+  }
+  message Context {
+    enum Format {
+      FORMAT_UNSPECIFIED = 0;
+      DISCOVERY = 1;
+      UX_FEEDBACK = 2;
+      CONTRIBUTION = 3;
+    }
+    string framing = 1;
+    .google.protobuf.Duration effort = 2;
+    string overview = 3;
+    .alis.os.ideas.v1.ContributionSession.Context.Format format = 4;
+    repeated string research_questions = 5;
+    string leading_question = 6;
+  }
+  message Synthesis {
+    enum GenerationState {
+      GENERATION_STATE_UNSPECIFIED = 0;
+      PENDING = 1;
+      GENERATING = 2;
+      READY = 3;
+      FAILED = 4;
+    }
+    string overview = 1;
+    .alis.os.ideas.v1.ContributionSession.Synthesis.GenerationState generation_state = 2;
+    string preview = 3;
+  }
+  message User {
+    enum Engagement {
+      ENGAGEMENT_UNSPECIFIED = 0;
+      INVITE_PENDING = 1;
+      OPENED = 2;
+      ACTIVE = 3;
+    }
+    string name = 1;
+    string display_name = 2;
+    string masked_email = 3;
+    string picture = 4;
+    .alis.os.ideas.v1.ContributionSession.User.Engagement engagement = 5;
+    string contribution_overview = 6;
+    bool has_seen = 7;
+    bool has_completed = 8;
+  }
+  string name = 1;
+  string subject = 2;
+  .alis.os.ideas.v1.ContributionSession.State state = 3;
+  .alis.os.ideas.v1.ContributionSession.Context context = 4;
+  .alis.os.ideas.v1.ContributionSession.Synthesis synthesis = 6;
+  .alis.os.ideas.v1.ContributionSession.User creator = 7;
+  repeated .alis.os.ideas.v1.ContributionSession.User participants = 8;
+  bool is_open_participation = 9;
+  .google.protobuf.StringValue research_stream = 10;
+  string etag = 96;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+  .google.protobuf.Timestamp expire_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateContributionSessionRequest {
+  string parent = 1;
+  .alis.os.ideas.v1.ContributionSession contribution_session = 2;
+}
+
+message GetContributionSessionRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateContributionSessionRequest {
+  .alis.os.ideas.v1.ContributionSession contribution_session = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteContributionSessionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteContributionSessionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListContributionSessionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListContributionSessionsResponse {
+  repeated .alis.os.ideas.v1.ContributionSession contribution_sessions = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateContributionSessionsRequest {
+  string parent = 1;
+  repeated .alis.os.ideas.v1.CreateContributionSessionRequest requests = 2;
+}
+
+message BatchCreateContributionSessionsResponse {
+}
+
+message BatchGetContributionSessionsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetContributionSessionsResponse {
+}
+
+message BatchUpdateContributionSessionsRequest {
+  string parent = 1;
+  repeated .alis.os.ideas.v1.UpdateContributionSessionRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateContributionSessionsResponse {
+}
+
+message BatchDeleteContributionSessionsRequest {
+  string parent = 1;
+  repeated .alis.os.ideas.v1.DeleteContributionSessionRequest requests = 2;
+}
+
+message BatchDeleteContributionSessionsResponse {
+}
+
+message BatchUndeleteContributionSessionsRequest {
+  string parent = 1;
+  repeated .alis.os.ideas.v1.UndeleteContributionSessionRequest requests = 2;
+}
+
+message BatchUndeleteContributionSessionsResponse {
+}
+
+message StreamContributionSessionsRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message InitialiseContributionSessionRequest {
+}
+
+message InitialiseContributionSessionResponse {
+}
+
+message InviteContributionSessionParticipantsRequest {
+  string contribution_session = 1;
+  bool email_new_participants = 2;
+}
+
+message InviteContributionSessionParticipantsResponse {
+}
+
+message SubmitContributionSessionRequest {
+}
+
+message SubmitContributionSessionResponse {
+}
+
+message SetContributionSessionSeenRequest {
+}
+
+message SetContributionSessionSeenResponse {
+}
+
+message ContributionSessionUpdatedEvent {
+  string contribution_session = 1;
+  .google.protobuf.FieldMask update_mask = 3;
+}
+
+message GenerateQuestionRequest {
+}
+
+message GenerateQuestionResponse {
+}
+
+message GenerateAudioQuestionRequest {
+}
+
+message GenerateAudioQuestionResponse {
+  string question = 1;
+  bytes audio = 2;
+}
+
+message GenerateSynthesisRequest {
+}
+
+message GenerateSynthesisResponse {
+}
+
+message GenerateContributionSessionSynthesisRequest {
+}
+
+message GenerateContributionSessionSynthesisResponse {
+}
+
+message GenerateParticipantContributionOverviewRequest {
+  string contribution_session = 1;
+  string participant = 2;
+}
+
+message GenerateParticipantContributionOverviewResponse {
+}
+
+message RetrieveContributionSessionsOnAccountRequest {
+  string account = 1;
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+}
+
+message RetrieveContributionSessionsOnAccountResponse {
+}
+
+message RetrieveInitialStreamRequest {
+}
+
+message RetrieveInitialStreamResponse {
+}
+
+message CopyContributionSessionRequest {
+  string contribution_session = 1;
+  string destination_idea = 2;
+}
+
+message CopyContributionSessionResponse {
+}
+
+message ArchiveContributionSessionRequest {
+}
+
+message ArchiveContributionSessionResponse {
+}
+
+message Idea {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    NEW = 1;
+    ACTIVE = 2;
+    ARCHIVED = 3;
+    PROCESSING = 4;
+    STALE = 5;
+  }
+  enum Scale {
+    TYPE_UNSPECIFIED = 0;
+    FEATURE = 1;
+    FEATURE_COLLECTION = 2;
+    STANDALONE_APPLICATION = 3;
+    APPLICATION_SUITE = 4;
+    BUSINESS = 5;
+  }
+  message ManagedSpecs {
+    string idea_brief = 1;
+    string current_process = 2;
+    string stakeholder_map = 3;
+    string pain_points = 4;
+    string jargon = 5;
+    string technology_landscape = 6;
+    string gap_analysis = 7;
+    string project_intent = 8;
+  }
+  message Maturity {
+    message Evaluation {
+      enum Clarity {
+        CLARITY_UNSPECIFIED = 0;
+        INSUFFICIENT = 1;
+        DEVELOPING = 2;
+        COMPREHENSIVE = 3;
+      }
+      .alis.os.ideas.v1.Idea.Maturity.Evaluation.Clarity clarity = 1;
+      string explanation = 2;
+    }
+    .alis.os.ideas.v1.Idea.Maturity.Evaluation context = 1;
+    .alis.os.ideas.v1.Idea.Maturity.Evaluation opportunity = 2;
+  }
+  message Contributor {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+    string picture = 4;
+  }
+  message MergeMetadata {
+    repeated string source_ideas = 1;
+  }
+  message ContextCache {
+    message ChildrenList {
+      repeated string children = 1;
+    }
+    string cached_content_name = 1;
+    .google.protobuf.Timestamp create_time = 2;
+    .google.protobuf.Timestamp expire_time = 3;
+    string model_name = 4;
+    map<string, string> source_parent_map = 5;
+    map<string, .alis.os.ideas.v1.Idea.ContextCache.ChildrenList> parent_children_map = 6;
+    int32 audio_streams_count = 7;
+    int32 video_streams_count = 8;
+  }
+  message Embeddings {
+    repeated float clustering = 1;
+    repeated float retrieval_document = 2;
+    repeated float idea_brief = 3;
+    repeated float current_process = 4;
+    repeated float stakeholder_map = 5;
+    repeated float pain_points = 6;
+    repeated float technology_landscape = 7;
+    repeated float project_intent = 8;
+  }
+  string name = 1;
+  string title = 2;
+  string overview = 3;
+  .alis.os.ideas.v1.Idea.State state = 4;
+  string working_spec = 5;
+  .alis.os.ideas.v1.Idea.Scale scale = 6;
+  .alis.os.ideas.v1.Idea.ManagedSpecs managed_specs = 7;
+  .alis.os.ideas.v1.Idea.Maturity maturity = 20;
+  repeated .alis.os.ideas.v1.Idea.Contributor contributors = 92;
+  string account = 94;
+  .alis.os.ideas.v1.Idea.MergeMetadata merge_metadata = 95;
+  .alis.os.ideas.v1.Idea.ContextCache context_cache = 96;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+  .alis.os.ideas.v1.Idea.Embeddings embeddings = 100;
+}
+
+message GetIdeaRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateIdeaRequest {
+  .alis.os.ideas.v1.Idea idea = 1;
+}
+
+message UpdateIdeaRequest {
+  .alis.os.ideas.v1.Idea idea = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteIdeaRequest {
+  string name = 1;
+}
+
+message ListIdeasRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string order_by = 4;
+  string filter = 5;
+}
+
+message ListIdeasResponse {
+  repeated .alis.os.ideas.v1.Idea ideas = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetIdeasRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetIdeasResponse {
+  repeated .alis.os.ideas.v1.Idea ideas = 1;
+}
+
+message SearchIdeasRequest {
+  string query = 1;
+  bool include_archived = 2;
+  string account = 3;
+  .alis.os.ideas.v1.EmbeddingDimension dimension = 4;  // enum (heuristically resolved)
+  int32 result_size = 99;
+}
+
+message SearchIdeasResponse {
+  message Result {
+    .alis.os.ideas.v1.Idea idea = 1;
+    float cosine_distance = 2;
+  }
+  repeated .alis.os.ideas.v1.SearchIdeasResponse.Result results = 1;
+}
+
+message RetrieveSimilarIdeasRequest {
+  string idea = 1;
+  string account = 3;
+  .alis.os.ideas.v1.EmbeddingDimension dimension = 4;  // enum (heuristically resolved)
+  int32 result_size = 99;
+}
+
+message RetrieveSimilarIdeasResponse {
+  message Result {
+    .alis.os.ideas.v1.Idea idea = 1;
+    float cosine_distance = 2;
+  }
+  repeated .alis.os.ideas.v1.RetrieveSimilarIdeasResponse.Result results = 1;
+}
+
+message DescribeIdeaComparisonRequest {
+  string reference_idea = 1;
+  repeated string candidate_ideas = 2;
+}
+
+message DescribeIdeaComparisonResponse {
+  message Result {
+    string idea = 1;
+    string description = 2;
+  }
+  repeated .alis.os.ideas.v1.DescribeIdeaComparisonResponse.Result results = 1;
+}
+
+message RetrievePrincipalIdeasRequest {
+  oneof principal {
+    string user = 1;
+    string domain = 2;
+  }
+}
+
+message RetrievePrincipalIdeasResponse {
+  message Result {
+    .alis.os.ideas.v1.Idea idea = 1;
+    string role = 2;
+  }
+  repeated .alis.os.ideas.v1.RetrievePrincipalIdeasResponse.Result results = 1;
+}
+
+message MergeIdeasRequest {
+  repeated string source_ideas = 1;
+  bool deprecate_source_ideas = 2;
+  string account = 3;
+}
+
+message MergeIdeasResponse {
+  .alis.os.ideas.v1.Idea result = 1;
+}
+
+message DuplicateIdeaRequest {
+  string idea = 1;
+  string account = 2;
+}
+
+message DuplicateIdeaResponse {
+  .alis.os.ideas.v1.Idea idea = 1;
+}
+
+message ArchiveIdeaRequest {
+  string idea = 1;
+}
+
+message ArchiveIdeaResponse {
+}
+
+message UnarchiveIdeaRequest {
+  string idea = 1;
+}
+
+message UnarchiveIdeaResponse {
+}
+
+message GenerateIdeaTitleRequest {
+  string idea = 1;
+}
+
+message GenerateIdeaTitleResponse {
+  .alis.os.ideas.v1.Idea idea = 1;
+}
+
+message FilterIdeasRequest {
+}
+
+message FilterIdeasResponse {
+}
+
+message CountFilteredIdeasRequest {
+}
+
+message CountFilteredIdeasResponse {
+}
+
+message Filter {
+  string theme = 1;
+  repeated string ideas = 2;
+  repeated .alis.os.ideas.v1.Idea.Contributor contributors = 3;
+  .alis.os.ideas.v1.Idea.Maturity.Evaluation.Clarity minimum_opportunity_clarity = 4;  // enum (low-confidence heuristic)
+  .alis.os.ideas.v1.Idea.Maturity.Evaluation.Clarity minimum_context_clarity = 5;  // enum (low-confidence heuristic)
+  int32 state = 6;  // enum type not recoverable from bundle (wire-compatible int32)
+  string account = 7;
+}
+
+message Lens {
+  message Table {
+    message Entry {
+      message User {
+        string name = 1;
+        string display_name = 2;
+        string picture_uri = 3;
+      }
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+      string description = 4;
+      .alis.os.ideas.v1.Lens.Table.Entry.User user = 5;
+      int32 contribution_count = 6;
+      .google.protobuf.Timestamp last_activity_time = 7;
+      int32 state = 8;  // enum type not recoverable from bundle (wire-compatible int32)
+    }
+  }
+  message Grid {
+    message Entry {
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+    }
+  }
+  message Live {
+    message Idea {
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+    }
+  }
+  message MaturityGrid {
+    message Entry {
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+      int32 contribution_count = 4;
+    }
+  }
+  message RecencyGrid {
+    message Entry {
+      message Stream {
+        string name = 1;
+        .google.protobuf.Timestamp effective_time = 2;
+        int32 type = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+      }
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+      .google.protobuf.Timestamp last_contribution_time = 4;
+      .google.protobuf.Timestamp idea_create_time = 5;
+      repeated .alis.os.ideas.v1.Lens.RecencyGrid.Entry.Stream contributions = 6;
+    }
+  }
+  message MyGrid {
+    message Entry {
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+      bool mine = 4;
+    }
+    message User {
+      string name = 1;
+      string firstname = 2;
+      string lastname = 3;
+      string picture_uri = 4;
+    }
+    repeated .alis.os.ideas.v1.Lens.MyGrid.Entry ideas = 1;
+    .alis.os.ideas.v1.Lens.MyGrid.User me = 2;
+  }
+  message Cluster {
+    message Entry {
+      message Entry {
+        string idea = 1;
+        string display_name = 2;
+        float x_coordinate = 3;
+        float y_coordinate = 4;
+        float z_coordinate = 5;
+      }
+      string title = 1;
+      string methodology = 2;
+      repeated .alis.os.ideas.v1.Lens.Cluster.Entry.Entry ideas = 3;
+    }
+  }
+  message Graph {
+    message Nodes {
+      message User {
+        string name = 1;
+        string firstname = 2;
+        string lastname = 3;
+        string picture_uri = 4;
+      }
+      message Idea {
+        string name = 1;
+        string display_name = 2;
+      }
+      repeated .alis.os.ideas.v1.Lens.Graph.Nodes.User users = 1;
+      repeated .alis.os.ideas.v1.Lens.Graph.Nodes.Idea ideas = 2;
+    }
+    message Edge {
+      enum Type {
+        TYPE_UNSPECIFIED = 0;
+        USER_CONTRIBUTED_IDEA = 1;
+      }
+      string source = 1;
+      string target = 2;
+      .alis.os.ideas.v1.Lens.Graph.Edge.Type type = 3;
+    }
+    string title = 1;
+    string methodology = 2;
+    .alis.os.ideas.v1.Lens.Graph.Nodes nodes = 3;
+    repeated .alis.os.ideas.v1.Lens.Graph.Edge edges = 4;
+  }
+  message Collection {
+    message Idea {
+      message Collection {
+        string name = 1;
+        string display_name = 2;
+        .google.protobuf.Int32Value cycle = 3;
+      }
+      string name = 1;
+      string display_name = 2;
+      repeated .alis.os.ideas.v1.Lens.Collection.Idea.Collection set = 3;
+    }
+    string title = 1;
+    string methodology = 2;
+    repeated .alis.os.ideas.v1.Lens.Collection.Idea members = 3;
+  }
+  message MyTeam {
+    message Entry {
+      message User {
+        string name = 1;
+        string display_name = 2;
+        string picture_uri = 3;
+      }
+      string idea = 1;
+      string display_name = 2;
+      bool hidden = 3;
+      .alis.os.ideas.v1.Lens.MyTeam.Entry.User user = 4;
+      int32 contribution_count = 5;
+      int32 contributor_count = 6;
+    }
+    repeated .alis.os.ideas.v1.Lens.MyTeam.Entry ideas = 1;
+    string notes = 2;
+  }
+  message Staleness {
+    message Entry {
+      string idea = 1;
+      string display_name = 2;
+      bool stale = 3;
+      int32 age = 4;
+      int32 recent_view_count = 5;
+      int32 contributor_count = 6;
+      int32 recent_contribution_count = 7;
+    }
+  }
+  oneof data {
+    .alis.os.ideas.v1.Lens.Table table = 10;
+    .alis.os.ideas.v1.Lens.Grid grid = 11;
+    .alis.os.ideas.v1.Lens.Live live = 12;
+    .alis.os.ideas.v1.Lens.MaturityGrid maturity_grid = 13;
+    .alis.os.ideas.v1.Lens.RecencyGrid recency_grid = 14;
+    .alis.os.ideas.v1.Lens.MyGrid my_grid = 15;
+    .alis.os.ideas.v1.Lens.Cluster cluster = 16;
+    .alis.os.ideas.v1.Lens.Graph graph = 17;
+    .alis.os.ideas.v1.Lens.Collection collection = 18;
+    .alis.os.ideas.v1.Lens.MyTeam my_team = 19;
+    .alis.os.ideas.v1.Lens.Staleness staleness = 20;
+  }
+}
+
+message ViewTableLensRequest {
+}
+
+message ViewTableLensResponse {
+}
+
+message ViewGridLensRequest {
+}
+
+message ViewGridLensResponse {
+}
+
+message ViewMaturityGridLensRequest {
+}
+
+message ViewMaturityGridLensResponse {
+}
+
+message ViewMyGridLensRequest {
+}
+
+message ViewMyGridLensResponse {
+}
+
+message ViewRecencyGridLensRequest {
+}
+
+message ViewRecencyGridLensResponse {
+}
+
+message ViewMyTeamLensRequest {
+}
+
+message ViewMyTeamLensResponse {
+}
+
+message ViewClusterLensRequest {
+}
+
+message ViewClusterLensResponse {
+}
+
+message ViewGraphLensRequest {
+}
+
+message ViewGraphLensResponse {
+}
+
+message ViewCollectionLensRequest {
+}
+
+message ViewCollectionLensResponse {
+}
+
+message ViewLiveLensRequest {
+}
+
+message ViewStalenessLensRequest {
+}
+
+message ViewStalenessLensResponse {
+}
+
+message Collection {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    ARCHIVED = 2;
+  }
+  message Member {
+    string idea = 1;
+    .google.protobuf.Int32Value cycle = 2;
+  }
+  message Framing {
+    string instruction = 1;
+    string logo_uri = 2;
+    bool include_inviter = 3;
+    string framing = 4;
+    repeated string research_questions = 5;
+    string leading_question = 6;
+  }
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  repeated .alis.os.ideas.v1.Collection.Member members = 4;
+  map<int32, string> cycle_display_names = 5;
+  .alis.os.ideas.v1.Collection.Framing framing = 6;
+  .alis.os.ideas.v1.Collection.State state = 7;
+  string account = 96;
+  .google.protobuf.Timestamp create_time = 97;
+  .google.protobuf.Timestamp update_time = 98;
+}
+
+message GetCollectionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateCollectionRequest {
+}
+
+message UpdateCollectionRequest {
+  .alis.os.ideas.v1.Collection collection = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteCollectionRequest {
+}
+
+message ArchiveCollectionRequest {
+}
+
+message ArchiveCollectionResponse {
+}
+
+message ListCollectionsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string order_by = 4;
+  string filter = 5;
+}
+
+message ListCollectionsResponse {
+  repeated .alis.os.ideas.v1.Collection collections = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetCollectionsRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetCollectionsResponse {
+}
+
+message RetrieveMyCollectionsRequest {
+}
+
+message RetrieveMyCollectionsResponse {
+}
+
+message UpsertCollectionMembersRequest {
+  string collection = 1;
+  repeated .alis.os.ideas.v1.Collection.Member members = 2;
+}
+
+message UpsertCollectionMembersResponse {
+}
+
+message RemoveCollectionMembersRequest {
+  string collection = 1;
+  repeated string ideas = 2;
+}
+
+message RemoveCollectionMembersResponse {
+}
+
+message SetCycleDisplayNameRequest {
+  string collection = 1;
+  int32 cycle = 2;
+  string display_name = 3;
+}
+
+message SetCycleDisplayNameResponse {
+}
+
+message GenerateCollectionResearchPlanRequest {
+}
+
+message GenerateCollectionResearchPlanResponse {
+  string framing = 1;
+  repeated string research_questions = 2;
+}
+
+message Endorsement {
+  enum Vote {
+    VOTE_UNSPECIFIED = 0;
+    UPVOTE = 1;
+    DOWNVOTE = 2;
+  }
+  message Endorser {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+    string picture = 4;
+  }
+  string name = 1;
+  .alis.os.ideas.v1.Endorsement.Vote vote = 2;
+  string comment = 3;
+  .alis.os.ideas.v1.Endorsement.Endorser endorser = 4;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetEndorsementRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateEndorsementRequest {
+  string parent = 1;
+  .alis.os.ideas.v1.Endorsement endorsement = 2;
+  string endorsement_id = 3;
+}
+
+message UpdateEndorsementRequest {
+  .alis.os.ideas.v1.Endorsement endorsement = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteEndorsementRequest {
+}
+
+message ListEndorsementsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListEndorsementsResponse {
+  repeated .alis.os.ideas.v1.Endorsement endorsements = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveIdeaEndorsementOverviewRequest {
+}
+
+message RetrieveIdeaEndorsementOverviewResponse {
+  int32 upvote_count = 1;
+  int32 downvote_count = 2;
+}
+
+message UpvoteIdeaRequest {
+}
+
+message UpvoteIdeaResponse {
+}
+
+message DownvoteIdeaRequest {
+}
+
+message DownvoteIdeaResponse {
+}
+
+message WithdrawIdeaEndorsementRequest {
+}
+
+message WithdrawIdeaEndorsementResponse {
+}
+
+message EvaluateIdeaMaturityRequest {
+}
+
+message EvaluateIdeaMaturityResponse {
+}
+
+message ApplyPrimeFrameworkRequest {
+}
+
+message ApplyPrimeFrameworkResponse {
+}
+
+message BatchApplyPrimeFrameworkRequest {
+}
+
+message BatchApplyPrimeFrameworkResponse {
+}
+
+message CalculateWeightedPrimeScoreRequest {
+  message Weights {
+    float value_to_users_weight = 1;
+    float business_value_weight = 2;
+    float ease_of_implementation_weight = 3;
+    float strategic_alignment_weight = 4;
+    float internal_skills_availability_weight = 5;
+    float team_capacity_weight = 6;
+  }
+  string idea = 1;
+  .alis.os.ideas.v1.CalculateWeightedPrimeScoreRequest.Weights weights = 2;
+}
+
+message CalculateWeightedPrimeScoreResponse {
+}
+
+message GenerateCandidateRequestsForContextRequest {
+  string idea = 1;
+  int32 num_candidates = 2;
+  repeated string previous_context_requests = 3;
+}
+
+message GenerateCandidateRequestsForContextResponse {
+  message Candidate {
+    string candidate_content = 1;
+    string explanation = 2;
+    string candidate_category = 3;
+  }
+}
+
+message ApplySixHatsFrameworkRequest {
+}
+
+message ApplySixHatsFrameworkResponse {
+}
+
+message GenerateIdeaGraphRequest {
+}
+
+message GenerateIdeaGraphResponse {
+  message Nodes {
+    repeated .alis.os.ideas.v1.Stream.Research.Interview.Participant.User users = 1;
+    repeated .alis.os.ideas.v1.Stream streams = 2;
+  }
+  message Edge {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      USER_CONTRIBUTED_STREAM = 1;
+      USER_COMMENTED_ON_STREAM = 2;
+      USER_REQUESTED_STREAM = 3;
+      STREAM_ASSIGNED_TO_USER = 4;
+    }
+    string source = 1;
+    string target = 2;
+    .alis.os.ideas.v1.GenerateIdeaGraphResponse.Edge.Type type = 3;
+  }
+  .alis.os.ideas.v1.GenerateIdeaGraphResponse.Nodes nodes = 1;
+  repeated .alis.os.ideas.v1.GenerateIdeaGraphResponse.Edge edges = 2;
+}
+
+message GenerateGraphRequest {
+  repeated string ideas = 1;
+  string account = 2;
+}
+
+message GenerateGraphResponse {
+  message Nodes {
+    repeated .alis.os.ideas.v1.Stream.Research.Interview.Participant.User users = 1;
+    repeated .alis.os.ideas.v1.Idea ideas = 2;
+  }
+  message Edge {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      USER_CONTRIBUTED_IDEA = 1;
+    }
+    string source = 1;
+    string target = 2;
+    .alis.os.ideas.v1.GenerateGraphResponse.Edge.Type type = 3;
+  }
+  .alis.os.ideas.v1.GenerateGraphResponse.Nodes nodes = 1;
+  repeated .alis.os.ideas.v1.GenerateGraphResponse.Edge edges = 2;
+}
+
+message Ledger {
+  string name = 1;
+  string account = 2;
+  double credit_balance = 3;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateLedgerRequest {
+}
+
+message GetLedgerRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateLedgerRequest {
+  .alis.os.ideas.v1.Ledger ledger = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteLedgerRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteLedgerRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListLedgersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListLedgersResponse {
+  repeated .alis.os.ideas.v1.Ledger ledgers = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateLedgersRequest {
+}
+
+message BatchCreateLedgersResponse {
+}
+
+message BatchGetLedgersRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetLedgersResponse {
+}
+
+message BatchUpdateLedgersRequest {
+  repeated .alis.os.ideas.v1.UpdateLedgerRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateLedgersResponse {
+}
+
+message BatchDeleteLedgersRequest {
+}
+
+message BatchDeleteLedgersResponse {
+}
+
+message BatchUndeleteLedgersRequest {
+}
+
+message BatchUndeleteLedgersResponse {
+}
+
+message StreamLedgersRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message AllowAccountTransactionRequest {
+}
+
+message AllowAccountTransactionResponse {
+  bool allow = 1;
+  string message = 2;
+}
+
+message RetrieveMonthlyAccountSpendRequest {
+  string account = 1;
+  int32 year = 2;
+  int32 month = 3;
+}
+
+message RetrieveMonthlyAccountSpendResponse {
+}
+
+message RetrieveLedgerByAccountRequest {
+}
+
+message RetrieveLedgerByAccountResponse {
+}
+
+message RetrieveAccountSpendTimeSeriesRequest {
+  enum SpendInterval {
+    SPEND_INTERVAL_UNSPECIFIED = 0;
+    DAY = 1;
+    WEEK = 2;
+    MONTH = 3;
+  }
+  enum SpendGroupBy {
+    SPEND_GROUP_BY_UNSPECIFIED = 0;
+    SPEND_GROUP_BY_USER = 1;
+  }
+  string account = 1;
+  .alis.bl.blocks.v1.Entitlement.PricingConfig.InstanceRecurringCost.Interval interval = 2;  // enum (heuristically resolved)
+  .google.protobuf.Timestamp start_time = 3;
+  .google.protobuf.Timestamp end_time = 4;
+  .alis.os.billing.v1.QuerySpendRequest.GroupBy group_by = 5;  // enum (heuristically resolved)
+}
+
+message RetrieveAccountSpendTimeSeriesResponse {
+  message SpendBucket {
+    message SpendSegment {
+      string key = 1;
+      double credits_spent = 2;
+    }
+    .google.protobuf.Timestamp start_time = 1;
+    .google.protobuf.Timestamp end_time = 2;
+    double credits_spent = 3;
+    repeated .alis.os.ideas.v1.RetrieveAccountSpendTimeSeriesResponse.SpendBucket.SpendSegment segments = 4;
+  }
+}
+
+message Transaction {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    UNPROCESSED = 1;
+    PROCESSED = 2;
+  }
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    LOAD = 1;
+    AGENT_INTERACTION = 2;
+    IDEATE_GENERATION = 3;
+    CLOUD_RUN = 4;
+    GPU = 5;
+  }
+  message PurchaseCredits {
+    enum TransactionType {
+      TRANSACTION_TYPE_UNSPECIFIED = 0;
+      INVOICED = 1;
+      PREPAID = 2;
+    }
+    .alis.os.ideas.v1.Transaction.PurchaseCredits.TransactionType transaction_type = 1;
+    .google.type.Money purchase_value = 2;
+    double credits = 3;
+  }
+  message AgentInteraction {
+    string agent = 1;
+    .alis.os.ideas.v1.Transaction.Gemini gemini = 2;
+    string session_id = 3;
+    string invocation_id = 4;
+  }
+  message IdeateGeneration {
+    string rpc_method = 1;
+    string resource = 2;
+    .alis.os.ideas.v1.Transaction.Gemini gemini = 3;
+  }
+  message Gemini {
+    enum Modality {
+      MODALITY_UNSPECIFIED = 0;
+      TEXT = 1;
+      IMAGE = 2;
+      AUDIO = 3;
+      VIDEO = 4;
+    }
+    message Metadata {
+      int32 thought_token_count = 1;
+      repeated .alis.os.ideas.v1.Transaction.Gemini.ModalityTokenCount prompt_token_details = 2;
+      repeated .alis.os.ideas.v1.Transaction.Gemini.ModalityTokenCount candidates_token_details = 3;
+      repeated .alis.os.ideas.v1.Transaction.Gemini.ModalityTokenCount cache_token_details = 4;
+    }
+    message ModalityTokenCount {
+      .alis.os.ideas.v1.Transaction.Gemini.Modality modality = 1;
+      int32 token_count = 2;
+    }
+    string model = 1;
+    .alis.os.ideas.v1.Transaction.Gemini.Metadata metadata = 2;
+  }
+  message CloudRun {
+    double vcpu_count = 1;
+    double memory_gib = 2;
+    int32 instance_count = 3;
+    int64 duration_seconds = 4;
+    bool cpu_always_allocated = 5;
+    string region = 6;
+    double cost = 7;
+  }
+  message Gpu {
+    enum GpuType {
+      GPU_TYPE_UNSPECIFIED = 0;
+      NVIDIA_L4 = 1;
+      NVIDIA_T4 = 2;
+      NVIDIA_A100_40GB = 3;
+      NVIDIA_A100_80GB = 4;
+      NVIDIA_H100_80GB = 5;
+      NVIDIA_V100 = 6;
+      NVIDIA_P100 = 7;
+    }
+    .alis.os.ideas.v1.Transaction.Gpu.GpuType gpu_type = 1;
+    int32 gpu_count = 2;
+    int32 vcpu_count = 3;
+    double memory_gib = 4;
+    string region = 5;
+    int64 duration_seconds = 6;
+    double cost = 7;
+  }
+  string name = 1;
+  string account = 2;
+  string user = 3;
+  double credit_value = 4;
+  .google.type.Money cloud_spend = 5;
+  .google.type.Money purchase_amount = 6;
+  .alis.os.ideas.v1.Transaction.State state = 18;
+  .alis.os.ideas.v1.Transaction.Type type = 19;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+  oneof metadata {
+    .alis.os.ideas.v1.Transaction.PurchaseCredits purchase_credits = 20;
+    .alis.os.ideas.v1.Transaction.AgentInteraction agent_interaction = 21;
+    .alis.os.ideas.v1.Transaction.IdeateGeneration ideate_generation = 22;
+    .alis.os.ideas.v1.Transaction.CloudRun cloud_run = 23;
+    .alis.os.ideas.v1.Transaction.Gpu gpu = 24;
+  }
+}
+
+message CreateTransactionRequest {
+}
+
+message GetTransactionRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateTransactionRequest {
+  .alis.os.ideas.v1.Transaction transaction = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteTransactionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteTransactionRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListTransactionsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListTransactionsResponse {
+  repeated .alis.os.ideas.v1.Transaction transactions = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateTransactionsRequest {
+}
+
+message BatchCreateTransactionsResponse {
+}
+
+message BatchGetTransactionsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetTransactionsResponse {
+}
+
+message BatchUpdateTransactionsRequest {
+  repeated .alis.os.ideas.v1.UpdateTransactionRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateTransactionsResponse {
+}
+
+message BatchDeleteTransactionsRequest {
+}
+
+message BatchDeleteTransactionsResponse {
+}
+
+message BatchUndeleteTransactionsRequest {
+}
+
+message BatchUndeleteTransactionsResponse {
+}
+
+message StreamTransactionsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message NoteStreamAddedEvent {
+}
+
+message AudioNoteStreamAddedEvent {
+}
+
+message VideoStreamAddedEvent {
+}
+
+message UploadedFileStreamAddedEvent {
+}
+
+message MultiFileUploadStreamAddedEvent {
+}
+
+message WebsiteLinkStreamAddedEvent {
+}
+
+message CommentStreamAddedEvent {
+}
+
+message PrimeFrameworkStreamAddedEvent {
+}
+
+message SixHatsFrameworkStreamAddedEvent {
+}
+
+message SpecFeedbackStreamAddedEvent {
+}
+
+message FigmaMakeStreamAddedEvent {
+}
+
+message UsabilityStudyStreamAddedEvent {
+}
+
+message AgentStreamAddedEvent {
+}
+
+message FirefliesTranscriptStreamAddedEvent {
+}
+
+message ResearchStreamAddedEvent {
+}
+
+message InternetResearchPhasesAddedEvent {
+}
+
+message ContextRequestedEvent {
+}
+
+message SpecPublishedEvent {
+}
+
+message IdeaContextCacheEvent {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    TYPE_USE_EXISTING_OR_CREATE = 1;
+    TYPE_FORCE_RECREATE = 2;
+  }
+  string idea = 1;
+  .alis.os.ideas.v1.IdeaContextCacheEvent.Type type = 2;
+  int32 ttl = 3;
+}
+
+message StreamParsedEvent {
+}
+
+message StreamArchivedEvent {
+}
+
+message StreamsBatchArchivedEvent {
+}
+
+message ContributionSessionArchivedEvent {
+}
+
+message IdeaCreatedEvent {
+}
+
+message IdeaUpdatedEvent {
+  string idea = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message CollectionCreatedEvent {
+}
+
+message CollectionUpdatedEvent {
+  string collection = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message CollectionArchivedEvent {
+}
+
+message IdeaWorkingSpecGeneratedEvent {
+}
+
+message IdeaCreatedWithTokenEvent {
+  string idea = 1;
+  string collection = 2;
+}
+
+message PurchasedCreditsEvent {
+  string transaction_uuid = 1;
+  string account = 2;
+  double credit_value = 3;
+  .google.type.Money purchase_amount = 4;
+  .alis.os.ideas.v1.Transaction.PurchaseCredits.TransactionType transaction_type = 5;  // enum (heuristically resolved)
+}
+
+message AdministratorAgentInteractionEvent {
+  string transaction_uuid = 1;
+  string user = 2;
+  string account = 3;
+  .alis.os.ideas.v1.Transaction.Gemini gemini = 4;
+  string session_id = 5;
+  string invocation_id = 6;
+}
+
+message InterviewAgentInteractionEvent {
+  string transaction_uuid = 1;
+  string contribution_session = 2;
+  .alis.os.ideas.v1.Transaction.Gemini gemini = 3;
+  string session_id = 4;
+  string invocation_id = 5;
+}
+
+message ResearchAgentInteractionEvent {
+  string transaction_uuid = 1;
+  string research_stream = 2;
+  .alis.os.ideas.v1.Transaction.Gemini gemini = 3;
+  string session_id = 4;
+  string invocation_id = 5;
+}
+
+message IdeateGenerationEvent {
+  string transaction_uuid = 1;
+  string rpc_method = 2;
+  string resource = 3;
+  .alis.os.ideas.v1.Transaction.Gemini gemini = 4;
+}
+
+message InterviewCompletedEvent {
+}
+
+message ParseNoteRequest {
+}
+
+message ParseNoteResponse {
+}
+
+message ParseAudioNoteRequest {
+}
+
+message ParseAudioNoteResponse {
+}
+
+message ParseVideoRequest {
+}
+
+message ParseVideoResponse {
+}
+
+message ParseMultiFileUploadRequest {
+}
+
+message ParseMultiFileUploadResponse {
+}
+
+message ParseWebsiteLinkRequest {
+}
+
+message ParseWebsiteLinkResponse {
+}
+
+message ParseSpecFeedbackRequest {
+}
+
+message ParseSpecFeedbackResponse {
+}
+
+message ParseStreamFeedbackRequest {
+}
+
+message ParseStreamFeedbackResponse {
+}
+
+message ParseUsabilityStudyRequest {
+}
+
+message ParseUsabilityStudyResponse {
+}
+
+message ParseAgentRequest {
+}
+
+message ParseAgentResponse {
+}
+
+message ParseFirefliesTranscriptRequest {
+  message ApiSchema {
+    message User {
+      string user_id = 1;
+      string email = 2;
+      string name = 3;
+    }
+    message Speaker {
+      int32 id = 1;
+      string name = 2;
+    }
+    message Sentence {
+      message AiFilter {
+        string task = 1;
+        string pricing = 2;
+        string metric = 3;
+        string question = 4;
+        string date_and_time = 5;
+        string text_cleanup = 6;
+        string sentiment = 7;
+      }
+      int32 index = 1;
+      string text = 2;
+      string raw_text = 3;
+      float start_time = 4;
+      float end_time = 5;
+      int32 speaker_id = 6;
+      string speaker_name = 7;
+      .alis.os.ideas.v1.ParseFirefliesTranscriptRequest.ApiSchema.Sentence.AiFilter ai_filters = 8;
+    }
+    message Summary {
+      string action_items = 1;
+      string outline = 2;
+      string overview = 3;
+      string shorthand_bullet = 4;
+      string notes = 5;
+      string short_summary = 6;
+      string meeting_type = 7;
+      repeated string topics_discussed = 8;
+    }
+    string id = 1;
+    string title = 2;
+    string organizer_email = 3;
+    .alis.os.ideas.v1.ParseFirefliesTranscriptRequest.ApiSchema.User user = 4;
+    repeated .alis.os.ideas.v1.ParseFirefliesTranscriptRequest.ApiSchema.Speaker speakers = 5;
+    string transcript_url = 6;
+    repeated string participants = 7;
+    string date_string = 8;
+    repeated .alis.os.ideas.v1.ParseFirefliesTranscriptRequest.ApiSchema.Sentence sentences = 9;
+    .alis.os.ideas.v1.ParseFirefliesTranscriptRequest.ApiSchema.Summary summary = 10;
+  }
+}
+
+message ParseFirefliesTranscriptResponse {
+}
+
+message ReparseStreamRequest {
+}
+
+message ReparseStreamResponse {
+}
+
+message AddNoteRequest {
+  repeated .alis.os.ideas.v1.ContentBlock content = 4;
+  string agent_context_request = 5;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 6;
+    string contribution_session = 7;
+  }
+}
+
+message AddNoteResponse {
+}
+
+message AddAudioNoteRequest {
+  string mime_type = 4;
+  string agent_context_request = 5;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 6;
+    string contribution_session = 7;
+  }
+}
+
+message AddAudioNoteResponse {
+  .alis.os.ideas.v1.Stream stream = 1;
+  string upload_uri = 2;
+}
+
+message AddVideoRequest {
+  string mime_type = 4;
+  string note = 5;
+  string agent_context_request = 6;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 7;
+    string contribution_session = 8;
+  }
+}
+
+message AddVideoResponse {
+  .alis.os.ideas.v1.Stream stream = 1;
+  string upload_uri = 2;
+}
+
+message AddMultiFileUploadRequest {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+  }
+  string note = 4;
+  string agent_context_request = 5;
+  repeated .alis.os.ideas.v1.AddMultiFileUploadRequest.File files = 6;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 7;
+    string contribution_session = 8;
+  }
+}
+
+message AddMultiFileUploadResponse {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+    string upload_uri = 3;
+  }
+  repeated .alis.os.ideas.v1.AddMultiFileUploadResponse.File files = 1;
+  .alis.os.ideas.v1.Stream stream = 2;
+}
+
+message AddWebsiteLinkRequest {
+  string stream = 1;
+  string website_link = 2;
+}
+
+message AddWebsiteLinkResponse {
+}
+
+message AddSpecFeedbackRequest {
+  string spec_revision = 1;
+  string idea = 2;
+  repeated .alis.os.ideas.v1.Stream.SpecFeedback.Entry entries = 3;
+}
+
+message AddSpecFeedbackResponse {
+}
+
+message AddStreamFeedbackRequest {
+  string target_stream = 1;
+  repeated .alis.os.ideas.v1.Stream.StreamFeedback.Entry entries = 2;
+}
+
+message AddStreamFeedbackResponse {
+}
+
+message AddCommentRequest {
+  string quote_comment = 3;
+  string text = 4;
+  oneof parent {
+    string idea = 1;
+    string stream = 2;
+  }
+}
+
+message AddCommentResponse {
+}
+
+message AddFigmaMakeRequest {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+  }
+  string figma_make_file_uri = 8;
+  string note = 9;
+  string agent_context_request = 10;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 4;
+    string contribution_session = 5;
+  }
+  oneof source {
+    .alis.os.ideas.v1.AddFigmaMakeRequest.File file = 6;
+    string figma_make_publish_uri = 7;
+  }
+}
+
+message AddFigmaMakeResponse {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+    string upload_uri = 3;
+  }
+  .alis.os.ideas.v1.AddFigmaMakeResponse.File file = 1;
+  .alis.os.ideas.v1.Stream stream = 2;
+}
+
+message AddAiStudioRequest {
+  string note = 7;
+  string agent_context_request = 8;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 4;
+    string contribution_session = 5;
+  }
+  oneof source {
+    string ai_studio_publish_uri = 6;
+  }
+}
+
+message AddAiStudioResponse {
+}
+
+message AddUsabilityStudyRequest {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+  }
+  .alis.os.ideas.v1.AddUsabilityStudyRequest.File file = 6;
+  string agent_context_request = 7;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 4;
+    string contribution_session = 5;
+  }
+}
+
+message AddUsabilityStudyResponse {
+  message File {
+    string filename = 1;
+    string mime_type = 2;
+    string upload_uri = 3;
+  }
+  .alis.os.ideas.v1.AddUsabilityStudyResponse.File file = 1;
+  .alis.os.ideas.v1.Stream stream = 2;
+}
+
+message AddAgentRequest {
+  string conversation_history = 8;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 4;
+    string contribution_session = 5;
+  }
+  oneof agent_card_source {
+    .alis.os.ideas.v1.AgentCard agent_card = 6;
+    string agent_card_uri = 7;
+  }
+}
+
+message AddAgentResponse {
+}
+
+message AddFirefliesTranscriptRequest {
+  string transcript_id = 6;
+  oneof stream_target {
+    string account = 1;
+    string idea = 2;
+    string stream = 3;
+    string token = 4;
+    string contribution_session = 5;
+  }
+}
+
+message AddFirefliesTranscriptResponse {
+}
+
+message AddResearchRequest {
+  string plan_positioning = 10;
+  oneof stream_target {
+    string idea = 1;
+  }
+}
+
+message AddResearchResponse {
+}
+
+message RequestContextRequest {
+  string idea = 1;
+  string assignee = 2;
+  string request = 3;
+  repeated int32 allowed_formats = 4;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message RequestContextResponse {
+}
+
+message GenerateIdeaIntakeSignedUriRequest {
+}
+
+message GenerateIdeaIntakeSignedUriResponse {
+}
+
+message DecryptIdeaIntakeSignedTokenRequest {
+}
+
+message DecryptIdeaIntakeSignedTokenResponse {
+  message Creator {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+    string picture = 4;
+  }
+  .alis.os.ideas.v1.DecryptIdeaIntakeSignedTokenResponse.Creator creator = 1;
+  string instruction = 2;
+  string logo_uri = 3;
+  bool include_inviter = 4;
+}
+
+message SplitAudioRequest {
+  string stream = 1;
+  int32 index = 2;
+  .google.protobuf.Duration duration = 3;
+}
+
+message SplitAudioResponse {
+}
+
+message SplitVideoRequest {
+  string stream = 1;
+  int32 index = 2;
+  .google.protobuf.Duration duration = 3;
+}
+
+message SplitVideoResponse {
+}
+
+message CaptureThumbnailRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message CaptureThumbnailResponse {
+}
+
+message PreprocessPowerpointPresentationRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessPowerpointPresentationResponse {
+}
+
+message PreprocessWordDocumentRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessWordDocumentResponse {
+}
+
+message PreprocessSpreadsheetRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessSpreadsheetResponse {
+}
+
+message PreprocessCsvRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessCsvResponse {
+}
+
+message PreprocessFigmaMakeRequest {
+}
+
+message PreprocessFigmaMakeResponse {
+}
+
+message PreprocessZipRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessZipResponse {
+}
+
+message PreprocessMdRequest {
+  string stream = 1;
+  int32 index = 2;
+}
+
+message PreprocessMdResponse {
+}
+
+message GenerateContinueContributingPlaylistRequest {
+}
+
+message GenerateNewAndPopularPlaylistRequest {
+}
+
+message GenerateMyIdeasPlaylistRequest {
+}
+
+message GenerateTopPicksPlaylistRequest {
+}
+
+message GenerateMoreLikeThisPlaylistRequest {
+  string idea = 1;
+  string account = 2;
+}
+
+message GenerateContinueContributingPlaylistResponse {
+}
+
+message GenerateNewAndPopularPlaylistResponse {
+}
+
+message GenerateMyIdeasPlaylistResponse {
+}
+
+message GenerateTopPicksPlaylistResponse {
+}
+
+message GenerateMoreLikeThisPlaylistResponse {
+}
+
+message CompileResearchReportRequest {
+}
+
+message CompileResearchReportResponse {
+  .alis.os.ideas.v1.Stream.Research research = 1;
+  .alis.os.ideas.v1.Stream.ResearchTask research_task = 2;
+}
+
+message AddInternetResearchPhasesRequest {
+  string stream = 1;
+  repeated .alis.os.ideas.v1.Stream.Research.Internet.Phase phases = 2;
+}
+
+message AddInternetResearchPhasesResponse {
+}
+
+message AddInterviewParticipantsRequest {
+  string stream = 1;
+  repeated string users = 2;
+}
+
+message AddInterviewParticipantsResponse {
+}
+
+message RemoveInterviewParticipantsRequest {
+  string stream = 1;
+  repeated string users = 2;
+}
+
+message RemoveInterviewParticipantsResponse {
+}
+
+message SetInterviewAccessCriteriaRequest {
+  message Public {
+  }
+  message Private {
+  }
+  message Domains {
+  }
+  string stream = 1;
+  oneof access {
+    .alis.os.ideas.v1.SetInterviewAccessCriteriaRequest.Public public = 2;
+    .alis.os.ideas.v1.SetInterviewAccessCriteriaRequest.Private private = 3;
+    .alis.os.ideas.v1.SetInterviewAccessCriteriaRequest.Domains domains = 4;
+  }
+}
+
+message SetInterviewAccessCriteriaResponse {
+}
+
+message JoinInterviewRequest {
+  string stream = 1;
+  string phase = 2;
+}
+
+message JoinInterviewResponse {
+  .alis.os.ideas.v1.Stream.Research.Interview.Participant participant = 1;
+  .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Participant interview_participant = 2;
+}
+
+message CompleteInterviewRequest {
+  string stream = 1;
+  string contribution_session = 2;
+}
+
+message CompleteInterviewResponse {
+  .alis.os.ideas.v1.Stream.Research.Interview.Participant participant = 1;
+  .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.Participant interview_participant = 2;
+}
+
+message SetResearchReferencesRequest {
+  string stream = 1;
+  repeated string referenced_specs = 2;
+  repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.ArtifactReferences.ReferencedStream referenced_streams = 3;
+}
+
+message SetResearchReferencesResponse {
+}
+
+message RetrieveMyIncompleteInterviewsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message RetrieveMyIncompleteInterviewsResponse {
+  message Item {
+    string stream = 1;
+    string title = 2;
+    string research_plan = 3;
+    bool is_open_invite = 4;
+    int32 state = 5;  // enum type not recoverable from bundle (wire-compatible int32)
+    int32 interview_state = 6;  // enum type not recoverable from bundle (wire-compatible int32)
+    string phase = 7;
+    string brief = 8;
+  }
+  repeated .alis.os.ideas.v1.RetrieveMyIncompleteInterviewsResponse.Item items = 1;
+  string next_page_token = 2;
+}
+
+message SetInternetPhaseRequest {
+  string stream = 1;
+  string phase_name = 2;
+  string plan = 3;
+}
+
+message SetInternetPhaseResponse {
+}
+
+message SetInterviewPhaseRequest {
+  message AccessCriteria {
+    message Public {
+    }
+    message Private {
+    }
+    message Domains {
+    }
+    oneof access {
+      .alis.os.ideas.v1.SetInterviewPhaseRequest.AccessCriteria.Public public = 1;
+      .alis.os.ideas.v1.SetInterviewPhaseRequest.AccessCriteria.Private private = 2;
+      .alis.os.ideas.v1.SetInterviewPhaseRequest.AccessCriteria.Domains domains = 3;
+    }
+  }
+  message References {
+    repeated string referenced_specs = 2;
+    repeated .alis.os.ideas.v1.Stream.ResearchTask.Phase.Interview.ArtifactReferences.ReferencedStream referenced_streams = 3;
+  }
+  string stream = 1;
+  string phase_name = 2;
+  string plan = 3;
+  string brief = 4;
+  int32 mode = 5;  // enum type not recoverable from bundle (wire-compatible int32)
+  .alis.os.ideas.v1.SetInterviewPhaseRequest.AccessCriteria access_criteria = 6;
+  .alis.os.ideas.v1.SetInterviewPhaseRequest.References references = 7;
+}
+
+message SetInterviewPhaseResponse {
+}
+
+message Spec {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    FULL_RFP = 1;
+    PROTOTYPE_RFP = 2;
+    FULL_PRD = 3;
+    PROTOTYPE_PRD = 4;
+    IDEA_BRIEF = 5;
+    UI_DESIGN = 6;
+    AI_PROTOTYPE = 7;
+    IDEATE_SPEC = 8;
+    BUSINESS_CASE = 9;
+    SOLUTION_FLOW_SPEC = 10;
+    CRAFTED_SPEC = 11;
+    CURRENT_PROCESS = 12;
+    JARGON = 13;
+    TECHNOLOGY_LANDSCAPE = 14;
+    PAIN_POINTS = 15;
+    STAKEHOLDER_MAP = 16;
+    FIGMA_MAKE = 17;
+    GEMINI_ENTERPRISE_CUSTOM_AGENT = 18;
+    AI_STUDIO = 19;
+    RESEARCH_PLAN = 20;
+    CUSTOM_AGENT = 21;
+    PRODUCT_REQUIREMENTS_DOCUMENT = 22;
+    AGENT_FEEDBACK = 23;
+    GAP_ANALYSIS = 24;
+    PROJECT_INTENT = 25;
+    USER_GENERATED = 26;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    DRAFT = 1;
+    PUBLISHED = 2;
+    ARCHIVED = 3;
+    PROCESSING = 4;
+    READY = 5;
+    FAILED = 6;
+    STALE = 7;
+  }
+  message Markdown {
+    string content = 1;
+  }
+  message FullRfp {
+    string content = 1;
+  }
+  message IdeaBrief {
+    string content = 1;
+  }
+  message UiDesign {
+    string content = 1;
+  }
+  message AiPrototype {
+    string content = 1;
+  }
+  message IdeateSpec {
+    string content = 1;
+  }
+  message BusinessCase {
+    string content = 1;
+  }
+  message SolutionFlowSpec {
+    string content = 1;
+  }
+  message CraftedSpec {
+    string content = 1;
+  }
+  message CurrentProcess {
+    message Diagrams {
+      string current_process = 1;
+    }
+    string content = 1;
+    .alis.os.ideas.v1.Spec.CurrentProcess.Diagrams diagrams = 2;
+  }
+  message Jargon {
+    string content = 1;
+  }
+  message TechnologyLandscape {
+    string content = 1;
+  }
+  message PainPoints {
+    string content = 1;
+  }
+  message StakeholderMap {
+    message Diagrams {
+      string stakeholder_map = 1;
+    }
+    string content = 1;
+    .alis.os.ideas.v1.Spec.StakeholderMap.Diagrams diagrams = 2;
+  }
+  message FigmaMake {
+    string content = 1;
+    string revised_prompt = 2;
+    string contribution_session = 3;
+    repeated string attachment_uris = 4;
+  }
+  message GeminiEnterpriseCustomAgentSpec {
+    string display_name = 1;
+    string description = 2;
+    string instructions = 3;
+  }
+  message AiStudio {
+    string content = 1;
+    string contribution_session = 2;
+    repeated string attachment_uris = 3;
+  }
+  message ResearchPlan {
+    string framing = 1;
+    repeated string research_questions = 2;
+    string leading_question = 3;
+  }
+  message CustomAgent {
+    string content = 1;
+  }
+  message ProductRequirementsDocument {
+    string content = 1;
+  }
+  message AgentFeedback {
+    message TargetAgent {
+      string agent_stream = 1;
+      .alis.os.ideas.v1.AgentCard agent_card = 2;
+      string overview = 3;
+    }
+    repeated .alis.os.ideas.v1.Spec.AgentFeedback.TargetAgent target_agents = 1;
+    string content = 2;
+  }
+  message UserGenerated {
+    string content = 1;
+  }
+  message GapAnalysis {
+    string content = 1;
+  }
+  message ProjectIntent {
+    string content = 1;
+  }
+  message GenerationContext {
+    string filter = 1;
+    string instructions = 2;
+  }
+  string name = 1;
+  string title = 2;
+  .alis.os.ideas.v1.Spec.Type type = 3;
+  .alis.os.ideas.v1.Spec.Markdown markdown = 4;
+  string idea = 7;
+  .alis.os.ideas.v1.Spec.State state = 8;
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 95;
+  string operation = 96;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+  .google.protobuf.Timestamp publish_time = 101;
+  oneof output {
+    .alis.os.ideas.v1.Spec.FullRfp full_rfp = 9;
+    .alis.os.ideas.v1.Spec.IdeaBrief idea_brief = 10;
+    .alis.os.ideas.v1.Spec.UiDesign ui_design = 11;
+    .alis.os.ideas.v1.Spec.AiPrototype ai_prototype = 12;
+    .alis.os.ideas.v1.Spec.IdeateSpec ideate_spec = 13;
+    .alis.os.ideas.v1.Spec.BusinessCase business_case = 14;
+    .alis.os.ideas.v1.Spec.CurrentProcess current_process = 15;
+    .alis.os.ideas.v1.Spec.Jargon jargon = 16;
+    .alis.os.ideas.v1.Spec.TechnologyLandscape technology_landscape = 17;
+    .alis.os.ideas.v1.Spec.PainPoints pain_points = 18;
+    .alis.os.ideas.v1.Spec.StakeholderMap stakeholder_map = 19;
+    .alis.os.ideas.v1.Spec.FigmaMake figma_make = 20;
+    .alis.os.ideas.v1.Spec.GeminiEnterpriseCustomAgentSpec gemini_enterprise_custom_agent = 21;
+    .alis.os.ideas.v1.Spec.AiStudio ai_studio = 22;
+    .alis.os.ideas.v1.Spec.SolutionFlowSpec solution_flow_spec = 23;
+    .alis.os.ideas.v1.Spec.ResearchPlan research_plan = 24;
+    .alis.os.ideas.v1.Spec.CustomAgent custom_agent = 25;
+    .alis.os.ideas.v1.Spec.ProductRequirementsDocument product_requirements_document = 26;
+    .alis.os.ideas.v1.Spec.AgentFeedback agent_feedback = 27;
+    .alis.os.ideas.v1.Spec.GapAnalysis gap_analysis = 28;
+    .alis.os.ideas.v1.Spec.ProjectIntent project_intent = 29;
+    .alis.os.ideas.v1.Spec.UserGenerated user_generated = 30;
+  }
+}
+
+message SpecRevision {
+  string name = 1;
+  .alis.os.ideas.v1.Spec snapshot = 2;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message CreateSpecRequest {
+  .alis.os.ideas.v1.Spec spec = 2;
+}
+
+message GetSpecRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateSpecRequest {
+  .alis.os.ideas.v1.Spec spec = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteSpecRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteSpecRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListSpecsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateSpecsRequest {
+  repeated .alis.os.ideas.v1.CreateSpecRequest requests = 2;
+}
+
+message BatchCreateSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message BatchGetSpecsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message BatchUpdateSpecsRequest {
+  repeated .alis.os.ideas.v1.UpdateSpecRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message BatchDeleteSpecsRequest {
+  repeated .alis.os.ideas.v1.DeleteSpecRequest requests = 2;
+}
+
+message BatchDeleteSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message BatchUndeleteSpecsRequest {
+  repeated .alis.os.ideas.v1.UndeleteSpecRequest requests = 2;
+}
+
+message BatchUndeleteSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message StreamSpecsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message RefreshIdeaWorkingSpecRequest {
+  string idea = 1;
+}
+
+message RefreshIdeaWorkingSpecMetadata {
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      RUNNING = 1;
+      SUCCEEDED = 2;
+      FAILED = 3;
+    }
+    string description = 1;
+    .alis.os.ideas.v1.RefreshIdeaWorkingSpecMetadata.Step.State state = 2;
+    string notes = 3;
+    .google.protobuf.Timestamp start_time = 4;
+    .google.protobuf.Timestamp end_time = 5;
+  }
+  repeated .alis.os.ideas.v1.RefreshIdeaWorkingSpecMetadata.Step steps = 1;
+}
+
+message RefreshIdeaWorkingSpecResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message RefreshIdeaManagedSpecsRequest {
+  string idea = 1;
+}
+
+message RefreshIdeaManagedSpecsMetadata {
+  .alis.os.ideas.v1.RefreshIdeaManagedSpecsRequest refresh_idea_managed_specs_request = 1;
+  repeated string pending_operations = 2;
+}
+
+message RefreshIdeaManagedSpecsResponse {
+}
+
+message GenerateSpecRequest {
+  string idea = 1;
+  int32 spec_type = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 4;
+}
+
+message GenerateSpecMetadata {
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      RUNNING = 1;
+      SUCCEEDED = 2;
+      FAILED = 3;
+    }
+    string description = 1;
+    .alis.os.ideas.v1.GenerateSpecMetadata.Step.State state = 2;
+    string notes = 3;
+    .google.protobuf.Timestamp start_time = 4;
+    .google.protobuf.Timestamp end_time = 5;
+  }
+  repeated .alis.os.ideas.v1.GenerateSpecMetadata.Step steps = 1;
+}
+
+message GenerateSpecResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message RegenerateSpecRequest {
+  string spec = 1;
+}
+
+message RegenerateSpecMetadata {
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      RUNNING = 1;
+      SUCCEEDED = 2;
+      FAILED = 3;
+    }
+    string description = 1;
+    .alis.os.ideas.v1.RegenerateSpecMetadata.Step.State state = 2;
+    string notes = 3;
+    .google.protobuf.Timestamp start_time = 4;
+    .google.protobuf.Timestamp end_time = 5;
+  }
+  repeated .alis.os.ideas.v1.RegenerateSpecMetadata.Step steps = 1;
+}
+
+message RegenerateSpecResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message PublishSpecRequest {
+  string spec = 1;
+  repeated string build_partners = 2;
+  repeated string users = 3;
+  bool request_build_partner = 4;
+}
+
+message PublishSpecResponse {
+}
+
+message ArchiveSpecRequest {
+  string spec = 1;
+}
+
+message ArchiveSpecResponse {
+}
+
+message GenerateFullRfpRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateIdeaBriefRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateIdeaBriefMetadata {
+  .alis.os.ideas.v1.GenerateIdeaBriefRequest generate_idea_brief_request = 1;
+}
+
+message GenerateUiDesignRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateAiPrototypeRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateIdeateSpecRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateBusinessCaseRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateSolutionFlowSpecRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateFullRfpResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateIdeaBriefResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateUiDesignResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateAiPrototypeResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateAiPrototypeMetadata {
+  .alis.os.ideas.v1.GenerateAiPrototypeRequest generate_ai_prototype_request = 1;
+}
+
+message GenerateIdeateSpecResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateBusinessCaseResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateResearchPlanRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateResearchPlanMetadata {
+  .alis.os.ideas.v1.GenerateResearchPlanRequest generate_research_plan_request = 1;
+}
+
+message GenerateResearchPlanResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateBusinessCaseMetadata {
+  .alis.os.ideas.v1.GenerateBusinessCaseRequest generate_business_case_request = 1;
+}
+
+message GenerateFullRfpMetadata {
+  .alis.os.ideas.v1.GenerateFullRfpRequest generate_full_rfp_request = 1;
+}
+
+message GenerateSolutionFlowSpecResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateSolutionFlowSpecMetadata {
+  .alis.os.ideas.v1.GenerateSolutionFlowSpecRequest generate_solution_flow_spec_request = 1;
+}
+
+message GenerateCurrentProcessRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateCurrentProcessMetadata {
+  .alis.os.ideas.v1.GenerateCurrentProcessRequest generate_current_process_request = 1;
+}
+
+message GenerateCurrentProcessResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateJargonRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateJargonMetadata {
+  .alis.os.ideas.v1.GenerateJargonRequest generate_jargon_request = 1;
+}
+
+message GenerateJargonResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateTechnologyLandscapeRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateTechnologyLandscapeMetadata {
+  .alis.os.ideas.v1.GenerateTechnologyLandscapeRequest generate_technology_landscape_request = 1;
+}
+
+message GenerateTechnologyLandscapeResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GeneratePainPointsRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GeneratePainPointsMetadata {
+  .alis.os.ideas.v1.GeneratePainPointsRequest generate_pain_points_request = 1;
+}
+
+message GeneratePainPointsResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateStakeholderMapRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateStakeholderMapMetadata {
+  .alis.os.ideas.v1.GenerateStakeholderMapRequest generate_stakeholder_map_request = 1;
+}
+
+message GenerateStakeholderMapResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateFigmaMakeRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  bool existing_prototype = 4;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateFigmaMakeResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateFigmaMakeMetadata {
+  .alis.os.ideas.v1.GenerateFigmaMakeRequest generate_figma_make_request = 1;
+}
+
+message GenerateGeminiEnterpriseCustomAgentRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateGeminiEnterpriseCustomAgentMetadata {
+  .alis.os.ideas.v1.GenerateGeminiEnterpriseCustomAgentRequest generate_gemini_enterprise_custom_agent_request = 1;
+}
+
+message GenerateGeminiEnterpriseCustomAgentResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message SetFigmaMakeContributionSessionRequest {
+  string spec = 1;
+  string contribution_session = 2;
+}
+
+message SetFigmaMakeContributionSessionResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateAiStudioRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  bool existing_prototype = 4;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateAiStudioResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateAiStudioMetadata {
+  .alis.os.ideas.v1.GenerateAiStudioRequest generate_ai_studio_request = 1;
+}
+
+message SetAiStudioContributionSessionRequest {
+  string spec = 1;
+  string contribution_session = 2;
+}
+
+message SetAiStudioContributionSessionResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateCustomAgentRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateCustomAgentMetadata {
+  .alis.os.ideas.v1.GenerateCustomAgentRequest generate_custom_agent_request = 1;
+}
+
+message GenerateCustomAgentResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateProductRequirementsDocumentRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateProductRequirementsDocumentMetadata {
+  .alis.os.ideas.v1.GenerateProductRequirementsDocumentRequest generate_product_requirements_document_request = 1;
+}
+
+message GenerateProductRequirementsDocumentResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateAgentFeedbackRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  repeated string target_agents = 4;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateAgentFeedbackMetadata {
+  .alis.os.ideas.v1.GenerateAgentFeedbackRequest generate_agent_feedback_request = 1;
+}
+
+message GenerateAgentFeedbackResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateGapAnalysisRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateGapAnalysisMetadata {
+  .alis.os.ideas.v1.GenerateGapAnalysisRequest generate_gap_analysis_request = 1;
+}
+
+message GenerateGapAnalysisResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateProjectIntentRequest {
+  .alis.os.ideas.v1.Spec.GenerationContext generation_context = 3;
+  oneof source {
+    string idea = 1;
+    string spec = 2;
+  }
+}
+
+message GenerateProjectIntentMetadata {
+  .alis.os.ideas.v1.GenerateProjectIntentRequest generate_project_intent_request = 1;
+}
+
+message GenerateProjectIntentResponse {
+  .alis.os.ideas.v1.Spec spec = 1;
+}
+
+message GenerateSectionRequest {
+  string prompt = 1;
+  string idea = 2;
+  string existing_content = 3;
+}
+
+message GenerateSectionResponse {
+  string generated_content = 1;
+}
+
+message RetrieveIdeaSpecsRequest {
+  string idea = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+  int32 spec_type = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message RetrieveIdeaSpecsResponse {
+  repeated .alis.os.ideas.v1.Spec specs = 1;
+}
+
+message CreateSpecRevisionRequest {
+  string parent = 1;
+  .alis.os.ideas.v1.SpecRevision spec_revision = 2;
+}
+
+message GetSpecRevisionRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateSpecRevisionRequest {
+  .alis.os.ideas.v1.SpecRevision spec_revision = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message ListSpecRevisionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+}
+
+message ListSpecRevisionsResponse {
+  repeated .alis.os.ideas.v1.SpecRevision spec_revisions = 1;
+  string next_page_token = 2;
+}
+
+message DeleteSpecRevisionRequest {
+  string name = 1;
+}
+
+message BatchCreateSpecRevisionsRequest {
+  string parent = 1;
+  repeated .alis.os.ideas.v1.CreateSpecRevisionRequest requests = 2;
+}
+
+message BatchCreateSpecRevisionsResponse {
+  repeated .alis.os.ideas.v1.SpecRevision spec_revisions = 1;
+}
+
+message RollbackSpecRequest {
+  string name = 1;
+}
+
+message StreamSpecEventsRequest {
+  oneof target {
+    string name = 1;
+    string idea = 2;
+  }
+}
+
+message StreamSpecEventsResponse {
+  oneof event {
+    .alis.os.ideas.v1.SpecCreatedEvent created = 1;
+    .alis.os.ideas.v1.SpecUpdatedEvent updated = 2;
+  }
+}
+
+message SpecCreatedEvent {
+  string spec = 1;
+}
+
+message SpecUpdatedEvent {
+  string spec = 1;
+  .google.protobuf.FieldMask update_mask = 3;
+}
+
+message CopySpecRequest {
+  string spec = 1;
+  string destination_idea = 2;
+}
+
+message CopySpecResponse {
+  string spec = 1;
+}
+
+service CollectionsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetCollection(.alis.os.ideas.v1.GetCollectionRequest) returns (.alis.os.ideas.v1.Collection);
+  rpc CreateCollection(.alis.os.ideas.v1.CreateCollectionRequest) returns (.alis.os.ideas.v1.Collection);
+  rpc UpdateCollection(.alis.os.ideas.v1.UpdateCollectionRequest) returns (.alis.os.ideas.v1.Collection);
+  rpc DeleteCollection(.alis.os.ideas.v1.DeleteCollectionRequest) returns (.google.protobuf.Empty);
+  rpc ArchiveCollection(.alis.os.ideas.v1.ArchiveCollectionRequest) returns (.alis.os.ideas.v1.ArchiveCollectionResponse);
+  rpc ListCollections(.alis.os.ideas.v1.ListCollectionsRequest) returns (.alis.os.ideas.v1.ListCollectionsResponse);
+  rpc BatchGetCollections(.alis.os.ideas.v1.BatchGetCollectionsRequest) returns (.alis.os.ideas.v1.BatchGetCollectionsResponse);
+  rpc RetrieveMyCollections(.alis.os.ideas.v1.RetrieveMyCollectionsRequest) returns (.alis.os.ideas.v1.RetrieveMyCollectionsResponse);
+  rpc UpsertCollectionMembers(.alis.os.ideas.v1.UpsertCollectionMembersRequest) returns (.alis.os.ideas.v1.UpsertCollectionMembersResponse);
+  rpc RemoveCollectionMembers(.alis.os.ideas.v1.RemoveCollectionMembersRequest) returns (.alis.os.ideas.v1.RemoveCollectionMembersResponse);
+  rpc SetCycleDisplayName(.alis.os.ideas.v1.SetCycleDisplayNameRequest) returns (.alis.os.ideas.v1.SetCycleDisplayNameResponse);
+  rpc GenerateCollectionResearchPlan(.alis.os.ideas.v1.GenerateCollectionResearchPlanRequest) returns (.alis.os.ideas.v1.GenerateCollectionResearchPlanResponse);
+}
+
+service ContributionSessionsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateContributionSession(.alis.os.ideas.v1.CreateContributionSessionRequest) returns (.alis.os.ideas.v1.ContributionSession);
+  rpc GetContributionSession(.alis.os.ideas.v1.GetContributionSessionRequest) returns (.alis.os.ideas.v1.ContributionSession);
+  rpc UpdateContributionSession(.alis.os.ideas.v1.UpdateContributionSessionRequest) returns (.alis.os.ideas.v1.ContributionSession);
+  rpc ListContributionSessions(.alis.os.ideas.v1.ListContributionSessionsRequest) returns (.alis.os.ideas.v1.ListContributionSessionsResponse);
+  rpc DeleteContributionSession(.alis.os.ideas.v1.DeleteContributionSessionRequest) returns (.alis.os.ideas.v1.ContributionSession);
+  rpc UndeleteContributionSession(.alis.os.ideas.v1.UndeleteContributionSessionRequest) returns (.alis.os.ideas.v1.ContributionSession);
+  rpc BatchCreateContributionSessions(.alis.os.ideas.v1.BatchCreateContributionSessionsRequest) returns (.alis.os.ideas.v1.BatchCreateContributionSessionsResponse);
+  rpc BatchGetContributionSessions(.alis.os.ideas.v1.BatchGetContributionSessionsRequest) returns (.alis.os.ideas.v1.BatchGetContributionSessionsResponse);
+  rpc BatchUpdateContributionSessions(.alis.os.ideas.v1.BatchUpdateContributionSessionsRequest) returns (.alis.os.ideas.v1.BatchUpdateContributionSessionsResponse);
+  rpc BatchDeleteContributionSessions(.alis.os.ideas.v1.BatchDeleteContributionSessionsRequest) returns (.alis.os.ideas.v1.BatchDeleteContributionSessionsResponse);
+  rpc BatchUndeleteContributionSessions(.alis.os.ideas.v1.BatchUndeleteContributionSessionsRequest) returns (.alis.os.ideas.v1.BatchUndeleteContributionSessionsResponse);
+  rpc StreamContributionSessions(.alis.os.ideas.v1.StreamContributionSessionsRequest) returns (stream .alis.os.ideas.v1.ContributionSession);
+  rpc InitialiseContributionSession(.alis.os.ideas.v1.InitialiseContributionSessionRequest) returns (.alis.os.ideas.v1.InitialiseContributionSessionResponse);
+  rpc InviteContributionSessionParticipants(.alis.os.ideas.v1.InviteContributionSessionParticipantsRequest) returns (.alis.os.ideas.v1.InviteContributionSessionParticipantsResponse);
+  rpc SubmitContributionSession(.alis.os.ideas.v1.SubmitContributionSessionRequest) returns (.alis.os.ideas.v1.SubmitContributionSessionResponse);
+  rpc SetContributionSessionSeen(.alis.os.ideas.v1.SetContributionSessionSeenRequest) returns (.alis.os.ideas.v1.SetContributionSessionSeenResponse);
+  rpc GenerateQuestion(.alis.os.ideas.v1.GenerateQuestionRequest) returns (.alis.os.ideas.v1.GenerateQuestionResponse);
+  rpc GenerateAudioQuestion(.alis.os.ideas.v1.GenerateAudioQuestionRequest) returns (.alis.os.ideas.v1.GenerateAudioQuestionResponse);
+  rpc GenerateSynthesis(.alis.os.ideas.v1.GenerateSynthesisRequest) returns (.alis.os.ideas.v1.GenerateSynthesisResponse);
+  rpc GenerateContributionSessionSynthesis(.alis.os.ideas.v1.GenerateContributionSessionSynthesisRequest) returns (.alis.os.ideas.v1.GenerateContributionSessionSynthesisResponse);
+  rpc GenerateParticipantContributionOverview(.alis.os.ideas.v1.GenerateParticipantContributionOverviewRequest) returns (.alis.os.ideas.v1.GenerateParticipantContributionOverviewResponse);
+  rpc RetrieveContributionSessionsOnAccount(.alis.os.ideas.v1.RetrieveContributionSessionsOnAccountRequest) returns (.alis.os.ideas.v1.RetrieveContributionSessionsOnAccountResponse);
+  rpc RetrieveInitialStream(.alis.os.ideas.v1.RetrieveInitialStreamRequest) returns (.alis.os.ideas.v1.RetrieveInitialStreamResponse);
+  rpc CopyContributionSession(.alis.os.ideas.v1.CopyContributionSessionRequest) returns (.alis.os.ideas.v1.CopyContributionSessionResponse);
+  rpc ArchiveContributionSession(.alis.os.ideas.v1.ArchiveContributionSessionRequest) returns (.alis.os.ideas.v1.ArchiveContributionSessionResponse);
+}
+
+service EndorsementsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetEndorsement(.alis.os.ideas.v1.GetEndorsementRequest) returns (.alis.os.ideas.v1.Endorsement);
+  rpc CreateEndorsement(.alis.os.ideas.v1.CreateEndorsementRequest) returns (.alis.os.ideas.v1.Endorsement);
+  rpc UpdateEndorsement(.alis.os.ideas.v1.UpdateEndorsementRequest) returns (.alis.os.ideas.v1.Endorsement);
+  rpc DeleteEndorsement(.alis.os.ideas.v1.DeleteEndorsementRequest) returns (.google.protobuf.Empty);
+  rpc ListEndorsements(.alis.os.ideas.v1.ListEndorsementsRequest) returns (.alis.os.ideas.v1.ListEndorsementsResponse);
+  rpc RetrieveIdeaEndorsementOverview(.alis.os.ideas.v1.RetrieveIdeaEndorsementOverviewRequest) returns (.alis.os.ideas.v1.RetrieveIdeaEndorsementOverviewResponse);
+  rpc UpvoteIdea(.alis.os.ideas.v1.UpvoteIdeaRequest) returns (.alis.os.ideas.v1.UpvoteIdeaResponse);
+  rpc DownvoteIdea(.alis.os.ideas.v1.DownvoteIdeaRequest) returns (.alis.os.ideas.v1.DownvoteIdeaResponse);
+  rpc WithdrawIdeaEndorsement(.alis.os.ideas.v1.WithdrawIdeaEndorsementRequest) returns (.alis.os.ideas.v1.WithdrawIdeaEndorsementResponse);
+}
+
+service EvaluationService {
+  rpc EvaluateIdeaMaturity(.alis.os.ideas.v1.EvaluateIdeaMaturityRequest) returns (.alis.os.ideas.v1.EvaluateIdeaMaturityResponse);
+  rpc ApplyPrimeFramework(.alis.os.ideas.v1.ApplyPrimeFrameworkRequest) returns (.alis.os.ideas.v1.ApplyPrimeFrameworkResponse);
+  rpc BatchApplyPrimeFramework(.alis.os.ideas.v1.BatchApplyPrimeFrameworkRequest) returns (.alis.os.ideas.v1.BatchApplyPrimeFrameworkResponse);
+  rpc CalculateWeightedPrimeScore(.alis.os.ideas.v1.CalculateWeightedPrimeScoreRequest) returns (.alis.os.ideas.v1.CalculateWeightedPrimeScoreResponse);
+  rpc GenerateCandidateRequestsForContext(.alis.os.ideas.v1.GenerateCandidateRequestsForContextRequest) returns (.alis.os.ideas.v1.GenerateCandidateRequestsForContextResponse);
+  rpc ApplySixHatsFramework(.alis.os.ideas.v1.ApplySixHatsFrameworkRequest) returns (.alis.os.ideas.v1.ApplySixHatsFrameworkResponse);
+}
+
+service ExploreService {
+  rpc FilterIdeas(.alis.os.ideas.v1.FilterIdeasRequest) returns (.alis.os.ideas.v1.FilterIdeasResponse);
+  rpc CountFilteredIdeas(.alis.os.ideas.v1.CountFilteredIdeasRequest) returns (.alis.os.ideas.v1.CountFilteredIdeasResponse);
+  rpc ViewTableLens(.alis.os.ideas.v1.ViewTableLensRequest) returns (.alis.os.ideas.v1.ViewTableLensResponse);
+  rpc ViewGridLens(.alis.os.ideas.v1.ViewGridLensRequest) returns (.alis.os.ideas.v1.ViewGridLensResponse);
+  rpc ViewMaturityGridLens(.alis.os.ideas.v1.ViewMaturityGridLensRequest) returns (.alis.os.ideas.v1.ViewMaturityGridLensResponse);
+  rpc ViewMyGridLens(.alis.os.ideas.v1.ViewMyGridLensRequest) returns (.alis.os.ideas.v1.ViewMyGridLensResponse);
+  rpc ViewRecencyGridLens(.alis.os.ideas.v1.ViewRecencyGridLensRequest) returns (.alis.os.ideas.v1.ViewRecencyGridLensResponse);
+  rpc ViewMyTeamLens(.alis.os.ideas.v1.ViewMyTeamLensRequest) returns (.alis.os.ideas.v1.ViewMyTeamLensResponse);
+  rpc ViewClusterLens(.alis.os.ideas.v1.ViewClusterLensRequest) returns (.alis.os.ideas.v1.ViewClusterLensResponse);
+  rpc ViewGraphLens(.alis.os.ideas.v1.ViewGraphLensRequest) returns (.alis.os.ideas.v1.ViewGraphLensResponse);
+  rpc ViewCollectionLens(.alis.os.ideas.v1.ViewCollectionLensRequest) returns (.alis.os.ideas.v1.ViewCollectionLensResponse);
+  rpc ViewLiveLens(.alis.os.ideas.v1.ViewLiveLensRequest) returns (stream .alis.os.ideas.v1.Lens.Live.Idea);
+  rpc ViewStalenessLens(.alis.os.ideas.v1.ViewStalenessLensRequest) returns (.alis.os.ideas.v1.ViewStalenessLensResponse);
+}
+
+service GraphService {
+  rpc GenerateIdeaGraph(.alis.os.ideas.v1.GenerateIdeaGraphRequest) returns (.alis.os.ideas.v1.GenerateIdeaGraphResponse);
+  rpc GenerateGraph(.alis.os.ideas.v1.GenerateGraphRequest) returns (.alis.os.ideas.v1.GenerateGraphResponse);
+}
+
+service IdeasService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetIdea(.alis.os.ideas.v1.GetIdeaRequest) returns (.alis.os.ideas.v1.Idea);
+  rpc CreateIdea(.alis.os.ideas.v1.CreateIdeaRequest) returns (.alis.os.ideas.v1.Idea);
+  rpc UpdateIdea(.alis.os.ideas.v1.UpdateIdeaRequest) returns (.alis.os.ideas.v1.Idea);
+  rpc DeleteIdea(.alis.os.ideas.v1.DeleteIdeaRequest) returns (.google.protobuf.Empty);
+  rpc ListIdeas(.alis.os.ideas.v1.ListIdeasRequest) returns (.alis.os.ideas.v1.ListIdeasResponse);
+  rpc BatchGetIdeas(.alis.os.ideas.v1.BatchGetIdeasRequest) returns (.alis.os.ideas.v1.BatchGetIdeasResponse);
+  rpc SearchIdeas(.alis.os.ideas.v1.SearchIdeasRequest) returns (.alis.os.ideas.v1.SearchIdeasResponse);
+  rpc RetrieveSimilarIdeas(.alis.os.ideas.v1.RetrieveSimilarIdeasRequest) returns (.alis.os.ideas.v1.RetrieveSimilarIdeasResponse);
+  rpc DescribeIdeaComparison(.alis.os.ideas.v1.DescribeIdeaComparisonRequest) returns (.alis.os.ideas.v1.DescribeIdeaComparisonResponse);
+  rpc RetrievePrincipalIdeas(.alis.os.ideas.v1.RetrievePrincipalIdeasRequest) returns (.alis.os.ideas.v1.RetrievePrincipalIdeasResponse);
+  rpc MergeIdeas(.alis.os.ideas.v1.MergeIdeasRequest) returns (.alis.os.ideas.v1.MergeIdeasResponse);
+  rpc DuplicateIdea(.alis.os.ideas.v1.DuplicateIdeaRequest) returns (.alis.os.ideas.v1.DuplicateIdeaResponse);
+  rpc ArchiveIdea(.alis.os.ideas.v1.ArchiveIdeaRequest) returns (.alis.os.ideas.v1.ArchiveIdeaResponse);
+  rpc UnarchiveIdea(.alis.os.ideas.v1.UnarchiveIdeaRequest) returns (.alis.os.ideas.v1.UnarchiveIdeaResponse);
+  rpc GenerateIdeaTitle(.alis.os.ideas.v1.GenerateIdeaTitleRequest) returns (.alis.os.ideas.v1.GenerateIdeaTitleResponse);
+}
+
+service IntakeService {
+  rpc AddNote(.alis.os.ideas.v1.AddNoteRequest) returns (.alis.os.ideas.v1.AddNoteResponse);
+  rpc AddAudioNote(.alis.os.ideas.v1.AddAudioNoteRequest) returns (.alis.os.ideas.v1.AddAudioNoteResponse);
+  rpc AddVideo(.alis.os.ideas.v1.AddVideoRequest) returns (.alis.os.ideas.v1.AddVideoResponse);
+  rpc AddMultiFileUpload(.alis.os.ideas.v1.AddMultiFileUploadRequest) returns (.alis.os.ideas.v1.AddMultiFileUploadResponse);
+  rpc AddWebsiteLink(.alis.os.ideas.v1.AddWebsiteLinkRequest) returns (.alis.os.ideas.v1.AddWebsiteLinkResponse);
+  rpc AddComment(.alis.os.ideas.v1.AddCommentRequest) returns (.alis.os.ideas.v1.AddCommentResponse);
+  rpc AddFigmaMake(.alis.os.ideas.v1.AddFigmaMakeRequest) returns (.alis.os.ideas.v1.AddFigmaMakeResponse);
+  rpc AddAiStudio(.alis.os.ideas.v1.AddAiStudioRequest) returns (.alis.os.ideas.v1.AddAiStudioResponse);
+  rpc AddUsabilityStudy(.alis.os.ideas.v1.AddUsabilityStudyRequest) returns (.alis.os.ideas.v1.AddUsabilityStudyResponse);
+  rpc AddAgent(.alis.os.ideas.v1.AddAgentRequest) returns (.alis.os.ideas.v1.AddAgentResponse);
+  rpc AddFirefliesTranscript(.alis.os.ideas.v1.AddFirefliesTranscriptRequest) returns (.alis.os.ideas.v1.AddFirefliesTranscriptResponse);
+  rpc AddResearch(.alis.os.ideas.v1.AddResearchRequest) returns (.alis.os.ideas.v1.AddResearchResponse);
+  rpc AddSpecFeedback(.alis.os.ideas.v1.AddSpecFeedbackRequest) returns (.alis.os.ideas.v1.AddSpecFeedbackResponse);
+  rpc AddStreamFeedback(.alis.os.ideas.v1.AddStreamFeedbackRequest) returns (.alis.os.ideas.v1.AddStreamFeedbackResponse);
+  rpc RequestContext(.alis.os.ideas.v1.RequestContextRequest) returns (.alis.os.ideas.v1.RequestContextResponse);
+  rpc GenerateIdeaIntakeSignedUri(.alis.os.ideas.v1.GenerateIdeaIntakeSignedUriRequest) returns (.alis.os.ideas.v1.GenerateIdeaIntakeSignedUriResponse);
+  rpc DecryptIdeaIntakeSignedToken(.alis.os.ideas.v1.DecryptIdeaIntakeSignedTokenRequest) returns (.alis.os.ideas.v1.DecryptIdeaIntakeSignedTokenResponse);
+}
+
+service MediaPreprocessingService {
+  rpc SplitAudio(.alis.os.ideas.v1.SplitAudioRequest) returns (.alis.os.ideas.v1.SplitAudioResponse);
+}
+
+service VideoPreprocessingService {
+  rpc SplitVideo(.alis.os.ideas.v1.SplitVideoRequest) returns (.alis.os.ideas.v1.SplitVideoResponse);
+  rpc CaptureThumbnail(.alis.os.ideas.v1.CaptureThumbnailRequest) returns (.alis.os.ideas.v1.CaptureThumbnailResponse);
+}
+
+service DocumentPreprocessingService {
+  rpc PreprocessWordDocument(.alis.os.ideas.v1.PreprocessWordDocumentRequest) returns (.alis.os.ideas.v1.PreprocessWordDocumentResponse);
+  rpc PreprocessSpreadsheet(.alis.os.ideas.v1.PreprocessSpreadsheetRequest) returns (.alis.os.ideas.v1.PreprocessSpreadsheetResponse);
+  rpc PreprocessCsv(.alis.os.ideas.v1.PreprocessCsvRequest) returns (.alis.os.ideas.v1.PreprocessCsvResponse);
+  rpc PreprocessMd(.alis.os.ideas.v1.PreprocessMdRequest) returns (.alis.os.ideas.v1.PreprocessMdResponse);
+}
+
+service PowerPointPreprocessingService {
+  rpc PreprocessPowerpointPresentation(.alis.os.ideas.v1.PreprocessPowerpointPresentationRequest) returns (.alis.os.ideas.v1.PreprocessPowerpointPresentationResponse);
+}
+
+service PrototypePreprocessingService {
+  rpc PreprocessFigmaMake(.alis.os.ideas.v1.PreprocessFigmaMakeRequest) returns (.alis.os.ideas.v1.PreprocessFigmaMakeResponse);
+}
+
+service ArchivePreprocessingService {
+  rpc PreprocessZip(.alis.os.ideas.v1.PreprocessZipRequest) returns (.alis.os.ideas.v1.PreprocessZipResponse);
+}
+
+service PlaylistService {
+  rpc GenerateContinueContributingPlaylist(.alis.os.ideas.v1.GenerateContinueContributingPlaylistRequest) returns (.alis.os.ideas.v1.GenerateContinueContributingPlaylistResponse);
+  rpc GenerateNewAndPopularPlaylist(.alis.os.ideas.v1.GenerateNewAndPopularPlaylistRequest) returns (.alis.os.ideas.v1.GenerateNewAndPopularPlaylistResponse);
+  rpc GenerateMyIdeasPlaylist(.alis.os.ideas.v1.GenerateMyIdeasPlaylistRequest) returns (.alis.os.ideas.v1.GenerateMyIdeasPlaylistResponse);
+  rpc GenerateTopPicksPlaylist(.alis.os.ideas.v1.GenerateTopPicksPlaylistRequest) returns (.alis.os.ideas.v1.GenerateTopPicksPlaylistResponse);
+  rpc GenerateMoreLikeThisPlaylist(.alis.os.ideas.v1.GenerateMoreLikeThisPlaylistRequest) returns (.alis.os.ideas.v1.GenerateMoreLikeThisPlaylistResponse);
+}
+
+service ResearchService {
+  rpc CompileResearchReport(.alis.os.ideas.v1.CompileResearchReportRequest) returns (.alis.os.ideas.v1.CompileResearchReportResponse);
+  rpc AddInternetResearchPhases(.alis.os.ideas.v1.AddInternetResearchPhasesRequest) returns (.alis.os.ideas.v1.AddInternetResearchPhasesResponse);
+  rpc AddInterviewParticipants(.alis.os.ideas.v1.AddInterviewParticipantsRequest) returns (.alis.os.ideas.v1.AddInterviewParticipantsResponse);
+  rpc RemoveInterviewParticipants(.alis.os.ideas.v1.RemoveInterviewParticipantsRequest) returns (.alis.os.ideas.v1.RemoveInterviewParticipantsResponse);
+  rpc SetInterviewAccessCriteria(.alis.os.ideas.v1.SetInterviewAccessCriteriaRequest) returns (.alis.os.ideas.v1.SetInterviewAccessCriteriaResponse);
+  rpc JoinInterview(.alis.os.ideas.v1.JoinInterviewRequest) returns (.alis.os.ideas.v1.JoinInterviewResponse);
+  rpc CompleteInterview(.alis.os.ideas.v1.CompleteInterviewRequest) returns (.alis.os.ideas.v1.CompleteInterviewResponse);
+  rpc SetResearchReferences(.alis.os.ideas.v1.SetResearchReferencesRequest) returns (.alis.os.ideas.v1.SetResearchReferencesResponse);
+  rpc RetrieveMyIncompleteInterviews(.alis.os.ideas.v1.RetrieveMyIncompleteInterviewsRequest) returns (.alis.os.ideas.v1.RetrieveMyIncompleteInterviewsResponse);
+  rpc SetInternetPhase(.alis.os.ideas.v1.SetInternetPhaseRequest) returns (.alis.os.ideas.v1.SetInternetPhaseResponse);
+  rpc SetInterviewPhase(.alis.os.ideas.v1.SetInterviewPhaseRequest) returns (.alis.os.ideas.v1.SetInterviewPhaseResponse);
+}
+
+service SpecsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateSpec(.alis.os.ideas.v1.CreateSpecRequest) returns (.alis.os.ideas.v1.Spec);
+  rpc GetSpec(.alis.os.ideas.v1.GetSpecRequest) returns (.alis.os.ideas.v1.Spec);
+  rpc UpdateSpec(.alis.os.ideas.v1.UpdateSpecRequest) returns (.alis.os.ideas.v1.Spec);
+  rpc ListSpecs(.alis.os.ideas.v1.ListSpecsRequest) returns (.alis.os.ideas.v1.ListSpecsResponse);
+  rpc DeleteSpec(.alis.os.ideas.v1.DeleteSpecRequest) returns (.alis.os.ideas.v1.Spec);
+  rpc UndeleteSpec(.alis.os.ideas.v1.UndeleteSpecRequest) returns (.alis.os.ideas.v1.Spec);
+  rpc BatchCreateSpecs(.alis.os.ideas.v1.BatchCreateSpecsRequest) returns (.alis.os.ideas.v1.BatchCreateSpecsResponse);
+  rpc BatchGetSpecs(.alis.os.ideas.v1.BatchGetSpecsRequest) returns (.alis.os.ideas.v1.BatchGetSpecsResponse);
+  rpc BatchUpdateSpecs(.alis.os.ideas.v1.BatchUpdateSpecsRequest) returns (.alis.os.ideas.v1.BatchUpdateSpecsResponse);
+  rpc BatchDeleteSpecs(.alis.os.ideas.v1.BatchDeleteSpecsRequest) returns (.alis.os.ideas.v1.BatchDeleteSpecsResponse);
+  rpc BatchUndeleteSpecs(.alis.os.ideas.v1.BatchUndeleteSpecsRequest) returns (.alis.os.ideas.v1.BatchUndeleteSpecsResponse);
+  rpc StreamSpecs(.alis.os.ideas.v1.StreamSpecsRequest) returns (stream .alis.os.ideas.v1.Spec);
+  rpc StreamSpecEvents(.alis.os.ideas.v1.StreamSpecEventsRequest) returns (stream .alis.os.ideas.v1.StreamSpecEventsResponse);
+  rpc RefreshIdeaWorkingSpec(.alis.os.ideas.v1.RefreshIdeaWorkingSpecRequest) returns (.google.longrunning.Operation);
+  rpc RefreshIdeaManagedSpecs(.alis.os.ideas.v1.RefreshIdeaManagedSpecsRequest) returns (.google.longrunning.Operation);
+  rpc GenerateSpec(.alis.os.ideas.v1.GenerateSpecRequest) returns (.google.longrunning.Operation);
+  rpc RegenerateSpec(.alis.os.ideas.v1.RegenerateSpecRequest) returns (.google.longrunning.Operation);
+  rpc GenerateSection(.alis.os.ideas.v1.GenerateSectionRequest) returns (.alis.os.ideas.v1.GenerateSectionResponse);
+  rpc RetrieveIdeaSpecs(.alis.os.ideas.v1.RetrieveIdeaSpecsRequest) returns (.alis.os.ideas.v1.RetrieveIdeaSpecsResponse);
+  rpc PublishSpec(.alis.os.ideas.v1.PublishSpecRequest) returns (.alis.os.ideas.v1.PublishSpecResponse);
+  rpc ArchiveSpec(.alis.os.ideas.v1.ArchiveSpecRequest) returns (.alis.os.ideas.v1.ArchiveSpecResponse);
+  rpc GenerateFullRfp(.alis.os.ideas.v1.GenerateFullRfpRequest) returns (.google.longrunning.Operation);
+  rpc GenerateIdeaBrief(.alis.os.ideas.v1.GenerateIdeaBriefRequest) returns (.google.longrunning.Operation);
+  rpc GenerateUiDesign(.alis.os.ideas.v1.GenerateUiDesignRequest) returns (.google.longrunning.Operation);
+  rpc GenerateAiPrototype(.alis.os.ideas.v1.GenerateAiPrototypeRequest) returns (.google.longrunning.Operation);
+  rpc GenerateIdeateSpec(.alis.os.ideas.v1.GenerateIdeateSpecRequest) returns (.google.longrunning.Operation);
+  rpc GenerateBusinessCase(.alis.os.ideas.v1.GenerateBusinessCaseRequest) returns (.google.longrunning.Operation);
+  rpc GenerateSolutionFlowSpec(.alis.os.ideas.v1.GenerateSolutionFlowSpecRequest) returns (.google.longrunning.Operation);
+  rpc GenerateCurrentProcess(.alis.os.ideas.v1.GenerateCurrentProcessRequest) returns (.google.longrunning.Operation);
+  rpc GenerateJargon(.alis.os.ideas.v1.GenerateJargonRequest) returns (.google.longrunning.Operation);
+  rpc GenerateTechnologyLandscape(.alis.os.ideas.v1.GenerateTechnologyLandscapeRequest) returns (.google.longrunning.Operation);
+  rpc GeneratePainPoints(.alis.os.ideas.v1.GeneratePainPointsRequest) returns (.google.longrunning.Operation);
+  rpc GenerateStakeholderMap(.alis.os.ideas.v1.GenerateStakeholderMapRequest) returns (.google.longrunning.Operation);
+  rpc GenerateFigmaMake(.alis.os.ideas.v1.GenerateFigmaMakeRequest) returns (.google.longrunning.Operation);
+  rpc GenerateGeminiEnterpriseCustomAgent(.alis.os.ideas.v1.GenerateGeminiEnterpriseCustomAgentRequest) returns (.google.longrunning.Operation);
+  rpc SetFigmaMakeContributionSession(.alis.os.ideas.v1.SetFigmaMakeContributionSessionRequest) returns (.alis.os.ideas.v1.SetFigmaMakeContributionSessionResponse);
+  rpc GenerateAiStudio(.alis.os.ideas.v1.GenerateAiStudioRequest) returns (.google.longrunning.Operation);
+  rpc GenerateResearchPlan(.alis.os.ideas.v1.GenerateResearchPlanRequest) returns (.google.longrunning.Operation);
+  rpc GenerateCustomAgent(.alis.os.ideas.v1.GenerateCustomAgentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateProductRequirementsDocument(.alis.os.ideas.v1.GenerateProductRequirementsDocumentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateAgentFeedback(.alis.os.ideas.v1.GenerateAgentFeedbackRequest) returns (.google.longrunning.Operation);
+  rpc GenerateGapAnalysis(.alis.os.ideas.v1.GenerateGapAnalysisRequest) returns (.google.longrunning.Operation);
+  rpc GenerateProjectIntent(.alis.os.ideas.v1.GenerateProjectIntentRequest) returns (.google.longrunning.Operation);
+  rpc CreateSpecRevision(.alis.os.ideas.v1.CreateSpecRevisionRequest) returns (.alis.os.ideas.v1.SpecRevision);
+  rpc GetSpecRevision(.alis.os.ideas.v1.GetSpecRevisionRequest) returns (.alis.os.ideas.v1.SpecRevision);
+  rpc UpdateSpecRevision(.alis.os.ideas.v1.UpdateSpecRevisionRequest) returns (.alis.os.ideas.v1.SpecRevision);
+  rpc ListSpecRevisions(.alis.os.ideas.v1.ListSpecRevisionsRequest) returns (.alis.os.ideas.v1.ListSpecRevisionsResponse);
+  rpc DeleteSpecRevision(.alis.os.ideas.v1.DeleteSpecRevisionRequest) returns (.google.protobuf.Empty);
+  rpc BatchCreateSpecRevisions(.alis.os.ideas.v1.BatchCreateSpecRevisionsRequest) returns (.alis.os.ideas.v1.BatchCreateSpecRevisionsResponse);
+  rpc RollbackSpec(.alis.os.ideas.v1.RollbackSpecRequest) returns (.alis.os.ideas.v1.SpecRevision);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc CopySpec(.alis.os.ideas.v1.CopySpecRequest) returns (.alis.os.ideas.v1.CopySpecResponse);
+}
+
+service StreamsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetStream(.alis.os.ideas.v1.GetStreamRequest) returns (.alis.os.ideas.v1.Stream);
+  rpc CreateStream(.alis.os.ideas.v1.CreateStreamRequest) returns (.alis.os.ideas.v1.Stream);
+  rpc UpdateStream(.alis.os.ideas.v1.UpdateStreamRequest) returns (.alis.os.ideas.v1.Stream);
+  rpc DeleteStream(.alis.os.ideas.v1.DeleteStreamRequest) returns (.google.protobuf.Empty);
+  rpc ListStreams(.alis.os.ideas.v1.ListStreamsRequest) returns (.alis.os.ideas.v1.ListStreamsResponse);
+  rpc BatchGetStreams(.alis.os.ideas.v1.BatchGetStreamsRequest) returns (.alis.os.ideas.v1.BatchGetStreamsResponse);
+  rpc RetrieveComments(.alis.os.ideas.v1.RetrieveCommentsRequest) returns (.alis.os.ideas.v1.RetrieveCommentsResponse);
+  rpc RetrieveStreamOverviews(.alis.os.ideas.v1.RetrieveStreamOverviewsRequest) returns (.alis.os.ideas.v1.RetrieveStreamOverviewsResponse);
+  rpc RetrievePendingRequestsForContext(.alis.os.ideas.v1.RetrievePendingRequestsForContextRequest) returns (.alis.os.ideas.v1.RetrievePendingRequestsForContextResponse);
+  rpc SearchStreams(.alis.os.ideas.v1.SearchStreamsRequest) returns (.alis.os.ideas.v1.SearchStreamsResponse);
+  rpc CopyStream(.alis.os.ideas.v1.CopyStreamRequest) returns (.alis.os.ideas.v1.CopyStreamResponse);
+  rpc ArchiveStream(.alis.os.ideas.v1.ArchiveStreamRequest) returns (.alis.os.ideas.v1.ArchiveStreamResponse);
+  rpc BatchArchiveStreams(.alis.os.ideas.v1.BatchArchiveStreamsRequest) returns (.alis.os.ideas.v1.BatchArchiveStreamsResponse);
+}

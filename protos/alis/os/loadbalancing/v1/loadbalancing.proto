@@ -1,0 +1,291 @@
+syntax = "proto3";
+
+package alis.os.loadbalancing.v1;
+
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/money.proto";
+import "google/type/postal_address.proto";
+
+message ManagedDomain {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    REGISTERING = 1;
+    REGISTRATION_FAILED = 2;
+    UNVERIFIED = 3;
+    VERIFIED = 4;
+  }
+  message GoogleDns {
+    string zone_project = 1;
+    string zone_id = 2;
+    string registration = 3;
+    repeated string name_servers = 4;
+  }
+  message CustomDns {
+  }
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  string domain = 4;
+  .alis.os.loadbalancing.v1.ManagedDomain.State state = 5;
+  .alis.os.loadbalancing.v1.DnsRecord managed_domain_record = 6;
+  .alis.os.loadbalancing.v1.DnsRecord alis_site_ownership_record = 7;
+  repeated string acl = 8;
+  bool ssl_deployed = 12;
+  oneof dns {
+    .alis.os.loadbalancing.v1.ManagedDomain.GoogleDns google_dns = 10;
+    string managed_domain = 11;
+    .alis.os.loadbalancing.v1.ManagedDomain.CustomDns custom_dns = 13;
+  }
+}
+
+message DnsRecord {
+  string host = 1;
+  string target = 2;
+  string type = 3;
+}
+
+message GetManagedDomainRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message DeleteManagedDomainRequest {
+}
+
+message ListManagedDomainsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListManagedDomainsResponse {
+  repeated .alis.os.loadbalancing.v1.ManagedDomain managed_domains = 1;
+  string next_page_token = 2;
+}
+
+message SearchCloudDomainsRequest {
+  string organisation = 1;
+  string query = 2;
+}
+
+message SearchCloudDomainsResponse {
+  message CloudDomain {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      AVAILABLE = 1;
+      UNAVAILABLE = 2;
+      UNSUPPORTED = 3;
+      UNKNOWN = 4;
+    }
+    string domain = 1;
+    .google.type.Money yearly_price = 2;
+    .alis.os.loadbalancing.v1.SearchCloudDomainsResponse.CloudDomain.State state = 3;
+  }
+}
+
+message RegisterDomainRequest {
+  string organisation = 1;
+  string domain = 2;
+  string contact_email = 3;
+  string contact_phone = 4;
+  .google.type.PostalAddress contact_address = 5;
+  bool validate_only = 6;
+}
+
+message RegisterDomainMetadata {
+}
+
+message AddDomainRequest {
+  string organisation = 1;
+  string domain = 2;
+}
+
+message AddDomainResponse {
+  .alis.os.loadbalancing.v1.ManagedDomain managed_domain = 1;
+  .alis.os.loadbalancing.v1.Verification verification = 2;
+}
+
+message ImportDomainRequest {
+  string organisation = 1;
+  string domain = 2;
+  oneof dns {
+    .alis.os.loadbalancing.v1.ManagedDomain.GoogleDns google_dns = 10;
+    .alis.os.loadbalancing.v1.ManagedDomain.CustomDns custom_dns = 11;
+  }
+}
+
+message ImportDomainResponse {
+  .alis.os.loadbalancing.v1.ManagedDomain managed_domain = 1;
+  .alis.os.loadbalancing.v1.Verification verification = 2;
+}
+
+message Verification {
+  bool alis_access = 1;
+  bool managed_domain_record_exists = 2;
+  bool authoritative_dns = 3;
+}
+
+message VerifyManagedDomainRequest {
+}
+
+message VerifyManagedDomainResponse {
+  .alis.os.loadbalancing.v1.ManagedDomain managed_domain = 1;
+  .alis.os.loadbalancing.v1.Verification verification = 2;
+}
+
+message Ssl {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    NONE = 1;
+    INCOMPLETE = 2;
+    PROVISIONING = 3;
+    ACTIVE = 4;
+    FAILED = 5;
+  }
+  string dns_authorization = 1;
+  .alis.os.loadbalancing.v1.DnsRecord dns_authorization_record = 2;
+  string certificate = 3;
+  string domain_map_entry = 4;
+  string subdomains_map_entry = 5;
+  .alis.os.loadbalancing.v1.Ssl.State state = 6;
+}
+
+message DeploySslRequest {
+}
+
+message DeploySslMetadata {
+}
+
+message RetrieveSslRequest {
+}
+
+message DestroySslRequest {
+}
+
+message AddSubdomainRequest {
+  string organisation = 1;
+  string subdomain = 2;
+}
+
+message EditManagedDomainAclRequest {
+  string managed_domain = 1;
+  repeated string acl = 2;
+}
+
+message Route {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    ORGANISATION_GIT = 1;
+    PRODUCT_GIT = 2;
+    DEPLOYMENT_GRPC = 3;
+    GENERAL = 4;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    SYNCING = 1;
+    ACTIVE = 2;
+    SYNC_FAILED = 3;
+    DELETING = 4;
+    DELETE_FAILED = 5;
+  }
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  bool managed = 4;
+  .alis.os.loadbalancing.v1.Route.Type type = 5;
+  repeated string hosts = 6;
+  string google_project_id = 9;
+  .alis.os.loadbalancing.v1.Route.State state = 11;
+  oneof target {
+    string backend_service_id = 7;
+    string backend_bucket_id = 8;
+  }
+}
+
+message GetRouteRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateRouteRequest {
+  string parent = 1;
+  .alis.os.loadbalancing.v1.Route route = 2;
+}
+
+message CreateRouteMetadata {
+  string route = 1;
+  .google.protobuf.Timestamp create_time = 2;
+}
+
+message UpdateRouteRequest {
+  .alis.os.loadbalancing.v1.Route route = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateRouteMetadata {
+}
+
+message DeleteRouteRequest {
+}
+
+message DeleteRouteMetadata {
+}
+
+message ListRoutesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListRoutesResponse {
+  repeated .alis.os.loadbalancing.v1.Route routes = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveDeploymentBackendsRequest {
+}
+
+message RetrieveDeploymentBackendsResponse {
+  repeated string backend_service_ids = 1;
+  repeated string backend_bucket_ids = 2;
+}
+
+service ManagedDomainsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc GetManagedDomain(.alis.os.loadbalancing.v1.GetManagedDomainRequest) returns (.alis.os.loadbalancing.v1.ManagedDomain);
+  rpc DeleteManagedDomain(.alis.os.loadbalancing.v1.DeleteManagedDomainRequest) returns (.google.protobuf.Empty);
+  rpc ListManagedDomains(.alis.os.loadbalancing.v1.ListManagedDomainsRequest) returns (.alis.os.loadbalancing.v1.ListManagedDomainsResponse);
+  rpc SearchCloudDomains(.alis.os.loadbalancing.v1.SearchCloudDomainsRequest) returns (.alis.os.loadbalancing.v1.SearchCloudDomainsResponse);
+  rpc RegisterDomain(.alis.os.loadbalancing.v1.RegisterDomainRequest) returns (.google.longrunning.Operation);
+  rpc AddDomain(.alis.os.loadbalancing.v1.AddDomainRequest) returns (.alis.os.loadbalancing.v1.AddDomainResponse);
+  rpc ImportDomain(.alis.os.loadbalancing.v1.ImportDomainRequest) returns (.alis.os.loadbalancing.v1.ImportDomainResponse);
+  rpc VerifyManagedDomain(.alis.os.loadbalancing.v1.VerifyManagedDomainRequest) returns (.alis.os.loadbalancing.v1.VerifyManagedDomainResponse);
+  rpc DeploySsl(.alis.os.loadbalancing.v1.DeploySslRequest) returns (.google.longrunning.Operation);
+  rpc RetrieveSsl(.alis.os.loadbalancing.v1.RetrieveSslRequest) returns (.alis.os.loadbalancing.v1.Ssl);
+  rpc DestroySsl(.alis.os.loadbalancing.v1.DestroySslRequest) returns (.alis.os.loadbalancing.v1.Ssl);
+  rpc AddSubdomain(.alis.os.loadbalancing.v1.AddSubdomainRequest) returns (.alis.os.loadbalancing.v1.ManagedDomain);
+  rpc EditManagedDomainAcl(.alis.os.loadbalancing.v1.EditManagedDomainAclRequest) returns (.alis.os.loadbalancing.v1.ManagedDomain);
+}
+
+service RoutesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc GetRoute(.alis.os.loadbalancing.v1.GetRouteRequest) returns (.alis.os.loadbalancing.v1.Route);
+  rpc CreateRoute(.alis.os.loadbalancing.v1.CreateRouteRequest) returns (.google.longrunning.Operation);
+  rpc UpdateRoute(.alis.os.loadbalancing.v1.UpdateRouteRequest) returns (.google.longrunning.Operation);
+  rpc DeleteRoute(.alis.os.loadbalancing.v1.DeleteRouteRequest) returns (.google.longrunning.Operation);
+  rpc ListRoutes(.alis.os.loadbalancing.v1.ListRoutesRequest) returns (.alis.os.loadbalancing.v1.ListRoutesResponse);
+  rpc RetrieveDeploymentBackends(.alis.os.loadbalancing.v1.RetrieveDeploymentBackendsRequest) returns (.alis.os.loadbalancing.v1.RetrieveDeploymentBackendsResponse);
+}

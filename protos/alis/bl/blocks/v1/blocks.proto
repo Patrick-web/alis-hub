@@ -1,0 +1,973 @@
+syntax = "proto3";
+
+package alis.bl.blocks.v1;
+
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
+import "google/type/money.proto";
+
+message File {
+  string filename = 1;
+  bytes content = 2;
+}
+
+message BlockVersion {
+  enum ReleaseLevel {
+    RELEASE_LEVEL_UNSPECIFIED = 0;
+    EXPERIMENTAL = 3;
+    ALPHA = 6;
+    BETA = 9;
+    RC = 12;
+    GA = 99;
+  }
+  message Content {
+    repeated .alis.bl.blocks.v1.File build_files = 1;
+    repeated .alis.bl.blocks.v1.File infra_files = 2;
+    repeated .alis.bl.blocks.v1.File proto_files = 3;
+  }
+  message Source {
+    string instance = 1;
+    string commit_sha = 2;
+  }
+  message Documentation {
+    enum ContentState {
+      CONTENT_STATE_UNSPECIFIED = 0;
+      CONTENT_STATE_GENERATING = 1;
+      CONTENT_STATE_GENERATED = 2;
+    }
+    message UserContent {
+      .alis.bl.blocks.v1.BlockVersion.Documentation.ContentState state = 1;  // enum (heuristically resolved)
+      string content = 2;
+      .google.protobuf.Timestamp generate_time = 99;
+    }
+    message AgentContent {
+      .alis.bl.blocks.v1.BlockVersion.Documentation.ContentState state = 1;  // enum (heuristically resolved)
+      string content = 2;
+      .google.protobuf.Timestamp generate_time = 99;
+    }
+    .alis.bl.blocks.v1.BlockVersion.Documentation.UserContent user_content = 10;
+    .alis.bl.blocks.v1.BlockVersion.Documentation.AgentContent agent_content = 11;
+  }
+  message ContextCache {
+    string cached_content_name = 1;
+    .google.protobuf.Timestamp create_time = 2;
+    .google.protobuf.Timestamp expire_time = 3;
+    string model_name = 4;
+  }
+  string name = 1;
+  string version = 2;
+  .alis.bl.blocks.v1.BlockVersion.Content contributed_content = 3;
+  string release_notes = 4;
+  .alis.bl.blocks.v1.BlockVersion.Source define_source = 5;
+  .alis.bl.blocks.v1.BlockVersion.Source build_source = 6;
+  .alis.bl.blocks.v1.BlockVersion.Content sample_content = 7;
+  .alis.bl.blocks.v1.BlockVersion.Documentation documentation = 8;
+  .alis.bl.blocks.v1.BlockVersion.ReleaseLevel release_level = 9;
+  .alis.bl.blocks.v1.BlockVersion.ContextCache context_cache = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetBlockVersionRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateBlockVersionRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.BlockVersion block_version = 2;
+}
+
+message CreateBlockVersionResponse {
+}
+
+message CreateBlockVersionMetadata {
+  string progress_notes = 1;
+}
+
+message UpdateBlockVersionRequest {
+  .alis.bl.blocks.v1.BlockVersion block_version = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteBlockVersionRequest {
+  string name = 1;
+}
+
+message ListBlockVersionsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListBlockVersionsResponse {
+  repeated .alis.bl.blocks.v1.BlockVersion block_versions = 1;
+  string next_page_token = 2;
+}
+
+message GetLatestStableBlockVersionRequest {
+  string parent = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message GenerateDocumentationUserContentRequest {
+  string block = 1;
+  string version = 2;
+}
+
+message GenerateDocumentationUserContentResponse {
+  .alis.bl.blocks.v1.BlockVersion.Documentation.UserContent user_content = 1;
+  string version = 2;
+}
+
+message GenerateDocumentationUserContentMetadata {
+  string progress_notes = 1;
+  .google.protobuf.Timestamp start_time = 2;
+}
+
+message GenerateDocumentationAgentContentRequest {
+  string block = 1;
+  string version = 2;
+}
+
+message GenerateDocumentationAgentContentResponse {
+  .alis.bl.blocks.v1.BlockVersion.Documentation.AgentContent agent_content = 1;
+  string version = 2;
+}
+
+message GenerateDocumentationAgentContentMetadata {
+  string progress_notes = 1;
+  .google.protobuf.Timestamp start_time = 2;
+}
+
+message Instance {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PENDING_INSTALLATION = 1;
+    INSTALLING = 2;
+    ACTIVE = 3;
+    UNINSTALLED = 4;
+    SUSPENDED = 5;
+  }
+  enum SuspensionReason {
+    SUSPENSION_REASON_UNSPECIFIED = 0;
+    ENTITLEMENT_DELETED = 1;
+  }
+  string name = 1;
+  string package = 2;
+  string block = 3;
+  string block_version = 4;
+  string build_folder = 5;
+  string git_branch = 6;
+  .alis.bl.blocks.v1.Instance.State state = 7;
+  .google.protobuf.Any block_config = 10;
+  string entitlement = 11;
+  .alis.bl.blocks.v1.Instance.SuspensionReason suspension_reason = 12;
+  string suspension_note = 13;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetInstanceRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateInstanceRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.Instance instance = 2;
+}
+
+message UpdateInstanceRequest {
+  .alis.bl.blocks.v1.Instance instance = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteInstanceRequest {
+  string name = 1;
+}
+
+message ListInstancesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListInstancesResponse {
+  repeated .alis.bl.blocks.v1.Instance instances = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetInstancesRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message BatchGetInstancesResponse {
+  repeated .alis.bl.blocks.v1.Instance instances = 1;
+}
+
+message CommitFilesRequest {
+  string instance = 1;
+  repeated .alis.bl.blocks.v1.File build_files = 2;
+  repeated .alis.bl.blocks.v1.File infra_files = 3;
+  repeated .alis.bl.blocks.v1.File proto_files = 4;
+}
+
+message CommitFilesMetadata {
+  .alis.bl.blocks.v1.CommitFilesRequest request = 1;
+}
+
+message CommitFilesResponse {
+  string branch = 1;
+  string build_commit_sha = 2;
+  string define_commit_sha = 3;
+}
+
+message MergeBlockBranchRequest {
+  string instance = 1;
+  bool merge_build_repository = 2;
+  bool merge_define_repository = 3;
+}
+
+message MergeBlockBranchMetadata {
+  .alis.bl.blocks.v1.MergeBlockBranchRequest request = 1;
+}
+
+message MergeBlockBranchResponse {
+  string branch = 1;
+  string build_commit_sha = 2;
+  string define_commit_sha = 3;
+}
+
+message PurgeInstancesRequest {
+  string parent = 1;
+  string filter = 2;
+}
+
+message PurgeInstancesResponse {
+}
+
+message RetrieveInstancesByPackagesRequest {
+  repeated string packages = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message RetrieveInstancesByPackagesResponse {
+  message Result {
+    string package = 1;
+    repeated .alis.bl.blocks.v1.Instance instances = 2;
+  }
+  repeated .alis.bl.blocks.v1.RetrieveInstancesByPackagesResponse.Result results = 1;
+}
+
+message SuspendInstanceRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.Instance.SuspensionReason suspension_reason = 2;  // enum (heuristically resolved)
+  string suspension_note = 3;
+}
+
+message Entitlement {
+  enum LicenseType {
+    LICENSE_TYPE_UNSPECIFIED = 0;
+    PERMISSIVE = 1;
+    RECIPROCAL = 2;
+    PROPRIETARY_STANDARD_COMMERCIAL_EULA = 3;
+    PROPRIETARY_COMPONENT_EULA = 4;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    CONFIGURING = 1;
+    REDEEMABLE = 2;
+    ACTIVE = 3;
+    DELETED = 4;
+    EXPIRED = 5;
+    SUSPENDED = 6;
+  }
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    PLAN = 1;
+    PLAN_USE = 2;
+    CUSTOM_USE = 3;
+  }
+  message LicenseConfig {
+    message Statement {
+      string title = 1;
+      string content = 2;
+    }
+    message Permissive {
+      string code_file_header_content = 1;
+      string license_txt_content = 2;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement permissions = 3;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement conditions = 4;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement limitations = 5;
+      string license_file_name = 6;
+      repeated string short_form_content = 7;
+    }
+    message Reciprocal {
+      string code_file_header_content = 1;
+      string license_txt_content = 2;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement permissions = 3;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement conditions = 4;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement limitations = 5;
+      string license_file_name = 6;
+      repeated string short_form_content = 7;
+    }
+    message ProprietaryStandardCommercialEULA {
+      string code_file_header_content = 1;
+      string license_txt_content = 2;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement permissions = 3;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement conditions = 4;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement limitations = 5;
+      string license_file_name = 6;
+      repeated string short_form_content = 7;
+    }
+    message ProprietaryComponentEULA {
+      string code_file_header_content = 1;
+      string license_txt_content = 2;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement permissions = 3;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement conditions = 4;
+      repeated .alis.bl.blocks.v1.Entitlement.LicenseConfig.Statement limitations = 5;
+      string license_file_name = 6;
+      repeated string short_form_content = 7;
+    }
+    oneof config {
+      .alis.bl.blocks.v1.Entitlement.LicenseConfig.Permissive permissive = 1;
+      .alis.bl.blocks.v1.Entitlement.LicenseConfig.Reciprocal reciprocal = 2;
+      .alis.bl.blocks.v1.Entitlement.LicenseConfig.ProprietaryStandardCommercialEULA proprietary_standard_commercial_eula = 3;
+      .alis.bl.blocks.v1.Entitlement.LicenseConfig.ProprietaryComponentEULA proprietary_component_eula = 4;
+    }
+  }
+  message PricingConfig {
+    enum BillingBasis {
+      BILLING_BASIS_UNSPECIFIED = 0;
+      INSTANCE_BASED = 1;
+      ACCOUNT_BASED = 2;
+    }
+    message FreeTier {
+      message Redemption {
+        bool active = 1;
+        string redeemed_by = 2;
+        .google.protobuf.Timestamp start_time = 3;
+        .google.protobuf.Timestamp expiry_time = 4;
+      }
+      bool available = 1;
+      int32 duration_days = 2;
+      .alis.bl.blocks.v1.Entitlement.PricingConfig.FreeTier.Redemption redemption = 3;
+    }
+    message InstancePurchaseCost {
+      .google.type.Money price_per_instance = 1;
+    }
+    message InstanceRecurringCost {
+      enum Interval {
+        INTERVAL_UNSPECIFIED = 0;
+        MONTHLY = 1;
+        YEARLY = 2;
+      }
+      .google.type.Money price_per_instance = 1;
+      .alis.bl.blocks.v1.Entitlement.PricingConfig.InstanceRecurringCost.Interval interval = 2;
+      .google.type.Date start_date = 3;
+      .google.type.Date end_date = 4;
+    }
+    message DistributionCommission {
+      float commission_rate = 1;
+    }
+    .alis.bl.blocks.v1.Entitlement.PricingConfig.FreeTier free_tier = 1;
+    .alis.bl.blocks.v1.Entitlement.PricingConfig.InstancePurchaseCost instance_purchase_cost = 2;
+    .alis.bl.blocks.v1.Entitlement.PricingConfig.InstanceRecurringCost instance_recurring_cost = 3;
+    .alis.bl.blocks.v1.Entitlement.PricingConfig.DistributionCommission distribution_commission = 4;
+    .alis.bl.blocks.v1.Entitlement.PricingConfig.BillingBasis billing_basis = 5;
+  }
+  string name = 1;
+  string entitlement_plan_reference = 2;
+  string account = 3;
+  .alis.bl.blocks.v1.Entitlement.LicenseType license_type = 4;
+  .alis.bl.blocks.v1.Entitlement.LicenseConfig license_config = 5;
+  .alis.bl.blocks.v1.Entitlement.PricingConfig pricing_config = 6;
+  .alis.bl.blocks.v1.Entitlement.State state = 7;
+  .alis.bl.blocks.v1.Entitlement.Type type = 8;
+  string display_name = 9;
+  .google.protobuf.Timestamp expire_time = 95;
+  .google.protobuf.Timestamp activated_time = 96;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateEntitlementRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.Entitlement entitlement = 2;
+}
+
+message GetEntitlementRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message GetEntitlementPlanRequest {
+  string name = 1;
+  string requesting_account = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateEntitlementRequest {
+  .alis.bl.blocks.v1.Entitlement entitlement = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteEntitlementRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteEntitlementRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListEntitlementsRequest {
+  enum View {
+    VIEW_UNSPECIFIED = 0;
+    ALL = 1;
+    PLAN = 2;
+    PLAN_USE = 3;
+    CUSTOM_USE = 4;
+    NON_PLAN = 5;
+  }
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 9;
+}
+
+message ListEntitlementsResponse {
+  repeated .alis.bl.blocks.v1.Entitlement entitlements = 1;
+  string next_page_token = 2;
+}
+
+message ProvisionEntitlementRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.Entitlement entitlement = 2;
+}
+
+message RedeemEntitlementRequest {
+  string name = 1;
+}
+
+message ConfigureEntitlementRequest {
+  .alis.bl.blocks.v1.Entitlement entitlement = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message ConfirmEntitlementRequest {
+  string name = 1;
+}
+
+message CreateEntitlementPlanRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.Entitlement entitlement_plan = 2;
+}
+
+message ListEntitlementPlansRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListEntitlementPlansResponse {
+  repeated .alis.bl.blocks.v1.Entitlement entitlement_plans = 1;
+  string next_page_token = 2;
+}
+
+message UpdateEntitlementPlanRequest {
+  .alis.bl.blocks.v1.Entitlement entitlement_plan = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message Block {
+  enum ReleaseLevel {
+    RELEASE_LEVEL_UNSPECIFIED = 0;
+    EXPERIMENTAL = 1;
+    ALPHA = 2;
+    BETA = 3;
+    GA = 4;
+    RC = 5;
+  }
+  message Releases {
+    string ga = 1;
+    string beta = 2;
+    string rc = 3;
+    string alpha = 4;
+    string experimental = 5;
+  }
+  message Dbd {
+    bool define = 1;
+    bool build = 2;
+    bool deploy = 3;
+    string notes = 4;
+  }
+  message Publisher {
+    string account = 1;
+    string logo = 2;
+    string website = 3;
+  }
+  message OverviewDetails {
+    message CallToAction {
+      string title = 1;
+      string url = 2;
+    }
+    message KeyFeature {
+      string title = 1;
+      string description = 2;
+    }
+    message CodeArchitectureLayer {
+      message LayerIcon {
+        enum StandardLayerIcon {
+          LAYER_ICON_UNSPECIFIED = 0;
+          PROTOBUF = 1;
+          TERRAFORM = 2;
+          DOCKER = 3;
+          KUBERNETES = 4;
+          GIT = 5;
+          GRPC = 6;
+          PYTHON = 10;
+          JAVASCRIPT = 11;
+          TYPESCRIPT = 12;
+          GO_LANG = 13;
+          JAVA = 14;
+          RUST = 15;
+          CSHARP = 16;
+          PHP = 17;
+          RUBY = 18;
+          SWIFT = 19;
+          REACT = 30;
+          ANGULAR = 31;
+          VUE_JS = 32;
+          NODE_JS = 33;
+          SPRING_BOOT = 34;
+          DJANGO = 35;
+          FLASK = 36;
+          DOTNET = 37;
+          RUBY_ON_RAILS = 38;
+          LARAVEL = 39;
+        }
+        string icon_tooltip = 1;
+        .alis.bl.blocks.v1.Block.OverviewDetails.CodeArchitectureLayer.LayerIcon.StandardLayerIcon icon = 2;  // enum (heuristically resolved)
+        string icon_uri = 3;
+      }
+      string title = 1;
+      string description = 2;
+      repeated .alis.bl.blocks.v1.Block.OverviewDetails.CodeArchitectureLayer.LayerIcon layer_icons = 3;
+    }
+    message AgentCard {
+      message AuthenticationInfo {
+        repeated string schemes = 1;
+        string documentation_url = 2;
+      }
+      message Capabilities {
+        bool streaming = 1;
+        bool push_notifications = 2;
+        bool task_state_history = 3;
+        bool tasks_get = 4;
+        bool tasks_cancel = 5;
+        bool tasks_push_notification_config_set = 6;
+      }
+      message Skill {
+        string id = 1;
+        string name = 2;
+        string description = 3;
+        repeated string input_modes = 4;
+        repeated string output_modes = 5;
+        repeated string examples = 6;
+      }
+      message ContactInfo {
+        string email = 1;
+        string website = 2;
+      }
+      message ProviderInfo {
+        string name = 1;
+        string website = 2;
+      }
+      string agent_card_url = 1;
+      string a2a_version = 2;
+      string name = 3;
+      string description = 4;
+      string service_endpoint = 5;
+      .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard.AuthenticationInfo authentication = 6;
+      .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard.Capabilities capabilities = 7;
+      repeated .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard.Skill skills = 8;
+      repeated string default_input_modes = 9;
+      repeated string default_output_modes = 10;
+      .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard.ContactInfo contact = 11;
+      .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard.ProviderInfo provider = 12;
+      string icon_url = 13;
+      string documentation_url = 14;
+      string agent_version = 15;
+      string last_updated = 16;
+      map<string, string> additional_metadata = 17;
+    }
+    string banner_uri = 1;
+    string hero_statement = 2;
+    string description = 3;
+    .alis.bl.blocks.v1.Block.OverviewDetails.CallToAction call_to_action = 4;
+    string video_uri = 5;
+    repeated string highlights = 6;
+    repeated .alis.bl.blocks.v1.Block.OverviewDetails.KeyFeature key_features = 7;
+    repeated .alis.bl.blocks.v1.Block.OverviewDetails.CodeArchitectureLayer code_architecture = 8;
+    .alis.bl.blocks.v1.Block.OverviewDetails.AgentCard agent_card = 9;
+    string tagline = 10;
+  }
+  message Documentation {
+    message Config {
+      message Reference {
+        string title = 1;
+        string description = 2;
+        string documentation_uri = 3;
+        string provider = 4;
+        string icon_uri = 5;
+      }
+      message Attachment {
+        string title = 1;
+        string description = 2;
+        string uri = 3;
+        string mime_type = 4;
+        int64 size_bytes = 5;
+      }
+      string user_documentation_prompt = 1;
+      repeated .alis.bl.blocks.v1.Block.Documentation.Config.Reference references = 2;
+      repeated .alis.bl.blocks.v1.Block.Documentation.Config.Attachment attachments = 3;
+      string agent_documentation_prompt = 4;
+      .google.protobuf.Timestamp update_time = 99;
+    }
+    .alis.bl.blocks.v1.Block.Documentation.Config config = 1;
+  }
+  message Agent {
+    string service_endpoint = 1;
+    bool agentic_install_enabled = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.bl.blocks.v1.Block.Releases releases = 4;
+  bool verified = 5;
+  bool one_click_deploy = 6;
+  bool premium = 7;
+  bool dedicated_service = 8;
+  .alis.bl.blocks.v1.Block.Dbd dbd = 12;
+  string tagline = 13;
+  bool agent_enabled = 14;
+  .alis.bl.blocks.v1.Block.ReleaseLevel release_level = 15;
+  .alis.bl.blocks.v1.Block.Publisher publisher = 30;
+  .alis.bl.blocks.v1.Block.OverviewDetails overview_details = 31;
+  .alis.bl.blocks.v1.Block.Documentation documentation = 33;
+  .alis.bl.blocks.v1.Block.Agent agent = 38;
+  bool deprecated = 90;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message RetrieveBlockDetailsRequest {
+  string package_filter = 1;
+  string filter = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message RetrieveBlockDetailsResponse {
+  message BlockDetail {
+    .alis.bl.blocks.v1.Block block = 1;
+    repeated .alis.bl.blocks.v1.Instance instances = 2;
+    int32 total_installs = 3;
+  }
+  repeated .alis.bl.blocks.v1.RetrieveBlockDetailsResponse.BlockDetail installed_blocks = 1;
+  repeated .alis.bl.blocks.v1.RetrieveBlockDetailsResponse.BlockDetail available_blocks = 2;
+}
+
+message BatchGetBlocksRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetBlocksResponse {
+  repeated .alis.bl.blocks.v1.Block blocks = 1;
+}
+
+message GetBlockRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateBlockRequest {
+  .alis.bl.blocks.v1.Block block = 2;
+  string block_id = 3;
+}
+
+message UpdateBlockRequest {
+  .alis.bl.blocks.v1.Block block = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteBlockRequest {
+  string name = 1;
+}
+
+message ListBlocksRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListBlocksResponse {
+  repeated .alis.bl.blocks.v1.Block blocks = 1;
+  string next_page_token = 2;
+}
+
+message BootstrapBlockRequest {
+  .alis.bl.blocks.v1.Block block = 2;
+  string block_id = 3;
+  string package = 4;
+  .alis.bl.blocks.v1.BlockVersion.Content contributed_content = 5;
+}
+
+message BootstrapBlockResponse {
+  .alis.bl.blocks.v1.Block block = 1;
+}
+
+message AddBlockRequest {
+  string block = 1;
+  string package = 2;
+  string entitlement = 3;
+}
+
+message AddBlockResponse {
+  string instance = 1;
+}
+
+message InstallBlockRequest {
+  string block = 1;
+  string package = 2;
+  string build_folder = 3;
+  string instance = 4;
+  string block_version = 5;
+}
+
+message InstallBlockResponse {
+  string instance = 1;
+}
+
+message InstallBlockMetadata {
+  string progress_notes = 1;
+}
+
+message UpgradeBlockRequest {
+  string instance = 1;
+  string block_version = 2;
+}
+
+message UpgradeBlockResponse {
+  string version = 1;
+  .alis.bl.blocks.v1.BlockVersion.Source define_source = 2;
+  .alis.bl.blocks.v1.BlockVersion.Source build_source = 3;
+}
+
+message UpgradeBlockMetadata {
+  string progress_notes = 1;
+}
+
+message UninstallBlockRequest {
+  string instance = 1;
+}
+
+message UninstallBlockResponse {
+}
+
+message UninstallBlockMetadata {
+  string progress_notes = 1;
+}
+
+message ProvideInputRequest {
+}
+
+message ProvideInputResponse {
+}
+
+message GenerateUserContentRequest {
+  string name = 1;
+  string version = 2;
+}
+
+message GenerateUserContentResponse {
+  .alis.bl.blocks.v1.BlockVersion.Documentation.UserContent user_content = 1;
+  string version = 2;
+}
+
+message GenerateUserContentMetadata {
+  string progress_notes = 1;
+  .google.protobuf.Timestamp start_time = 2;
+}
+
+message GenerateAgentContentRequest {
+  string name = 1;
+  string version = 2;
+}
+
+message GenerateAgentContentResponse {
+  .alis.bl.blocks.v1.BlockVersion.Documentation.AgentContent agent_content = 1;
+  string version = 2;
+}
+
+message GenerateAgentContentMetadata {
+  string progress_notes = 1;
+  .google.protobuf.Timestamp start_time = 2;
+}
+
+message GenerateFileUploadUriRequest {
+  string bucket_name = 1;
+  string object_name = 2;
+  string mime_type = 3;
+}
+
+message GenerateFileUploadUriResponse {
+  string upload_uri = 1;
+}
+
+message UploadBlockDocumentationConfigAttachmentRequest {
+  string block = 1;
+  string file_display_name = 2;
+  string mime_type = 3;
+}
+
+message UploadBlockDocumentationConfigAttachmentResponse {
+  string upload_uri = 1;
+}
+
+message DeleteBlockDocumentationConfigAttachmentRequest {
+  string block = 1;
+  string file_display_name = 2;
+}
+
+message GenerateBlockOverviewRequest {
+  string name = 1;
+  repeated string keywords = 2;
+}
+
+message GenerateBlockOverviewMetadata {
+  .alis.bl.blocks.v1.GenerateBlockOverviewRequest request = 1;
+}
+
+message GenerateBlockOverviewResponse {
+  .alis.bl.blocks.v1.Block.OverviewDetails overview_details = 1;
+}
+
+service BlocksService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetBlock(.alis.bl.blocks.v1.GetBlockRequest) returns (.alis.bl.blocks.v1.Block);
+  rpc CreateBlock(.alis.bl.blocks.v1.CreateBlockRequest) returns (.alis.bl.blocks.v1.Block);
+  rpc UpdateBlock(.alis.bl.blocks.v1.UpdateBlockRequest) returns (.alis.bl.blocks.v1.Block);
+  rpc DeleteBlock(.alis.bl.blocks.v1.DeleteBlockRequest) returns (.google.protobuf.Empty);
+  rpc ListBlocks(.alis.bl.blocks.v1.ListBlocksRequest) returns (.alis.bl.blocks.v1.ListBlocksResponse);
+  rpc RetrieveBlockDetails(.alis.bl.blocks.v1.RetrieveBlockDetailsRequest) returns (.alis.bl.blocks.v1.RetrieveBlockDetailsResponse);
+  rpc BatchGetBlocks(.alis.bl.blocks.v1.BatchGetBlocksRequest) returns (.alis.bl.blocks.v1.BatchGetBlocksResponse);
+  rpc BootstrapBlock(.alis.bl.blocks.v1.BootstrapBlockRequest) returns (.alis.bl.blocks.v1.BootstrapBlockResponse);
+  rpc AddBlock(.alis.bl.blocks.v1.AddBlockRequest) returns (.alis.bl.blocks.v1.AddBlockResponse);
+  rpc InstallBlock(.alis.bl.blocks.v1.InstallBlockRequest) returns (.google.longrunning.Operation);
+  rpc UpgradeBlock(.alis.bl.blocks.v1.UpgradeBlockRequest) returns (.google.longrunning.Operation);
+  rpc UninstallBlock(.alis.bl.blocks.v1.UninstallBlockRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc GenerateUserContent(.alis.bl.blocks.v1.GenerateUserContentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateAgentContent(.alis.bl.blocks.v1.GenerateAgentContentRequest) returns (.google.longrunning.Operation);
+  rpc UploadBlockDocumentationConfigAttachment(.alis.bl.blocks.v1.UploadBlockDocumentationConfigAttachmentRequest) returns (.alis.bl.blocks.v1.UploadBlockDocumentationConfigAttachmentResponse);
+  rpc DeleteBlockDocumentationConfigAttachment(.alis.bl.blocks.v1.DeleteBlockDocumentationConfigAttachmentRequest) returns (.google.protobuf.Empty);
+  rpc GenerateFileUploadUri(.alis.bl.blocks.v1.GenerateFileUploadUriRequest) returns (.alis.bl.blocks.v1.GenerateFileUploadUriResponse);
+  rpc GenerateBlockOverview(.alis.bl.blocks.v1.GenerateBlockOverviewRequest) returns (.google.longrunning.Operation);
+}
+
+service BlockVersionsService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetBlockVersion(.alis.bl.blocks.v1.GetBlockVersionRequest) returns (.alis.bl.blocks.v1.BlockVersion);
+  rpc CreateBlockVersion(.alis.bl.blocks.v1.CreateBlockVersionRequest) returns (.google.longrunning.Operation);
+  rpc UpdateBlockVersion(.alis.bl.blocks.v1.UpdateBlockVersionRequest) returns (.alis.bl.blocks.v1.BlockVersion);
+  rpc DeleteBlockVersion(.alis.bl.blocks.v1.DeleteBlockVersionRequest) returns (.google.protobuf.Empty);
+  rpc ListBlockVersions(.alis.bl.blocks.v1.ListBlockVersionsRequest) returns (.alis.bl.blocks.v1.ListBlockVersionsResponse);
+  rpc GetLatestStableBlockVersion(.alis.bl.blocks.v1.GetLatestStableBlockVersionRequest) returns (.alis.bl.blocks.v1.BlockVersion);
+  rpc GenerateDocumentationUserContent(.alis.bl.blocks.v1.GenerateDocumentationUserContentRequest) returns (.google.longrunning.Operation);
+  rpc GenerateDocumentationAgentContent(.alis.bl.blocks.v1.GenerateDocumentationAgentContentRequest) returns (.google.longrunning.Operation);
+}
+
+service EntitlementsService {
+  rpc CreateEntitlement(.alis.bl.blocks.v1.CreateEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc GetEntitlement(.alis.bl.blocks.v1.GetEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc UpdateEntitlement(.alis.bl.blocks.v1.UpdateEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc ListEntitlements(.alis.bl.blocks.v1.ListEntitlementsRequest) returns (.alis.bl.blocks.v1.ListEntitlementsResponse);
+  rpc DeleteEntitlement(.alis.bl.blocks.v1.DeleteEntitlementRequest) returns (.google.protobuf.Empty);
+  rpc UndeleteEntitlement(.alis.bl.blocks.v1.UndeleteEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc ProvisionEntitlement(.alis.bl.blocks.v1.ProvisionEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc ConfigureEntitlement(.alis.bl.blocks.v1.ConfigureEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc ConfirmEntitlement(.alis.bl.blocks.v1.ConfirmEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc RedeemEntitlement(.alis.bl.blocks.v1.RedeemEntitlementRequest) returns (.alis.bl.blocks.v1.Entitlement);
+}
+
+service EntitlementPlansService {
+  rpc CreateEntitlementPlan(.alis.bl.blocks.v1.CreateEntitlementPlanRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc UpdateEntitlementPlan(.alis.bl.blocks.v1.UpdateEntitlementPlanRequest) returns (.alis.bl.blocks.v1.Entitlement);
+  rpc ListEntitlementPlans(.alis.bl.blocks.v1.ListEntitlementPlansRequest) returns (.alis.bl.blocks.v1.ListEntitlementPlansResponse);
+  rpc GetEntitlementPlan(.alis.bl.blocks.v1.GetEntitlementPlanRequest) returns (.alis.bl.blocks.v1.Entitlement);
+}
+
+service InstancesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetInstance(.alis.bl.blocks.v1.GetInstanceRequest) returns (.alis.bl.blocks.v1.Instance);
+  rpc CreateInstance(.alis.bl.blocks.v1.CreateInstanceRequest) returns (.alis.bl.blocks.v1.Instance);
+  rpc UpdateInstance(.alis.bl.blocks.v1.UpdateInstanceRequest) returns (.alis.bl.blocks.v1.Instance);
+  rpc DeleteInstance(.alis.bl.blocks.v1.DeleteInstanceRequest) returns (.google.protobuf.Empty);
+  rpc SuspendInstance(.alis.bl.blocks.v1.SuspendInstanceRequest) returns (.alis.bl.blocks.v1.Instance);
+  rpc ListInstances(.alis.bl.blocks.v1.ListInstancesRequest) returns (.alis.bl.blocks.v1.ListInstancesResponse);
+  rpc BatchGetInstances(.alis.bl.blocks.v1.BatchGetInstancesRequest) returns (.alis.bl.blocks.v1.BatchGetInstancesResponse);
+  rpc PurgeInstances(.alis.bl.blocks.v1.PurgeInstancesRequest) returns (.alis.bl.blocks.v1.PurgeInstancesResponse);
+  rpc CommitFiles(.alis.bl.blocks.v1.CommitFilesRequest) returns (.google.longrunning.Operation);
+  rpc MergeBlockBranch(.alis.bl.blocks.v1.MergeBlockBranchRequest) returns (.google.longrunning.Operation);
+  rpc RetrieveInstancesByPackages(.alis.bl.blocks.v1.RetrieveInstancesByPackagesRequest) returns (.alis.bl.blocks.v1.RetrieveInstancesByPackagesResponse);
+}

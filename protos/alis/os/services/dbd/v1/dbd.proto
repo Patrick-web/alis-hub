@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package alis.os.services.dbd.v1;
+
+import "alis/os/resources/products/v1/products.proto";
+message RunDefineRequest {
+  message ProtoFile {
+    string name = 1;
+    bytes content = 2;
+  }
+  string proto_package = 1;
+  string commit_sha = 2;
+  bool allow_new = 3;
+  bool force = 4;
+  repeated .alis.os.services.dbd.v1.RunDefineRequest.ProtoFile proto_files = 5;
+  bool increment_stubs_major_version = 6;
+}
+
+message RunDefineResponse {
+  message InitialDefineResponse {
+  }
+  message StandardDefineResponse {
+  }
+  oneof response {
+    .alis.os.services.dbd.v1.RunDefineResponse.StandardDefineResponse standard_define_response = 1;
+    .alis.os.services.dbd.v1.RunDefineResponse.InitialDefineResponse initial_define_response = 2;
+  }
+}
+
+message RunDefineMetadata {
+  string message = 1;
+  string proto_package = 2;
+  string builders = 3;
+  repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 4;
+}
+
+message RunBuildRequest {
+  string proto_package = 1;
+  string commit_sha = 2;
+  repeated string dockerfile_paths = 3;
+  string proto_commit_sha = 4;
+  repeated string retag_paths = 5;
+  repeated string locally_built_paths = 6;
+}
+
+message RunBuildResponse {
+}
+
+message RunBuildMetadata {
+  string message = 1;
+  string proto_package = 2;
+  string builders = 3;
+  repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 4;
+  string commit_sha = 5;
+  string proto_commit_sha = 6;
+  repeated string dockerfile_paths = 7;
+  repeated string retag_paths = 8;
+  string version = 9;
+}
+
+message RunDeployRequest {
+  string proto_package = 1;
+  bool validate_only = 4;
+  string version = 5;
+  bytes terraform_tfvars = 11;
+  oneof deployment {
+    string product_deployment = 2;
+    .alis.os.resources.products.v1.ProductDeployment new_product_deployment = 3;
+  }
+}
+
+message RunDeployResponse {
+}
+
+message RunDeployMetadata {
+  string message = 1;
+  string proto_package = 2;
+  string builders = 3;
+  repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 4;
+  string version = 5;
+}
+
+message RunBuildAndDeployRequest {
+  .alis.os.services.dbd.v1.RunBuildRequest build_request = 1;
+  repeated .alis.os.services.dbd.v1.RunDeployRequest deploy_requests = 2;
+}
+
+message RunBuildAndDeployResponse {
+}
+
+message RunBuildAndDeployMetadata {
+  string message = 1;
+  string proto_package = 2;
+  string builder = 3;
+  string build_operation = 4;
+  repeated string deploy_operations = 5;
+}
+
+message DefineBuildDeployProgress {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PENDING = 1;
+    RUNNING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+  }
+  string notes = 1;
+  .alis.os.services.dbd.v1.DefineBuildDeployProgress.State state = 2;
+  string title = 3;
+  string uri = 4;
+}

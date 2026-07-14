@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package alis.bl.agents.v1;
+
+import "alis/os/ideas/v1/ideas.proto";
+import "google/longrunning/operations.proto";
+
+message BlockConfig {
+  enum Architecture {
+    ARCHITECTURE_UNSPECIFIED = 0;
+    ARCHITECTURE_GO_ADK = 1;
+  }
+  .alis.bl.agents.v1.BlockConfig.Architecture architecture = 1;
+  string agent_name = 2;
+  string tagline = 3;
+  bool include_console = 4;
+}
+
+message InstallBlockRequest {
+  string instance = 1;
+  string build_folder = 2;
+  string block_version = 3;
+  .alis.bl.agents.v1.BlockConfig block_config = 4;
+}
+
+message InstallBlockResponse {
+  string instance = 1;
+  string branch = 2;
+}
+
+message InstallBlockMetadata {
+  .alis.bl.agents.v1.InstallBlockRequest request = 1;
+  string progress_notes = 2;
+}
+
+message UpgradeBlockRequest {
+  string instance = 1;
+  string block_version = 2;
+  .alis.bl.agents.v1.BlockConfig block_config = 3;
+}
+
+message UpgradeBlockResponse {
+  string version = 1;
+}
+
+message UpgradeBlockMetadata {
+  .alis.bl.agents.v1.UpgradeBlockRequest request = 1;
+  string progress_notes = 2;
+}
+
+message UninstallBlockRequest {
+  string instance = 1;
+}
+
+message UninstallBlockResponse {
+}
+
+message UninstallBlockMetadata {
+  .alis.bl.agents.v1.UninstallBlockRequest request = 1;
+}
+
+message GenerateBlockContentRequest {
+  string package = 1;
+  .alis.bl.agents.v1.BlockConfig block_config = 2;
+  string build_folder = 3;
+}
+
+message GenerateBlockContentResponse {
+  message Content {
+    repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File build_files = 1;
+    repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File infra_files = 2;
+    repeated .alis.os.ideas.v1.Stream.MultiFileUpload.File proto_files = 3;
+  }
+  .alis.bl.agents.v1.GenerateBlockContentResponse.Content block_content = 1;
+}
+
+message PublishGeminiEnterpriseA2aAgentRequest {
+  string project_number = 1;
+  string location = 2;
+  string application_id = 3;
+  string agent_id = 4;
+  string auth_id = 5;
+  string agent_card_url = 6;
+  string environment = 7;
+}
+
+message PublishGeminiEnterpriseA2aAgentResponse {
+  string agent = 1;
+}
+
+message IntitialiseAgentRequest {
+  string product = 1;
+  string agent_name = 2;
+  string tagline = 3;
+  string environment = 4;
+}
+
+message IntitialiseAgentMetadata {
+  string progress_notes = 1;
+  string instance = 2;
+  string package = 3;
+  string product = 4;
+  string agent_name = 5;
+  string tagline = 6;
+  string environment = 7;
+}
+
+message IntitialiseAgentResponse {
+  string neuron = 1;
+  string agent_uri = 2;
+  string agent_ui_uri = 3;
+}
+
+message InitialiseGeminiEnterpriseRequest {
+  string product = 1;
+  string environment = 2;
+}
+
+message InitialiseGeminiEnterpriseMetadata {
+  string progress_notes = 1;
+  string instance = 2;
+  string package = 3;
+  string product = 4;
+  string environment = 5;
+}
+
+message InitialiseGeminiEnterpriseResponse {
+  string neuron = 1;
+  string google_cloud_console_url = 2;
+}
+
+service AgentsService {
+  rpc InstallBlock(.alis.bl.agents.v1.InstallBlockRequest) returns (.google.longrunning.Operation);
+  rpc UpgradeBlock(.alis.bl.agents.v1.UpgradeBlockRequest) returns (.google.longrunning.Operation);
+  rpc UninstallBlock(.alis.bl.agents.v1.UninstallBlockRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc GenerateBlockContent(.alis.bl.agents.v1.GenerateBlockContentRequest) returns (.alis.bl.agents.v1.GenerateBlockContentResponse);
+  rpc PublishGeminiEnterpriseA2aAgent(.alis.bl.agents.v1.PublishGeminiEnterpriseA2aAgentRequest) returns (.alis.bl.agents.v1.PublishGeminiEnterpriseA2aAgentResponse);
+  rpc InitialiseAgent(.alis.bl.agents.v1.IntitialiseAgentRequest) returns (.google.longrunning.Operation);
+  rpc InitialiseGeminiEnterprise(.alis.bl.agents.v1.InitialiseGeminiEnterpriseRequest) returns (.google.longrunning.Operation);
+}

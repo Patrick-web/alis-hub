@@ -24,6 +24,7 @@ import type {
 } from "../../../../bindings/alis-hub-v3/models";
 import { useLabs } from "../../stores/labs";
 import { useGCloud } from "../../stores/gcloud";
+import { useWorkspace } from "../../stores/workspace";
 
 interface Props {
   projectID: string;
@@ -94,6 +95,8 @@ function queryTabLabel(id: string): string {
 export function SpannerExplorer({ projectID }: Props) {
   const { isSuggestionEnabled } = useLabs();
   const rwTxnLabsEnabled = isSuggestionEnabled("spanner-rw-transaction");
+  const protoDecodeEnabled = isSuggestionEnabled("spanner-proto-decode");
+  const { state: workspaceState } = useWorkspace();
 
   // Ref tracking all open RW sessions so we can rollback on unmount
   const openRWTxnsRef = useRef<Map<string, PendingRWTxn>>(new Map());
@@ -1007,6 +1010,9 @@ export function SpannerExplorer({ projectID }: Props) {
                     <SpannerTableView
                       tableName={info.tableName}
                       dbName={info.dbName}
+                      org={workspaceState.organisation}
+                      product={workspaceState.product}
+                      protoDecodeEnabled={protoDecodeEnabled}
                       onNavigateToQuery={(navSql) =>
                         handleNavigateToQuery(navSql, info.dbName)
                       }

@@ -747,12 +747,20 @@ type spannerDDLResp struct {
 }
 
 type SpannerQueryResult struct {
-	Columns []string   `json:"columns"`
-	Rows    [][]string `json:"rows"`
+	Columns          []string   `json:"columns"`
+	ColumnTypes      []string   `json:"columnTypes"`
+	ColumnProtoTypes []string   `json:"columnProtoTypes"` // fully-qualified proto message name for columns of type PROTO; empty otherwise
+	Rows             [][]string `json:"rows"`
+}
+
+type spannerFieldType struct {
+	Code          string `json:"code"`
+	ProtoTypeName string `json:"protoTypeName"`
 }
 
 type spannerField struct {
-	Name string `json:"name"`
+	Name string           `json:"name"`
+	Type spannerFieldType `json:"type"`
 }
 
 type spannerRowType struct {
@@ -913,6 +921,8 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 	}
 
 	var columns []string
+	var columnTypes []string
+	var columnProtoTypes []string
 	var flat []interface{}
 	var pendingChunk string // tail of a chunked string value
 	hasPending := false
@@ -924,8 +934,12 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 		}
 		if len(columns) == 0 && len(chunk.Metadata.RowType.Fields) > 0 {
 			columns = make([]string, len(chunk.Metadata.RowType.Fields))
+			columnTypes = make([]string, len(chunk.Metadata.RowType.Fields))
+			columnProtoTypes = make([]string, len(chunk.Metadata.RowType.Fields))
 			for i, f := range chunk.Metadata.RowType.Fields {
 				columns[i] = f.Name
+				columnTypes[i] = f.Type.Code
+				columnProtoTypes[i] = f.Type.ProtoTypeName
 			}
 		}
 		for i, v := range chunk.Values {
@@ -955,7 +969,7 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 	}
 
 	if len(columns) == 0 {
-		return &SpannerQueryResult{Columns: []string{}, Rows: [][]string{}}, nil
+		return &SpannerQueryResult{Columns: []string{}, ColumnTypes: []string{}, ColumnProtoTypes: []string{}, Rows: [][]string{}}, nil
 	}
 	numCols := len(columns)
 	numRows := len(flat) / numCols
@@ -969,7 +983,7 @@ func (g *GCloudService) ExecuteSpannerQuery(databaseResourceName, sql string) (*
 		}
 		rows[i] = cells
 	}
-	return &SpannerQueryResult{Columns: columns, Rows: rows}, nil
+	return &SpannerQueryResult{Columns: columns, ColumnTypes: columnTypes, ColumnProtoTypes: columnProtoTypes, Rows: rows}, nil
 }
 
 // SpannerDMLResult holds the outcome of a partitioned DML statement.

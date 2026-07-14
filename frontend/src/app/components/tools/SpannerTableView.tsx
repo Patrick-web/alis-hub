@@ -12,13 +12,24 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
 } from '../ui/alert-dialog';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
-import type { SpannerQueryResult } from '../../../../bindings/alis-hub-v3/models';
+import * as PD from '../../../../bindings/alis-hub-v3/protodecodeservice';
+import type { SpannerQueryResult, ProtoMessageInfo } from '../../../../bindings/alis-hub-v3/models';
 import { useGCloud } from '../../stores/gcloud';
 
 interface Props {
   tableName: string;
   dbName: string;
+  org: string;
+  product: string;
+  protoDecodeEnabled: boolean;
   onNavigateToQuery: (sql: string) => void;
+}
+
+interface ProtoDecodeView {
+  col: string;
+  loading: boolean;
+  json: string | null;
+  error: string | null;
 }
 
 type WhereOp = '=' | '!=' | '>' | '<' | '>=' | '<=' | 'LIKE' | 'IS NULL' | 'IS NOT NULL';
@@ -42,6 +53,8 @@ interface ContextMenuState {
 
 const OPS: WhereOp[] = ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IS NULL', 'IS NOT NULL'];
 const NO_VALUE_OPS: WhereOp[] = ['IS NULL', 'IS NOT NULL'];
+// Spanner GoogleSQL rejects ORDER BY on these column types.
+const NON_ORDERABLE_TYPES = new Set(['PROTO', 'STRUCT', 'ARRAY', 'JSON']);
 const PAGE_SIZES = [20, 50, 100, 200];
 
 function buildQuery(
@@ -81,7 +94,7 @@ function ident(name: string): string {
   return `\`${name}\``;
 }
 
-export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props) {
+export function SpannerTableView({ tableName, dbName, org, product, protoDecodeEnabled, onNavigateToQuery }: Props) {
   const [columns, setColumns] = useState<string[]>([]);
   const [whereConditions, setWhereConditions] = useState<WhereCondition[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -105,6 +118,14 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
 
   // Row detail panel
   const [selectedRow, setSelectedRow] = useState<string[] | null>(null);
+
+  // Proto decode (Labs feature) — per-column chosen message type, and the decoded-JSON view
+  const [protoColumnTypes, setProtoColumnTypes] = useState<Record<string, string>>({});
+  const [tfColumnProtoTypes, setTfColumnProtoTypes] = useState<Record<string, string | undefined>>({});
+  const [protoTypeOptions, setProtoTypeOptions] = useState<ProtoMessageInfo[]>([]);
+  const [protoTypesLoading, setProtoTypesLoading] = useState(false);
+  const [protoTypesError, setProtoTypesError] = useState<string | null>(null);
+  const [protoDecodeView, setProtoDecodeView] = useState<ProtoDecodeView | null>(null);
 
   // Close column picker on outside click
   useEffect(() => {
@@ -159,6 +180,18 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
         if (r?.columns?.length) {
           setColumns((prev) => (prev.length ? prev : r.columns));
         }
+        // Native Spanner PROTO columns declare their message type on the wire —
+        // pre-fill the decode picker so the user doesn't have to guess it.
+        if (r?.columns?.length && r.columnProtoTypes?.length) {
+          setProtoColumnTypes((prev) => {
+            const next = { ...prev };
+            r.columns.forEach((col, i) => {
+              const protoType = r.columnProtoTypes[i];
+              if (protoType && !next[col]) next[col] = protoType;
+            });
+            return next;
+          });
+        }
       })
       .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
       .finally(() => setLoading(false));
@@ -167,7 +200,72 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { runQuery(); }, []);
 
+  function loadProtoTypes() {
+    if (!protoDecodeEnabled || !org) return;
+    setProtoTypesLoading(true);
+    setProtoTypesError(null);
+    PD.ListProtoMessageTypes(org)
+      .then((types: ProtoMessageInfo[] | null) => setProtoTypeOptions(types ?? []))
+      .catch((e: unknown) => setProtoTypesError(String(e)))
+      .finally(() => setProtoTypesLoading(false));
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadProtoTypes(); }, [protoDecodeEnabled, org]);
+
+  function loadSpannerSchemaTypes() {
+    if (!protoDecodeEnabled || !org || !product || !tableName) return;
+    PD.GetSpannerColumnProtoTypes(org, product, tableName)
+      .then((cols: Record<string, string | undefined> | null) => {
+        if (!cols) return;
+        setTfColumnProtoTypes(cols);
+        // spanner.tf is the authoritative, always-available source (it also covers
+        // columns Spanner exposes as plain BYTES) — prefer it over native metadata,
+        // but never clobber a manual override the user already made.
+        setProtoColumnTypes((prev) => {
+          const next = { ...prev };
+          Object.entries(cols).forEach(([col, protoType]) => {
+            if (protoType) next[col] = protoType;
+          });
+          return next;
+        });
+      })
+      .catch(() => { /* no spanner.tf mapping available — fall back to native metadata / manual pick */ });
+  }
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { loadSpannerSchemaTypes(); }, [protoDecodeEnabled, org, product, tableName]);
+
+  function rebuildProtoIndex() {
+    if (!org) return;
+    setProtoTypesLoading(true);
+    setProtoTypesError(null);
+    Promise.all([
+      PD.RefreshProtoIndex(org),
+      product ? PD.RefreshSpannerSchemaIndex(org, product) : Promise.resolve(),
+    ])
+      .then(() => { loadProtoTypes(); loadSpannerSchemaTypes(); })
+      .catch((e: unknown) => { setProtoTypesError(String(e)); setProtoTypesLoading(false); });
+  }
+
+  function openProtoDecodedView(col: string, cellValue: string) {
+    const messageType = protoColumnTypes[col];
+    if (!messageType) return;
+    setProtoDecodeView({ col, loading: true, json: null, error: null });
+    PD.DecodeProtoBytes(org, cellValue, messageType)
+      .then((json: string) => setProtoDecodeView({ col, loading: false, json, error: null }))
+      .catch((e: unknown) => setProtoDecodeView({ col, loading: false, json: null, error: String(e) }));
+  }
+
+  function isOrderableColumn(col: string): boolean {
+    const idx = result?.columns.indexOf(col) ?? -1;
+    if (idx < 0) return true;
+    const type = result?.columnTypes?.[idx];
+    return !type || !NON_ORDERABLE_TYPES.has(type);
+  }
+
   function sortByColumn(col: string) {
+    if (!isOrderableColumn(col)) return;
     const newDir: 'ASC' | 'DESC' = orderBy === col && orderDir === 'ASC' ? 'DESC' : 'ASC';
     setOrderBy(col);
     setOrderDir(newDir);
@@ -335,6 +433,18 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
             )}
           </div>
 
+          {protoDecodeEnabled && (
+            <button
+              onClick={rebuildProtoIndex}
+              disabled={protoTypesLoading}
+              title="Recompile proto types from the define repo"
+              className="flex items-center gap-[5px] h-[26px] px-[8px] bg-muted border border-border rounded-[3px] text-[10px] font-mono text-foreground/60 hover:text-foreground hover:border-brand-fill/50 transition-colors disabled:opacity-40 shrink-0"
+            >
+              <Icon icon="solar:refresh-linear" className={`text-[11px] ${protoTypesLoading ? 'animate-spin' : ''}`} />
+              <span>Rebuild proto index</span>
+            </button>
+          )}
+
           {/* WHERE filters */}
           <div className="flex-1 flex flex-col gap-[5px] min-w-0">
             {whereConditions.map((cond) => (
@@ -451,26 +561,49 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
           <table className="w-full border-collapse text-[10px] font-mono">
             <thead className="sticky top-0 z-10">
               <tr className="bg-muted border-b border-border">
-                {result.columns.map((col) => (
-                  <th
-                    key={col}
-                    className="text-left px-[12px] py-[7px] text-foreground/50 font-bold text-[9px] whitespace-nowrap border-r border-border last:border-0 cursor-pointer hover:bg-foreground/[3%] transition-colors select-none"
-                    onClick={() => sortByColumn(col)}
-                    onContextMenu={(e) => openContextMenu(e, buildColumnMenu(col))}
-                  >
-                    <div className="flex items-center gap-[5px] uppercase">
-                      {col}
-                      <Icon
-                        icon={
-                          orderBy === col
-                            ? (orderDir === 'ASC' ? 'solar:sort-from-bottom-to-top-linear' : 'solar:sort-from-top-to-bottom-linear')
-                            : 'solar:sort-linear'
-                        }
-                        className={`text-[9px] transition-colors ${orderBy === col ? 'text-brand' : 'text-foreground/15'}`}
-                      />
-                    </div>
-                  </th>
-                ))}
+                {result.columns.map((col, colIdx) => {
+                  const colType = result.columnTypes?.[colIdx];
+                  const isDecodable = colType === 'BYTES' || colType === 'PROTO' || !!tfColumnProtoTypes[col];
+                  const orderable = isOrderableColumn(col);
+                  return (
+                    <th
+                      key={col}
+                      className="text-left px-[12px] py-[7px] text-foreground/50 font-bold text-[9px] whitespace-nowrap border-r border-border last:border-0 hover:bg-foreground/[3%] transition-colors select-none"
+                      onContextMenu={(e) => openContextMenu(e, buildColumnMenu(col))}
+                    >
+                      <div
+                        className={`flex items-center gap-[5px] uppercase ${orderable ? 'cursor-pointer' : 'cursor-default'}`}
+                        onClick={() => sortByColumn(col)}
+                        title={orderable ? undefined : `${colType} columns can't be sorted`}
+                      >
+                        {col}
+                        {orderable && (
+                          <Icon
+                            icon={
+                              orderBy === col
+                                ? (orderDir === 'ASC' ? 'solar:sort-from-bottom-to-top-linear' : 'solar:sort-from-top-to-bottom-linear')
+                                : 'solar:sort-linear'
+                            }
+                            className={`text-[9px] transition-colors ${orderBy === col ? 'text-brand' : 'text-foreground/15'}`}
+                          />
+                        )}
+                      </div>
+                      {protoDecodeEnabled && isDecodable && (
+                        <div className="mt-[4px] normal-case" onClick={(e) => e.stopPropagation()}>
+                          <SearchableSelect
+                            value={protoColumnTypes[col] ?? ''}
+                            options={protoTypeOptions.map((t) => ({ label: t.fullName, value: t.fullName }))}
+                            onChange={(val) => setProtoColumnTypes((prev) => ({ ...prev, [col]: val }))}
+                            placeholder="Decode as…"
+                            loading={protoTypesLoading}
+                            emptyLabel={protoTypesError ?? 'No message types'}
+                            className="max-w-[130px] font-normal normal-case"
+                          />
+                        </div>
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -480,19 +613,32 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
                   className="border-b border-border hover:bg-foreground/[2%] transition-colors cursor-pointer"
                   onClick={() => setSelectedRow(row)}
                 >
-                  {row.map((cell, j) => (
-                    <td
-                      key={j}
-                      title={cell === 'NULL' ? '' : cell}
-                      className="px-[12px] py-[6px] border-r border-border last:border-0 max-w-[240px]"
-                      onContextMenu={(e) => openContextMenu(e, buildCellMenu(result.columns[j], cell))}
-                    >
-                      {cell === 'NULL'
-                        ? <span className="text-foreground/20 italic">NULL</span>
-                        : <span className="text-foreground/72 truncate block">{cell}</span>
-                      }
-                    </td>
-                  ))}
+                  {row.map((cell, j) => {
+                    const col = result.columns[j];
+                    const messageType = protoDecodeEnabled ? protoColumnTypes[col] : undefined;
+                    return (
+                      <td
+                        key={j}
+                        title={cell === 'NULL' ? '' : cell}
+                        className="px-[12px] py-[6px] border-r border-border last:border-0 max-w-[240px]"
+                        onContextMenu={(e) => openContextMenu(e, buildCellMenu(col, cell))}
+                      >
+                        {cell === 'NULL' ? (
+                          <span className="text-foreground/20 italic">NULL</span>
+                        ) : messageType ? (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openProtoDecodedView(col, cell); }}
+                            className="flex items-center gap-[4px] text-brand hover:text-brand/80 transition-colors truncate max-w-full"
+                          >
+                            <Icon icon="solar:code-2-linear" className="text-[10px] shrink-0" />
+                            <span className="truncate">View JSON</span>
+                          </button>
+                        ) : (
+                          <span className="text-foreground/72 truncate block">{cell}</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -638,6 +784,49 @@ export function SpannerTableView({ tableName, dbName, onNavigateToQuery }: Props
               Copy CSV
             </button>
           </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Proto decode panel (Labs) ── */}
+      <Sheet open={!!protoDecodeView} onOpenChange={(open) => { if (!open) setProtoDecodeView(null); }}>
+        <SheetContent
+          side="right"
+          className="w-[420px] bg-background border-l border-border p-0 flex flex-col gap-0 text-foreground"
+        >
+          <SheetHeader className="px-[16px] py-[12px] border-b border-border">
+            <SheetTitle className="text-[11px] text-foreground font-mono uppercase tracking-wider">
+              {protoDecodeView?.col} · {protoColumnTypes[protoDecodeView?.col ?? '']}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto p-[14px]">
+            {protoDecodeView?.loading ? (
+              <div className="flex items-center justify-center h-full"><Loader size={24} /></div>
+            ) : protoDecodeView?.error ? (
+              <p className="text-[10px] text-red-400 font-mono whitespace-pre-wrap">{protoDecodeView.error}</p>
+            ) : (
+              <>
+                <p className="text-[9px] text-foreground/30 font-mono mb-[8px]">
+                  Decoded speculatively using the chosen message type — verify the fields look sane.
+                </p>
+                <pre className="text-[10px] text-foreground/85 font-mono whitespace-pre-wrap break-all">
+                  {protoDecodeView?.json}
+                </pre>
+              </>
+            )}
+          </div>
+
+          {protoDecodeView?.json && (
+            <div className="px-[14px] py-[10px] border-t border-border">
+              <button
+                onClick={() => protoDecodeView.json && navigator.clipboard.writeText(protoDecodeView.json)}
+                className="flex items-center gap-[5px] px-[10px] py-[5px] bg-muted border border-border rounded-[3px] text-[9px] font-mono text-foreground/60 hover:text-foreground hover:border-foreground/30 transition-colors uppercase"
+              >
+                <Icon icon="solar:copy-linear" className="text-[11px]" />
+                Copy JSON
+              </button>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>

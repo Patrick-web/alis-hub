@@ -1,0 +1,605 @@
+syntax = "proto3";
+
+package alis.os.iam.v2;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum IdentityProvider {
+  IDENTITY_PROVIDER_UNSPECIFIED = 0;
+  GOOGLE = 1;
+  MICROSOFT = 2;
+  EMAIL = 3;
+  LINKEDIN = 4;
+  APPLE = 5;
+}
+
+enum UserView {
+  USER_VIEW_UNSPECIFIED = 0;
+  USER_VIEW_BASIC = 1;
+  USER_VIEW_FULL = 2;
+}
+
+enum ConnectorView {
+  CONNECTOR_VIEW_UNSPECIFIED = 0;
+  CONNECTOR_VIEW_BASIC = 1;
+  CONNECTOR_VIEW_FULL = 2;
+}
+
+enum GroupView {
+  GROUP_VIEW_UNSPECIFIED = 0;
+  GROUP_VIEW_BASIC = 1;
+  GROUP_VIEW_FULL = 2;
+}
+
+message User {
+  message GoogleIdentity {
+    string id = 1;
+  }
+  message MicrosoftIdentity {
+    string id = 1;
+  }
+  message LinkedinIdentity {
+    string id = 1;
+  }
+  message AppleIdentity {
+    string id = 1;
+  }
+  message Account {
+    message Seat {
+      int32 plan = 1;
+      int32 seat = 2;
+    }
+    map<int32, .alis.os.iam.v2.User.Account.Seat> seats = 1;
+    double ideate_account_credit_limit = 2;
+    double ideate_user_credit_limit = 3;
+  }
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  string email = 4;
+  bool verified_email = 5;
+  .alis.os.iam.v2.IdentityProvider identity_provider = 6;
+  string given_name = 7;
+  string family_name = 8;
+  string picture = 9;
+  string contact_number = 10;
+  .google.protobuf.Any metadata = 11;
+  string google_group = 12;
+  string position = 13;
+  string education = 14;
+  string linkedin_uri = 15;
+  .google.protobuf.Timestamp last_sign_in_time = 16;
+  .alis.os.iam.v2.User.GoogleIdentity google_identity = 17;
+  .alis.os.iam.v2.User.MicrosoftIdentity microsoft_identity = 18;
+  .google.protobuf.Any internal_metadata = 19;
+  .google.protobuf.Timestamp last_refresh_time = 20;
+  .alis.os.iam.v2.User.LinkedinIdentity linkedin_identity = 21;
+  repeated string group_ids = 23;
+  .alis.os.iam.v2.User.AppleIdentity apple_identity = 24;
+  string github_refresh_token = 30;
+  string github_id = 50;
+  bool accepted_tcs = 51;
+  string etag = 90;
+  map<string, .alis.os.iam.v2.User.Account> accounts = 99;
+}
+
+message CreateUserRequest {
+  .alis.os.iam.v2.User user = 2;
+}
+
+message GetUserRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateUserRequest {
+  .alis.os.iam.v2.User user = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteUserRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteUserRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListUsersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListUsersResponse {
+  repeated .alis.os.iam.v2.User users = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetUsersRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetUsersResponse {
+  repeated .alis.os.iam.v2.User users = 1;
+}
+
+message BatchDeleteUsersRequest {
+  repeated .alis.os.iam.v2.DeleteUserRequest requests = 2;
+}
+
+message BatchDeleteUsersResponse {
+  repeated .alis.os.iam.v2.User users = 1;
+}
+
+message StreamUsersRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message RetrieveUserByEmailRequest {
+  string email = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchRetrieveMaskedUsersRequest {
+  repeated string users = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchRetrieveMaskedUsersResponse {
+  repeated .alis.os.iam.v2.MaskedUser masked_users = 1;
+}
+
+message LookupUserRequest {
+  string search_text = 1;
+}
+
+message LookupUserResponse {
+  message Result {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+  }
+  repeated .alis.os.iam.v2.LookupUserResponse.Result results = 1;
+}
+
+message RetrieveMaskedUsersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message RetrieveMaskedUsersResponse {
+  repeated .alis.os.iam.v2.MaskedUser users = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMaskedUserRequest {
+  oneof identifier {
+    string user = 1;
+    string email = 2;
+  }
+}
+
+message MaskedUser {
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  string masked_email = 4;
+  .alis.os.iam.v2.IdentityProvider identity_provider = 6;
+  string given_name = 7;
+  string family_name = 8;
+  string picture = 9;
+  string position = 10;
+  string education = 11;
+  string linkedin_uri = 12;
+}
+
+message EditUserInfoRequest {
+  string user = 1;
+  string given_name = 2;
+  string family_name = 3;
+  string picture = 4;
+  string contact_number = 5;
+  string position = 6;
+  string education = 7;
+  string linkedin_uri = 8;
+  .google.protobuf.FieldMask update_mask = 99;
+}
+
+message EditUserMetadataRequest {
+  string user = 1;
+  .google.protobuf.Any metadata = 2;
+}
+
+message RetrieveMyUserRequest {
+}
+
+message EditMyInfoRequest {
+  string given_name = 1;
+  string family_name = 2;
+  string picture = 3;
+  string contact_number = 4;
+  string position = 5;
+  string education = 6;
+  string linkedin_uri = 7;
+  .google.protobuf.FieldMask update_mask = 10;
+}
+
+message EditMyMetadataRequest {
+  .google.protobuf.Any metadata = 1;
+}
+
+message RemoveMyUserRequest {
+}
+
+message SyncToGoogleGroupRequest {
+}
+
+message SyncToGoogleGroupResponse {
+  int32 nr_added = 1;
+  int32 nr_removed = 2;
+}
+
+message SetUserPictureRequest {
+  string user = 1;
+  bytes data = 2;
+  string mime_type = 3;
+}
+
+message SetUserPictureResponse {
+  string public_uri = 1;
+}
+
+message CheckBuilderReadinessRequest {
+}
+
+message CheckBuilderReadinessResponse {
+  string user = 1;
+  bool valid_builder_seat = 2;
+  bool valid_ideate_seat = 3;
+  bool valid_landingzone = 4;
+}
+
+message EditMyGithubIdRequest {
+  string github_id = 1;
+}
+
+message Connector {
+  string name = 1;
+  string display_name = 2;
+  string external_user_id = 3;
+  string access_token = 4;
+  string refresh_token = 5;
+  .google.protobuf.Timestamp expiry_time = 6;
+  string api_key = 7;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateConnectorRequest {
+  string parent = 1;
+  .alis.os.iam.v2.Connector connector = 2;
+  string connector_id = 3;
+}
+
+message GetConnectorRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateConnectorRequest {
+  .alis.os.iam.v2.Connector connector = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteConnectorRequest {
+  string name = 1;
+}
+
+message UndeleteConnectorRequest {
+  string name = 1;
+}
+
+message ListConnectorsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateConnectorsRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v2.CreateConnectorRequest requests = 2;
+}
+
+message BatchCreateConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+}
+
+message BatchGetConnectorsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+}
+
+message BatchUpdateConnectorsRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v2.UpdateConnectorRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+}
+
+message BatchDeleteConnectorsRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v2.DeleteConnectorRequest requests = 2;
+}
+
+message BatchDeleteConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+}
+
+message BatchUndeleteConnectorsRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v2.UndeleteConnectorRequest requests = 2;
+}
+
+message BatchUndeleteConnectorsResponse {
+  repeated .alis.os.iam.v2.Connector connectors = 1;
+}
+
+message StreamConnectorsRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message FetchAccessTokenRequest {
+  string connector = 1;
+  bool force_refresh = 2;
+}
+
+message FetchAccessTokenResponse {
+  string access_token = 1;
+}
+
+message FetchApiKeyRequest {
+  string connector = 1;
+}
+
+message FetchApiKeyResponse {
+  string api_key = 1;
+}
+
+message AuthorizeConnectorRequest {
+  string connector = 1;
+}
+
+message AuthorizeConnectorMetadata {
+  string connector = 1;
+  string progress_notes = 2;
+  string auth_code_url = 3;
+  string api_key_url = 4;
+}
+
+message AuthorizeConnectorResponse {
+}
+
+message RevokeConnectorRequest {
+  string connector = 1;
+}
+
+message RevokeConnectorResponse {
+}
+
+message ListMyAvailableConnectorsRequest {
+}
+
+message ListMyAvailableConnectorsResponse {
+  message ConnectorSummary {
+    enum ConnectorStatus {
+      CONNECTOR_STATUS_UNSPECIFIED = 0;
+      UNCONNECTED = 1;
+      CONNECTED = 2;
+      EXPIRED = 3;
+    }
+    string name = 1;
+    string description = 2;
+    .alis.os.iam.v2.ListMyAvailableConnectorsResponse.ConnectorSummary.ConnectorStatus connector_status = 3;
+    string provider = 4;
+    string display_name = 5;
+  }
+  repeated .alis.os.iam.v2.ListMyAvailableConnectorsResponse.ConnectorSummary connector_summaries = 1;
+}
+
+message GenerateAccessTokenRequest {
+  string subject = 1;
+  string email = 2;
+  .google.protobuf.Timestamp expiry = 3;
+}
+
+message GenerateAccessTokenResponse {
+  string access_token = 1;
+}
+
+message Group {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message CreateGroupRequest {
+}
+
+message GetGroupRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateGroupRequest {
+  .alis.os.iam.v2.Group group = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteGroupRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListGroupsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListGroupsResponse {
+  repeated .alis.os.iam.v2.Group groups = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetGroupsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetGroupsResponse {
+}
+
+message BatchDeleteGroupsRequest {
+}
+
+message BatchDeleteGroupsResponse {
+}
+
+message StreamGroupsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message SyncGroupRequest {
+}
+
+message SyncGroupResponse {
+}
+
+service GroupsService {
+  rpc CreateGroup(.alis.os.iam.v2.CreateGroupRequest) returns (.alis.os.iam.v2.Group);
+  rpc GetGroup(.alis.os.iam.v2.GetGroupRequest) returns (.alis.os.iam.v2.Group);
+  rpc UpdateGroup(.alis.os.iam.v2.UpdateGroupRequest) returns (.alis.os.iam.v2.Group);
+  rpc ListGroups(.alis.os.iam.v2.ListGroupsRequest) returns (.alis.os.iam.v2.ListGroupsResponse);
+  rpc DeleteGroup(.alis.os.iam.v2.DeleteGroupRequest) returns (.alis.os.iam.v2.Group);
+  rpc BatchGetGroups(.alis.os.iam.v2.BatchGetGroupsRequest) returns (.alis.os.iam.v2.BatchGetGroupsResponse);
+  rpc BatchDeleteGroups(.alis.os.iam.v2.BatchDeleteGroupsRequest) returns (.alis.os.iam.v2.BatchDeleteGroupsResponse);
+  rpc StreamGroups(.alis.os.iam.v2.StreamGroupsRequest) returns (stream .alis.os.iam.v2.Group);
+  rpc SyncGroup(.alis.os.iam.v2.SyncGroupRequest) returns (.alis.os.iam.v2.SyncGroupResponse);
+}
+
+service UsersService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateUser(.alis.os.iam.v2.CreateUserRequest) returns (.alis.os.iam.v2.User);
+  rpc GetUser(.alis.os.iam.v2.GetUserRequest) returns (.alis.os.iam.v2.User);
+  rpc UpdateUser(.alis.os.iam.v2.UpdateUserRequest) returns (.alis.os.iam.v2.User);
+  rpc ListUsers(.alis.os.iam.v2.ListUsersRequest) returns (.alis.os.iam.v2.ListUsersResponse);
+  rpc DeleteUser(.alis.os.iam.v2.DeleteUserRequest) returns (.alis.os.iam.v2.User);
+  rpc BatchGetUsers(.alis.os.iam.v2.BatchGetUsersRequest) returns (.alis.os.iam.v2.BatchGetUsersResponse);
+  rpc BatchDeleteUsers(.alis.os.iam.v2.BatchDeleteUsersRequest) returns (.alis.os.iam.v2.BatchDeleteUsersResponse);
+  rpc StreamUsers(.alis.os.iam.v2.StreamUsersRequest) returns (stream .alis.os.iam.v2.User);
+  rpc LookupUser(.alis.os.iam.v2.LookupUserRequest) returns (.alis.os.iam.v2.LookupUserResponse);
+  rpc BatchRetrieveMaskedUsers(.alis.os.iam.v2.BatchRetrieveMaskedUsersRequest) returns (.alis.os.iam.v2.BatchRetrieveMaskedUsersResponse);
+  rpc RetrieveMaskedUsers(.alis.os.iam.v2.RetrieveMaskedUsersRequest) returns (.alis.os.iam.v2.RetrieveMaskedUsersResponse);
+  rpc RetrieveMaskedUser(.alis.os.iam.v2.RetrieveMaskedUserRequest) returns (.alis.os.iam.v2.MaskedUser);
+  rpc EditUserInfo(.alis.os.iam.v2.EditUserInfoRequest) returns (.alis.os.iam.v2.User);
+  rpc EditUserMetadata(.alis.os.iam.v2.EditUserMetadataRequest) returns (.alis.os.iam.v2.User);
+  rpc RetrieveMyUser(.alis.os.iam.v2.RetrieveMyUserRequest) returns (.alis.os.iam.v2.User);
+  rpc EditMyInfo(.alis.os.iam.v2.EditMyInfoRequest) returns (.alis.os.iam.v2.User);
+  rpc EditMyMetadata(.alis.os.iam.v2.EditMyMetadataRequest) returns (.alis.os.iam.v2.User);
+  rpc RemoveMyUser(.alis.os.iam.v2.RemoveMyUserRequest) returns (.google.protobuf.Empty);
+  rpc SyncToGoogleGroup(.alis.os.iam.v2.SyncToGoogleGroupRequest) returns (.alis.os.iam.v2.SyncToGoogleGroupResponse);
+  rpc SetUserPicture(.alis.os.iam.v2.SetUserPictureRequest) returns (.alis.os.iam.v2.SetUserPictureResponse);
+  rpc RetrieveUserByEmail(.alis.os.iam.v2.RetrieveUserByEmailRequest) returns (.alis.os.iam.v2.User);
+  rpc CheckBuilderReadiness(.alis.os.iam.v2.CheckBuilderReadinessRequest) returns (.alis.os.iam.v2.CheckBuilderReadinessResponse);
+  rpc EditMyGithubId(.alis.os.iam.v2.EditMyGithubIdRequest) returns (.alis.os.iam.v2.User);
+  rpc CreateConnector(.alis.os.iam.v2.CreateConnectorRequest) returns (.alis.os.iam.v2.Connector);
+  rpc GetConnector(.alis.os.iam.v2.GetConnectorRequest) returns (.alis.os.iam.v2.Connector);
+  rpc UpdateConnector(.alis.os.iam.v2.UpdateConnectorRequest) returns (.alis.os.iam.v2.Connector);
+  rpc ListConnectors(.alis.os.iam.v2.ListConnectorsRequest) returns (.alis.os.iam.v2.ListConnectorsResponse);
+  rpc DeleteConnector(.alis.os.iam.v2.DeleteConnectorRequest) returns (.alis.os.iam.v2.Connector);
+  rpc UndeleteConnector(.alis.os.iam.v2.UndeleteConnectorRequest) returns (.alis.os.iam.v2.Connector);
+  rpc BatchCreateConnectors(.alis.os.iam.v2.BatchCreateConnectorsRequest) returns (.alis.os.iam.v2.BatchCreateConnectorsResponse);
+  rpc BatchGetConnectors(.alis.os.iam.v2.BatchGetConnectorsRequest) returns (.alis.os.iam.v2.BatchGetConnectorsResponse);
+  rpc BatchUpdateConnectors(.alis.os.iam.v2.BatchUpdateConnectorsRequest) returns (.alis.os.iam.v2.BatchUpdateConnectorsResponse);
+  rpc BatchDeleteConnectors(.alis.os.iam.v2.BatchDeleteConnectorsRequest) returns (.alis.os.iam.v2.BatchDeleteConnectorsResponse);
+  rpc BatchUndeleteConnectors(.alis.os.iam.v2.BatchUndeleteConnectorsRequest) returns (.alis.os.iam.v2.BatchUndeleteConnectorsResponse);
+  rpc StreamConnectors(.alis.os.iam.v2.StreamConnectorsRequest) returns (stream .alis.os.iam.v2.Connector);
+  rpc AuthorizeConnector(.alis.os.iam.v2.AuthorizeConnectorRequest) returns (.google.longrunning.Operation);
+  rpc FetchAccessToken(.alis.os.iam.v2.FetchAccessTokenRequest) returns (.alis.os.iam.v2.FetchAccessTokenResponse);
+  rpc FetchApiKey(.alis.os.iam.v2.FetchApiKeyRequest) returns (.alis.os.iam.v2.FetchApiKeyResponse);
+  rpc RevokeConnector(.alis.os.iam.v2.RevokeConnectorRequest) returns (.alis.os.iam.v2.RevokeConnectorResponse);
+  rpc ListMyAvailableConnectors(.alis.os.iam.v2.ListMyAvailableConnectorsRequest) returns (.alis.os.iam.v2.ListMyAvailableConnectorsResponse);
+  rpc GenerateAccessToken(.alis.os.iam.v2.GenerateAccessTokenRequest) returns (.alis.os.iam.v2.GenerateAccessTokenResponse);
+}

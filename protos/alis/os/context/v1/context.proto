@@ -1,0 +1,445 @@
+syntax = "proto3";
+
+package alis.os.context.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum ContextView {
+  CONTEXT_VIEW_UNSPECIFIED = 0;
+  CONTEXT_VIEW_BASIC = 1;
+  CONTEXT_VIEW_FULL = 2;
+}
+
+message SessionStartEvent {
+  string model = 1;
+  string working_directory = 2;
+  string transcript_uri = 3;
+  string source = 4;
+  string ide = 5;
+}
+
+message SessionEndEvent {
+  string reason = 1;
+  string transcript_uri = 2;
+}
+
+message SessionTitleEvent {
+  string title = 1;
+}
+
+message SessionContentEvent {
+  repeated string prompts = 1;
+  string harness_title = 2;
+}
+
+message TurnCompletedEvent {
+  int64 duration_ms = 1;
+  int32 tool_use_count = 2;
+}
+
+message SessionErrorEvent {
+  string error_type = 1;
+  string error_message = 2;
+}
+
+message TokenUsageEvent {
+  string model = 1;
+  int64 input_tokens = 2;
+  int64 output_tokens = 3;
+  int64 cache_read_tokens = 4;
+  int64 cache_creation_tokens = 5;
+  int64 reasoning_tokens = 6;
+  int32 message_count = 7;
+  double estimated_cost_usd = 8;
+  .google.protobuf.Timestamp period_start_time = 9;
+  .google.protobuf.Timestamp period_end_time = 10;
+  string working_directory = 11;
+  string agent = 12;
+}
+
+message ToolUseEvent {
+  string tool_name = 1;
+  string description = 2;
+  string resource = 3;
+}
+
+message PromptSubmitEvent {
+  int32 prompt_length = 1;
+}
+
+message SubagentStartEvent {
+  string agent_type = 1;
+  string agent_id = 2;
+  string task_description = 3;
+}
+
+message SubagentStopEvent {
+  string agent_type = 1;
+  string agent_id = 2;
+}
+
+message TaskCreatedEvent {
+  string task_name = 1;
+  string task_description = 2;
+}
+
+message TaskCompletedEvent {
+  string task_name = 1;
+}
+
+message ModelChangedEvent {
+  string model = 1;
+  string previous_model = 2;
+}
+
+message WorkingDirectoryChangedEvent {
+  string working_directory = 1;
+  string previous_working_directory = 2;
+}
+
+message WorkspaceChangedEvent {
+  string workspace_directory = 1;
+  string resource = 2;
+}
+
+message FileSavedEvent {
+  string file_path = 1;
+  string resource = 2;
+}
+
+message Context {
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    IDLE = 2;
+    PROMOTED = 3;
+  }
+  message Session {
+    enum Harness {
+      HARNESS_UNSPECIFIED = 0;
+      CLAUDE_CODE = 1;
+      GEMINI_CLI = 2;
+      CODEX = 3;
+      OPENCODE = 4;
+      VSCODE = 5;
+      CURSOR = 6;
+      COPILOT_CLI = 7;
+      AMP = 8;
+      CLINE = 9;
+      ROO_CODE = 10;
+      KILO = 11;
+      ZED = 12;
+      GOOSE = 13;
+      DROID = 14;
+      OPENCLAW = 15;
+    }
+    enum Status {
+      STATUS_UNSPECIFIED = 0;
+      ACTIVE = 1;
+      ENDED = 2;
+    }
+    string id = 1;
+    .alis.os.context.v1.Context.Session.Harness harness = 2;
+    string model = 3;
+    string hostname = 4;
+    string transcript_uri = 5;
+    string last_synced_etag = 6;
+    .alis.os.context.v1.Context.Session.Status status = 7;
+    .google.protobuf.Timestamp start_time = 8;
+    .google.protobuf.Timestamp last_seen_time = 9;
+    .google.protobuf.Timestamp end_time = 10;
+    string ide = 11;
+    string working_directory = 12;
+  }
+  message Workstation {
+    string hostname = 1;
+    string root_directory = 2;
+    string platform = 3;
+    string kind = 4;
+    repeated string define_repos = 5;
+    repeated string build_repos = 6;
+    string playground = 7;
+  }
+  message Signal {
+    enum Source {
+      SOURCE_UNSPECIFIED = 0;
+      TOOL_CALL = 1;
+      HOOK = 2;
+      IDE = 3;
+      USER_CONFIRMED = 4;
+    }
+    .alis.os.context.v1.Context.Signal.Source source = 1;
+    string description = 2;
+    string resource = 3;
+    .google.protobuf.Timestamp observe_time = 4;
+  }
+  message Usage {
+    message DailyUsage {
+      string date = 1;
+      repeated .alis.os.context.v1.Context.Usage.ModelUsage models = 2;
+    }
+    message ModelUsage {
+      string model = 1;
+      int64 input_tokens = 2;
+      int64 output_tokens = 3;
+      int64 cache_read_tokens = 4;
+      int64 cache_creation_tokens = 5;
+      int64 reasoning_tokens = 6;
+      int32 message_count = 7;
+      double estimated_cost_usd = 8;
+    }
+    repeated .alis.os.context.v1.Context.Usage.DailyUsage daily = 1;
+  }
+  string name = 1;
+  string display_name = 2;
+  string organisation = 3;
+  string product = 4;
+  string focus_neuron = 5;
+  repeated string neurons = 6;
+  string environment = 7;
+  .alis.os.context.v1.Context.Status status = 8;
+  string build_spec = 9;
+  .alis.os.context.v1.Context.Session session = 10;
+  repeated .alis.os.context.v1.Context.Workstation workstations = 11;
+  repeated .alis.os.context.v1.Context.Signal signals = 12;
+  string summary = 13;
+  .google.protobuf.Timestamp last_activity_time = 14;
+  .google.protobuf.Timestamp expire_time = 15;
+  .alis.os.context.v1.Context.Usage usage = 16;
+  repeated string applied_event_ids = 17;
+  string organisation_id = 18;
+  string product_id = 19;
+  string focus_neuron_id = 20;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateContextRequest {
+  string parent = 1;
+  string context_id = 2;
+  .alis.os.context.v1.Context context = 3;
+}
+
+message GetContextRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateContextRequest {
+  .alis.os.context.v1.Context context = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteContextRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteContextRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListContextsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateContextsRequest {
+  repeated .alis.os.context.v1.CreateContextRequest requests = 2;
+}
+
+message BatchCreateContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+}
+
+message BatchGetContextsRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+}
+
+message BatchUpdateContextsRequest {
+  repeated .alis.os.context.v1.UpdateContextRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+}
+
+message BatchDeleteContextsRequest {
+  repeated .alis.os.context.v1.DeleteContextRequest requests = 2;
+}
+
+message BatchDeleteContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+}
+
+message BatchUndeleteContextsRequest {
+  repeated .alis.os.context.v1.UndeleteContextRequest requests = 2;
+}
+
+message BatchUndeleteContextsResponse {
+  repeated .alis.os.context.v1.Context contexts = 1;
+}
+
+message StreamContextsRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message HandleEventRequest {
+  repeated .alis.os.context.v1.Event events = 1;
+  .alis.os.context.v1.Context.Workstation workstation = 2;
+}
+
+message Event {
+  string event_id = 1;
+  string session_id = 2;
+  .alis.os.context.v1.Context.Session.Harness harness = 3;  // enum (heuristically resolved)
+  .google.protobuf.Timestamp observe_time = 4;
+  oneof event {
+    .alis.os.context.v1.SessionStartEvent session_start = 10;
+    .alis.os.context.v1.SessionEndEvent session_end = 11;
+    .alis.os.context.v1.TurnCompletedEvent turn_completed = 12;
+    .alis.os.context.v1.SessionErrorEvent session_error = 13;
+    .alis.os.context.v1.SessionTitleEvent session_title = 14;
+    .alis.os.context.v1.SessionContentEvent session_content = 15;
+    .alis.os.context.v1.TokenUsageEvent token_usage = 20;
+    .alis.os.context.v1.ToolUseEvent tool_use = 30;
+    .alis.os.context.v1.PromptSubmitEvent prompt_submit = 31;
+    .alis.os.context.v1.ModelChangedEvent model_changed = 32;
+    .alis.os.context.v1.WorkingDirectoryChangedEvent working_directory_changed = 33;
+    .alis.os.context.v1.SubagentStartEvent subagent_start = 34;
+    .alis.os.context.v1.SubagentStopEvent subagent_stop = 35;
+    .alis.os.context.v1.TaskCreatedEvent task_created = 36;
+    .alis.os.context.v1.TaskCompletedEvent task_completed = 37;
+    .alis.os.context.v1.WorkspaceChangedEvent workspace_changed = 50;
+    .alis.os.context.v1.FileSavedEvent file_saved = 51;
+  }
+}
+
+message GenerateSummaryRequest {
+  int32 days = 1;
+  int32 recent_session_limit = 2;
+}
+
+message GenerateSummaryResponse {
+  message Session {
+    string context = 1;
+    string display_name = 2;
+    string focus_neuron = 3;
+    .alis.os.context.v1.Context.Session.Harness harness = 4;  // enum (heuristically resolved)
+    string model = 5;
+    int32 status = 6;  // enum type not recoverable from bundle (wire-compatible int32)
+    .google.protobuf.Timestamp last_activity_time = 7;
+    string organisation = 8;
+    string product = 9;
+    string environment = 10;
+    int32 neuron_count = 11;
+    string hostname = 12;
+    string platform = 13;
+    .google.protobuf.Timestamp start_time = 14;
+    .google.protobuf.Timestamp end_time = 15;
+    int64 work_tokens = 16;
+    int64 cache_read_tokens = 17;
+    int64 message_count = 18;
+    double estimated_cost_usd = 19;
+    repeated .alis.os.context.v1.Context.Signal recent_signals = 20;
+    string id = 21;
+    string working_directory = 22;
+    string summary = 23;
+  }
+  message Totals {
+    int64 input_tokens = 1;
+    int64 output_tokens = 2;
+    int64 cache_read_tokens = 3;
+    int64 cache_creation_tokens = 4;
+    int64 reasoning_tokens = 5;
+    int64 total_tokens = 6;
+    int64 message_count = 7;
+    int32 active_days = 8;
+    int32 longest_streak_days = 9;
+    int32 session_count = 10;
+    double estimated_cost_usd = 11;
+  }
+  message ModelUsage {
+    string model = 1;
+    int64 total_tokens = 2;
+    double estimated_cost_usd = 3;
+    int32 message_count = 4;
+  }
+  message HarnessUsage {
+    .alis.os.context.v1.Context.Session.Harness harness = 1;  // enum (heuristically resolved)
+    int64 total_tokens = 2;
+    double estimated_cost_usd = 3;
+    int32 session_count = 4;
+  }
+  message DailyUsage {
+    string date = 1;
+    int64 total_tokens = 2;
+    int64 message_count = 3;
+    double estimated_cost_usd = 4;
+  }
+  .google.protobuf.Timestamp as_of_time = 1;
+  .google.protobuf.Timestamp start_time = 2;
+  .google.protobuf.Timestamp end_time = 3;
+  repeated .alis.os.context.v1.GenerateSummaryResponse.Session recent_sessions = 4;
+  .alis.os.context.v1.GenerateSummaryResponse.Totals totals = 5;
+  repeated .alis.os.context.v1.GenerateSummaryResponse.ModelUsage top_models = 6;
+  repeated .alis.os.context.v1.GenerateSummaryResponse.HarnessUsage top_harnesses = 7;
+  repeated .alis.os.context.v1.GenerateSummaryResponse.DailyUsage daily_usage = 8;
+}
+
+service ContextsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateContext(.alis.os.context.v1.CreateContextRequest) returns (.alis.os.context.v1.Context);
+  rpc GetContext(.alis.os.context.v1.GetContextRequest) returns (.alis.os.context.v1.Context);
+  rpc UpdateContext(.alis.os.context.v1.UpdateContextRequest) returns (.alis.os.context.v1.Context);
+  rpc ListContexts(.alis.os.context.v1.ListContextsRequest) returns (.alis.os.context.v1.ListContextsResponse);
+  rpc DeleteContext(.alis.os.context.v1.DeleteContextRequest) returns (.alis.os.context.v1.Context);
+  rpc UndeleteContext(.alis.os.context.v1.UndeleteContextRequest) returns (.alis.os.context.v1.Context);
+  rpc BatchCreateContexts(.alis.os.context.v1.BatchCreateContextsRequest) returns (.alis.os.context.v1.BatchCreateContextsResponse);
+  rpc BatchGetContexts(.alis.os.context.v1.BatchGetContextsRequest) returns (.alis.os.context.v1.BatchGetContextsResponse);
+  rpc BatchUpdateContexts(.alis.os.context.v1.BatchUpdateContextsRequest) returns (.alis.os.context.v1.BatchUpdateContextsResponse);
+  rpc BatchDeleteContexts(.alis.os.context.v1.BatchDeleteContextsRequest) returns (.alis.os.context.v1.BatchDeleteContextsResponse);
+  rpc BatchUndeleteContexts(.alis.os.context.v1.BatchUndeleteContextsRequest) returns (.alis.os.context.v1.BatchUndeleteContextsResponse);
+  rpc StreamContexts(.alis.os.context.v1.StreamContextsRequest) returns (stream .alis.os.context.v1.Context);
+  rpc HandleEvent(.alis.os.context.v1.HandleEventRequest) returns (.google.protobuf.Empty);
+  rpc GenerateSummary(.alis.os.context.v1.GenerateSummaryRequest) returns (.alis.os.context.v1.GenerateSummaryResponse);
+}

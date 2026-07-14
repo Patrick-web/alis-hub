@@ -1,0 +1,600 @@
+syntax = "proto3";
+
+package alis.os.metrics.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+enum IdeateUserState {
+  IDEATE_USER_STATE_UNSPECIFIED = 0;
+  ONBOARDING_NEW = 1;
+  NON_ACTIVATED_SPEC = 2;
+  NON_ACTIVATED_INTAKE = 3;
+  ACTIVE_VALUE_ADD = 5;
+  ACTIVE_VIEWER = 6;
+  DORMANT_LOW_RISK = 7;
+  DORMANT_MED_RISK = 8;
+  DORMANT_HIGH_RISK = 9;
+  CHURNED = 10;
+  CONTRIBUTOR_30D = 11;
+  CONTRIBUTOR_90D = 12;
+  CONTRIBUTOR_360D = 13;
+  CONTRIBUTOR_OLD = 14;
+  CHURNED_SEAT_REMOVED_30D = 16;
+  CHURNED_SEAT_REMOVED_90D = 17;
+  CHURNED_SEAT_REMOVED_360D = 18;
+  CHURNED_SEAT_REMOVED_OLD = 19;
+}
+
+message Metric {
+  message Seats {
+    .google.protobuf.Int64Value total_express_seats = 1;
+    .google.protobuf.Int64Value total_paid_seats = 2;
+    .google.protobuf.DoubleValue total_weighted_paid_seats = 3;
+    .google.protobuf.Int64Value total_paid_ideate_creators = 4;
+    .google.protobuf.Int64Value total_paid_ideate_collaborators = 5;
+    .google.protobuf.Int64Value total_paid_build_builders = 6;
+    .google.protobuf.Int64Value total_paid_build_architects = 7;
+    .google.protobuf.Int64Value total_paid_manage_managers = 8;
+    .google.protobuf.Int64Value total_paid_products = 9;
+    .google.protobuf.DoubleValue total_weighted_paid_products = 10;
+    .google.protobuf.Int64Value total_foundation_seats = 11;
+    .google.protobuf.Int64Value total_professional_seats = 12;
+    .google.protobuf.Int64Value total_enterprise_seats = 13;
+    .google.protobuf.DoubleValue total_weighted_paid_ideate_creators = 14;
+    .google.protobuf.DoubleValue total_weighted_paid_ideate_collaborators = 15;
+    .google.protobuf.DoubleValue total_weighted_paid_build_builders = 16;
+    .google.protobuf.DoubleValue total_weighted_paid_build_architects = 17;
+    .google.protobuf.DoubleValue total_weighted_paid_manage_managers = 18;
+    .google.protobuf.Int64Value total_express_ideate_creators = 19;
+    .google.protobuf.Int64Value total_express_ideate_collaborators = 20;
+    .google.protobuf.Int64Value total_express_build_builders = 21;
+    .google.protobuf.Int64Value total_express_build_architects = 22;
+    .google.protobuf.Int64Value total_express_manage_managers = 23;
+    .google.protobuf.Int64Value total_partner_trial_ideate_creators = 24;
+    .google.protobuf.Int64Value total_partner_trial_ideate_collaborators = 25;
+    .google.protobuf.Int64Value total_partner_trial_build_builders = 26;
+    .google.protobuf.Int64Value total_partner_trial_build_architects = 27;
+    .google.protobuf.Int64Value total_partner_trial_manage_managers = 28;
+    .google.protobuf.Int64Value total_partner_paid_ideate_creators = 29;
+    .google.protobuf.Int64Value total_partner_paid_ideate_collaborators = 30;
+    .google.protobuf.Int64Value total_partner_paid_build_builders = 31;
+    .google.protobuf.Int64Value total_partner_paid_build_architects = 32;
+    .google.protobuf.Int64Value total_partner_paid_manage_managers = 33;
+    .google.protobuf.Int64Value total_partner_trial_seats = 101;
+  }
+  message Usage {
+    .google.protobuf.Int64Value daily_active_users = 1;
+    .google.protobuf.Int64Value daily_active_express_users = 2;
+    .google.protobuf.Int64Value daily_active_paid_users = 3;
+    .google.protobuf.Int64Value daily_active_foundation_users = 4;
+    .google.protobuf.Int64Value daily_active_professional_users = 5;
+    .google.protobuf.Int64Value daily_active_enterprise_users = 6;
+    .google.protobuf.Int64Value weekly_active_users = 7;
+    .google.protobuf.Int64Value weekly_active_express_users = 8;
+    .google.protobuf.Int64Value weekly_active_paid_users = 9;
+    .google.protobuf.Int64Value monthly_active_users = 10;
+    .google.protobuf.Int64Value monthly_active_express_users = 11;
+    .google.protobuf.Int64Value monthly_active_paid_users = 12;
+    .google.protobuf.Int64Value total_ideas = 13;
+    .google.protobuf.Int64Value total_active_ideas = 14;
+    .google.protobuf.DoubleValue average_ideas_per_account = 15;
+    .google.protobuf.DoubleValue median_ideas_per_account = 16;
+    .google.protobuf.Int64Value total_products = 17;
+    .google.protobuf.Int64Value total_active_products = 18;
+    .google.protobuf.DoubleValue average_products_per_account = 19;
+    .google.protobuf.DoubleValue daily_engagement_ratio = 34;
+    .google.protobuf.DoubleValue weekly_engagement_ratio = 35;
+    .google.protobuf.DoubleValue monthly_engagement_ratio = 36;
+    .google.protobuf.DoubleValue average_time_to_first_idea = 37;
+    .google.protobuf.DoubleValue average_time_to_first_ideate_spec = 38;
+    .google.protobuf.DoubleValue average_time_to_team_invite = 39;
+    .google.protobuf.DoubleValue percent_accounts_with_ideas = 40;
+    .google.protobuf.DoubleValue percent_accounts_with_ideate_specs = 41;
+    .google.protobuf.DoubleValue percent_accounts_with_multiple_users = 42;
+    .google.protobuf.DoubleValue day7_retention = 43;
+    .google.protobuf.DoubleValue day30_retention = 44;
+    .google.protobuf.DoubleValue day90_retention = 45;
+    .google.protobuf.Int64Value daily_active_trial_partner_users = 101;
+    .google.protobuf.Int64Value daily_active_paid_partner_users = 102;
+    .google.protobuf.Int64Value weekly_active_foundation_users = 111;
+    .google.protobuf.Int64Value weekly_active_professional_users = 112;
+    .google.protobuf.Int64Value weekly_active_enterprise_users = 113;
+    .google.protobuf.Int64Value weekly_active_trial_partner_users = 114;
+    .google.protobuf.Int64Value weekly_active_paid_partner_users = 115;
+    .google.protobuf.Int64Value monthly_active_foundation_users = 121;
+    .google.protobuf.Int64Value monthly_active_professional_users = 122;
+    .google.protobuf.Int64Value monthly_active_enterprise_users = 123;
+    .google.protobuf.Int64Value monthly_active_trial_partner_users = 124;
+    .google.protobuf.Int64Value monthly_active_paid_partner_users = 125;
+  }
+  message AggregateAccounts {
+    .google.protobuf.Int64Value total_accounts = 23;
+    .google.protobuf.Int64Value total_express_accounts = 24;
+    .google.protobuf.Int64Value total_paid_accounts = 25;
+    .google.protobuf.Int64Value total_stale_express_accounts = 27;
+    .google.protobuf.DoubleValue day45_account_activation_rate = 28;
+    .google.protobuf.DoubleValue day60_account_activation_rate = 29;
+    .google.protobuf.Int64Value total_foundation_accounts = 30;
+    .google.protobuf.Int64Value total_professional_accounts = 31;
+    .google.protobuf.Int64Value total_enterprise_accounts = 32;
+    .google.protobuf.Int64Value total_paid_partner_accounts = 33;
+    .google.protobuf.Int64Value total_archived_accounts = 34;
+    .google.protobuf.Int64Value total_low_churn_risk_accounts = 35;
+    .google.protobuf.Int64Value total_medium_churn_risk_accounts = 36;
+    .google.protobuf.Int64Value total_high_churn_risk_accounts = 37;
+    .google.protobuf.Int64Value total_very_high_churn_risk_accounts = 38;
+    .google.protobuf.Int64Value total_named_accounts = 39;
+    .google.protobuf.Int64Value total_strategic_accounts = 40;
+    .google.protobuf.Int64Value total_territory_accounts = 41;
+    .google.protobuf.Int64Value total_unnamed_accounts = 42;
+    .google.protobuf.Int64Value total_trial_partner_accounts = 101;
+  }
+  message Account {
+    enum AccountPlan {
+      ACCOUNT_PLAN_UNSPECIFIED = 0;
+      ACCOUNT_PLAN_EXPRESS = 1;
+      ACCOUNT_PLAN_FOUNDATION = 2;
+      ACCOUNT_PLAN_PROFESSIONAL = 3;
+      ACCOUNT_PLAN_ENTERPRISE = 4;
+      ACCOUNT_PLAN_PARTNER = 5;
+      ACCOUNT_PLAN_ARCHIVED = 6;
+    }
+    enum ChurnLikelihood {
+      CHURN_LIKELIHOOD_UNSPECIFIED = 0;
+      CHURN_LIKELIHOOD_LOW = 1;
+      CHURN_LIKELIHOOD_MEDIUM = 2;
+      CHURN_LIKELIHOOD_HIGH = 3;
+      CHURN_LIKELIHOOD_VERY_HIGH = 4;
+    }
+    enum AccountTier {
+      ACCOUNT_TIER_UNSPECIFIED = 0;
+      ACCOUNT_TIER_NAMED = 1;
+      ACCOUNT_TIER_STRATEGIC = 2;
+      ACCOUNT_TIER_TERRITORY = 3;
+      ACCOUNT_TIER_UNNAMED = 9;
+      ACCOUNT_TIER_EXCLUDE = 10;
+    }
+    message AccountUser {
+      message IdeateSeatInfo {
+        .google.protobuf.StringValue seat_type = 1;
+        .google.protobuf.BoolValue is_annual = 2;
+      }
+      message BuildSeatInfo {
+        .google.protobuf.StringValue seat_type = 1;
+        .google.protobuf.BoolValue is_annual = 2;
+      }
+      .google.protobuf.StringValue user_name = 1;
+      .google.protobuf.StringValue display_name = 2;
+      .google.protobuf.StringValue email = 3;
+      .google.protobuf.StringValue account_role = 5;
+      .alis.os.metrics.v1.Metric.Account.AccountUser.IdeateSeatInfo ideate_seat = 6;
+      .alis.os.metrics.v1.Metric.Account.AccountUser.BuildSeatInfo build_seat = 7;
+      .google.protobuf.Timestamp last_sign_in_time = 9;
+      .google.protobuf.Timestamp last_refresh_time = 10;
+      .google.protobuf.Timestamp create_time = 11;
+      .google.protobuf.Int64Value total_ideas_created = 12;
+      .google.protobuf.Int64Value total_ideas_collaborated = 13;
+      .google.protobuf.Int64Value total_products_accessible = 14;
+      .google.protobuf.Int64Value active_days_last30 = 15;
+      .google.protobuf.Int64Value active_days_last7 = 16;
+      .google.protobuf.StringValue identity_provider = 17;
+      .google.protobuf.BoolValue email_verified = 18;
+      .google.protobuf.StringValue position = 19;
+      .google.protobuf.StringValue linkedin_uri = 20;
+      .google.protobuf.BoolValue is_onboarded = 21;
+      .google.protobuf.BoolValue accepted_terms_of_service = 22;
+      .google.protobuf.BoolValue accepted_privacy_policy = 23;
+      .google.protobuf.Int32Value days_since_last_activity = 24;
+    }
+    .google.protobuf.StringValue account_name = 1;
+    .google.protobuf.StringValue display_name = 2;
+    .google.protobuf.StringValue am_user = 3;
+    .google.protobuf.StringValue am_email = 4;
+    .google.protobuf.StringValue am_name = 5;
+    .alis.os.metrics.v1.Metric.Account.AccountPlan account_plan = 6;
+    .google.protobuf.StringValue build_partner_account_name = 7;
+    .google.protobuf.StringValue build_partner_display_name = 8;
+    .google.protobuf.Int32Value trial_days_remaining = 9;
+    .google.protobuf.StringValue activity_summary = 10;
+    .alis.os.metrics.v1.Metric.Account.ChurnLikelihood churn_likelihood = 11;
+    .google.protobuf.StringValue am_comments_and_suggested_actions = 12;
+    .alis.os.metrics.v1.Metric.Account.AccountTier account_tier = 13;
+    .alis.os.metrics.v1.Metric.Seats seat_metrics = 20;
+    .alis.os.metrics.v1.Metric.Usage usage_metrics = 21;
+    repeated .alis.os.metrics.v1.Metric.Account.AccountUser account_users = 22;
+  }
+  message AccountManager {
+    .google.protobuf.StringValue account_manager = 1;
+    .google.protobuf.StringValue am_email = 2;
+    .google.protobuf.StringValue am_name = 3;
+    .google.protobuf.DoubleValue total_arr_managed = 4;
+    .google.protobuf.DoubleValue average_account_health_score = 5;
+    .google.protobuf.DoubleValue average_time_to_conversion = 6;
+    .google.protobuf.DoubleValue conversion_rate = 7;
+    .google.protobuf.DoubleValue retention_rate = 8;
+    .google.protobuf.Int64Value new_accounts_last30_days = 9;
+    .google.protobuf.Int64Value upgraded_accounts_last30_days = 10;
+    .google.protobuf.Int64Value churned_accounts_last30_days = 11;
+    .alis.os.metrics.v1.Metric.Seats seat_metrics = 20;
+    .alis.os.metrics.v1.Metric.Usage usage_metrics = 21;
+    .alis.os.metrics.v1.Metric.AggregateAccounts aggregated_account_metrics = 23;
+  }
+  message IdeateUsage {
+    message UserUsage {
+      string user = 1;
+      string email = 2;
+      .google.protobuf.Int64Value total_streams = 3;
+      .google.protobuf.Timestamp last_stream_added = 4;
+      .google.protobuf.Int64Value total_ideas_created = 5;
+      .google.protobuf.Timestamp last_idea_created = 6;
+      .google.protobuf.Int64Value total_specs_created = 7;
+      .google.protobuf.Timestamp last_spec_added = 8;
+      .google.protobuf.Timestamp last_agent_interaction = 9;
+      .google.protobuf.Timestamp snapshot_date = 10;
+      .alis.os.metrics.v1.IdeateUserState state = 11;  // enum (heuristically resolved)
+      .google.protobuf.Timestamp first_interaction = 12;
+    }
+  }
+  message IdeateStateTransitionMatrix {
+    message StateTransition {
+      .alis.os.metrics.v1.IdeateUserState from_state = 1;  // enum (heuristically resolved)
+      .alis.os.metrics.v1.IdeateUserState to_state = 2;  // enum (heuristically resolved)
+      int64 user_count = 3;
+    }
+  }
+  message IdeateUserLevelStateTransition {
+    message UserStateTransition {
+      string user = 1;
+      string email = 2;
+      .alis.os.metrics.v1.IdeateUserState from_state = 3;  // enum (heuristically resolved)
+      .alis.os.metrics.v1.IdeateUserState to_state = 4;  // enum (heuristically resolved)
+    }
+  }
+  message IdeateUserActivation {
+    message UserActivation {
+      string user = 1;
+      string email = 2;
+      .google.protobuf.Timestamp first_platform_interaction = 3;
+      .google.protobuf.Timestamp first_ideate_interaction = 4;
+      .google.protobuf.Timestamp first_idea_created = 5;
+      .google.protobuf.Timestamp first_spec_generated = 6;
+      .google.protobuf.Timestamp first_stream_added = 7;
+      .google.protobuf.Timestamp first_collaboration_invite = 8;
+      .google.protobuf.Timestamp first_agent_interaction = 9;
+      .google.protobuf.Timestamp first_collection_created = 10;
+      .google.protobuf.Timestamp first_spec_feedback = 11;
+    }
+    message ActivationSummary {
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_ideate_interaction = 1;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_idea_created = 2;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_spec_generated = 3;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_stream_added = 4;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_collaboration_invite = 5;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_agent_interaction = 6;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_collection_created = 7;
+      .alis.os.metrics.v1.Metric.IdeateUserActivation.TimeToValueStats time_to_spec_feedback = 8;
+    }
+    message TimeToValueStats {
+      .google.protobuf.DoubleValue min_minutes = 1;
+      .google.protobuf.DoubleValue max_minutes = 2;
+      .google.protobuf.DoubleValue mean_minutes = 3;
+      .google.protobuf.DoubleValue median_minutes = 4;
+      .google.protobuf.DoubleValue percent_users_reached = 5;
+    }
+    repeated .alis.os.metrics.v1.Metric.IdeateUserActivation.UserActivation users = 1;
+    .alis.os.metrics.v1.Metric.IdeateUserActivation.ActivationSummary summary = 2;
+  }
+  message IdeateEngagementHealth {
+    .google.protobuf.Int64Value daily_engaged_users = 1;
+    .google.protobuf.Int64Value weekly_engaged_users = 2;
+    .google.protobuf.Int64Value monthly_engaged_users = 3;
+    .google.protobuf.DoubleValue median_active_days_last7 = 4;
+    .google.protobuf.DoubleValue median_active_days_last30 = 5;
+    .google.protobuf.DoubleValue weekly_to_monthly_ratio = 6;
+    .google.protobuf.DoubleValue daily_to_monthly_ratio = 7;
+    .google.protobuf.Int64Value monthly_engaged_express_users = 8;
+    .google.protobuf.Int64Value monthly_engaged_paid_users = 9;
+    .google.protobuf.Int64Value weekly_engaged_users_delta = 10;
+    .google.protobuf.Int64Value monthly_engaged_users_delta = 11;
+    .google.protobuf.Int64Value users_creating_ideas = 20;
+    .google.protobuf.Int64Value users_generating_specs = 21;
+    .google.protobuf.Int64Value users_interacting_with_agent = 22;
+    .google.protobuf.Int64Value users_sending_invitations = 23;
+    .google.protobuf.Int64Value users_pushing_to_tools = 24;
+    .google.protobuf.Int64Value users_adding_streams = 25;
+    .google.protobuf.Int64Value users_providing_feedback = 26;
+  }
+  message IdeateInputBehavior {
+    message InputBreakdownAggregate {
+      .google.protobuf.Int64Value voice_note_count = 1;
+      .google.protobuf.Int64Value file_upload_count = 2;
+      .google.protobuf.Int64Value text_entry_count = 3;
+      .google.protobuf.Int64Value total_count = 4;
+      .google.protobuf.Int64Value voice_note_users = 5;
+      .google.protobuf.Int64Value file_upload_users = 6;
+      .google.protobuf.Int64Value text_entry_users = 7;
+    }
+    message InputBreakdownUser {
+      .google.protobuf.Int64Value voice_note_count = 1;
+      .google.protobuf.Int64Value file_upload_count = 2;
+      .google.protobuf.Int64Value text_entry_count = 3;
+      .google.protobuf.Int64Value total_count = 4;
+    }
+    message UserInputBehavior {
+      string user = 1;
+      string email = 2;
+      .alis.os.metrics.v1.Metric.IdeateInputBehavior.InputBreakdownUser breakdown = 3;
+      .google.protobuf.StringValue dominant_input_type = 4;
+      .google.protobuf.DoubleValue dominant_type_percentage = 5;
+    }
+    .alis.os.metrics.v1.Metric.IdeateInputBehavior.InputBreakdownAggregate aggregate = 1;
+    repeated .alis.os.metrics.v1.Metric.IdeateInputBehavior.UserInputBehavior users = 2;
+  }
+  message IdeatePushToToolMetrics {
+    message PushMetrics {
+      .google.protobuf.Int64Value total_push_events = 1;
+      .google.protobuf.Int64Value distinct_users_pushing = 2;
+      .google.protobuf.Int64Value distinct_tools_used = 3;
+      .google.protobuf.Int64Value total_items_pushed = 4;
+      .google.protobuf.DoubleValue spec_to_push_rate = 5;
+    }
+    message ToolBreakdown {
+      string tool = 1;
+      .google.protobuf.Int64Value items_pushed = 2;
+      .google.protobuf.Int64Value distinct_users = 3;
+      .google.protobuf.Int64Value successful_pushes = 4;
+      .google.protobuf.Int64Value failed_pushes = 5;
+    }
+    message UserPushMetrics {
+      string user = 1;
+      string email = 2;
+      .google.protobuf.Int64Value total_push_events = 3;
+      repeated .alis.os.metrics.v1.Metric.IdeatePushToToolMetrics.ToolBreakdown tools = 4;
+    }
+    .alis.os.metrics.v1.Metric.IdeatePushToToolMetrics.PushMetrics aggregate = 1;
+    repeated .alis.os.metrics.v1.Metric.IdeatePushToToolMetrics.ToolBreakdown tools = 2;
+    repeated .alis.os.metrics.v1.Metric.IdeatePushToToolMetrics.UserPushMetrics users = 3;
+  }
+}
+
+message WriteSeatsMetricsRequest {
+}
+
+message WriteUsageMetricsRequest {
+}
+
+message WriteAggregateAccountMetricsRequest {
+}
+
+message WriteAccountMetricsRequest {
+}
+
+message ViewLatestAccountMetricsRequest {
+}
+
+message ViewLatestAccountMetricsResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.Account account_metrics = 2;
+}
+
+message BatchViewLatestAccountMetricsRequest {
+}
+
+message BatchViewLatestAccountMetricsResponse {
+}
+
+message WriteAccountManagerMetricsRequest {
+}
+
+message BatchWriteAccountMetricsRequest {
+}
+
+message BatchWriteAccountManagerMetricsRequest {
+}
+
+message SyncPlatformAccountManagementDataRequest {
+}
+
+message ViewLatestIdeateUsageMetricsRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    repeated .alis.os.metrics.v1.IdeateUserState state = 4;  // enum (heuristically resolved)
+    .google.protobuf.Timestamp first_interaction_start = 5;
+    .google.protobuf.Timestamp first_interaction_end = 6;
+  }
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp as_of_time = 3;
+  .alis.os.metrics.v1.ViewLatestIdeateUsageMetricsRequest.Filter filter = 4;
+}
+
+message ViewLatestIdeateUsageMetricsResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateUsage ideate_usage_metrics = 2;
+}
+
+message ViewIdeateUsersStateTransitionMatrixRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    repeated .alis.os.metrics.v1.IdeateUserState state = 4;  // enum (heuristically resolved)
+  }
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp to_time = 3;
+  .alis.os.metrics.v1.ViewIdeateUsersStateTransitionMatrixRequest.Filter filter = 4;
+}
+
+message ViewIdeateUsersStateTransitionMatrixResponse {
+  .google.protobuf.Timestamp to_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateStateTransitionMatrix transition_matrix = 2;
+}
+
+message ViewIdeateUserLevelStateTransitionRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    repeated .alis.os.metrics.v1.IdeateUserState state = 4;  // enum (heuristically resolved)
+  }
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp to_time = 3;
+  .alis.os.metrics.v1.ViewIdeateUserLevelStateTransitionRequest.Filter filter = 4;
+}
+
+message ViewIdeateUserLevelStateTransitionResponse {
+  .google.protobuf.Timestamp to_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateUserLevelStateTransition user_level_transitions = 2;
+}
+
+message ViewIdeateUserActivationRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    .google.protobuf.Timestamp first_platform_interaction_start = 4;
+    .google.protobuf.Timestamp first_platform_interaction_end = 5;
+  }
+  bool include_alis = 1;
+  .alis.os.metrics.v1.ViewIdeateUserActivationRequest.Filter filter = 2;
+}
+
+message ViewIdeateUserActivationResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateUserActivation user_activation = 2;
+}
+
+message ViewIdeateEngagementHealthRequest {
+  message Filter {
+    .google.protobuf.StringValue domain = 1;
+    .alis.os.metrics.v1.Metric.Account.AccountPlan account_plan = 2;  // enum (heuristically resolved)
+  }
+  bool include_alis = 1;
+  .google.protobuf.Timestamp as_of_time = 2;
+  .alis.os.metrics.v1.ViewIdeateEngagementHealthRequest.Filter filter = 3;
+}
+
+message ViewIdeateEngagementHealthResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateEngagementHealth engagement = 2;
+}
+
+message ViewIdeateInputBehaviorRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    .google.protobuf.Timestamp first_interaction_start = 4;
+    .google.protobuf.Timestamp first_interaction_end = 5;
+  }
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp as_of_time = 3;
+  .alis.os.metrics.v1.ViewIdeateInputBehaviorRequest.Filter filter = 4;
+}
+
+message ViewIdeateInputBehaviorResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.IdeateInputBehavior input_behavior = 2;
+}
+
+message ViewIdeatePushToToolMetricsRequest {
+  message Filter {
+    .google.protobuf.StringValue user = 1;
+    .google.protobuf.StringValue email = 2;
+    .google.protobuf.StringValue domain = 3;
+    .google.protobuf.StringValue tool = 4;
+  }
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp as_of_time = 3;
+  .alis.os.metrics.v1.ViewIdeatePushToToolMetricsRequest.Filter filter = 4;
+}
+
+message ViewIdeatePushToToolMetricsResponse {
+  .google.protobuf.Timestamp as_of_time = 1;
+  .alis.os.metrics.v1.Metric.IdeatePushToToolMetrics push_metrics = 2;
+}
+
+message ViewIdeateUserUsageTimelineRequest {
+  bool include_alis = 1;
+  .google.protobuf.Int64Value lookback_days = 2;
+  .google.protobuf.Timestamp as_of_time = 3;
+  oneof identifier {
+    string user = 4;
+    string email = 5;
+  }
+}
+
+message ViewIdeateUserUsageTimelineResponse {
+  message DailyUsage {
+    .google.protobuf.Timestamp date = 1;
+    repeated .alis.os.metrics.v1.ViewIdeateUserUsageTimelineResponse.UsageEvent events = 2;
+  }
+  message UsageEvent {
+    string event = 1;
+    string metadata = 2;
+    .google.protobuf.Timestamp event_time = 3;
+  }
+  .google.protobuf.Timestamp as_of_time = 1;
+  repeated .alis.os.metrics.v1.ViewIdeateUserUsageTimelineResponse.DailyUsage daily_usage = 2;
+}
+
+message ViewIdeateUserSeatInfoRequest {
+  message Filter {
+    repeated string emails = 1;
+    repeated string users = 2;
+    .google.protobuf.StringValue domain = 3;
+  }
+}
+
+message ViewIdeateUserSeatInfoResponse {
+  message UserSeatInfo {
+    .google.protobuf.StringValue user_name = 1;
+    .google.protobuf.StringValue display_name = 2;
+    .google.protobuf.StringValue email = 3;
+    .google.protobuf.BoolValue has_ideate_creator_seat = 4;
+    .google.protobuf.BoolValue had_ideate_creator_seat = 5;
+    .google.protobuf.Timestamp first_ideate_creator_seat_time = 6;
+    repeated .alis.os.metrics.v1.ViewIdeateUserSeatInfoResponse.AccountSeatDetail accounts = 7;
+  }
+  message AccountSeatDetail {
+    .google.protobuf.StringValue account_name = 1;
+    .google.protobuf.StringValue account_display_name = 2;
+    .google.protobuf.StringValue account_plan = 3;
+    .google.protobuf.StringValue ideate_seat_type = 4;
+    .google.protobuf.BoolValue ideate_seat_is_annual = 5;
+    .google.protobuf.StringValue account_role = 6;
+    .google.protobuf.Timestamp user_create_time = 7;
+  }
+  .google.protobuf.Timestamp as_of_time = 1;
+  repeated .alis.os.metrics.v1.ViewIdeateUserSeatInfoResponse.UserSeatInfo users = 2;
+}
+
+service MetricsService {
+  rpc WriteSeatsMetrics(.alis.os.metrics.v1.WriteSeatsMetricsRequest) returns (.google.protobuf.Empty);
+  rpc WriteUsageMetrics(.alis.os.metrics.v1.WriteUsageMetricsRequest) returns (.google.protobuf.Empty);
+  rpc WriteAggregateAccountMetrics(.alis.os.metrics.v1.WriteAggregateAccountMetricsRequest) returns (.google.protobuf.Empty);
+  rpc WriteAccountMetrics(.alis.os.metrics.v1.WriteAccountMetricsRequest) returns (.google.protobuf.Empty);
+  rpc ViewLatestAccountMetrics(.alis.os.metrics.v1.ViewLatestAccountMetricsRequest) returns (.alis.os.metrics.v1.ViewLatestAccountMetricsResponse);
+  rpc BatchViewLatestAccountMetrics(.alis.os.metrics.v1.BatchViewLatestAccountMetricsRequest) returns (.alis.os.metrics.v1.BatchViewLatestAccountMetricsResponse);
+  rpc WriteAccountManagerMetrics(.alis.os.metrics.v1.WriteAccountManagerMetricsRequest) returns (.google.protobuf.Empty);
+  rpc BatchWriteAccountMetrics(.alis.os.metrics.v1.BatchWriteAccountMetricsRequest) returns (.google.protobuf.Empty);
+  rpc BatchWriteAccountManagerMetrics(.alis.os.metrics.v1.BatchWriteAccountManagerMetricsRequest) returns (.google.protobuf.Empty);
+  rpc SyncPlatformAccountManagementData(.alis.os.metrics.v1.SyncPlatformAccountManagementDataRequest) returns (.google.protobuf.Empty);
+  rpc ViewLatestIdeateUsageMetrics(.alis.os.metrics.v1.ViewLatestIdeateUsageMetricsRequest) returns (.alis.os.metrics.v1.ViewLatestIdeateUsageMetricsResponse);
+  rpc ViewIdeateUsersStateTransitionMatrix(.alis.os.metrics.v1.ViewIdeateUsersStateTransitionMatrixRequest) returns (.alis.os.metrics.v1.ViewIdeateUsersStateTransitionMatrixResponse);
+  rpc ViewIdeateUserLevelStateTransition(.alis.os.metrics.v1.ViewIdeateUserLevelStateTransitionRequest) returns (.alis.os.metrics.v1.ViewIdeateUserLevelStateTransitionResponse);
+  rpc ViewIdeateUserActivation(.alis.os.metrics.v1.ViewIdeateUserActivationRequest) returns (.alis.os.metrics.v1.ViewIdeateUserActivationResponse);
+  rpc ViewIdeateEngagementHealth(.alis.os.metrics.v1.ViewIdeateEngagementHealthRequest) returns (.alis.os.metrics.v1.ViewIdeateEngagementHealthResponse);
+  rpc ViewIdeateInputBehavior(.alis.os.metrics.v1.ViewIdeateInputBehaviorRequest) returns (.alis.os.metrics.v1.ViewIdeateInputBehaviorResponse);
+  rpc ViewIdeatePushToToolMetrics(.alis.os.metrics.v1.ViewIdeatePushToToolMetricsRequest) returns (.alis.os.metrics.v1.ViewIdeatePushToToolMetricsResponse);
+  rpc ViewIdeateUserUsageTimeline(.alis.os.metrics.v1.ViewIdeateUserUsageTimelineRequest) returns (.alis.os.metrics.v1.ViewIdeateUserUsageTimelineResponse);
+  rpc ViewIdeateUserSeatInfo(.alis.os.metrics.v1.ViewIdeateUserSeatInfoRequest) returns (.alis.os.metrics.v1.ViewIdeateUserSeatInfoResponse);
+}

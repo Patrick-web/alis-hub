@@ -1,0 +1,352 @@
+syntax = "proto3";
+
+package alis.open.agent.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum TaskState {
+  TASK_STATE_UNSPECIFIED = 0;
+  TASK_STATE_SUBMITTED = 1;
+  TASK_STATE_WORKING = 2;
+  TASK_STATE_COMPLETED = 3;
+  TASK_STATE_FAILED = 4;
+  TASK_STATE_CANCELLED = 5;
+  TASK_STATE_INPUT_REQUIRED = 6;
+  TASK_STATE_REJECTED = 7;
+  TASK_STATE_AUTH_REQUIRED = 8;
+}
+
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_USER = 1;
+  ROLE_AGENT = 2;
+}
+
+message SendMessageConfiguration {
+  repeated string accepted_output_modes = 1;
+  .alis.open.agent.v1.PushNotificationConfig push_notification = 2;
+  int32 history_length = 3;
+  bool blocking = 4;
+}
+
+message Task {
+  string name = 1;
+  string id = 2;
+  string context_id = 3;
+  .alis.open.agent.v1.TaskStatus status = 4;
+  repeated .alis.open.agent.v1.Artifact artifacts = 5;
+  repeated .alis.open.agent.v1.Message history = 6;
+  .google.protobuf.Struct metadata = 7;
+}
+
+message TaskStatus {
+  .alis.open.agent.v1.TaskState state = 1;  // enum (heuristically resolved)
+  .alis.open.agent.v1.Message update = 2;
+  .google.protobuf.Timestamp timestamp = 3;
+}
+
+message Part {
+  .google.protobuf.Struct metadata = 4;
+  oneof part {
+    string text = 1;
+    .alis.open.agent.v1.FilePart file = 2;
+    .alis.open.agent.v1.DataPart data = 3;
+    .google.protobuf.Any any = 20;
+  }
+}
+
+message FilePart {
+  string mime_type = 3;
+  string name = 4;
+  oneof file {
+    string file_with_uri = 1;
+    bytes file_with_bytes = 2;
+  }
+}
+
+message DataPart {
+}
+
+message Message {
+  string message_id = 1;
+  string context_id = 2;
+  string task_id = 3;
+  .alis.open.agent.v1.Role role = 4;
+  repeated .alis.open.agent.v1.Part parts = 5;
+  .google.protobuf.Struct metadata = 6;
+  repeated string extensions = 7;
+  repeated string reference_task_ids = 8;
+}
+
+message Artifact {
+  string artifact_id = 1;
+  string name = 3;
+  string description = 4;
+  repeated .alis.open.agent.v1.Part parts = 5;
+  .google.protobuf.Struct metadata = 6;
+  repeated string extensions = 7;
+}
+
+message TaskStatusUpdateEvent {
+  string task_id = 1;
+  string context_id = 2;
+  .alis.open.agent.v1.TaskStatus status = 3;
+  bool final = 4;
+  .google.protobuf.Struct metadata = 5;
+}
+
+message TaskArtifactUpdateEvent {
+  string task_id = 1;
+  string context_id = 2;
+  .alis.open.agent.v1.Artifact artifact = 3;
+  bool append = 4;
+  bool last_chunk = 5;
+  .google.protobuf.Struct metadata = 6;
+}
+
+message PushNotificationConfig {
+  string id = 1;
+  string url = 2;
+  string token = 3;
+  .alis.open.agent.v1.AuthenticationInfo authentication = 4;
+}
+
+message AuthenticationInfo {
+  repeated string schemes = 1;
+  string credentials = 2;
+}
+
+message AgentInterface {
+  string url = 1;
+  string transport = 2;
+}
+
+message AgentCard {
+  string name = 1;
+  string description = 2;
+  string url = 3;
+  .alis.open.agent.v1.AgentProvider provider = 4;
+  string version = 5;
+  string documentation_url = 6;
+  .alis.open.agent.v1.AgentCapabilities capabilities = 7;
+  map<string, .alis.open.agent.v1.SecurityScheme> security_schemes = 8;
+  repeated .alis.open.agent.v1.Security security = 9;
+  repeated string default_input_modes = 10;
+  repeated string default_output_modes = 11;
+  repeated .alis.open.agent.v1.AgentSkill skills = 12;
+  bool supports_authenticated_extended_card = 13;
+  string preferred_transport = 14;
+  repeated .alis.open.agent.v1.AgentInterface additional_interfaces = 15;
+  string protocol_version = 16;
+  repeated .alis.open.agent.v1.AgentCardSignature signatures = 17;
+  string icon_url = 18;
+}
+
+message AgentProvider {
+  string url = 1;
+  string organization = 2;
+}
+
+message AgentCapabilities {
+  bool streaming = 1;
+  bool push_notifications = 2;
+  repeated .alis.open.agent.v1.AgentExtension extensions = 3;
+  bool state_transition_history = 4;
+}
+
+message AgentExtension {
+  string uri = 1;
+  string description = 2;
+  bool required = 3;
+  .google.protobuf.Struct params = 4;
+}
+
+message AgentSkill {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string tags = 4;
+  repeated string examples = 5;
+  repeated string input_modes = 6;
+  repeated string output_modes = 7;
+  repeated .alis.open.agent.v1.Security security = 8;
+}
+
+message AgentCardSignature {
+  string protected = 1;
+  string signature = 2;
+  .google.protobuf.Struct header = 3;
+}
+
+message TaskPushNotificationConfig {
+  string name = 1;
+  .alis.open.agent.v1.PushNotificationConfig push_notification_config = 2;
+}
+
+message StringList {
+}
+
+message Security {
+}
+
+message SecurityScheme {
+  oneof scheme {
+    .alis.open.agent.v1.APIKeySecurityScheme api_key_security_scheme = 1;
+    .alis.open.agent.v1.HTTPAuthSecurityScheme http_auth_security_scheme = 2;
+    .alis.open.agent.v1.OAuth2SecurityScheme oauth2_security_scheme = 3;
+    .alis.open.agent.v1.OpenIdConnectSecurityScheme open_id_connect_security_scheme = 4;
+    .alis.open.agent.v1.MutualTlsSecurityScheme mtls_security_scheme = 5;
+  }
+}
+
+message APIKeySecurityScheme {
+  string description = 1;
+  string location = 2;
+  string name = 3;
+}
+
+message HTTPAuthSecurityScheme {
+  string description = 1;
+  string scheme = 2;
+  string bearer_format = 3;
+}
+
+message OAuth2SecurityScheme {
+  string description = 1;
+  .alis.open.agent.v1.OAuthFlows flows = 2;
+  string oauth2_metadata_url = 3;
+}
+
+message OpenIdConnectSecurityScheme {
+  string description = 1;
+  string open_id_connect_url = 2;
+}
+
+message MutualTlsSecurityScheme {
+}
+
+message OAuthFlows {
+  oneof flow {
+    .alis.open.agent.v1.AuthorizationCodeOAuthFlow authorization_code = 1;
+    .alis.open.agent.v1.ClientCredentialsOAuthFlow client_credentials = 2;
+    .alis.open.agent.v1.ImplicitOAuthFlow implicit = 3;
+    .alis.open.agent.v1.PasswordOAuthFlow password = 4;
+  }
+}
+
+message AuthorizationCodeOAuthFlow {
+  string authorization_url = 1;
+  string token_url = 2;
+  string refresh_url = 3;
+  map<string, string> scopes = 4;
+}
+
+message ClientCredentialsOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message ImplicitOAuthFlow {
+  string authorization_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message PasswordOAuthFlow {
+  string token_url = 1;
+  string refresh_url = 2;
+  map<string, string> scopes = 3;
+}
+
+message SendMessageRequest {
+  .alis.open.agent.v1.Message request = 1;
+  .alis.open.agent.v1.SendMessageConfiguration configuration = 2;
+  .google.protobuf.Struct metadata = 3;
+}
+
+message GetTaskRequest {
+  string name = 1;
+  int32 history_length = 2;
+}
+
+message ListTasksRequest {
+  string context_id = 1;
+  int32 status = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+  int32 page_size = 3;
+  string page_token = 4;
+  int32 history_length = 5;
+  .google.protobuf.Timestamp last_updated_time = 6;
+  bool include_artifacts = 7;
+}
+
+message CancelTaskRequest {
+}
+
+message GetTaskPushNotificationConfigRequest {
+}
+
+message DeleteTaskPushNotificationConfigRequest {
+}
+
+message CreateTaskPushNotificationConfigRequest {
+  string parent = 1;
+  string config_id = 2;
+  .alis.open.agent.v1.TaskPushNotificationConfig config = 3;
+}
+
+message TaskSubscriptionRequest {
+}
+
+message ListTaskPushNotificationConfigRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message GetAgentCardRequest {
+}
+
+message SendMessageResponse {
+  oneof payload {
+    .alis.open.agent.v1.Task task = 1;
+    .alis.open.agent.v1.Message msg = 2;
+  }
+}
+
+message StreamResponse {
+  oneof payload {
+    .alis.open.agent.v1.Task task = 1;
+    .alis.open.agent.v1.Message msg = 2;
+    .alis.open.agent.v1.TaskStatusUpdateEvent status_update = 3;
+    .alis.open.agent.v1.TaskArtifactUpdateEvent artifact_update = 4;
+  }
+}
+
+message ListTasksResponse {
+  repeated .alis.open.agent.v1.Task tasks = 1;
+  string next_page_token = 2;
+  int32 total_size = 3;
+}
+
+message ListTaskPushNotificationConfigResponse {
+  repeated .alis.open.agent.v1.TaskPushNotificationConfig configs = 1;
+  string next_page_token = 2;
+}
+
+service A2AService {
+  rpc SendMessage(.alis.open.agent.v1.SendMessageRequest) returns (.alis.open.agent.v1.SendMessageResponse);
+  rpc SendStreamingMessage(.alis.open.agent.v1.SendMessageRequest) returns (stream .alis.open.agent.v1.StreamResponse);
+  rpc GetTask(.alis.open.agent.v1.GetTaskRequest) returns (.alis.open.agent.v1.Task);
+  rpc ListTasks(.alis.open.agent.v1.ListTasksRequest) returns (.alis.open.agent.v1.ListTasksResponse);
+  rpc CancelTask(.alis.open.agent.v1.CancelTaskRequest) returns (.alis.open.agent.v1.Task);
+  rpc TaskSubscription(.alis.open.agent.v1.TaskSubscriptionRequest) returns (stream .alis.open.agent.v1.StreamResponse);
+  rpc CreateTaskPushNotificationConfig(.alis.open.agent.v1.CreateTaskPushNotificationConfigRequest) returns (.alis.open.agent.v1.TaskPushNotificationConfig);
+  rpc GetTaskPushNotificationConfig(.alis.open.agent.v1.GetTaskPushNotificationConfigRequest) returns (.alis.open.agent.v1.TaskPushNotificationConfig);
+  rpc ListTaskPushNotificationConfig(.alis.open.agent.v1.ListTaskPushNotificationConfigRequest) returns (.alis.open.agent.v1.ListTaskPushNotificationConfigResponse);
+  rpc GetAgentCard(.alis.open.agent.v1.GetAgentCardRequest) returns (.alis.open.agent.v1.AgentCard);
+  rpc DeleteTaskPushNotificationConfig(.alis.open.agent.v1.DeleteTaskPushNotificationConfigRequest) returns (.google.protobuf.Empty);
+}

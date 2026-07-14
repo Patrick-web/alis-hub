@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+package alis.os.glass.v1;
+message ExplainDefineRequest {
+  string definition = 1;
+  string version = 2;
+  repeated string definition_artifacts = 3;
+  string neuron = 4;
+  string root_directory = 5;
+}
+
+message ExplainDefineResponse {
+  message Definition {
+    string name = 1;
+    string version = 2;
+    string commit = 3;
+    string release_type = 4;
+  }
+  message Neuron {
+    string name = 1;
+    string title = 2;
+  }
+  message Artifacts {
+    message Golang {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string installation_script = 5;
+      string developer_context = 6;
+      string usage_example = 7;
+      string package_import_path = 8;
+    }
+    message Javascript {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string package_name = 5;
+      string installation_script = 6;
+      string developer_context = 7;
+      string usage_example = 8;
+    }
+    message Python {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string package_name = 5;
+      string installation_script = 6;
+      string developer_context = 7;
+      string usage_example = 8;
+    }
+    message Dart {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string installation_script = 5;
+      string developer_context = 6;
+      string usage_example = 7;
+    }
+    message GoogleCloudSpanner {
+      message Database {
+        string database = 1;
+        repeated string types = 2;
+        string location_uri = 3;
+      }
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      repeated .alis.os.glass.v1.ExplainDefineResponse.Artifacts.GoogleCloudSpanner.Database databases = 4;
+      string developer_context = 5;
+    }
+    message GoogleCloudPubSub {
+      message Environment {
+        string name = 1;
+        string location_uri = 2;
+        repeated string topics = 3;
+      }
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      repeated .alis.os.glass.v1.ExplainDefineResponse.Artifacts.GoogleCloudPubSub.Environment environments = 4;
+      string developer_context = 5;
+    }
+    message DotNet {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string installation_script = 5;
+      string developer_context = 6;
+      string usage_example = 7;
+    }
+    message OpenAPI {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string location_uri = 4;
+      string developer_context = 5;
+      string usage_example = 6;
+    }
+    message Postman {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string collection_uri = 4;
+      string developer_context = 5;
+      string usage_example = 6;
+    }
+    message GolangPublic {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string package = 4;
+      string github_repo = 5;
+      string installation_script = 6;
+      string developer_context = 7;
+      string usage_example = 8;
+    }
+    message JavascriptPublic {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string package = 4;
+      string npm_package = 5;
+      string installation_script = 6;
+      string developer_context = 7;
+      string usage_example = 8;
+    }
+    message ProtosPublic {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string package_id = 4;
+      string github_repo = 5;
+      string developer_context = 6;
+      string usage_example = 7;
+    }
+    message EcmascriptPublic {
+      string definition_artifact = 1;
+      int32 state = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+      string notes = 3;
+      string package = 4;
+      string npm_package = 5;
+      string installation_script = 6;
+      string developer_context = 7;
+      string usage_example = 8;
+    }
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.Golang golang = 1;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.Javascript javascript = 2;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.Python python = 3;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.Dart dart = 4;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.GoogleCloudSpanner google_cloud_spanner = 5;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.GoogleCloudPubSub google_cloud_pubsub = 6;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.DotNet dot_net = 7;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.OpenAPI open_api = 8;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.Postman postman = 9;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.GolangPublic golang_public = 10;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.JavascriptPublic javascript_public = 11;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.ProtosPublic protos_public = 12;
+    .alis.os.glass.v1.ExplainDefineResponse.Artifacts.EcmascriptPublic ecmascript_public = 13;
+  }
+  string title = 1;
+  string summary = 2;
+  .alis.os.glass.v1.ExplainDefineResponse.Definition definition = 3;
+  .alis.os.glass.v1.ExplainDefineResponse.Neuron neuron = 4;
+  .alis.os.glass.v1.ExplainDefineResponse.Artifacts artifacts = 5;
+}
+
+service GlassService {
+  rpc ExplainDefine(.alis.os.glass.v1.ExplainDefineRequest) returns (.alis.os.glass.v1.ExplainDefineResponse);
+}

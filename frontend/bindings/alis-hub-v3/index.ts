@@ -13,6 +13,7 @@ import * as LocalAIService from "./localaiservice.js";
 import * as LogService from "./logservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
+import * as ProtoDecodeService from "./protodecodeservice.js";
 import * as ServiceManager from "./servicemanager.js";
 import * as SettingsService from "./settingsservice.js";
 import * as WorkflowService from "./workflowservice.js";
@@ -29,6 +30,7 @@ export {
     LogService,
     PackageService,
     ProductService,
+    ProtoDecodeService,
     ServiceManager,
     SettingsService,
     WorkflowService
@@ -111,6 +113,7 @@ export {
     ProductOverview,
     ProductRepoPaths,
     ProductSummary,
+    ProtoMessageInfo,
     RemoteMergeResult,
     RunBuildResult,
     RunDefineResult,

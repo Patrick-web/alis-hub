@@ -81,6 +81,13 @@ export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
     description: 'Execute DML in a read-write transaction that holds changes open until you choose to commit or rollback.',
     enabled: true,
   },
+  {
+    id: 'spanner-proto-decode',
+    category: 'Tools',
+    title: 'Decode Spanner BYTES as proto JSON',
+    description: "Adds a \"Decode as proto\" action to BYTES columns, using message types compiled from the org's cloned define repo.",
+    enabled: true,
+  },
 ];
 
 export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
