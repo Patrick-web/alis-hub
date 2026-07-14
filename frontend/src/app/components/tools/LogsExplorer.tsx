@@ -9,6 +9,8 @@ import { LogsServicesTab } from './LogsServicesTab';
 import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
 import type { LogEntry, CloudRunService } from '../../../../bindings/alis-hub-v3/models';
 import { useGCloud } from '../../stores/gcloud';
+import { notify } from '../../lib/notify';
+import { copyToClipboard } from '../../lib/clipboard';
 
 interface Props {
   projectID: string;
@@ -421,8 +423,20 @@ export function LogsExplorer({ projectID }: Props) {
                     />
                   </button>
                   {isExpanded && (
-                    <div className="bg-muted border-b border-border px-[16px] py-[12px]">
-                      <pre className="text-[9px] text-foreground/60 whitespace-pre-wrap break-all leading-[1.6]">
+                    <div className="bg-muted border-b border-border px-[16px] py-[12px] relative">
+                      <button
+                        onClick={() => {
+                          copyToClipboard(JSON.stringify(entry, null, 2))
+                            .then(() => notify.success('Log entry copied to clipboard'))
+                            .catch(() => notify.error('Failed to copy log entry'));
+                        }}
+                        title="Copy log entry"
+                        className="absolute top-[8px] right-[8px] flex items-center gap-[4px] px-[8px] py-[3px] rounded-[3px] bg-background border border-border text-[9px] font-mono text-foreground/50 hover:text-foreground hover:border-foreground/30 transition-colors"
+                      >
+                        <Icon icon="solar:copy-linear" className="text-[11px]" />
+                        Copy
+                      </button>
+                      <pre className="text-[9px] text-foreground/60 whitespace-pre-wrap break-all leading-[1.6] pr-[60px]">
                         {JSON.stringify(entry, null, 2)}
                       </pre>
                     </div>
