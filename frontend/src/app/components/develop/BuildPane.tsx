@@ -35,7 +35,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
 
   const [step, setStep] = useState<BuildStep>('commits');
   const [commits, setCommits] = useState<DefineCommit[]>([]);
-  const [commitsLoading, setCommitsLoading] = useState(false);
+  const [commitsLoading, setCommitsLoading] = useState(() => !restore?.task);
   const [selectedCommit, setSelectedCommit] = useState<DefineCommit | null>(null);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [progressMsg, setProgressMsg] = useState('Starting...');

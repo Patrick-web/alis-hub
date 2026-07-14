@@ -117,7 +117,9 @@ export function BuildsPage() {
 
   // Versions table
   const [versions, setVersions] = useState<VersionEntry[]>([]);
-  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsLoading, setVersionsLoading] = useState(
+    () => !!activeNeuron && !!state.organisation && !!state.product,
+  );
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [filterText, setFilterText] = useState("");
 

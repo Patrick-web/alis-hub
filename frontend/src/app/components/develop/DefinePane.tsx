@@ -29,7 +29,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
 
   const [step, setStep] = useState<DefineStep>('commits');
   const [commits, setCommits] = useState<DefineCommit[]>([]);
-  const [commitsLoading, setCommitsLoading] = useState(false);
+  const [commitsLoading, setCommitsLoading] = useState(() => !restore?.task);
   const [selectedCommit, setSelectedCommit] = useState<DefineCommit | null>(null);
   const [defineResult, setDefineResult] = useState<DefineResult | null>(null);
   const [progressMsg, setProgressMsg] = useState('Starting...');

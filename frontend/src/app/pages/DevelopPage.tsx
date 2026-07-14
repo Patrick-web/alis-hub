@@ -30,7 +30,9 @@ export function DevelopPage() {
   );
   const [commitTimes, setCommitTimes] = useState<Record<string, string>>({});
   const [commitTimesLoading, setCommitTimesLoading] = useState(false);
-  const [neuronsLoading, setNeuronsLoading] = useState(false);
+  const [neuronsLoading, setNeuronsLoading] = useState(
+    () => state.neurons.length === 0 && !!state.organisation && !!state.product,
+  );
   const commitTimesBranchRef = useRef<string>("");
 
   const loadNeurons = useCallback(async () => {
@@ -302,7 +304,14 @@ export function DevelopPage() {
 
       {/* Services table */}
       <div className="flex-1 overflow-y-auto">
-        {state.neurons.length === 0 ? (
+        {state.neurons.length === 0 && neuronsLoading ? (
+          <div className="flex items-center justify-center h-full gap-[10px]">
+            <Loader size={20} />
+            <span className="text-[11px] text-foreground/50">
+              Loading services...
+            </span>
+          </div>
+        ) : state.neurons.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
               icon="solar:server-minimalistic-linear"

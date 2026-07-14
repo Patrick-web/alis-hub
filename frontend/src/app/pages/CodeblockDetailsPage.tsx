@@ -178,16 +178,20 @@ export function CodeblockDetailsPage() {
 
   const [versions, setVersions] = useState<CodeblockVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
+  const [versionsLoaded, setVersionsLoaded] = useState(false);
   const [selectedVersion, setSelectedVersion] =
     useState<CodeblockVersion | null>(null);
 
   const [doc, setDoc] = useState("");
   const [agentDoc, setAgentDoc] = useState("");
   const [docAudience, setDocAudience] = useState<"user" | "agent">("user");
-  const [docLoading, setDocLoading] = useState(false);
+  const [docLoading, setDocLoading] = useState(
+    () => activeTab === "documentation",
+  );
 
   const [instances, setInstances] = useState<CodeblockInstance[]>([]);
   const [instancesLoading, setInstancesLoading] = useState(false);
+  const [instancesLoaded, setInstancesLoaded] = useState(false);
 
   const [plans, setPlans] = useState<BlockPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
@@ -251,7 +255,10 @@ export function CodeblockDetailsPage() {
         if (list.length > 0) setSelectedVersion(list[0]);
       })
       .catch(console.error)
-      .finally(() => setVersionsLoading(false));
+      .finally(() => {
+        setVersionsLoading(false);
+        setVersionsLoaded(true);
+      });
   }, [activeTab, blockId, versions.length]);
 
   // Lazy load documentation
@@ -306,7 +313,10 @@ export function CodeblockDetailsPage() {
     )(blockId)
       .then((v) => setInstances(v ?? []))
       .catch(console.error)
-      .finally(() => setInstancesLoading(false));
+      .finally(() => {
+        setInstancesLoading(false);
+        setInstancesLoaded(true);
+      });
   }, [activeTab, blockId, instances.length]);
 
   // Lazy load plans for settings tab
@@ -493,6 +503,7 @@ export function CodeblockDetailsPage() {
           onClose={() => setInstallOpen(false)}
           onDone={() => {
             setInstallOpen(false);
+            setInstancesLoaded(false);
             setInstances([]);
             go("instances");
           }}
@@ -536,7 +547,7 @@ export function CodeblockDetailsPage() {
           {activeTab === "versions" && (
             <VersionsTab
               versions={versions}
-              loading={versionsLoading}
+              loading={versionsLoading || !versionsLoaded}
               selected={selectedVersion}
               onSelect={setSelectedVersion}
             />
@@ -544,9 +555,12 @@ export function CodeblockDetailsPage() {
           {activeTab === "instances" && (
             <InstancesTab
               instances={instances}
-              loading={instancesLoading}
+              loading={instancesLoading || !instancesLoaded}
               blockId={blockId}
-              onRefresh={() => setInstances([])}
+              onRefresh={() => {
+                setInstancesLoaded(false);
+                setInstances([]);
+              }}
             />
           )}
           {activeTab === "help" && <HelpTab blockId={blockId} />}
@@ -565,7 +579,7 @@ export function CodeblockDetailsPage() {
             <AccessTab
               blockId={blockId}
               data={accessData}
-              loading={accessLoading}
+              loading={accessLoading || (accessData === null && !accessError)}
               error={accessError}
               isOwner={isOwner}
               onRefresh={() => setAccessData(null)}
