@@ -129,6 +129,7 @@ export function LogsExplorer({ projectID }: Props) {
   const [isStreaming, setIsStreaming] = useState(false);
   const latestTimestampRef = useRef<string | null>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const pageFilterRef = useRef<string>('');
 
   // Cloud Run services list
   const [crServices, setCrServices] = useState<FilterSelectOption[]>([]);
@@ -167,9 +168,18 @@ export function LogsExplorer({ projectID }: Props) {
   });
 
   const load = useCallback((append = false, serviceOverride?: string) => {
-    const svc = serviceOverride ?? cloudRunService;
-    const since = new Date(Date.now() - Number(timeRange) * 60 * 1000).toISOString();
-    const filter = buildFilter(since, true, severity, searchText, resourceType, svc, logName, projectID);
+    let filter: string;
+    if (append && pageFilterRef.current) {
+      // Cloud Logging requires the filter on a page_token request to be byte-identical
+      // to the one that produced that token, so reuse the exact filter from page 1
+      // rather than rebuilding it (which would shift the `since` timestamp).
+      filter = pageFilterRef.current;
+    } else {
+      const svc = serviceOverride ?? cloudRunService;
+      const since = new Date(Date.now() - Number(timeRange) * 60 * 1000).toISOString();
+      filter = buildFilter(since, true, severity, searchText, resourceType, svc, logName, projectID);
+      pageFilterRef.current = filter;
+    }
     setLoading(true);
     setError(null);
     GS.ListLogEntries(projectID, filter, append ? nextPageToken : '')
@@ -196,6 +206,7 @@ export function LogsExplorer({ projectID }: Props) {
     const filter = buildFilter(latestTimestampRef.current, false, severity, searchText, resourceType, cloudRunService, logName, projectID);
     GS.ListLogEntries(projectID, filter, '')
       .then((page) => {
+        setError(null);
         const incoming = (page.entries ?? []).filter((e) => !seenIdsRef.current.has(e.insertId ?? ''));
         if (incoming.length === 0) return;
         setEntries((prev) => {
