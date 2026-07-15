@@ -54,6 +54,8 @@ jobs:
           rm /tmp/certificate.p12 /tmp/DevIDG2.cer /tmp/WWDRG3.cer
       - name: Build binary
         run: go build -tags production,devtools -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+        env:
+          GOOS: darwin
       - name: Create .app bundle and sign
         run: |
           APP="AlisHub.app"
@@ -157,7 +159,7 @@ jobs:
       - name: Build frontend
         run: npm --prefix frontend run build
       - name: Build binary
-        run: go build -tags production,devtools -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
       - name: Package
         run: |
           VERSION=${{ github.ref_name }}
@@ -196,13 +198,13 @@ jobs:
       - name: Generate Windows resources (amd64)
         run: wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
       - name: Build binary (amd64)
-        run: go build -tags production,devtools -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-amd64.exe .
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-amd64.exe .
         env:
           GOARCH: amd64
       - name: Generate Windows resources (arm64)
         run: wails3 generate syso -arch arm64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_arm64.syso
       - name: Build binary (arm64)
-        run: go build -tags production,devtools -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-arm64.exe .
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-arm64.exe .
         env:
           GOARCH: arm64
       - name: Generate WebView2 bootstrapper
