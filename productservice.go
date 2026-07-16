@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -10,6 +9,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"google.golang.org/protobuf/encoding/protowire"
 )
 
@@ -265,92 +266,74 @@ type BootstrapBlockParams struct {
 }
 
 type ProductService struct {
-	tokens *ConsoleTokenSource
-	mu     sync.Mutex
-	app    *application.App
-	proxy  *forgeProxy
+	tokens       *ConsoleTokenSource
+	mu           sync.Mutex
+	app          *application.App
+	proxies      map[string]*authProxy
+	editorWindow *application.WebviewWindow
+	editorURL    string
 }
 
-// forgeProxy holds the local reverse-proxy server for one Forgejo host.
-type forgeProxy struct {
-	server    *http.Server
-	port      int
-	forgeBase string
+// authProxy holds a local reverse-proxy server for one upstream host.
+type authProxy struct {
+	server *http.Server
+	port   int
+	base   string
 }
 
-// forgeProxyHandler is the http.Handler for the local Forgejo reverse proxy.
-// It injects a fresh Bearer token on every outbound request and strips headers
-// that would prevent the WebView from rendering the response correctly.
-type forgeProxyHandler struct {
-	forgeBase string
-	port      int
-	tokens    *ConsoleTokenSource
-	client    *http.Client
-}
-
-func (h *forgeProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	target := h.forgeBase + r.RequestURI
-
-	var body []byte
-	if r.Body != nil {
-		body, _ = io.ReadAll(r.Body)
-	}
-	outReq, err := http.NewRequestWithContext(r.Context(), r.Method, target, bytes.NewReader(body))
+// newAuthProxyHandler returns an http.Handler that reverse-proxies to base,
+// injecting a fresh Bearer token on every outbound request (including
+// WebSocket upgrades) and stripping headers that would prevent the WebView
+// from rendering the response correctly.
+func newAuthProxyHandler(base string, port int, tokens *ConsoleTokenSource) (http.Handler, error) {
+	target, err := url.Parse(base)
 	if err != nil {
-		http.Error(w, "proxy: bad request", http.StatusBadGateway)
-		return
+		return nil, err
 	}
-
-	// Forward request headers, rewriting any self-referencing Referer/Origin.
-	proxyBase := fmt.Sprintf("http://127.0.0.1:%d", h.port)
-	for name, vals := range r.Header {
-		switch name {
-		case "Host", "Content-Length":
-			// Let the http.Client set these correctly.
-		case "Referer", "Origin":
-			for _, v := range vals {
-				outReq.Header.Add(name, strings.ReplaceAll(v, proxyBase, h.forgeBase))
+	proxyBase := fmt.Sprintf("http://127.0.0.1:%d", port)
+	return &httputil.ReverseProxy{
+		Rewrite: func(pr *httputil.ProxyRequest) {
+			pr.SetURL(target)
+			pr.Out.Host = target.Host
+			// Rewrite any self-referencing Referer/Origin to the upstream host.
+			for _, name := range []string{"Referer", "Origin"} {
+				if v := pr.In.Header.Get(name); v != "" {
+					pr.Out.Header.Set(name, strings.ReplaceAll(v, proxyBase, base))
+				}
 			}
-		default:
-			outReq.Header[name] = vals
-		}
-	}
-
-	// Inject the alis Bearer token so Forgejo authenticates without OAuth redirect.
-	if token, tokErr := h.tokens.AccessToken(); tokErr == nil && token != "" {
-		outReq.Header.Set("Authorization", "Bearer "+token)
-	}
-
-	resp, err := h.client.Do(outReq)
-	if err != nil {
-		http.Error(w, "proxy: upstream error", http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
-
-	// Copy response headers with selective modifications.
-	for name, vals := range resp.Header {
-		switch name {
-		case "X-Frame-Options", "Content-Security-Policy":
+			// Inject the alis Bearer token so upstream authenticates without OAuth redirect.
+			if token, tokErr := tokens.AccessToken(); tokErr == nil && token != "" {
+				pr.Out.Header.Set("Authorization", "Bearer "+token)
+			}
+		},
+		ModifyResponse: func(resp *http.Response) error {
 			// Strip: these would block the WebView from rendering.
-		case "Set-Cookie":
+			resp.Header.Del("X-Frame-Options")
+			resp.Header.Del("Content-Security-Policy")
 			// Strip Secure flag so the browser accepts cookies over http://127.0.0.1.
-			for _, v := range vals {
-				v = strings.ReplaceAll(v, "; Secure", "")
-				v = strings.ReplaceAll(v, ";Secure", "")
-				w.Header().Add("Set-Cookie", v)
+			if cookies := resp.Header["Set-Cookie"]; len(cookies) > 0 {
+				rewritten := make([]string, 0, len(cookies))
+				for _, v := range cookies {
+					v = strings.ReplaceAll(v, "; Secure", "")
+					v = strings.ReplaceAll(v, ";Secure", "")
+					rewritten = append(rewritten, v)
+				}
+				resp.Header["Set-Cookie"] = rewritten
 			}
-		case "Location":
 			// Rewrite redirect targets to stay within the proxy.
-			for _, v := range vals {
-				w.Header().Add("Location", strings.ReplaceAll(v, h.forgeBase, proxyBase))
+			if locs := resp.Header["Location"]; len(locs) > 0 {
+				rewritten := make([]string, 0, len(locs))
+				for _, v := range locs {
+					rewritten = append(rewritten, strings.ReplaceAll(v, base, proxyBase))
+				}
+				resp.Header["Location"] = rewritten
 			}
-		default:
-			w.Header()[name] = vals
-		}
-	}
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body) //nolint:errcheck
+			return nil
+		},
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, "proxy: upstream error", http.StatusBadGateway)
+		},
+	}, nil
 }
 
 func NewProductService() *ProductService {
@@ -363,40 +346,34 @@ func (s *ProductService) SetApp(app *application.App) {
 	s.mu.Unlock()
 }
 
-// ensureForgeProxy starts (or reuses) a local HTTP proxy for forgeBase and
-// returns the port it is listening on. The proxy injects a fresh Bearer token
-// on every outbound request so Forgejo authenticates without an OAuth redirect.
-func (s *ProductService) ensureForgeProxy(forgeBase string) (int, error) {
+// ensureAuthProxy starts (or reuses) a local HTTP proxy for base and returns
+// the port it is listening on. The proxy injects a fresh Bearer token on every
+// outbound request so upstream authenticates without an OAuth redirect.
+func (s *ProductService) ensureAuthProxy(base string) (int, error) {
 	if err := s.initTokens(); err != nil {
 		return 0, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.proxy != nil {
-		if s.proxy.forgeBase == forgeBase {
-			return s.proxy.port, nil
-		}
-		s.proxy.server.Close()
-		s.proxy = nil
+	if p, ok := s.proxies[base]; ok {
+		return p.port, nil
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
 	port := ln.Addr().(*net.TCPAddr).Port
-	h := &forgeProxyHandler{
-		forgeBase: forgeBase,
-		port:      port,
-		tokens:    s.tokens,
-		client: &http.Client{
-			CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-				return http.ErrUseLastResponse
-			},
-		},
+	h, err := newAuthProxyHandler(base, port, s.tokens)
+	if err != nil {
+		ln.Close()
+		return 0, err
 	}
 	srv := &http.Server{Handler: h}
 	go srv.Serve(ln) //nolint:errcheck
-	s.proxy = &forgeProxy{server: srv, port: port, forgeBase: forgeBase}
+	if s.proxies == nil {
+		s.proxies = map[string]*authProxy{}
+	}
+	s.proxies[base] = &authProxy{server: srv, port: port, base: base}
 	return port, nil
 }
 
@@ -413,7 +390,7 @@ func (s *ProductService) OpenForgejoWindow(repoURL string) {
 	localURL := repoURL
 	if u, err := url.Parse(repoURL); err == nil {
 		forgeBase := u.Scheme + "://" + u.Host
-		if port, proxyErr := s.ensureForgeProxy(forgeBase); proxyErr == nil {
+		if port, proxyErr := s.ensureAuthProxy(forgeBase); proxyErr == nil {
 			localURL = fmt.Sprintf("http://127.0.0.1:%d%s", port, u.Path)
 			if u.RawQuery != "" {
 				localURL += "?" + u.RawQuery
@@ -432,6 +409,79 @@ func (s *ProductService) OpenForgejoWindow(repoURL string) {
 	})
 	win.Show()
 	win.Focus()
+}
+
+// OpenEditorWindow opens the web IDE for the given product in a new WebView
+// window. It routes the request through a local proxy that injects auth
+// headers, and reuses an existing editor window if one is already open.
+func (s *ProductService) OpenEditorWindow(productName string) error {
+	s.mu.Lock()
+	app := s.app
+	s.mu.Unlock()
+	if app == nil {
+		return fmt.Errorf("app not initialised")
+	}
+
+	uri, err := s.GetWorkstationURI()
+	if err != nil {
+		return fmt.Errorf("get workstation: %w", err)
+	}
+	if uri == "" {
+		return fmt.Errorf("workstation not yet available")
+	}
+
+	u, err := url.Parse(uri)
+	if err != nil {
+		return fmt.Errorf("parse workstation uri: %w", err)
+	}
+	base := u.Scheme + "://" + u.Host
+	port, err := s.ensureAuthProxy(base)
+	if err != nil {
+		return fmt.Errorf("start editor proxy: %w", err)
+	}
+	query := u.Query()
+	query.Set("product", productName)
+	localURL := fmt.Sprintf("http://127.0.0.1:%d%s?%s", port, u.Path, query.Encode())
+
+	s.mu.Lock()
+	win, prevURL := s.editorWindow, s.editorURL
+	s.mu.Unlock()
+	if win != nil {
+		if localURL != prevURL {
+			win.SetURL(localURL)
+			s.mu.Lock()
+			s.editorURL = localURL
+			s.mu.Unlock()
+		}
+		win.Show()
+		win.Focus()
+		return nil
+	}
+
+	win = app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:  "Editor",
+		Width:  1280,
+		Height: 900,
+		URL:    localURL,
+		Mac: application.MacWindow{
+			Backdrop: application.MacBackdropNormal,
+		},
+	})
+	win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
+		s.mu.Lock()
+		if s.editorWindow == win {
+			s.editorWindow = nil
+			s.editorURL = ""
+		}
+		s.mu.Unlock()
+	})
+	s.mu.Lock()
+	s.editorWindow = win
+	s.editorURL = localURL
+	s.mu.Unlock()
+	win.Show()
+	win.Focus()
+	return nil
 }
 
 func (s *ProductService) emitSyncLog(text string) {
@@ -4837,15 +4887,7 @@ func (s *ProductService) OpenInIDE(productName, ide string) error {
 		openBrowserURL("cursor://AlisExchange.alis-build/" + productName)
 		return nil
 	case "web":
-		uri, err := s.GetWorkstationURI()
-		if err != nil {
-			return fmt.Errorf("get workstation: %w", err)
-		}
-		if uri == "" {
-			return fmt.Errorf("workstation not yet available")
-		}
-		openBrowserURL(uri + "?product=" + productName)
-		return nil
+		return s.OpenEditorWindow(productName)
 	default:
 		return fmt.Errorf("unknown IDE %q", ide)
 	}

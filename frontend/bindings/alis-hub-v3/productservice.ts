@@ -378,6 +378,15 @@ export function OpenBlockWorktrees(instanceName: string): $CancellablePromise<st
 }
 
 /**
+ * OpenEditorWindow opens the web IDE for the given product in a new WebView
+ * window. It routes the request through a local proxy that injects auth
+ * headers, and reuses an existing editor window if one is already open.
+ */
+export function OpenEditorWindow(productName: string): $CancellablePromise<void> {
+    return $Call.ByID(761887995, productName);
+}
+
+/**
  * OpenForgejoWindow opens a new WebView window pointed at the given Forgejo URL.
  * It routes the request through a local proxy that injects auth headers.
  */

@@ -21,9 +21,9 @@ func TestForgejoProxy(t *testing.T) {
 	const probePath = "/voyage/proto"
 
 	ps := NewProductService()
-	port, err := ps.ensureForgeProxy(forgeBase)
+	port, err := ps.ensureAuthProxy(forgeBase)
 	if err != nil {
-		t.Fatalf("ensureForgeProxy: %v", err)
+		t.Fatalf("ensureAuthProxy: %v", err)
 	}
 	t.Logf("proxy listening on 127.0.0.1:%d", port)
 
