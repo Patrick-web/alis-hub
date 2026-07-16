@@ -348,23 +348,6 @@ export function StageFiles(repoPath: string, paths: string[]): $CancellablePromi
 }
 
 /**
- * StartRemoteMerge merges branchName into baseBranch on the Forgejo remote via a
- * pull request (opening one if none exists yet, reusing it otherwise), then
- * fast-forwards the local clone. The merge itself happens server-side — the local
- * working tree is never put into a mid-merge state, matching how a user would merge
- * the block branch manually on the git host before pulling the base branch locally.
- * baseBranch defaults to "master" when empty (the common case for a define repo,
- * which typically only has one long-lived branch; build repos can have several,
- * so callers should let the user pick).
- * Git command output is streamed via "git:log" Wails events.
- */
-export function StartRemoteMerge(repoPath: string, branchName: string, baseBranch: string): $CancellablePromise<$models.RemoteMergeResult | null> {
-    return $Call.ByID(1529596895, repoPath, branchName, baseBranch).then(($result: any) => {
-        return $$createType27($result);
-    });
-}
-
-/**
  * UndoLastCommit soft-resets HEAD by one commit, leaving the undone commit's
  * changes staged. Purely local — callers are expected to only allow this when
  * the commit hasn't been pushed yet (see GetAheadBehind).
@@ -425,5 +408,3 @@ const $$createType22 = $Create.Nullable($$createType21);
 const $$createType23 = $models.GitStatus.createFrom;
 const $$createType24 = $Create.Nullable($$createType23);
 const $$createType25 = $Create.Array($$createType3);
-const $$createType26 = $models.RemoteMergeResult.createFrom;
-const $$createType27 = $Create.Nullable($$createType26);

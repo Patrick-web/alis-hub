@@ -1766,32 +1766,111 @@ func (s *ProductService) pollOperation(ctx context.Context, method string, opNam
 	}
 }
 
-// mergeBlockBranch calls InstancesService/MergeBlockBranch to merge the git branch that
-// InstallBlock creates in the product's build repository, then polls the resulting LRO.
-func (s *ProductService) mergeBlockBranch(ctx context.Context, instanceName string) error {
+// MergeBlockBranchResult is the decoded InstancesService/MergeBlockBranch response.
+type MergeBlockBranchResult struct {
+	Branch          string `json:"branch"`
+	BuildCommitSHA  string `json:"buildCommitSha"`
+	DefineCommitSHA string `json:"defineCommitSha"`
+}
+
+// MergeBlockInstance calls InstancesService/MergeBlockBranch to merge the git branch that
+// InstallBlock creates into both the product's build and define repositories, then polls
+// the resulting LRO. Unlike a manually opened pull request, this is instance-scoped on the
+// backend (mirrors the VS Code "alis.blocks.scm.merge" command) and always merges into each
+// repo's "master" branch — it does not accept an alternate base branch.
+func (s *ProductService) MergeBlockInstance(instanceName string) (*MergeBlockBranchResult, error) {
+	if err := s.initTokens(); err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
 	var buf []byte
 	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
 	buf = protowire.AppendString(buf, instanceName)
 	buf = protowire.AppendTag(buf, 2, protowire.VarintType)
 	buf = protowire.AppendVarint(buf, 1) // merge_build_repository = true
+	buf = protowire.AppendTag(buf, 3, protowire.VarintType)
+	buf = protowire.AppendVarint(buf, 1) // merge_define_repository = true
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
 		"alis.bl.blocks.v1.InstancesService/MergeBlockBranch", buf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if grpcStatus != 0 {
-		return fmt.Errorf("grpc %d: %s", grpcStatus, grpcMsg)
+		return nil, fmt.Errorf("grpc %d: %s", grpcStatus, grpcMsg)
 	}
 	if len(body) < 5 {
-		return fmt.Errorf("response too short (%d bytes)", len(body))
+		return nil, fmt.Errorf("response too short (%d bytes)", len(body))
 	}
 	opName := parseStringField1(body[5:])
 	if opName == "" {
-		return fmt.Errorf("empty operation name in MergeBlockBranch response")
+		return nil, fmt.Errorf("empty operation name in MergeBlockBranch response")
 	}
-	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
-	return err
+	data, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	if err != nil {
+		return nil, err
+	}
+	return parseMergeBlockBranchResponse(data), nil
+}
+
+// parseMergeBlockBranchResponse extracts MergeBlockBranchResponse{branch=1,
+// build_commit_sha=2, define_commit_sha=3} from a completed Operation's Any response
+// (field 5), mirroring parseInstallBlockBranch's approach for InstallBlockResponse.
+func parseMergeBlockBranchResponse(data []byte) *MergeBlockBranchResult {
+	out := &MergeBlockBranchResult{}
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 5 { // field 5 = response (google.protobuf.Any)
+			continue
+		}
+		anyData := b
+		for len(anyData) > 0 {
+			fn, ftyp, fn2 := protowire.ConsumeTag(anyData)
+			if fn2 < 0 {
+				break
+			}
+			anyData = anyData[fn2:]
+			if ftyp != protowire.BytesType {
+				m := protowire.ConsumeFieldValue(fn, ftyp, anyData)
+				if m < 0 {
+					break
+				}
+				anyData = anyData[m:]
+				continue
+			}
+			ab, am := protowire.ConsumeBytes(anyData)
+			if am < 0 {
+				break
+			}
+			anyData = anyData[am:]
+			if fn == 2 { // value bytes = serialized MergeBlockBranchResponse
+				out.Branch = parseStringFieldN(ab, 1)
+				out.BuildCommitSHA = parseStringFieldN(ab, 2)
+				out.DefineCommitSHA = parseStringFieldN(ab, 3)
+				return out
+			}
+		}
+	}
+	return out
 }
 
 // parseInstallBlockBranch extracts the branch name from a completed google.longrunning.Operation

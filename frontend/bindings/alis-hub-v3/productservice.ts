@@ -357,6 +357,19 @@ export function Logout(): $CancellablePromise<void> {
 }
 
 /**
+ * MergeBlockInstance calls InstancesService/MergeBlockBranch to merge the git branch that
+ * InstallBlock creates into both the product's build and define repositories, then polls
+ * the resulting LRO. Unlike a manually opened pull request, this is instance-scoped on the
+ * backend (mirrors the VS Code "alis.blocks.scm.merge" command) and always merges into each
+ * repo's "master" branch — it does not accept an alternate base branch.
+ */
+export function MergeBlockInstance(instanceName: string): $CancellablePromise<$models.MergeBlockBranchResult | null> {
+    return $Call.ByID(4242359780, instanceName).then(($result: any) => {
+        return $$createType50($result);
+    });
+}
+
+/**
  * OpenBlockWorktrees creates git worktrees for an instance's build and define repos.
  * It returns the root worktree path, e.g. "{tmpdir}/.alis-blocks-worktrees/{blockId}/{packageId}/{instanceId}/".
  */
@@ -395,7 +408,7 @@ export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
  */
 export function ReadNeuronFileContents(neuronPackage: string, files: $models.ScannedNeuronFile[]): $CancellablePromise<$models.NeuronFileContents | null> {
     return $Call.ByID(3333239169, neuronPackage, files).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType52($result);
     });
 }
 
@@ -405,7 +418,7 @@ export function ReadNeuronFileContents(neuronPackage: string, files: $models.Sca
  */
 export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
     return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType54($result);
     });
 }
 
@@ -433,7 +446,7 @@ export function SwitchEnvironment(org: string, product: string, envName: string,
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType54($result);
+        return $$createType56($result);
     });
 }
 
@@ -532,9 +545,11 @@ const $$createType45 = $models.LandingZonesData.createFrom;
 const $$createType46 = $Create.Nullable($$createType45);
 const $$createType47 = $models.ProductSummary.createFrom;
 const $$createType48 = $Create.Array($$createType47);
-const $$createType49 = $models.NeuronFileContents.createFrom;
+const $$createType49 = $models.MergeBlockBranchResult.createFrom;
 const $$createType50 = $Create.Nullable($$createType49);
-const $$createType51 = $models.NeuronScanResult.createFrom;
+const $$createType51 = $models.NeuronFileContents.createFrom;
 const $$createType52 = $Create.Nullable($$createType51);
-const $$createType53 = $models.SyncReposResult.createFrom;
+const $$createType53 = $models.NeuronScanResult.createFrom;
 const $$createType54 = $Create.Nullable($$createType53);
+const $$createType55 = $models.SyncReposResult.createFrom;
+const $$createType56 = $Create.Nullable($$createType55);

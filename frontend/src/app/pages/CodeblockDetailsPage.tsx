@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { marked } from "marked";
@@ -9,7 +9,6 @@ mermaid.initialize({
   theme: "dark",
   securityLevel: "loose",
 });
-import { Events } from "@wailsio/runtime";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import * as GitService from "../../../bindings/alis-hub-v3/gitservice";
 import { Loader } from "../components/Loader";
@@ -18,10 +17,6 @@ import { Button } from "../components/Button";
 import { FilterSelect } from "../components/FilterSelect";
 import { SearchableSelect } from "../components/ui/searchable-select";
 import { FileViewerModal } from "../components/CodeFileViewerModal";
-import {
-  BuildTerminal,
-  type BuildTerminalHandle,
-} from "../components/BuildTerminal";
 
 const LEVEL_LABEL: Record<number, string> = {
   1: "Experimental",
@@ -637,14 +632,19 @@ function InstallBlockWizard({
 
   // Merge step
   const [mergePhase, setMergePhase] = useState<MergePhase>("ready");
+  const [instanceName, setInstanceName] = useState("");
   const [branchName, setBranchName] = useState("");
   const [repoPath, setRepoPath] = useState("");
-  const [defineRepoPath, setDefineRepoPath] = useState("");
   const [mergeError, setMergeError] = useState("");
-  const [mergePRUrl, setMergePRUrl] = useState("");
-  const [mergeBaseBranch, setMergeBaseBranch] = useState("master");
-  const [mergeBranches, setMergeBranches] = useState<string[]>([]);
-  const mergeTermRef = useRef<BuildTerminalHandle>(null);
+  const [mergeResult, setMergeResult] = useState<{
+    branch: string;
+    buildCommitSha: string;
+    defineCommitSha: string;
+  } | null>(null);
+  // Other long-lived branches on the build repo besides "master" — the merge RPC
+  // always targets master, so if any of these exist we warn the user that this repo
+  // won't be updated by auto-merge.
+  const [otherBuildBranches, setOtherBuildBranches] = useState<string[]>([]);
 
   // Load orgs on mount
   useEffect(() => {
@@ -745,16 +745,15 @@ function InstallBlockWizard({
       }>
     )(params)
       .then((r) => {
+        setInstanceName(r?.instanceName ?? "");
         setBranchName(r?.branchName ?? "");
         setRepoPath(r?.repoPath ?? "");
-        setDefineRepoPath(r?.defineRepoPath ?? "");
         setMergePhase("ready");
         setStep("merge");
 
-        // The build repo can have several long-lived branches, so let the user
-        // pick the merge target instead of assuming master. (The define repo
-        // that follows is merged automatically into master — it typically only
-        // has the one branch, so there's nothing useful to ask there.)
+        // Auto-merge always targets "master" on both repos (it's a fixed backend
+        // behaviour, not a client choice — see startMerge). If the build repo has
+        // other long-lived branches, warn the user that this won't update them.
         const buildRepoPath = r?.repoPath ?? "";
         if (buildRepoPath) {
           (
@@ -767,8 +766,7 @@ function InstallBlockWizard({
                 .filter((b) => b.isRemote)
                 .map((b) => b.name.replace(/^origin\//, ""))
                 .filter((v, i, a) => a.indexOf(v) === i);
-              setMergeBranches(remote);
-              setMergeBaseBranch(remote.includes("master") ? "master" : (remote[0] ?? "master"));
+              setOtherBuildBranches(remote.filter((b) => b !== "master"));
             })
             .catch(() => {});
         }
@@ -779,56 +777,28 @@ function InstallBlockWizard({
       });
   }
 
-  // runMerge merges `branchName` into `baseBranch` on the Forgejo remote (via pull
-  // request) for the repo at `path`, then pulls the result down locally. If `isLast`
-  // is false, a successful merge automatically continues into the define repo
-  // (always against "master" — see doInstall's comment on why only the build repo
-  // needs a user-chosen base branch). Pass `path`/`baseBranch` explicitly so that
-  // closures inside async .then() callbacks use the correct values, not stale state.
-  function runMerge(path: string, isLast: boolean, baseBranch: string) {
-    mergeTermRef.current?.clear();
-    const off = Events.On("git:log", (ev: any) =>
-      mergeTermRef.current?.write(
-        typeof ev === "string" ? ev : (ev?.data ?? String(ev)),
-      ),
-    );
-    (
-      GitService.StartRemoteMerge as (
-        rp: string,
-        bn: string,
-        base: string,
-      ) => Promise<{ errorMessage: string; prUrl: string }>
-    )(path, branchName, baseBranch)
-      .then((r) => {
-        off();
-        if (r.errorMessage) {
-          setMergeError(r.errorMessage);
-          setMergePRUrl(r.prUrl ?? "");
-          setMergePhase("ready");
-          return;
-        }
-        if (!isLast) {
-          // Build repo merged; continue to define repo.
-          setRepoPath(defineRepoPath);
-          runMerge(defineRepoPath, true, "master");
-        } else {
-          setMergePhase("done");
-        }
-      })
-      .catch((e) => {
-        off();
-        setMergeError(String(e));
-        setMergePhase("ready");
-      });
-  }
-
+  // startMerge calls the Blocks backend's instance-scoped MergeBlockBranch RPC, which
+  // merges the branch InstallBlock created into "master" on both the build and define
+  // repos in a single server-side operation (no local git/PR steps involved).
   function startMerge() {
     setMergePhase("merging");
     setMergeError("");
-    setMergePRUrl("");
-    // isLast = true when there is no define repo, or when repoPath is already the define repo.
-    const isLast = !defineRepoPath || repoPath === defineRepoPath;
-    runMerge(repoPath, isLast, mergeBaseBranch);
+    setMergeResult(null);
+    (
+      ProductService.MergeBlockInstance as (name: string) => Promise<{
+        branch: string;
+        buildCommitSha: string;
+        defineCommitSha: string;
+      }>
+    )(instanceName)
+      .then((r) => {
+        setMergeResult(r);
+        setMergePhase("done");
+      })
+      .catch((e) => {
+        setMergeError(String(e));
+        setMergePhase("ready");
+      });
   }
 
   return (
@@ -1096,12 +1066,8 @@ function InstallBlockWizard({
               branchName={branchName}
               repoPath={repoPath}
               mergeError={mergeError}
-              mergePRUrl={mergePRUrl}
-              termRef={mergeTermRef}
-              onOpenPR={(url) => ProductService.OpenForgejoWindow(url)}
-              baseBranch={mergeBaseBranch}
-              baseBranches={mergeBranches}
-              onBaseBranchChange={setMergeBaseBranch}
+              mergeResult={mergeResult}
+              otherBuildBranches={otherBuildBranches}
             />
           )}
 
@@ -1178,7 +1144,7 @@ function InstallBlockWizard({
               <Button
                 variant="primary"
                 onClick={startMerge}
-                disabled={!repoPath}
+                disabled={!instanceName}
                 icon={<Icon icon="solar:code-square-linear" />}
               >
                 Start Merge
@@ -1213,30 +1179,26 @@ function MergeStepContent({
   branchName,
   repoPath,
   mergeError,
-  mergePRUrl,
-  termRef,
-  onOpenPR,
-  baseBranch,
-  baseBranches,
-  onBaseBranchChange,
+  mergeResult,
+  otherBuildBranches,
 }: {
   mergePhase: MergePhase;
   branchName: string;
   repoPath: string;
   mergeError: string;
-  mergePRUrl: string;
-  termRef: React.RefObject<BuildTerminalHandle>;
-  onOpenPR: (url: string) => void;
-  baseBranch: string;
-  baseBranches: string[];
-  onBaseBranchChange: (v: string) => void;
+  mergeResult: {
+    branch: string;
+    buildCommitSha: string;
+    defineCommitSha: string;
+  } | null;
+  otherBuildBranches: string[];
 }) {
   if (mergePhase === "ready") {
     return (
       <div className="flex flex-col gap-[16px]">
         <p className="text-[12px] text-foreground/50">
           The installation created a branch on the remote repo. Merge it into
-          another branch to complete the setup.
+          master to complete the setup.
         </p>
         <div className="p-[12px] bg-foreground/3 border border-border rounded-[4px] text-[11px] text-foreground/50 flex flex-col gap-[6px]">
           <div className="flex items-center gap-[8px]">
@@ -1258,37 +1220,32 @@ function MergeStepContent({
             </span>
           </div>
         </div>
-        <div className="flex flex-col gap-[6px]">
-          <label className="text-[10px] text-foreground/40 uppercase tracking-wider font-semibold">
-            Merge into
-          </label>
-          <SearchableSelect
-            value={baseBranch}
-            options={baseBranches.length > 0 ? baseBranches : [baseBranch]}
-            onChange={onBaseBranchChange}
-            placeholder="Select branch…"
-          />
-        </div>
+        {otherBuildBranches.length > 0 && (
+          <div className="p-[10px] bg-yellow-500/10 border border-yellow-500/30 rounded-[4px] text-[11px] text-yellow-500 flex flex-col gap-[4px]">
+            <span className="font-bold">Heads up</span>
+            <span className="text-yellow-500/80">
+              Auto-merge always targets{" "}
+              <span className="font-mono">master</span> on the build repo.
+              This repo also has{" "}
+              {otherBuildBranches.map((b) => (
+                <span key={b} className="font-mono">
+                  {b}{" "}
+                </span>
+              ))}
+              — merge master into those manually afterward if needed.
+            </span>
+          </div>
+        )}
         {mergeError && (
-          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-mono whitespace-pre-wrap flex flex-col gap-[8px] items-start">
-            <span>{mergeError}</span>
-            {mergePRUrl && (
-              <Button
-                variant="secondary"
-                onClick={() => onOpenPR(mergePRUrl)}
-                className="text-[11px]"
-                icon={<Icon icon="solar:link-linear" />}
-              >
-                Open Pull Request in Forgejo
-              </Button>
-            )}
+          <div className="p-[10px] bg-red-500/10 border border-red-500/30 rounded-[4px] text-[11px] text-red-400 font-mono whitespace-pre-wrap">
+            {mergeError}
           </div>
         )}
         <p className="text-[11px] text-foreground/30">
-          This will open a pull request from{" "}
+          This merges{" "}
           <span className="font-mono">{branchName || "…"}</span> into{" "}
-          <span className="font-mono">{baseBranch || "…"}</span>, merge it on
-          the remote, then pull the result down locally.
+          <span className="font-mono">master</span> on both the build and
+          define repos via the Blocks backend — no local git required.
         </p>
       </div>
     );
@@ -1296,19 +1253,12 @@ function MergeStepContent({
 
   if (mergePhase === "merging") {
     return (
-      <div className="flex flex-col gap-[10px] h-full">
-        <div className="flex items-center gap-[8px]">
-          <span className="inline-block w-[6px] h-[6px] rounded-full bg-brand-fill animate-pulse" />
-          <p className="text-[11px] text-foreground/50">
-            Running git operations…
-          </p>
-        </div>
-        <div
-          className="flex-1 rounded-[4px] overflow-hidden"
-          style={{ minHeight: 240 }}
-        >
-          <BuildTerminal ref={termRef} className="h-full" />
-        </div>
+      <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
+        <Loader />
+        <p className="text-[13px] text-foreground/60">Merging…</p>
+        <p className="text-[11px] text-foreground/30">
+          This can take a moment.
+        </p>
       </div>
     );
   }
@@ -1319,8 +1269,18 @@ function MergeStepContent({
       <p className="text-[14px] font-bold text-foreground">Branch Merged</p>
       <p className="text-[12px] text-foreground/50 text-center">
         <span className="font-mono text-foreground/80">{branchName}</span> has
-        been merged into master.
+        been merged into {mergeResult?.branch || "master"}.
       </p>
+      {(mergeResult?.buildCommitSha || mergeResult?.defineCommitSha) && (
+        <div className="text-[10px] font-mono text-foreground/30 flex flex-col gap-[2px] items-center">
+          {mergeResult.buildCommitSha && (
+            <span>build {mergeResult.buildCommitSha.slice(0, 12)}</span>
+          )}
+          {mergeResult.defineCommitSha && (
+            <span>define {mergeResult.defineCommitSha.slice(0, 12)}</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
