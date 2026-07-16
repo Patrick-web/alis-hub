@@ -2356,6 +2356,38 @@ export class LogResource {
     }
 }
 
+/**
+ * MergeBlockBranchResult is the decoded InstancesService/MergeBlockBranch response.
+ */
+export class MergeBlockBranchResult {
+    "branch": string;
+    "buildCommitSha": string;
+    "defineCommitSha": string;
+
+    /** Creates a new MergeBlockBranchResult instance. */
+    constructor($$source: Partial<MergeBlockBranchResult> = {}) {
+        if (!("branch" in $$source)) {
+            this["branch"] = "";
+        }
+        if (!("buildCommitSha" in $$source)) {
+            this["buildCommitSha"] = "";
+        }
+        if (!("defineCommitSha" in $$source)) {
+            this["defineCommitSha"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MergeBlockBranchResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MergeBlockBranchResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MergeBlockBranchResult($$parsedSource as Partial<MergeBlockBranchResult>);
+    }
+}
+
 export class NeuronFileContents {
     "buildFiles": CodeblockFileItem[];
     "infraFiles": CodeblockFileItem[];
@@ -2990,43 +3022,6 @@ export class ProtoMessageInfo {
     static createFrom($$source: any = {}): ProtoMessageInfo {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new ProtoMessageInfo($$parsedSource as Partial<ProtoMessageInfo>);
-    }
-}
-
-export class RemoteMergeResult {
-    "repoPath": string;
-    "branchName": string;
-    "baseBranch": string;
-    "errorMessage": string;
-    "prUrl": string;
-
-    /** Creates a new RemoteMergeResult instance. */
-    constructor($$source: Partial<RemoteMergeResult> = {}) {
-        if (!("repoPath" in $$source)) {
-            this["repoPath"] = "";
-        }
-        if (!("branchName" in $$source)) {
-            this["branchName"] = "";
-        }
-        if (!("baseBranch" in $$source)) {
-            this["baseBranch"] = "";
-        }
-        if (!("errorMessage" in $$source)) {
-            this["errorMessage"] = "";
-        }
-        if (!("prUrl" in $$source)) {
-            this["prUrl"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new RemoteMergeResult instance from a string or object.
-     */
-    static createFrom($$source: any = {}): RemoteMergeResult {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new RemoteMergeResult($$parsedSource as Partial<RemoteMergeResult>);
     }
 }
 
