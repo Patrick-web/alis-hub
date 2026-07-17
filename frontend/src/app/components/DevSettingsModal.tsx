@@ -416,7 +416,7 @@ export function DevSettingsModal() {
                   }}
                   onKeyDown={(e) => handleSidebarKeyDown(e, i)}
                   onClick={() => open(item.id)}
-                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors outline-none focus:ring-1 focus:ring-inset focus:ring-ring ${
+                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors focus:ring-1 focus:ring-inset focus:ring-ring ${
                     activeTab === item.id ? 'bg-foreground/[0.07]' : 'hover:bg-foreground/[0.04]'
                   }`}
                   style={{ width: 'calc(100% - 10px)' }}
