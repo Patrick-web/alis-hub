@@ -152,7 +152,7 @@ func (g *GitService) emitAuthExpired() {
 // GitSyncResult is returned by PushOrigin, PullOrigin, and CheckoutBranch with a classified outcome.
 // Kind values: "ok" | "up_to_date" | "push_rejected" | "pull_conflict" |
 //
-//	"uncommitted_changes" | "network_error" | "auth_error" | "other_error"
+//	"uncommitted_changes" | "network_error" | "auth_error" | "index_lock" | "other_error"
 type GitSyncResult struct {
 	Kind          string   `json:"kind"`
 	Message       string   `json:"message"`
@@ -191,6 +191,12 @@ func classifyGitOutput(output string, err error) (kind, message string) {
 		// unrelated to the token) and would misclassify an unrelated failure as
 		// auth_error, spuriously popping the re-login modal.
 		return "auth_error", "Authentication failed. Your session may have expired."
+	case strings.Contains(lower, "index.lock"):
+		// "fatal: Unable to create '.../.git/index.lock': File exists." — a
+		// previous git process crashed (or another one is still running) and
+		// left the lock behind. Surfaced as its own kind so the UI can offer
+		// a one-click "clear lock" action (ClearIndexLock).
+		return "index_lock", "Git is locked by a stale index.lock file, likely left behind by a crashed git process. Clear the lock to continue."
 	default:
 		msg := strings.TrimSpace(output)
 		if msg == "" {
@@ -971,6 +977,27 @@ func (g *GitService) FetchOrigin(repoPath string) GitSyncResult {
 		g.emitAuthExpired()
 	}
 	return GitSyncResult{Kind: kind, Message: message}
+}
+
+// ClearIndexLock removes a stale .git/index.lock left behind by a crashed or
+// killed git process. Only invoked from the UI after an operation failed with
+// kind "index_lock" — if another git process is genuinely still running, the
+// next operation will simply recreate the lock.
+func (g *GitService) ClearIndexLock(repoPath string) error {
+	out, err := gitCmd(repoPath, "git", "rev-parse", "--git-dir")
+	if err != nil {
+		return fmt.Errorf("resolve git dir: %s", strings.TrimSpace(out))
+	}
+	gitDir := strings.TrimSpace(out)
+	if !filepath.IsAbs(gitDir) {
+		gitDir = filepath.Join(repoPath, gitDir)
+	}
+	lockPath := filepath.Join(gitDir, "index.lock")
+	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	g.emitChanged(repoPath)
+	return nil
 }
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer

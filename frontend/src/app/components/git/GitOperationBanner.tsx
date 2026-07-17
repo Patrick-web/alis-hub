@@ -15,6 +15,7 @@ interface Props {
   onSync?: () => void;
   onResolve?: () => void;
   onRetry?: () => void;
+  onClearLock?: () => Promise<void> | void;
   onDismiss?: () => void;
 }
 
@@ -77,6 +78,14 @@ const CONFIG: Record<string, {
     text: 'text-red-400',
     label: 'Authentication failed. Your session may have expired.',
   },
+  index_lock: {
+    icon: 'solar:lock-linear',
+    iconClass: 'text-amber-400',
+    bg: 'bg-amber-500/10',
+    border: 'border-amber-500/20',
+    text: 'text-amber-400',
+    label: 'Git is locked by a stale index.lock file, likely left behind by a crashed git process. Clear the lock to continue.',
+  },
   other_error: {
     icon: 'solar:info-circle-linear',
     iconClass: 'text-red-400',
@@ -87,12 +96,27 @@ const CONFIG: Record<string, {
   },
 };
 
-export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, onRetry, onDismiss }: Props) {
+export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, onRetry, onClearLock, onDismiss }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [signingIn, setSigningIn] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
+  const [clearingLock, setClearingLock] = useState(false);
+  const [clearLockError, setClearLockError] = useState<string | null>(null);
 
   if (!result || result.kind === 'ok') return null;
+
+  async function handleClearLock() {
+    if (!onClearLock) return;
+    setClearingLock(true);
+    setClearLockError(null);
+    try {
+      await onClearLock();
+    } catch (e) {
+      setClearLockError(String(e));
+    } finally {
+      setClearingLock(false);
+    }
+  }
 
   async function handleSignIn() {
     setSigningIn(true);
@@ -149,6 +173,16 @@ export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, 
             {signingIn ? 'Signing in…' : 'Sign In'}
           </button>
         );
+      case 'index_lock':
+        return onClearLock ? (
+          <button
+            onClick={handleClearLock}
+            disabled={clearingLock}
+            className="text-[10px] px-[8px] py-[2px] rounded-[3px] border border-amber-400/30 hover:border-amber-400/60 text-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {clearingLock ? 'Clearing…' : 'Clear Lock & Retry'}
+          </button>
+        ) : null;
       case 'other_error':
         return result.message.length > 80 ? (
           <button
@@ -165,6 +199,8 @@ export function GitOperationBanner({ result, onPull, onPush, onSync, onResolve, 
 
   const displayMessage = result.kind === 'auth_error' && signInError
     ? `Sign-in failed: ${signInError}`
+    : result.kind === 'index_lock' && clearLockError
+    ? `Failed to clear lock: ${clearLockError}`
     : result.kind === 'other_error'
     ? (expanded ? result.message : result.message.slice(0, 120) + (result.message.length > 120 ? '…' : ''))
     : label;
