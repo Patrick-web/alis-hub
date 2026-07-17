@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Tab } from './Tab';
@@ -32,6 +32,38 @@ export function StandaloneTopNav() {
 
   const activeTab = location.pathname.split('/')[1] || '';
 
+  const allTabs = [
+    ...standaloneTabs,
+    { id: 'picking-org', label: 'Landing Zones', icon: <Icon icon="solar:buildings-2-linear" className="text-lg" />, route: null },
+  ];
+
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [tabFocusIndex, setTabFocusIndex] = useState(-1);
+
+  function handleTabKeyDown(e: React.KeyboardEvent, idx: number) {
+    const n = allTabs.length;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = (idx + 1) % n;
+      setTabFocusIndex(next);
+      tabRefs.current.get(allTabs[next].id)?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = (idx - 1 + n) % n;
+      setTabFocusIndex(next);
+      tabRefs.current.get(allTabs[next].id)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setTabFocusIndex(0);
+      tabRefs.current.get(allTabs[0].id)?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      const last = n - 1;
+      setTabFocusIndex(last);
+      tabRefs.current.get(allTabs[last].id)?.focus();
+    }
+  }
+
   return (
     <div
       className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
@@ -60,21 +92,25 @@ export function StandaloneTopNav() {
           className="flex h-full border-r border-border"
           style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
         >
-          {standaloneTabs.map((tab) => (
+          {allTabs.map((tab, i) => (
             <Tab
               key={tab.id}
+              ref={(el) => {
+                if (el) tabRefs.current.set(tab.id, el);
+                else tabRefs.current.delete(tab.id);
+              }}
               label={tab.label}
               icon={tab.icon}
               active={activeTab === tab.id}
-              onClick={() => navigate(tab.route)}
+              tabIndex={
+                tabFocusIndex >= 0
+                  ? tabFocusIndex === i ? 0 : -1
+                  : activeTab === tab.id ? 0 : -1
+              }
+              onKeyDown={(e) => handleTabKeyDown(e, i)}
+              onClick={() => tab.route ? navigate(tab.route) : setPhase('picking-org')}
             />
           ))}
-          <Tab
-            label="Landing Zones"
-            icon={<Icon icon="solar:buildings-2-linear" className="text-lg" />}
-            active={false}
-            onClick={() => setPhase('picking-org')}
-          />
         </div>
       </div>
 

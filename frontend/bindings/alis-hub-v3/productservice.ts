@@ -379,8 +379,14 @@ export function OpenBlockWorktrees(instanceName: string): $CancellablePromise<st
 
 /**
  * OpenEditorWindow opens the web IDE for the given product in a new WebView
- * window. It routes the request through a local proxy that injects auth
- * headers, and reuses an existing editor window if one is already open.
+ * window, and reuses an existing editor window if one is already open.
+ * 
+ * Unlike Forgejo, the workstation host authenticates via its own ws_access_token/
+ * ws_refresh_token/ws_id_token cookies (minted by identity.alisx.com), not the
+ * alis console Bearer token, so it is opened directly rather than through the
+ * auth-injecting local proxy. On first use the WebView completes an interactive
+ * login exactly as a browser tab would; the window's cookie jar then carries
+ * that session for subsequent opens.
  */
 export function OpenEditorWindow(productName: string): $CancellablePromise<void> {
     return $Call.ByID(761887995, productName);

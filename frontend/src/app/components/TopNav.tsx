@@ -98,6 +98,33 @@ export function TopNav() {
   const handleHomeClick = () => setPhase('hub');
   const handleOrgClick = () => setPhase('picking-product');
 
+  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [tabFocusIndex, setTabFocusIndex] = useState(-1);
+
+  function handleTabKeyDown(e: React.KeyboardEvent, idx: number) {
+    const n = visibleTabs.length;
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const next = (idx + 1) % n;
+      setTabFocusIndex(next);
+      tabRefs.current.get(visibleTabs[next].id)?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const next = (idx - 1 + n) % n;
+      setTabFocusIndex(next);
+      tabRefs.current.get(visibleTabs[next].id)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setTabFocusIndex(0);
+      tabRefs.current.get(visibleTabs[0].id)?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      const last = n - 1;
+      setTabFocusIndex(last);
+      tabRefs.current.get(visibleTabs[last].id)?.focus();
+    }
+  }
+
   return (
     <div
       className="bg-card border-b border-border h-[40px] flex items-center shrink-0 w-full overflow-x-hidden"
@@ -148,12 +175,22 @@ export function TopNav() {
       {/* Center: Tabs */}
       <div className="flex h-full flex-1 justify-center overflow-x-auto no-scrollbar">
         <div className="flex h-full border-r border-border" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
-          {visibleTabs.map((tab) => (
+          {visibleTabs.map((tab, i) => (
             <Tab
               key={tab.id}
+              ref={(el) => {
+                if (el) tabRefs.current.set(tab.id, el);
+                else tabRefs.current.delete(tab.id);
+              }}
               label={tab.label}
               icon={<Icon icon={tab.icon} className="text-lg" />}
               active={activeTab === tab.id}
+              tabIndex={
+                tabFocusIndex >= 0
+                  ? tabFocusIndex === i ? 0 : -1
+                  : activeTab === tab.id ? 0 : -1
+              }
+              onKeyDown={(e) => handleTabKeyDown(e, i)}
               onClick={() => handleTabClick(tab.id)}
             />
           ))}

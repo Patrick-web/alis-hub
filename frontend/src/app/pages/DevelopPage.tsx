@@ -34,6 +34,8 @@ export function DevelopPage() {
     () => state.neurons.length === 0 && !!state.organisation && !!state.product,
   );
   const commitTimesBranchRef = useRef<string>("");
+  const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
+  const [focusIndex, setFocusIndex] = useState(-1);
 
   const loadNeurons = useCallback(async () => {
     if (!state.organisation || !state.product) return;
@@ -223,6 +225,37 @@ export function DevelopPage() {
     selectedNeurons.has(n.name || n.id),
   );
 
+  useEffect(() => {
+    setFocusIndex(-1);
+  }, [sortedNeurons.length]);
+
+  const handleRowKeyDown = useCallback(
+    (e: React.KeyboardEvent, idx: number) => {
+      const n = sortedNeurons.length;
+      let next = idx;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        next = Math.min(idx + 1, n - 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        next = Math.max(idx - 1, 0);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === "End") {
+        e.preventDefault();
+        next = n - 1;
+      } else {
+        return;
+      }
+      setFocusIndex(next);
+      const targetName =
+        sortedNeurons[next].name || sortedNeurons[next].id;
+      rowRefs.current.get(targetName)?.focus();
+    },
+    [sortedNeurons],
+  );
+
   const toggleNeuron = (name: string) =>
     setSelectedNeurons((prev) => {
       const next = new Set(prev);
@@ -362,13 +395,21 @@ export function DevelopPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedNeurons.map((neuron) => {
+              {sortedNeurons.map((neuron, i) => {
                 const name = neuron.name || neuron.id;
                 const isSelected = selectedNeurons.has(name);
                 return (
                   <tr
                     key={name}
-                    className={`border-b border-border transition-colors ${isSelected ? "bg-brand-fill/4" : "hover:bg-foreground/[2%]"}`}
+                    ref={(el) => {
+                      if (el) rowRefs.current.set(name, el);
+                      else rowRefs.current.delete(name);
+                    }}
+                    tabIndex={0}
+                    role="row"
+                    onKeyDown={(e) => handleRowKeyDown(e, i)}
+                    onFocus={() => setFocusIndex(i)}
+                    className={`border-b border-border transition-colors ${isSelected ? "bg-brand-fill/4" : "hover:bg-foreground/[2%]"} ${focusIndex === i ? "ring-1 ring-inset ring-ring" : ""}`}
                   >
                     <td className="px-[16px] py-[10px]">
                       <button

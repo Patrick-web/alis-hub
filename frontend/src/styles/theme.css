@@ -154,6 +154,17 @@
     @apply bg-background text-foreground;
   }
 
+  /* Global focus-visible fallback for interactive elements */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   html {
     font-size: var(--font-size);
   }
