@@ -332,7 +332,6 @@ export function DevSettingsModal() {
   const { isOpen, activeTab, close, open } = useDevSettingsModal();
   const { real, envInfo, override, effective, setOverride } = usePlatform();
   const sidebarRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
-  const [sidebarFocusIndex, setSidebarFocusIndex] = useState(-1);
 
   const handleSidebarKeyDown = useCallback(
     (e: React.KeyboardEvent, idx: number) => {
@@ -357,7 +356,6 @@ export function DevSettingsModal() {
       } else {
         return;
       }
-      setSidebarFocusIndex(next);
       const targetId = SIDEBAR_ITEMS[next].id;
       sidebarRefs.current.get(targetId)?.focus();
       open(targetId);
@@ -417,11 +415,10 @@ export function DevSettingsModal() {
                     else sidebarRefs.current.delete(item.id);
                   }}
                   onKeyDown={(e) => handleSidebarKeyDown(e, i)}
-                  onFocus={() => setSidebarFocusIndex(i)}
                   onClick={() => open(item.id)}
-                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors outline-none focus:ring-1 focus:ring-inset focus:ring-ring ${
                     activeTab === item.id ? 'bg-foreground/[0.07]' : 'hover:bg-foreground/[0.04]'
-                  } ${sidebarFocusIndex === i ? 'ring-1 ring-inset ring-ring' : ''}`}
+                  }`}
                   style={{ width: 'calc(100% - 10px)' }}
                 >
                   <Icon
