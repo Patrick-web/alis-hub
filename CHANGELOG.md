@@ -1,5 +1,19 @@
 # Changelog
 
+## [v0.14.5] - 2026-07-17
+
+### What's New
+- The command palette now supports nested subpages for Develop flows
+- You can navigate tables, modals, sidebars, tabs, and settings panels with the keyboard
+- The web IDE can now open in a native operating system window with automatic token injection
+- You can now clear stale `.git/index.lock` files with a single click when git errors occur
+- Clicking the same action on the same neuron now dismisses the existing tab instead of opening a duplicate
+
+### Bug Fixes
+- Fixed an issue where DevSettingsModal sidebar buttons had no visible focus outline
+- Fixed an issue where DevSettingsModal auto-focused incorrectly on open, causing scroll jumps
+- Fixed an issue where codeblock auto-merge could interfere with merges in other builder instances
+
 ## [v0.14.4] - 2026-07-15
 
 ### What's New
