@@ -44,6 +44,16 @@ export function CheckoutBranch(repoPath: string, branchName: string): $Cancellab
 }
 
 /**
+ * ClearIndexLock removes a stale .git/index.lock left behind by a crashed or
+ * killed git process. Only invoked from the UI after an operation failed with
+ * kind "index_lock" — if another git process is genuinely still running, the
+ * next operation will simply recreate the lock.
+ */
+export function ClearIndexLock(repoPath: string): $CancellablePromise<void> {
+    return $Call.ByID(3387327601, repoPath);
+}
+
+/**
  * Commit creates a commit with the given message.
  */
 export function Commit(repoPath: string, message: string): $CancellablePromise<void> {

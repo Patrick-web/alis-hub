@@ -366,6 +366,7 @@ function RepoSection({
       return;
     }
     setSyncResult(null);
+    setLastSyncOp(null);
     try {
       const result = await GitService.CheckoutBranch(repoPath, name) as any;
       if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
@@ -381,6 +382,7 @@ function RepoSection({
     if (!checkoutPending) return;
     setCheckingOut(true);
     setSyncResult(null);
+    setLastSyncOp(null);
     try {
       const result = await GitService.CheckoutBranch(repoPath, checkoutPending) as any;
       if (result && result.kind !== 'ok' && result.kind !== 'up_to_date') {
@@ -495,6 +497,13 @@ function RepoSection({
             ? (lastSyncOp === 'push' ? handlePush : handlePull)
             : undefined
         }
+        onClearLock={async () => {
+          await GitService.ClearIndexLock(repoPath);
+          setSyncResult(null);
+          if (lastSyncOp === 'push') await handlePush();
+          else if (lastSyncOp === 'pull') await handlePull();
+          else refresh();
+        }}
         onDismiss={() => setSyncResult(null)}
       />
 
