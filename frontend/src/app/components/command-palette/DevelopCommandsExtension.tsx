@@ -1,67 +1,92 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { HammerIcon, RocketIcon, FileCodeIcon, PackageIcon } from 'lucide-react';
-import { useWorkspace } from '../../stores/workspace';
+import { HistoryIcon } from 'lucide-react';
 import { useDevelopTabs } from '../../stores/developTabs';
 import { useCommandPalette, type CommandItem } from '../../stores/commandPalette';
+import { getSession, useDevelopSessions } from '../../stores/developSessions';
+import {
+  FLOW_ROOT_META,
+  packagesServicesPage,
+  pushFlowPages,
+  servicesPage,
+} from './developFlowPages';
 import type { TaskType } from '../../stores/notifications';
 
-const TASK_TYPES: TaskType[] = ['define', 'build', 'deploy', 'packages'];
-
-// 'workflow' is excluded from TASK_TYPES below (workflows aren't opened as Develop
-// tabs), but TYPE_META is keyed on the full TaskType union so TS stays exhaustive.
-const TYPE_META: Record<TaskType, { label: string; groupOrder: number; icon: React.ComponentType<{ className?: string }> }> = {
-  define:   { label: 'Define',   groupOrder: 10, icon: FileCodeIcon },
-  build:    { label: 'Build',    groupOrder: 11, icon: HammerIcon },
-  deploy:   { label: 'Deploy',   groupOrder: 12, icon: RocketIcon },
-  packages: { label: 'Packages', groupOrder: 13, icon: PackageIcon },
-  workflow: { label: 'Workflow', groupOrder: 14, icon: FileCodeIcon },
+const TYPE_LABELS: Record<TaskType, string> = {
+  define: 'Define',
+  build: 'Build',
+  deploy: 'Deploy',
+  packages: 'Packages',
+  workflow: 'Workflow',
 };
 
+function sessionStepLabel(tabId: string): string | undefined {
+  const session = getSession(tabId);
+  if (!session) return undefined;
+  switch (session.step) {
+    case 'commits': return 'Selecting commit';
+    case 'confirm': return 'Confirming';
+    case 'loading': return 'Loading';
+    case 'scan': return 'Scanning';
+    case 'select-action': return 'Selecting action';
+    case 'select-folders': return 'Selecting folders';
+    case 'venv-setup': return 'Venv setup';
+    case 'preparing': return 'Starting';
+    case 'running': return 'Running';
+    case 'glass':
+    case 'result': return 'Finished';
+    default: return undefined;
+  }
+}
+
 export function DevelopCommandsExtension() {
-  const { state } = useWorkspace();
-  const { openTab } = useDevelopTabs();
+  const { tabs } = useDevelopTabs();
   const { registerExtension, unregisterExtension } = useCommandPalette();
   const navigate = useNavigate();
 
+  // Re-register when any flow moves to a different step so the resume
+  // subtitles stay accurate (string selector avoids re-renders on other
+  // session changes like progress messages or log-driven patches).
+  const stepsKey = useDevelopSessions(s => tabs.map(t => s.sessions[t.id]?.step ?? '').join(','));
+
   useEffect(() => {
-    const neurons = state.neurons ?? [];
-    const commands: CommandItem[] = neurons.flatMap(n =>
-      TASK_TYPES.map(type => {
-        const meta = TYPE_META[type];
-        const neuronName = n.name || n.id;
-        return {
-          id: `develop-${type}-${neuronName}`,
-          title: `${meta.label} · ${neuronName}`,
-          group: meta.label,
-          groupOrder: meta.groupOrder,
-          icon: meta.icon,
-          keywords: [type, neuronName, 'service', 'develop'],
-          onSelect: (ctx) => {
-            openTab(type, neuronName);
-            ctx.showResult({
-              title: `${meta.label} · ${neuronName} triggered`,
-              subtitle: 'Running in background',
-              actions: [
-                {
-                  label: 'Go to Develop',
-                  variant: 'primary',
-                  onAction: () => { navigate('/develop'); ctx.close(); },
-                },
-                {
-                  label: 'Dismiss',
-                  variant: 'secondary',
-                  onAction: () => ctx.close(),
-                },
-              ],
-            });
-          },
-        };
-      })
-    );
-    registerExtension({ id: 'develop-actions', commands });
+    // Root entry points — one per develop action; each opens a sub-page flow.
+    const rootCommands: CommandItem[] = FLOW_ROOT_META.map(({ type, label, icon }) => ({
+      id: `develop-${type}`,
+      title: label,
+      subtitle: type === 'packages' ? 'Select services' : 'Select a service',
+      group: 'Develop',
+      groupOrder: 10,
+      icon,
+      keywords: [type, 'develop', 'service', 'neuron'],
+      onSelect: (ctx) => {
+        if (type === 'packages') ctx.push(packagesServicesPage(navigate));
+        else ctx.push(servicesPage(type, navigate));
+      },
+    }));
+
+    // Resume entries — one per open Develop tab, jumping straight to the
+    // page matching the flow's current step.
+    const resumeCommands: CommandItem[] = tabs
+      .filter(t => t.type !== 'workflow')
+      .map(tab => ({
+        id: `develop-resume-${tab.id}`,
+        title: `${TYPE_LABELS[tab.type]} · ${tab.neuron}`,
+        subtitle: sessionStepLabel(tab.id),
+        group: 'Resume',
+        groupOrder: -1,
+        icon: HistoryIcon,
+        keywords: ['resume', 'continue', tab.type, tab.neuron],
+        onSelect: (ctx) => {
+          useDevelopTabs.getState().activateTab(tab.id);
+          pushFlowPages(ctx, tab.type, tab.id, tab.neuron, navigate);
+        },
+      }));
+
+    registerExtension({ id: 'develop-actions', commands: [...resumeCommands, ...rootCommands] });
     return () => unregisterExtension('develop-actions');
-  }, [state.neurons, openTab, navigate, registerExtension, unregisterExtension]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabs, stepsKey, navigate, registerExtension, unregisterExtension]);
 
   return null;
 }

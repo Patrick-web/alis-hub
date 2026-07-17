@@ -36,6 +36,7 @@ function CommandDialog({
   contentClassName,
   shouldFilter,
   filter,
+  onEscapeKeyDown,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string;
@@ -43,6 +44,7 @@ function CommandDialog({
   contentClassName?: string;
   shouldFilter?: React.ComponentProps<typeof CommandPrimitive>["shouldFilter"];
   filter?: React.ComponentProps<typeof CommandPrimitive>["filter"];
+  onEscapeKeyDown?: (e: KeyboardEvent) => void;
 }) {
   return (
     <Dialog {...props}>
@@ -50,7 +52,10 @@ function CommandDialog({
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
-      <DialogContent className={cn("overflow-hidden p-0", contentClassName)}>
+      <DialogContent
+        className={cn("overflow-hidden p-0", contentClassName)}
+        onEscapeKeyDown={onEscapeKeyDown}
+      >
         <Command
           shouldFilter={shouldFilter}
           filter={filter}
@@ -63,10 +68,10 @@ function CommandDialog({
   );
 }
 
-function CommandInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+const CommandInput = React.forwardRef<
+  HTMLInputElement,
+  React.ComponentProps<typeof CommandPrimitive.Input>
+>(({ className, ...props }, ref) => {
   return (
     <div
       data-slot="command-input-wrapper"
@@ -74,6 +79,7 @@ function CommandInput({
     >
       <SearchIcon className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
+        ref={ref}
         data-slot="command-input"
         className={cn(
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
@@ -83,7 +89,8 @@ function CommandInput({
       />
     </div>
   );
-}
+});
+CommandInput.displayName = "CommandInput";
 
 function CommandList({
   className,

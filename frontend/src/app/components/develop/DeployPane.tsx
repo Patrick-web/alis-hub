@@ -1,20 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Button } from '../Button';
 import { Loader } from '../Loader';
 import { CheckCircle } from './CheckCircle';
-import { Browser } from '@wailsio/runtime';
-import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
 import { useProtectedEnvironments } from '../../stores/protectedEnvironments';
+import {
+  useDevelopSessions,
+  initialDeploySession,
+  patchSession,
+  getSession,
+  registerSessionController,
+  unregisterSessionController,
+  type DeploySession,
+} from '../../stores/developSessions';
+import { getLogBus } from '../../lib/logBus';
 import type { AppNotification } from '../../stores/notifications';
 import type { DeployEnv, DeployStep, EnvRunState } from './types';
 import { isAuthError, formatRelativeTime } from './types';
 import { completeTaskNotification } from '../../lib/taskNotify';
 import { ConfirmDialog } from '../ConfirmDialog';
+import { EnvRunView } from './shared/EnvRunView';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
 
@@ -31,31 +40,13 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const { isProtected } = useProtectedEnvironments();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<DeployStep>('loading');
+  const session = useDevelopSessions(s => s.sessions[tabId]) as DeploySession | undefined;
+  const patch = (p: Partial<DeploySession>) => patchSession<DeploySession>(tabId, p);
+
   const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
-  const [deployError, setDeployError] = useState<string | null>(null);
-  const [envs, setEnvs] = useState<DeployEnv[]>([]);
-  const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
-  const [versions, setVersions] = useState<{ name: string; version: string; createTime: number }[]>([]);
-  const [version, setVersion] = useState(''); // short display version e.g. 1.0.65
-  const [planOnly, setPlanOnly] = useState(false);
-  const [beta, setBeta] = useState(false);
 
-  // Per-environment run state
-  const [envRuns, setEnvRuns] = useState<EnvRunState[]>([]);
-  const [activeRunEnv, setActiveRunEnv] = useState('');
-
-  const termRefsMap = useRef<Record<string, BuildTerminalHandle | null>>({});
   const logOffsetRefs = useRef<Record<string, number>>({});
-  const logBufferRefs = useRef<Record<string, string[]>>({});
   const taskIdRef = useRef<string | null>(null);
-
-  const [copiedEnv, setCopiedEnv] = useState<string | null>(null);
-  function copyLog(env: string) {
-    navigator.clipboard.writeText(logBufferRefs.current[env]?.join('') ?? '');
-    setCopiedEnv(env);
-    setTimeout(() => setCopiedEnv((cur) => (cur === env ? null : cur)), 1500);
-  }
 
   const orgRef = useRef(state.organisation);
   const productRef = useRef(state.product);
@@ -65,34 +56,52 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   activeEnvRef.current = state.activeEnvName;
 
   useEffect(() => {
+    useDevelopSessions.getState().ensureSession(initialDeploySession(tabId, neuron));
     if (restore?.task) {
       const { step: savedStep, meta } = restore.task;
-      setStep(savedStep as DeployStep);
       taskIdRef.current = restore.id;
       if (savedStep === 'running' && Array.isArray(meta.envOps)) {
         const ops = meta.envOps as EnvRunState[];
         ops.forEach(op => {
           logOffsetRefs.current[op.env] = 0;
-          logBufferRefs.current[op.env] = [...(restore.task!.logBuffer ?? [])];
+          (restore.task!.logBuffer ?? []).forEach(chunk => getLogBus(tabId, op.env).write(chunk));
         });
-        setEnvRuns(ops.map(op => ({ ...op, done: false, progressMsg: 'Reconnecting...' })));
-        setActiveRunEnv(ops[0]?.env ?? '');
+        patchSession<DeploySession>(tabId, {
+          step: savedStep as DeployStep,
+          envRuns: ops.map(op => ({ ...op, done: false, progressMsg: 'Reconnecting...' })),
+          activeRunEnv: ops[0]?.env ?? '',
+        });
+      } else {
+        patchSession<DeploySession>(tabId, { step: savedStep as DeployStep });
       }
-    } else {
+    } else if (getSession<DeploySession>(tabId)?.step === 'loading') {
       loadDeployInfo();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Imperative controller so other surfaces (command palette) can drive this flow.
+  useEffect(() => {
+    registerSessionController(tabId, {
+      kind: 'deploy',
+      reload: () => loadDeployInfoRef.current(),
+      runDeployNow: () => runDeployNowRef.current(),
+    });
+    return () => unregisterSessionController(tabId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabId]);
+
   async function loadDeployInfo() {
-    setStep('loading');
-    setDeployError(null);
-    setEnvs([]);
-    setVersions([]);
-    setSelectedEnvs([]);
-    setVersion('');
-    setEnvRuns([]);
+    patchSession<DeploySession>(tabId, {
+      step: 'loading',
+      deployError: null,
+      envs: [],
+      versions: [],
+      selectedEnvs: [],
+      version: '',
+      envRuns: [],
+    });
     logOffsetRefs.current = {};
-    logBufferRefs.current = {};
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
     try {
       const [overview, versionList] = await Promise.all([
@@ -102,33 +111,40 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       const builtVersions = (versionList ?? []).filter(v => v !== null).map(v => ({
         name: v!.name, version: v!.version, createTime: v!.createTime,
       }));
-      setVersions(builtVersions);
-      if (builtVersions.length > 0) setVersion(builtVersions[0].version);
+      patchSession<DeploySession>(tabId, {
+        versions: builtVersions,
+        ...(builtVersions.length > 0 ? { version: builtVersions[0].version } : {}),
+      });
       const envList: DeployEnv[] = (overview?.environments ?? []).map(env => {
         const dep = env.deployments?.find((d: any) => d.neuronId === neuron);
         return { name: env.name, displayName: env.displayName, currentVersion: dep?.version ?? '' };
       });
-      setEnvs(envList);
+      patchSession<DeploySession>(tabId, { envs: envList });
       if (activeEnvRef.current) {
         const active = envList.find(e => e.name === activeEnvRef.current);
-        if (active) setSelectedEnvs([active.name]);
+        if (active) patchSession<DeploySession>(tabId, { selectedEnvs: [active.name] });
       }
     } catch (e: unknown) {
       if (isAuthError(e)) { setPhase('login'); return; }
-      setDeployError(e instanceof Error ? e.message : String(e));
+      patchSession<DeploySession>(tabId, { deployError: e instanceof Error ? e.message : String(e) });
     } finally {
-      setStep('confirm');
+      patchSession<DeploySession>(tabId, { step: 'confirm' });
     }
   }
+  const loadDeployInfoRef = useRef(loadDeployInfo);
+  loadDeployInfoRef.current = loadDeployInfo;
 
+  const selectedEnvs = session?.selectedEnvs ?? [];
+  const envs = session?.envs ?? [];
   const protectedSelectedEnvs = selectedEnvs.filter(isProtected);
   const protectedSelectedLabels = envs
     .filter(e => protectedSelectedEnvs.includes(e.name))
     .map(e => e.displayName);
 
   function handleRunDeploy() {
-    if (selectedEnvs.length === 0 || !version) return;
-    if (protectedSelectedEnvs.length > 0) {
+    const current = getSession<DeploySession>(tabId);
+    if (!current || current.selectedEnvs.length === 0 || !current.version) return;
+    if (current.selectedEnvs.filter(isProtected).length > 0) {
       setProtectedConfirmOpen(true);
       return;
     }
@@ -136,21 +152,20 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   }
 
   async function runDeployNow() {
+    const current = getSession<DeploySession>(tabId);
+    if (!current) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
-    setStep('running');
+    patchSession<DeploySession>(tabId, { step: 'running' });
 
-    // Reset per-env refs
-    termRefsMap.current = {};
+    // Reset per-env offsets
     logOffsetRefs.current = {};
-    logBufferRefs.current = {};
-    selectedEnvs.forEach(env => {
+    current.selectedEnvs.forEach(env => {
       logOffsetRefs.current[env] = 0;
-      logBufferRefs.current[env] = [];
     });
 
     // Init run states
-    const initialRuns: EnvRunState[] = selectedEnvs.map(envName => {
-      const envObj = envs.find(e => e.name === envName);
+    const initialRuns: EnvRunState[] = current.selectedEnvs.map(envName => {
+      const envObj = current.envs.find(e => e.name === envName);
       return {
         env: envName,
         displayName: envObj?.displayName || envName,
@@ -161,8 +176,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         done: false,
       };
     });
-    setEnvRuns(initialRuns);
-    setActiveRunEnv(selectedEnvs[0]);
+    patchSession<DeploySession>(tabId, { envRuns: initialRuns, activeRunEnv: current.selectedEnvs[0] });
 
     const taskId = addNotification({
       severity: 'info', source: 'deploy', title: 'Deploy started', body: neuron, persistent: true,
@@ -173,7 +187,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
 
     // Start a single deploy for all environments
     let startError: string | null = null;
-    const deployResult = await DeployService.RunDeploy(neuronResource, version, selectedEnvs, planOnly, beta)
+    const deployResult = await DeployService.RunDeploy(neuronResource, current.version, current.selectedEnvs, current.planOnly, current.beta)
       .catch((e: unknown) => {
         startError = e instanceof Error ? e.message : String(e);
         return null;
@@ -190,7 +204,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       }
       return { ...run, done: true, error: startError ?? 'Failed to start', progressMsg: `Failed: ${startError}` };
     });
-    setEnvRuns(updatedRuns);
+    patchSession<DeploySession>(tabId, { envRuns: updatedRuns });
 
     // Persist env ops in notification meta for restore
     updateNotification(taskId, {
@@ -204,20 +218,19 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       },
     });
   }
+  const runDeployNowRef = useRef(runDeployNow);
+  runDeployNowRef.current = runDeployNow;
+
+  const step = session?.step ?? 'loading';
+  const envRuns = session?.envRuns ?? [];
 
   // Poll all running operations
   const pollKey = envRuns.filter(r => r.operationName && !r.done).map(r => r.operationName).join(',');
   useEffect(() => {
     if (!pollKey || step !== 'running') return;
     const interval = setInterval(async () => {
-      let updatedRuns: EnvRunState[] | null = null;
-      setEnvRuns(prev => {
-        updatedRuns = prev;
-        return prev;
-      });
-      if (!updatedRuns) return;
-
-      const running = (updatedRuns as EnvRunState[]).filter(r => r.operationName && !r.done);
+      const currentRuns = getSession<DeploySession>(tabId)?.envRuns ?? [];
+      const running = currentRuns.filter(r => r.operationName && !r.done);
       if (running.length === 0) return;
 
       const uniqueOpNames = [...new Set(running.map(r => r.operationName))];
@@ -225,33 +238,33 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         uniqueOpNames.map(name => DeployService.PollDeployOperation(name))
       );
 
-      setEnvRuns(prev => {
-        const next = [...prev];
-        uniqueOpNames.forEach((opName, opIdx) => {
-          const res = polled[opIdx];
-          const envs = next.filter(r => r.operationName === opName && !r.done);
-          envs.forEach(run => {
-            const idx = next.findIndex(r => r.env === run.env);
-            if (idx === -1) return;
-            if (res.status === 'fulfilled' && res.value) {
-              const r = res.value;
-              next[idx] = {
-                ...next[idx],
-                done: r.done ?? false,
-                error: r.error || undefined,
-                version: r.version || next[idx].version,
-                logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
-                progressMsg: r.notes || next[idx].progressMsg,
-              };
-            } else if (res.status === 'rejected') {
-              next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
-            }
-          });
+      const prev = getSession<DeploySession>(tabId)?.envRuns ?? [];
+      const next = [...prev];
+      uniqueOpNames.forEach((opName, opIdx) => {
+        const res = polled[opIdx];
+        const envMatches = next.filter(r => r.operationName === opName && !r.done);
+        envMatches.forEach(run => {
+          const idx = next.findIndex(r => r.env === run.env);
+          if (idx === -1) return;
+          if (res.status === 'fulfilled' && res.value) {
+            const r = res.value;
+            next[idx] = {
+              ...next[idx],
+              done: r.done ?? false,
+              error: r.error || undefined,
+              version: r.version || next[idx].version,
+              logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
+              progressMsg: r.notes || next[idx].progressMsg,
+            };
+          } else if (res.status === 'rejected') {
+            next[idx] = { ...next[idx], done: true, error: (res.reason as any)?.message || 'Poll failed' };
+          }
         });
-        return next;
       });
+      patchSession<DeploySession>(tabId, { envRuns: next });
     }, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pollKey, step]);
 
   // Transition to result and update notification when all runs finish
@@ -259,7 +272,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     if (step !== 'running' || envRuns.length === 0) return;
     const allDone = envRuns.every(r => r.done);
     if (!allDone) return;
-    setStep('result');
+    patchSession<DeploySession>(tabId, { step: 'result' });
     if (taskIdRef.current) {
       const doneId = taskIdRef.current;
       taskIdRef.current = null;
@@ -273,6 +286,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [envRuns, step]);
 
   // Stream logs for all envs
@@ -286,11 +300,11 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
         try {
           const chunk = await DeployService.FetchDeployLogs(run.logsUrl, logOffsetRefs.current[run.env] ?? 0);
           if (chunk?.content) {
-            termRefsMap.current[run.env]?.write(chunk.content);
+            getLogBus(tabId, run.env).write(chunk.content);
             logOffsetRefs.current[run.env] = chunk.nextOffset;
-            logBufferRefs.current[run.env] = [...(logBufferRefs.current[run.env] ?? []), chunk.content];
             if (taskIdRef.current) {
-              const combined = Object.values(logBufferRefs.current).flat();
+              const currentRuns = getSession<DeploySession>(tabId)?.envRuns ?? [];
+              const combined = currentRuns.flatMap(r => getLogBus(tabId, r.env).getSnapshot());
               updateNotification(taskIdRef.current, { task: { logBuffer: combined } });
             }
           }
@@ -304,12 +318,15 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     });
 
     return () => intervals.forEach(i => { if (i !== null) clearInterval(i); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [logsKey]);
+
+  if (!session) return null;
 
   return (
     <>
       {/* Step: loading */}
-      {step === 'loading' && (
+      {session.step === 'loading' && (
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-[12px]">
             <Loader size={20} />
@@ -319,15 +336,15 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       )}
 
       {/* Step: confirm */}
-      {step === 'confirm' && (
+      {session.step === 'confirm' && (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto">
-            {deployError && (
+            {session.deployError && (
               <div className="mx-[14px] mt-[14px] flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
                 <Icon icon="solar:danger-triangle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold text-foreground/80 mb-[2px]">Failed to load deploy info</p>
-                  <p className="text-[9px] text-foreground/50 leading-relaxed break-words">{deployError}</p>
+                  <p className="text-[9px] text-foreground/50 leading-relaxed break-words">{session.deployError}</p>
                 </div>
               </div>
             )}
@@ -335,19 +352,19 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
               <div className="px-[16px] pt-[14px] pb-[8px]">
                 <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">Build Version</p>
               </div>
-              {versions.length === 0 ? (
+              {session.versions.length === 0 ? (
                 <div className="px-[16px] pb-[12px]">
                   <p className="text-[11px] text-foreground/30">No built versions found.</p>
                 </div>
               ) : (
                 <div className="max-h-[160px] overflow-y-auto">
-                  {versions.map((v) => {
-                    const selected = version === v.version;
+                  {session.versions.map((v) => {
+                    const selected = session.version === v.version;
                     const ago = v.createTime > 0 ? formatRelativeTime(v.createTime) : '';
                     return (
                       <button
                         key={v.name}
-                        onClick={() => setVersion(v.version)}
+                        onClick={() => patch({ version: v.version })}
                         className={`w-full text-left px-[16px] py-[9px] border-b border-border flex items-center gap-[10px] transition-colors ${
                           selected ? 'bg-brand-fill/8' : 'hover:bg-foreground/[2%]'
                         }`}
@@ -364,20 +381,24 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
             <div className="px-[16px] pt-[12px] pb-[4px]">
               <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">Target Environments</p>
             </div>
-            {envs.length === 0 ? (
+            {session.envs.length === 0 ? (
               <div className="px-[16px] pb-[12px]">
                 <p className="text-[11px] text-foreground/30">No environments found.</p>
               </div>
             ) : (
               <div className="flex flex-col">
-                {envs.map((env) => {
-                  const selected = selectedEnvs.includes(env.name);
-                  const isCurrent = env.currentVersion === version;
+                {session.envs.map((env) => {
+                  const selected = session.selectedEnvs.includes(env.name);
+                  const isCurrent = env.currentVersion === session.version;
                   const hasDeployment = !!env.currentVersion;
                   return (
                     <button
                       key={env.name}
-                      onClick={() => setSelectedEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
+                      onClick={() => patch({
+                        selectedEnvs: selected
+                          ? session.selectedEnvs.filter(e => e !== env.name)
+                          : [...session.selectedEnvs, env.name],
+                      })}
                       className={`text-left px-[16px] py-[11px] border-b border-border transition-colors flex items-center gap-[10px] ${selected ? 'bg-brand-fill/5' : 'hover:bg-foreground/[2%]'}`}
                     >
                       <CheckCircle selected={selected} size={15} />
@@ -391,7 +412,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
                           <div className="flex items-center gap-[4px] shrink-0">
                             <span className="text-[9px] font-mono text-foreground/30 line-through">{env.currentVersion}</span>
                             <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/25 text-[10px]" />
-                            <span className="text-[9px] font-bold font-mono text-brand">{version || '?'}</span>
+                            <span className="text-[9px] font-bold font-mono text-brand">{session.version || '?'}</span>
                           </div>
                         )
                       ) : (
@@ -406,14 +427,14 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
               <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[10px]">Options</p>
               <div className="flex flex-col gap-[8px]">
                 <label className="flex items-center gap-[8px] cursor-pointer">
-                  <input type="checkbox" checked={planOnly} onChange={(e) => setPlanOnly(e.target.checked)} className="accent-brand" />
+                  <input type="checkbox" checked={session.planOnly} onChange={(e) => patch({ planOnly: e.target.checked })} className="accent-brand" />
                   <div>
                     <span className="text-[10px] text-foreground/70">Plan only</span>
                     <span className="text-[9px] text-foreground/30 ml-[6px]">terraform plan, no apply</span>
                   </div>
                 </label>
                 <label className="flex items-center gap-[8px] cursor-pointer">
-                  <input type="checkbox" checked={beta} onChange={(e) => setBeta(e.target.checked)} className="accent-brand" />
+                  <input type="checkbox" checked={session.beta} onChange={(e) => patch({ beta: e.target.checked })} className="accent-brand" />
                   <div>
                     <span className="text-[10px] text-foreground/70">Beta</span>
                     <span className="text-[9px] text-foreground/30 ml-[6px]">sets ALIS_BETA_VERSION</span>
@@ -426,113 +447,27 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
             <Button
               variant="primary"
               className="w-full justify-center py-[10px]"
-              disabled={!version || selectedEnvs.length === 0}
+              disabled={!session.version || session.selectedEnvs.length === 0}
               onClick={handleRunDeploy}
             >
-              {planOnly ? 'Run Plan' : 'Run Deploy'} · {selectedEnvs.length} env{selectedEnvs.length !== 1 ? 's' : ''}
+              {session.planOnly ? 'Run Plan' : 'Run Deploy'} · {session.selectedEnvs.length} env{session.selectedEnvs.length !== 1 ? 's' : ''}
             </Button>
           </div>
         </div>
       )}
 
       {/* Steps: running + result — one terminal per env */}
-      {(step === 'running' || step === 'result') && (
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Env tab bar — only shown when deploying to multiple environments */}
-          {envRuns.length > 1 && (
-            <div className="shrink-0 flex border-b border-border overflow-x-auto">
-              {envRuns.map(run => (
-                <button
-                  key={run.env}
-                  onClick={() => setActiveRunEnv(run.env)}
-                  className={`flex items-center gap-[6px] px-[12px] py-[8px] text-[10px] shrink-0 border-r border-border transition-colors ${
-                    activeRunEnv === run.env
-                      ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
-                      : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/[2%]'
-                  }`}
-                >
-                  {run.done && run.error ? (
-                    <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px] shrink-0" />
-                  ) : run.done ? (
-                    <Icon icon="solar:check-circle-linear" className="text-success text-[11px] shrink-0" />
-                  ) : (
-                    <Loader size={10} />
-                  )}
-                  <span className="font-medium">{run.displayName}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Per-env terminal panes */}
-          {envRuns.map(run => (
-            <div
-              key={run.env}
-              className="flex-1 flex flex-col min-h-0"
-              style={{ display: (activeRunEnv === run.env || envRuns.length === 1) ? 'flex' : 'none' }}
-            >
-              {/* Per-env status header */}
-              {step === 'running' && !run.done && (
-                <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
-                  <Loader size={20} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Planning' : 'Deploying'} · {run.version || version}</p>
-                    <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{run.progressMsg}</p>
-                  </div>
-                  <button onClick={() => copyLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                    <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                  </button>
-                </div>
-              )}
-              {(step === 'result' || run.done) && (
-                <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${run.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
-                  {run.error ? (
-                    <div className="flex items-start gap-[8px]">
-                      <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                      <p className="text-[10px] text-foreground/70 leading-relaxed flex-1">{run.error}</p>
-                      <button onClick={() => copyLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                        <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-[8px]">
-                      <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-foreground leading-tight">{planOnly ? 'Plan Complete' : 'Deploy Complete'}</p>
-                        {(run.version || version) && (
-                          <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{run.version || version}</p>
-                        )}
-                      </div>
-                      <div className="ml-auto flex items-center gap-[10px] shrink-0">
-                        <button onClick={() => copyLog(run.env)} className="text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                          <Icon icon={copiedEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                        </button>
-                        {run.logsUrl && (
-                          <button onClick={() => Browser.OpenURL(run.logsUrl)} className="text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
-                            <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              <BuildTerminal
-                ref={r => { termRefsMap.current[run.env] = r; }}
-                className="flex-1 min-h-0"
-              />
-            </div>
-          ))}
-
-          {step === 'result' && (
-            <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
-              <button onClick={loadDeployInfo} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
-                <Icon icon="solar:refresh-linear" className="text-sm" />
-                Run Deploy again
-              </button>
-            </div>
-          )}
-        </div>
+      {(session.step === 'running' || session.step === 'result') && (
+        <EnvRunView
+          runs={session.envRuns}
+          activeEnv={session.activeRunEnv}
+          onSelectEnv={(env) => patch({ activeRunEnv: env })}
+          step={session.step}
+          busFor={(env) => getLogBus(tabId, env)}
+          planOnly={session.planOnly}
+          fallbackVersion={session.version}
+          onRerun={session.step === 'result' ? loadDeployInfo : undefined}
+        />
       )}
 
       <ConfirmDialog
@@ -545,7 +480,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
             Type the phrase below to confirm this deploy.
           </>
         }
-        confirmLabel={planOnly ? 'Run Plan' : 'Run Deploy'}
+        confirmLabel={session.planOnly ? 'Run Plan' : 'Run Deploy'}
         requireText={`Deploy to ${protectedSelectedLabels.join(', ')}`}
         onConfirm={() => {
           setProtectedConfirmOpen(false);
