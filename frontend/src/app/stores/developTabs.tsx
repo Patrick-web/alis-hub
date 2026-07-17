@@ -23,10 +23,9 @@ export const useDevelopTabs = create<DevelopTabsStore>((set) => ({
   tabs: [],
   activeTabId: null,
   openTab: (type, neuron, restore) => set(state => {
-    const existing = state.tabs.find(t => t.type === type && t.neuron === neuron);
-    if (existing) return { activeTabId: existing.id };
+    const next = state.tabs.filter(t => !(t.type === type && t.neuron === neuron));
     const id = crypto.randomUUID();
-    return { tabs: [...state.tabs, { id, type, neuron, restore }], activeTabId: id };
+    return { tabs: [...next, { id, type, neuron, restore }], activeTabId: id };
   }),
   closeTab: (id) => set(state => {
     const next = state.tabs.filter(t => t.id !== id);
