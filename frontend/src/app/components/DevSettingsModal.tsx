@@ -331,6 +331,39 @@ function LogsTab() {
 export function DevSettingsModal() {
   const { isOpen, activeTab, close, open } = useDevSettingsModal();
   const { real, envInfo, override, effective, setOverride } = usePlatform();
+  const sidebarRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [sidebarFocusIndex, setSidebarFocusIndex] = useState(-1);
+
+  const handleSidebarKeyDown = useCallback(
+    (e: React.KeyboardEvent, idx: number) => {
+      const n = SIDEBAR_ITEMS.length;
+      let next = idx;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        next = (idx + 1) % n;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        next = (idx - 1 + n) % n;
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        next = 0;
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        next = n - 1;
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open(SIDEBAR_ITEMS[idx].id);
+        return;
+      } else {
+        return;
+      }
+      setSidebarFocusIndex(next);
+      const targetId = SIDEBAR_ITEMS[next].id;
+      sidebarRefs.current.get(targetId)?.focus();
+      open(targetId);
+    },
+    [open],
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={v => (v ? open() : close())}>
@@ -376,13 +409,19 @@ export function DevSettingsModal() {
                   Developer
                 </span>
               </div>
-              {SIDEBAR_ITEMS.map(item => (
+              {SIDEBAR_ITEMS.map((item, i) => (
                 <button
                   key={item.id}
+                  ref={(el) => {
+                    if (el) sidebarRefs.current.set(item.id, el);
+                    else sidebarRefs.current.delete(item.id);
+                  }}
+                  onKeyDown={(e) => handleSidebarKeyDown(e, i)}
+                  onFocus={() => setSidebarFocusIndex(i)}
                   onClick={() => open(item.id)}
-                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors ${
+                  className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                     activeTab === item.id ? 'bg-foreground/[0.07]' : 'hover:bg-foreground/[0.04]'
-                  }`}
+                  } ${sidebarFocusIndex === i ? 'ring-1 ring-inset ring-ring' : ''}`}
                   style={{ width: 'calc(100% - 10px)' }}
                 >
                   <Icon
@@ -414,10 +453,28 @@ export function DevSettingsModal() {
                     <SectionTitle>Title bar preview</SectionTitle>
                     <SettingsCard>
                       <SettingRow label="Render as">
-                        <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                          {OVERRIDE_OPTIONS.map(opt => (
+                        <div
+                          role="radiogroup"
+                          aria-label="Platform override"
+                          className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]"
+                          onKeyDown={(e) => {
+                            const currentIdx = OVERRIDE_OPTIONS.findIndex((o) => o.id === override);
+                            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                              e.preventDefault();
+                              const dir = e.key === 'ArrowRight' ? 1 : -1;
+                              const next = (currentIdx + dir + OVERRIDE_OPTIONS.length) % OVERRIDE_OPTIONS.length;
+                              setOverride(OVERRIDE_OPTIONS[next].id);
+                              const buttons = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button');
+                              buttons[next]?.focus();
+                            }
+                          }}
+                        >
+                          {OVERRIDE_OPTIONS.map((opt) => (
                             <button
                               key={opt.id}
+                              role="radio"
+                              aria-checked={override === opt.id}
+                              tabIndex={override === opt.id ? 0 : -1}
                               onClick={() => setOverride(opt.id)}
                               className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${override === opt.id ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
                             >

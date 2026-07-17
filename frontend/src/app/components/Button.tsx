@@ -15,7 +15,7 @@ export function Button({
   className = '',
   ...props
 }: ButtonProps) {
-  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-mono transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
+  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-mono transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
 
   const variants = {
     primary: 'bg-brand-fill text-brand-foreground px-[10px] py-[5px] hover:bg-brand-fill-hover',

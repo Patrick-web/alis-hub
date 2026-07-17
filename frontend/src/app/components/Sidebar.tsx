@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { SidebarNavItem } from "./SidebarNavItem";
@@ -185,6 +185,42 @@ export function Sidebar() {
     }
   };
 
+  // Roving tabindex for keyboard sidebar navigation
+  const itemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const [focusIndex, setFocusIndex] = useState(-1);
+
+  useEffect(() => {
+    setFocusIndex(-1);
+  }, [items.length]);
+
+  const handleItemKeyDown = useCallback(
+    (e: React.KeyboardEvent, idx: number) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = Math.min(idx + 1, items.length - 1);
+        setFocusIndex(next);
+        itemRefs.current.get(items[next].id)?.focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const next = Math.max(idx - 1, 0);
+        setFocusIndex(next);
+        itemRefs.current.get(items[next].id)?.focus();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        setFocusIndex(0);
+        itemRefs.current.get(items[0].id)?.focus();
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        const last = items.length - 1;
+        setFocusIndex(last);
+        itemRefs.current.get(items[last].id)?.focus();
+      }
+    },
+    [items],
+  );
+
+  const activeId = getActiveItem();
+
   const handleCreateEnv = async (
     displayName: string,
     envType: number,
@@ -267,12 +303,22 @@ export function Sidebar() {
                 />
               </div>
             )}
-            {items.map((item) => (
+            {items.map((item, i) => (
               <SidebarNavItem
                 key={item.id}
+                ref={(el) => {
+                  if (el) itemRefs.current.set(item.id, el);
+                  else itemRefs.current.delete(item.id);
+                }}
                 label={item.label}
                 icon={item.icon}
-                active={getActiveItem() === item.id}
+                active={activeId === item.id}
+                tabIndex={
+                  focusIndex >= 0
+                    ? focusIndex === i ? 0 : -1
+                    : activeId === item.id ? 0 : -1
+                }
+                onKeyDown={(e) => handleItemKeyDown(e, i)}
                 onClick={() => handleItemClick(item)}
                 onEdit={
                   isEnvironments && dynamicEnvItems.length > 0

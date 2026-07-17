@@ -1025,13 +1025,38 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
                         >
                           <SectionTitle>Accent color</SectionTitle>
                           <SettingsCard>
-                            <div className="px-[12px] py-[11px] flex items-center justify-between flex-wrap">
+                            <div
+                              role="radiogroup"
+                              aria-label="Accent color"
+                              className="px-[12px] py-[11px] flex items-center justify-between flex-wrap"
+                              onKeyDown={(e) => {
+                                const items = ACCENT_COLORS.map(c => c.id).concat('custom');
+                                const idx = items.indexOf(accentId);
+                                let next = idx;
+                                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                                  next = (idx + 1) % items.length;
+                                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                                  next = (idx - 1 + items.length) % items.length;
+                                }
+                                if (next !== idx && next >= 0) {
+                                  e.preventDefault();
+                                  if (items[next] === 'custom') {
+                                    setCustomAccent(customHex);
+                                  } else {
+                                    setAccent(items[next]);
+                                  }
+                                }
+                              }}
+                            >
                               {ACCENT_COLORS.map((color) => (
                                 <button
                                   key={color.id}
+                                  role="radio"
+                                  aria-checked={accentId === color.id}
+                                  tabIndex={accentId === color.id ? 0 : -1}
                                   title={color.label}
                                   onClick={() => setAccent(color.id)}
-                                  className="relative w-[48px] h-[24px] rounded-full transition-transform hover:scale-110 shrink-0 focus:outline-none"
+                                  className="relative w-[48px] h-[24px] rounded-full transition-transform hover:scale-110 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
                                   style={{ background: color.brand }}
                                 >
                                   {accentId === color.id && (
@@ -1058,8 +1083,11 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
 
                               {/* Custom color */}
                               <label
+                                role="radio"
+                                aria-checked={accentId === "custom"}
+                                tabIndex={accentId === "custom" ? 0 : -1}
                                 title="Custom color"
-                                className="relative w-[24px] h-[24px] rounded-full cursor-pointer hover:scale-110 transition-transform shrink-0 overflow-hidden"
+                                className="relative w-[24px] h-[24px] rounded-full cursor-pointer hover:scale-110 transition-transform shrink-0 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-card"
                                 style={
                                   accentId === "custom"
                                     ? { background: customHex }

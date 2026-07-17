@@ -158,6 +158,7 @@ export function VarFormSheet({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               disabled={loading || mode === 'edit'}
+              autoFocus
               className={`font-mono text-[12px] ${mode === 'create' && label && !LABEL_REGEX.test(label.trim()) ? 'border-destructive focus:border-destructive' : ''}`}
             />
             {mode === 'create' && label && !LABEL_REGEX.test(label.trim()) && (

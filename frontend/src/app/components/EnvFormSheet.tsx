@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@iconify/react';
 import {
   Sheet,
@@ -75,6 +75,9 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const regionInputRef = useRef<HTMLInputElement>(null);
+  const regionButtonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
+
   useEffect(() => {
     if (open) {
       setDisplayName(initialDisplayName);
@@ -99,6 +102,33 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
       setLoading(false);
     }
   };
+
+  const handleRegionInputKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' && filteredRegions.length > 0) {
+      e.preventDefault();
+      const idx = filteredRegions.indexOf(region);
+      const target = idx >= 0 ? filteredRegions[idx] : filteredRegions[0];
+      regionButtonsRef.current.get(target)?.focus();
+    }
+  }, [filteredRegions, region]);
+
+  const moveEnvType = useCallback((dir: 1 | -1) => {
+    const idx = ENV_TYPES.findIndex(t => t.value === envType);
+    const next = (idx + dir + ENV_TYPES.length) % ENV_TYPES.length;
+    setEnvType(ENV_TYPES[next].value);
+  }, [envType]);
+
+  const moveRegion = useCallback((dir: 1 | -1) => {
+    if (filteredRegions.length === 0) return;
+    const idx = filteredRegions.indexOf(region);
+    const nextIdx = idx >= 0 ? (idx + dir + filteredRegions.length) % filteredRegions.length : 0;
+    const next = filteredRegions[nextIdx];
+    setRegion(next);
+    regionButtonsRef.current.get(next)?.focus();
+    requestAnimationFrame(() => {
+      regionButtonsRef.current.get(next)?.scrollIntoView({ block: 'nearest' });
+    });
+  }, [filteredRegions, region]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -127,6 +157,7 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={loading}
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              autoFocus
             />
           </div>
 
@@ -137,27 +168,41 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                 <p className="font-mono text-[10px] font-bold text-foreground/50 uppercase">
                   Type
                 </p>
-                <div className="flex flex-col gap-[4px]">
-                  {ENV_TYPES.map((t) => (
-                    <button
-                      key={t.value}
-                      onClick={() => setEnvType(t.value)}
-                      disabled={loading}
-                      className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
-                        envType === t.value
-                          ? 'border-brand-fill bg-brand-fill/8'
-                          : 'border-border hover:bg-foreground/[4%]'
-                      }`}
-                    >
-                      <Icon
-                        icon={t.icon}
-                        className={`text-xl ${envType === t.value ? 'text-brand' : 'text-foreground/50'}`}
-                      />
-                      <span className={`font-mono text-[12px] ${envType === t.value ? 'text-brand' : 'text-foreground'}`}>
-                        {t.label}
-                      </span>
-                    </button>
-                  ))}
+                <div
+                  role="radiogroup"
+                  aria-label="Environment type"
+                  className="flex flex-col gap-[4px]"
+                >
+                  {ENV_TYPES.map((t) => {
+                    const checked = envType === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        role="radio"
+                        aria-checked={checked}
+                        tabIndex={checked ? 0 : -1}
+                        onClick={() => setEnvType(t.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowDown') { e.preventDefault(); moveEnvType(1); }
+                          if (e.key === 'ArrowUp') { e.preventDefault(); moveEnvType(-1); }
+                        }}
+                        disabled={loading}
+                        className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] border transition-colors text-left ${
+                          checked
+                            ? 'border-brand-fill bg-brand-fill/8'
+                            : 'border-border hover:bg-foreground/[4%]'
+                        }`}
+                      >
+                        <Icon
+                          icon={t.icon}
+                          className={`text-xl ${checked ? 'text-brand' : 'text-foreground/50'}`}
+                        />
+                        <span className={`font-mono text-[12px] ${checked ? 'text-brand' : 'text-foreground'}`}>
+                          {t.label}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -170,25 +215,45 @@ export function EnvFormSheet({ open, onOpenChange, mode, initialDisplayName = ''
                   placeholder="Filter regions..."
                   value={regionFilter}
                   onChange={(e) => setRegionFilter(e.target.value)}
+                  onKeyDown={handleRegionInputKeyDown}
                   disabled={loading}
+                  inputRef={regionInputRef}
                   className="font-mono text-[12px]"
                 />
-                <div className="flex flex-col gap-[2px] max-h-[180px] overflow-y-auto border border-border rounded-[4px]">
-                  {filteredRegions.map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setRegion(r)}
-                      disabled={loading}
-                      className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
-                        region === r
-                          ? 'bg-brand-fill/12 text-brand'
-                          : 'text-foreground/70 hover:bg-foreground/[4%]'
-                      }`}
-                    >
-                      <span className="font-mono text-[11px]">{r}</span>
-                      {region === r && <Icon icon="solar:check-circle-linear" className="text-brand text-[14px] shrink-0" />}
-                    </button>
-                  ))}
+                <div
+                  role="radiogroup"
+                  aria-label="Region"
+                  className="flex flex-col gap-[2px] max-h-[180px] overflow-y-auto border border-border rounded-[4px]"
+                >
+                  {filteredRegions.map((r) => {
+                    const checked = region === r;
+                    return (
+                      <button
+                        key={r}
+                        ref={(el) => {
+                          if (el) regionButtonsRef.current.set(r, el);
+                          else regionButtonsRef.current.delete(r);
+                        }}
+                        role="radio"
+                        aria-checked={checked}
+                        tabIndex={checked ? 0 : -1}
+                        onClick={() => setRegion(r)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowDown') { e.preventDefault(); moveRegion(1); }
+                          if (e.key === 'ArrowUp') { e.preventDefault(); moveRegion(-1); }
+                        }}
+                        disabled={loading}
+                        className={`flex items-center justify-between px-[12px] py-[6px] text-left transition-colors ${
+                          checked
+                            ? 'bg-brand-fill/12 text-brand'
+                            : 'text-foreground/70 hover:bg-foreground/[4%]'
+                        }`}
+                      >
+                        <span className="font-mono text-[11px]">{r}</span>
+                        {checked && <Icon icon="solar:check-circle-linear" className="text-brand text-[14px] shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </>

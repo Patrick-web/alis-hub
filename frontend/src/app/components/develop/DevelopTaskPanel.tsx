@@ -7,6 +7,7 @@ import { DefinePane } from './DefinePane';
 import { BuildPane } from './BuildPane';
 import { DeployPane } from './DeployPane';
 import { PackagesPane } from './PackagesPane';
+import { useKeyboardShortcuts } from '../../lib/keyboardShortcuts';
 import type { TaskType } from '../../stores/notifications';
 
 const MIN_WIDTH = 320;
@@ -55,6 +56,45 @@ export function DevelopTaskPanel() {
     closeMultiple(ids);
     notifIds.forEach(dismiss);
   }
+
+  const tabsRef = useRef(tabs);
+  tabsRef.current = tabs;
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
+  const activateTabRef = useRef(activateTab);
+  activateTabRef.current = activateTab;
+  const closeTabRef = useRef(closeTab);
+  closeTabRef.current = closeTab;
+  const dismissRef = useRef(dismiss);
+  dismissRef.current = dismiss;
+
+  useKeyboardShortcuts([
+    ...([1, 2, 3, 4] as const).map(n => ({
+      id: `develop-tab-${n}`,
+      keys: `Ctrl+${n}`,
+      description: `Switch to tab ${n}`,
+      group: 'Develop',
+      scope: '/develop',
+      handler: () => {
+        const current = tabsRef.current;
+        if (current.length >= n) activateTabRef.current(current[n - 1].id);
+      },
+    })),
+    {
+      id: 'develop-close-tab',
+      keys: 'Ctrl+W',
+      description: 'Close active tab',
+      group: 'Develop',
+      scope: '/develop',
+      handler: () => {
+        const id = activeTabIdRef.current;
+        if (!id) return;
+        const tab = tabsRef.current.find(t => t.id === id);
+        closeTabRef.current(id);
+        if (tab?.notificationId) dismissRef.current(tab.notificationId);
+      },
+    },
+  ], []);
 
   const [paneWidth, setPaneWidth] = useState(DEFAULT_WIDTH);
   const dragging = useRef(false);

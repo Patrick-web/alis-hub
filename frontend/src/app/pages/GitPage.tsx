@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GitBranchBar } from '../components/git/GitBranchBar';
 import { GitDiffViewer } from '../components/git/GitDiffViewer';
 import { GitFileList } from '../components/git/GitFileList';
@@ -20,6 +20,7 @@ import { Events } from '@wailsio/runtime';
 import { Loader } from '../components/Loader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useLocalAI } from '../stores/localai';
+import { useKeyboardShortcuts } from '../lib/keyboardShortcuts';
 import { GitPullRequest, GitCommitVertical, Undo2 } from 'lucide-react';
 
 type GitTab = 'code' | 'prs';
@@ -398,6 +399,52 @@ function RepoSection({
     await GitService.CreateBranch(repoPath, name);
     refresh();
   }
+
+  const commitMessageRef = useRef(commitMessage);
+  commitMessageRef.current = commitMessage;
+  const handleCommitRef = useRef(handleCommit);
+  handleCommitRef.current = handleCommit;
+  const handlePushRef = useRef(handlePush);
+  handlePushRef.current = handlePush;
+  const handlePullRef = useRef(handlePull);
+  handlePullRef.current = handlePull;
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+
+  useKeyboardShortcuts([
+    {
+      id: `git-commit-${repoPath}`,
+      keys: 'Ctrl+Enter',
+      description: 'Commit staged changes',
+      group: 'Source Control',
+      scope: '/git',
+      handler: () => { if (commitMessageRef.current.trim()) handleCommitRef.current(); },
+    },
+    {
+      id: `git-push-${repoPath}`,
+      keys: 'Ctrl+Shift+P',
+      description: 'Push to origin',
+      group: 'Source Control',
+      scope: '/git',
+      handler: () => handlePushRef.current(),
+    },
+    {
+      id: `git-pull-${repoPath}`,
+      keys: 'Ctrl+Shift+U',
+      description: 'Pull from origin',
+      group: 'Source Control',
+      scope: '/git',
+      handler: () => handlePullRef.current(),
+    },
+    {
+      id: `git-fetch-${repoPath}`,
+      keys: 'Ctrl+Shift+F',
+      description: 'Fetch from origin',
+      group: 'Source Control',
+      scope: '/git',
+      handler: () => refreshRef.current(),
+    },
+  ], [repoPath]);
 
   const conflictFilePaths = gitStatus.conflicted.length > 0
     ? gitStatus.conflicted.map(f => f.path)
