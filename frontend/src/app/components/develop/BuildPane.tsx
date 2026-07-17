@@ -1,19 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Icon } from '@iconify/react';
 import { Button } from '../Button';
 import { Loader } from '../Loader';
 import { CheckCircle } from './CheckCircle';
-import { Browser } from '@wailsio/runtime';
-import { BuildTerminal, type BuildTerminalHandle } from '../BuildTerminal';
 import { useWorkspace } from '../../stores/workspace';
 import { useDevelopSettings } from '../../stores/developSettings';
 import { useNotifications } from '../../stores/notifications';
 import { useDevelopTabs } from '../../stores/developTabs';
+import {
+  useDevelopSessions,
+  initialBuildSession,
+  patchSession,
+  getSession,
+  registerSessionController,
+  unregisterSessionController,
+  type BuildSession,
+} from '../../stores/developSessions';
+import { getLogBus } from '../../lib/logBus';
 import type { AppNotification } from '../../stores/notifications';
 import type { DefineCommit, BuildResult, BuildStep, BuildMode, DeployEnv, EnvRunState } from './types';
 import { parseNeuron, formatTimestamp } from './types';
 import { completeTaskNotification } from '../../lib/taskNotify';
+import { CommitList } from './shared/CommitList';
+import { BuildRunView } from './shared/BuildRunView';
+import { EnvRunView } from './shared/EnvRunView';
 import * as BuildService from '../../../../bindings/alis-hub-v3/buildservice';
 import * as DeployService from '../../../../bindings/alis-hub-v3/deployservice';
 import * as ProductService from '../../../../bindings/alis-hub-v3/productservice';
@@ -34,31 +45,15 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   const { openTab, setTabNotificationId } = useDevelopTabs();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState<BuildStep>('commits');
-  const [commits, setCommits] = useState<DefineCommit[]>([]);
-  const [commitsLoading, setCommitsLoading] = useState(() => !restore?.task);
-  const [selectedCommit, setSelectedCommit] = useState<DefineCommit | null>(null);
-  const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
-  const [progressMsg, setProgressMsg] = useState('Starting...');
-  const [branch, setBranch] = useState('master');
-  const [branches, setBranches] = useState<string[]>(['master']);
-  const [buildMode, setBuildMode] = useState<BuildMode>('cloud');
-  const [localBuildId, setLocalBuildId] = useState<string | null>(null);
+  const session = useDevelopSessions(s => s.sessions[tabId]) as BuildSession | undefined;
+  const patch = (p: Partial<BuildSession>) => patchSession<BuildSession>(tabId, p);
 
-  // Build+Deploy state
-  const [deployEnvs, setDeployEnvs] = useState<DeployEnv[]>([]);
-  const [selectedDeployEnvs, setSelectedDeployEnvs] = useState<string[]>([]);
-  const [envsLoading, setEnvsLoading] = useState(false);
-  const [buildPhase, setBuildPhase] = useState<'build' | 'deploy'>('build');
-  const [deployRuns, setDeployRuns] = useState<EnvRunState[]>([]);
-  const [activeRunEnv, setActiveRunEnv] = useState('');
-
-  const termRef = useRef<BuildTerminalHandle>(null);
+  const buildBus = getLogBus(tabId, 'build');
   const logOffsetRef = useRef<number>(0);
-  const logBufferRef = useRef<string[]>([]);
   const taskIdRef = useRef<string | null>(null);
   const cloudBuildPollFailuresRef = useRef(0);
   const localBuildPollFailuresRef = useRef(0);
+  const deployLogOffsets = useRef<Record<string, number>>({});
 
   const orgRef = useRef(state.organisation);
   const productRef = useRef(state.product);
@@ -67,46 +62,41 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   productRef.current = state.product;
   activeEnvRef.current = state.activeEnvName;
 
-  // Refs for build+deploy phase
-  const buildModeRef = useRef(buildMode);
-  buildModeRef.current = buildMode;
-  const selectedDeployEnvsRef = useRef(selectedDeployEnvs);
-  selectedDeployEnvsRef.current = selectedDeployEnvs;
-  const deployEnvsRef = useRef(deployEnvs);
-  deployEnvsRef.current = deployEnvs;
-  const deployTermsMap = useRef<Record<string, BuildTerminalHandle | null>>({});
-  const deployLogOffsets = useRef<Record<string, number>>({});
-  const deployLogBuffers = useRef<Record<string, string[]>>({});
-
-  const [buildCopied, setBuildCopied] = useState(false);
-  function copyBuildLog() {
-    navigator.clipboard.writeText(logBufferRef.current.join(''));
-    setBuildCopied(true);
-    setTimeout(() => setBuildCopied(false), 1500);
-  }
-  const [copiedDeployEnv, setCopiedDeployEnv] = useState<string | null>(null);
-  function copyDeployLog(env: string) {
-    navigator.clipboard.writeText(deployLogBuffers.current[env]?.join('') ?? '');
-    setCopiedDeployEnv(env);
-    setTimeout(() => setCopiedDeployEnv((cur) => (cur === env ? null : cur)), 1500);
-  }
-
   useEffect(() => {
+    useDevelopSessions.getState().ensureSession(initialBuildSession(tabId, neuron));
     if (restore?.task) {
       const { step: savedStep, meta } = restore.task;
-      setStep(savedStep as BuildStep);
       taskIdRef.current = restore.id;
-      logBufferRef.current = [...restore.task.logBuffer];
-      if (savedStep === 'running' && meta.operationName) {
-        setBuildResult({
-          operationName: meta.operationName as string, version: '', neuronVersion: '',
-          logsUrl: (meta.logsUrl as string) || '', notes: '', done: false,
-        });
-      }
-    } else {
+      restore.task.logBuffer.forEach(chunk => buildBus.write(chunk));
+      patchSession<BuildSession>(tabId, {
+        step: savedStep as BuildStep,
+        commitsLoading: false,
+        ...(savedStep === 'running' && meta.operationName
+          ? {
+              buildResult: {
+                operationName: meta.operationName as string, version: '', neuronVersion: '',
+                logsUrl: (meta.logsUrl as string) || '', notes: '', done: false,
+              },
+            }
+          : {}),
+      });
+    } else if (getSession<BuildSession>(tabId)?.commitsLoading) {
       resolveDefaultBranchAndLoad();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Imperative controller so other surfaces (command palette) can drive this flow.
+  useEffect(() => {
+    registerSessionController(tabId, {
+      kind: 'build',
+      loadCommits: (b: string) => loadCommitsRef.current(b),
+      changeBranch: (b: string) => changeBranchRef.current(b),
+      runBuild: () => runBuildRef.current(),
+    });
+    return () => unregisterSessionController(tabId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabId]);
 
   async function resolveDefaultBranchAndLoad() {
     let initialBranch = 'master';
@@ -124,77 +114,81 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   }
 
   async function loadCommits(b: string) {
-    setStep('commits');
-    setCommits([]);
-    setSelectedCommit(null);
-    setBuildResult(null);
-    setBuildMode('cloud');
-    setBranch(b);
-    setLocalBuildId(null);
+    patchSession<BuildSession>(tabId, {
+      step: 'commits',
+      commits: [],
+      selectedCommit: null,
+      buildResult: null,
+      buildMode: 'cloud',
+      branch: b,
+      localBuildId: null,
+      buildPhase: 'build',
+      deployRuns: [],
+      activeRunEnv: '',
+      selectedDeployEnvs: [],
+      commitsLoading: true,
+    });
     logOffsetRef.current = 0;
-    setBuildPhase('build');
-    setDeployRuns([]);
-    setActiveRunEnv('');
-    setSelectedDeployEnvs([]);
-    setCommitsLoading(true);
     const parsed = parseNeuron(neuron);
     const [, commitsResult] = await Promise.allSettled([
       BuildService.GetBuildBranches(orgRef.current, productRef.current).then(
-        (bs) => { if (bs && bs.length > 0) setBranches(bs as string[]); }
+        (bs) => { if (bs && bs.length > 0) patchSession<BuildSession>(tabId, { branches: bs as string[] }); }
       ),
       BuildService.GetBuildCommits(orgRef.current, productRef.current, parsed.id, parsed.version, b, 30),
     ]);
-    setCommitsLoading(false);
-    setCommits(commitsResult.status === 'fulfilled' && commitsResult.value ? commitsResult.value as DefineCommit[] : []);
+    patchSession<BuildSession>(tabId, {
+      commitsLoading: false,
+      commits: commitsResult.status === 'fulfilled' && commitsResult.value ? commitsResult.value as DefineCommit[] : [],
+    });
   }
+  const loadCommitsRef = useRef(loadCommits);
+  loadCommitsRef.current = loadCommits;
 
   async function handleBranchChange(b: string) {
-    setBranch(b);
-    setSelectedCommit(null);
-    setCommitsLoading(true);
-    setCommits([]);
+    patchSession<BuildSession>(tabId, { branch: b, selectedCommit: null, commitsLoading: true, commits: [] });
     const parsed = parseNeuron(neuron);
     try {
       const result = await BuildService.GetBuildCommits(orgRef.current, productRef.current, parsed.id, parsed.version, b, 30);
-      setCommits(result as DefineCommit[]);
+      patchSession<BuildSession>(tabId, { commits: result as DefineCommit[], commitsLoading: false });
     } catch {
-      setCommits([]);
-    } finally {
-      setCommitsLoading(false);
+      patchSession<BuildSession>(tabId, { commits: [], commitsLoading: false });
     }
   }
+  const changeBranchRef = useRef(handleBranchChange);
+  changeBranchRef.current = handleBranchChange;
 
   async function loadDeployEnvs() {
-    setEnvsLoading(true);
-    setDeployEnvs([]);
+    patchSession<BuildSession>(tabId, { envsLoading: true, deployEnvs: [] });
     try {
       const overview = await ProductService.GetServicesOverview(orgRef.current, productRef.current);
       const envList: DeployEnv[] = (overview?.environments ?? []).map((env: any) => ({
         name: env.name, displayName: env.displayName, currentVersion: '',
       }));
-      setDeployEnvs(envList);
+      patchSession<BuildSession>(tabId, { deployEnvs: envList });
       if (activeEnvRef.current) {
         const active = envList.find(e => e.name === activeEnvRef.current);
-        if (active) setSelectedDeployEnvs([active.name]);
+        if (active) patchSession<BuildSession>(tabId, { selectedDeployEnvs: [active.name] });
       }
     } catch {} finally {
-      setEnvsLoading(false);
+      patchSession<BuildSession>(tabId, { envsLoading: false });
     }
   }
 
+  const buildMode = session?.buildMode ?? 'cloud';
   useEffect(() => {
     if (buildMode !== 'deploy') return;
     loadDeployEnvs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildMode]);
 
   async function handleRunBuild() {
-    if (!selectedCommit) return;
+    const current = getSession<BuildSession>(tabId);
+    const selectedCommit = current?.selectedCommit;
+    if (!current || !selectedCommit) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
-    logBufferRef.current = [];
 
-    if (buildMode === 'local') {
-      setStep('running');
-      setProgressMsg('Building locally...');
+    if (current.buildMode === 'local') {
+      patchSession<BuildSession>(tabId, { step: 'running', progressMsg: 'Building locally...' });
       const taskId = addNotification({
         severity: 'info', source: 'build', title: 'Local build started', body: neuron, persistent: true,
         task: { type: 'build', status: 'running', neuronId: neuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: { mode: 'local' } },
@@ -203,11 +197,13 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       setTabNotificationId(tabId, taskId);
       try {
         const result = await BuildService.StartLocalBuild(neuronResource, selectedCommit.sha);
-        if (result) setLocalBuildId(result.buildId);
+        if (result) patchSession<BuildSession>(tabId, { localBuildId: result.buildId });
       } catch (e: any) {
         const errMsg = e?.message || 'Failed to start local build';
-        setStep('result');
-        setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg });
+        patchSession<BuildSession>(tabId, {
+          step: 'result',
+          buildResult: { operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg },
+        });
         completeTaskNotification(updateNotification, { id: taskId, severity: 'error', title: 'Local build failed', body: errMsg, taskStatus: 'error', taskPatch: { step: 'result' } });
         taskIdRef.current = null;
       }
@@ -215,9 +211,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     }
 
     // Cloud build (both 'cloud' and 'deploy' modes)
-    setStep('running');
-    setBuildPhase('build');
-    setProgressMsg('Starting Build...');
+    patchSession<BuildSession>(tabId, { step: 'running', buildPhase: 'build', progressMsg: 'Starting Build...' });
     const taskId = addNotification({
       severity: 'info', source: 'build', title: 'Build started', body: neuron, persistent: true,
       task: { type: 'build', status: 'running', neuronId: neuron, step: 'running', startedAt: Date.now(), logBuffer: [], meta: {} },
@@ -226,42 +220,42 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     setTabNotificationId(tabId, taskId);
     try {
       const result = await BuildService.RunBuild(neuronResource, selectedCommit.sha);
-      setBuildResult(result as BuildResult);
+      patchSession<BuildSession>(tabId, { buildResult: result as BuildResult });
       updateNotification(taskId, {
         task: { meta: { operationName: (result as BuildResult).operationName, logsUrl: (result as BuildResult).logsUrl } },
       });
     } catch (e: any) {
       const errMsg = e?.message || String(e) || 'Failed to start build';
-      setStep('result');
-      setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg });
-      termRef.current?.write(`\r\n\x1b[31mBuild failed: ${errMsg}\x1b[0m\r\n`);
+      patchSession<BuildSession>(tabId, {
+        step: 'result',
+        buildResult: { operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: errMsg },
+      });
+      buildBus.write(`\r\n\x1b[31mBuild failed: ${errMsg}\x1b[0m\r\n`);
       completeTaskNotification(updateNotification, { id: taskId, severity: 'error', title: 'Build failed', body: errMsg, taskStatus: 'error', taskPatch: { step: 'result' } });
       taskIdRef.current = null;
     }
   }
+  const runBuildRef = useRef(handleRunBuild);
+  runBuildRef.current = handleRunBuild;
 
   async function handleStartDeploy(version: string) {
-    setBuildPhase('deploy');
-    setProgressMsg('Starting Deploy...');
+    patchSession<BuildSession>(tabId, { buildPhase: 'deploy', progressMsg: 'Starting Deploy...' });
     deployLogOffsets.current = {};
-    deployLogBuffers.current = {};
-    deployTermsMap.current = {};
 
+    const current = getSession<BuildSession>(tabId);
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
-    const envs = selectedDeployEnvsRef.current;
-    const envObjList = deployEnvsRef.current;
+    const envs = current?.selectedDeployEnvs ?? [];
+    const envObjList = current?.deployEnvs ?? [];
 
     envs.forEach(env => {
       deployLogOffsets.current[env] = 0;
-      deployLogBuffers.current[env] = [];
     });
 
     const initialRuns: EnvRunState[] = envs.map(envName => {
       const envObj = envObjList.find(e => e.name === envName);
       return { env: envName, displayName: envObj?.displayName || envName, operationName: '', logsUrl: '', version: '', progressMsg: 'Starting...', done: false };
     });
-    setDeployRuns(initialRuns);
-    setActiveRunEnv(envs[0] || '');
+    patchSession<BuildSession>(tabId, { deployRuns: initialRuns, activeRunEnv: envs[0] || '' });
 
     let startError: string | null = null;
     const deployResult = await DeployService.RunDeploy(neuronResource, version, envs, false, false)
@@ -275,8 +269,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       done: !!startError,
       error: startError ?? undefined,
     }));
-    setDeployRuns(updatedRuns);
+    patchSession<BuildSession>(tabId, { deployRuns: updatedRuns });
   }
+
+  const step = session?.step ?? 'commits';
+  const buildResult = session?.buildResult ?? null;
+  const buildPhase = session?.buildPhase ?? 'build';
+  const localBuildId = session?.localBuildId ?? null;
+  const deployRuns = session?.deployRuns ?? [];
 
   // Poll cloud build
   useEffect(() => {
@@ -287,16 +287,16 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
         const result = await BuildService.PollBuildOperation(buildResult.operationName, neuronResource);
         cloudBuildPollFailuresRef.current = 0;
-        setBuildResult(result as BuildResult);
+        patchSession<BuildSession>(tabId, { buildResult: result as BuildResult });
         if (result?.done) {
           clearInterval(interval);
           if (!result.error) {
-            if (buildModeRef.current === 'deploy') {
+            if (getSession<BuildSession>(tabId)?.buildMode === 'deploy') {
               const version = result.version || result.neuronVersion;
-              setStep('running');
+              patchSession<BuildSession>(tabId, { step: 'running' });
               handleStartDeploy(version);
             } else {
-              setStep('result');
+              patchSession<BuildSession>(tabId, { step: 'result' });
               const version = result.neuronVersion || result.version;
               const body = version ? `${neuron} · ${version}` : neuron;
               if (taskIdRef.current) {
@@ -308,20 +308,20 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
               }
             }
           } else {
-            setStep('result');
+            patchSession<BuildSession>(tabId, { step: 'result' });
             if (taskIdRef.current) {
               completeTaskNotification(updateNotification, { id: taskIdRef.current, severity: 'error', title: 'Build failed', body: result.error, taskStatus: 'error', taskPatch: { step: 'result' } });
               taskIdRef.current = null;
             }
           }
         } else if (result?.notes) {
-          setProgressMsg(result.notes);
+          patchSession<BuildSession>(tabId, { progressMsg: result.notes });
         }
       } catch {
         cloudBuildPollFailuresRef.current += 1;
         if (cloudBuildPollFailuresRef.current >= MAX_POLL_FAILURES) {
           clearInterval(interval);
-          setStep('result');
+          patchSession<BuildSession>(tabId, { step: 'result' });
           if (taskIdRef.current) {
             completeTaskNotification(updateNotification, {
               id: taskIdRef.current, severity: 'error', title: 'Build status unknown',
@@ -334,6 +334,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       }
     }, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildResult?.operationName, buildResult?.done, step]);
 
   // Stream cloud build logs
@@ -343,16 +344,16 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       try {
         const chunk = await BuildService.FetchBuildLogs(buildResult.logsUrl, logOffsetRef.current);
         if (chunk?.content) {
-          termRef.current?.write(chunk.content);
+          buildBus.write(chunk.content);
           logOffsetRef.current = chunk.nextOffset;
-          logBufferRef.current.push(chunk.content);
-          if (taskIdRef.current) updateNotification(taskIdRef.current, { task: { logBuffer: [...logBufferRef.current] } });
+          if (taskIdRef.current) updateNotification(taskIdRef.current, { task: { logBuffer: [...buildBus.getSnapshot()] } });
         }
       } catch {}
     };
     if (buildResult.done) { fetchLogs(); return; }
     const interval = setInterval(fetchLogs, 3000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buildResult?.logsUrl, buildResult?.done]);
 
   // Poll local build
@@ -365,15 +366,16 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         const chunk = await BuildService.PollLocalBuild(localBuildId, offset);
         localBuildPollFailuresRef.current = 0;
         if (chunk?.content) {
-          termRef.current?.write(chunk.content);
+          buildBus.write(chunk.content);
           offset = chunk.nextOffset;
-          logBufferRef.current.push(chunk.content);
-          if (taskIdRef.current) updateNotification(taskIdRef.current, { task: { logBuffer: [...logBufferRef.current] } });
+          if (taskIdRef.current) updateNotification(taskIdRef.current, { task: { logBuffer: [...buildBus.getSnapshot()] } });
         }
         if (chunk?.done) {
           clearInterval(interval);
-          setStep('result');
-          setBuildResult({ operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: chunk.error || undefined });
+          patchSession<BuildSession>(tabId, {
+            step: 'result',
+            buildResult: { operationName: '', version: '', neuronVersion: '', logsUrl: '', notes: '', done: true, error: chunk.error || undefined },
+          });
           if (!chunk.error) {
             if (taskIdRef.current) {
               completeTaskNotification(updateNotification, {
@@ -391,7 +393,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         localBuildPollFailuresRef.current += 1;
         if (localBuildPollFailuresRef.current >= MAX_POLL_FAILURES) {
           clearInterval(interval);
-          setStep('result');
+          patchSession<BuildSession>(tabId, { step: 'result' });
           if (taskIdRef.current) {
             completeTaskNotification(updateNotification, {
               id: taskIdRef.current, severity: 'error', title: 'Local build status unknown',
@@ -404,6 +406,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       }
     }, 500);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localBuildId, step]);
 
   // Poll deploy operations (build+deploy mode)
@@ -411,11 +414,8 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
   useEffect(() => {
     if (!deployPollKey || step !== 'running' || buildPhase !== 'deploy') return;
     const interval = setInterval(async () => {
-      let updatedRuns: EnvRunState[] | null = null;
-      setDeployRuns(prev => { updatedRuns = prev; return prev; });
-      if (!updatedRuns) return;
-
-      const running = (updatedRuns as EnvRunState[]).filter(r => r.operationName && !r.done);
+      const currentRuns = getSession<BuildSession>(tabId)?.deployRuns ?? [];
+      const running = currentRuns.filter(r => r.operationName && !r.done);
       if (running.length === 0) return;
 
       const uniqueOpNames = [...new Set(running.map(r => r.operationName))];
@@ -423,33 +423,33 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         uniqueOpNames.map(name => DeployService.PollDeployOperation(name))
       );
 
-      setDeployRuns(prev => {
-        const next = [...prev];
-        uniqueOpNames.forEach((opName, opIdx) => {
-          const res = polled[opIdx];
-          const envMatches = next.filter(r => r.operationName === opName && !r.done);
-          envMatches.forEach(run => {
-            const idx = next.findIndex(r => r.env === run.env);
-            if (idx === -1) return;
-            if (res.status === 'fulfilled' && res.value) {
-              const r = res.value;
-              next[idx] = {
-                ...next[idx],
-                done: r.done ?? false,
-                error: r.error || undefined,
-                version: r.version || next[idx].version,
-                logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
-                progressMsg: r.notes || next[idx].progressMsg,
-              };
-            } else if (res.status === 'rejected') {
-              next[idx] = { ...next[idx], done: true, error: res.reason?.message || 'Poll failed' };
-            }
-          });
+      const prev = getSession<BuildSession>(tabId)?.deployRuns ?? [];
+      const next = [...prev];
+      uniqueOpNames.forEach((opName, opIdx) => {
+        const res = polled[opIdx];
+        const envMatches = next.filter(r => r.operationName === opName && !r.done);
+        envMatches.forEach(run => {
+          const idx = next.findIndex(r => r.env === run.env);
+          if (idx === -1) return;
+          if (res.status === 'fulfilled' && res.value) {
+            const r = res.value;
+            next[idx] = {
+              ...next[idx],
+              done: r.done ?? false,
+              error: r.error || undefined,
+              version: r.version || next[idx].version,
+              logsUrl: r.deployments?.[run.deploymentIndex ?? 0]?.logsUrl || next[idx].logsUrl,
+              progressMsg: r.notes || next[idx].progressMsg,
+            };
+          } else if (res.status === 'rejected') {
+            next[idx] = { ...next[idx], done: true, error: (res.reason as any)?.message || 'Poll failed' };
+          }
         });
-        return next;
       });
+      patchSession<BuildSession>(tabId, { deployRuns: next });
     }, 5000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployPollKey, step, buildPhase]);
 
   // Stream deploy logs (build+deploy mode)
@@ -463,9 +463,8 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         try {
           const chunk = await DeployService.FetchDeployLogs(run.logsUrl, deployLogOffsets.current[run.env] ?? 0);
           if (chunk?.content) {
-            deployTermsMap.current[run.env]?.write(chunk.content);
+            getLogBus(tabId, run.env).write(chunk.content);
             deployLogOffsets.current[run.env] = chunk.nextOffset;
-            deployLogBuffers.current[run.env] = [...(deployLogBuffers.current[run.env] ?? []), chunk.content];
           }
         } catch {}
       };
@@ -474,13 +473,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     });
 
     return () => intervals.forEach(i => { if (i !== null) clearInterval(i); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployLogsKey]);
 
   // Transition to result when all deploy runs finish
   useEffect(() => {
     if (step !== 'running' || buildPhase !== 'deploy' || deployRuns.length === 0) return;
     if (!deployRuns.every(r => r.done)) return;
-    setStep('result');
+    patchSession<BuildSession>(tabId, { step: 'result' });
     if (taskIdRef.current) {
       const doneId = taskIdRef.current;
       taskIdRef.current = null;
@@ -491,24 +491,27 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         completeTaskNotification(updateNotification, { id: doneId, severity: 'success', title: 'Build & Deploy complete', body: neuron, taskStatus: 'done', taskPatch: { step: 'result' } });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deployRuns, step, buildPhase]);
+
+  if (!session) return null;
 
   return (
     <>
       {/* Step: commits */}
-      {step === 'commits' && (
+      {session.step === 'commits' && (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
             <Icon icon="solar:branch-linear" className="text-foreground/35 text-sm shrink-0" />
             <SearchableSelect
-              value={branch}
-              options={branches}
+              value={session.branch}
+              options={session.branches}
               onChange={handleBranchChange}
               className="flex-1 min-w-0"
             />
             <button
-              onClick={() => loadCommits(branch)}
-              disabled={commitsLoading}
+              onClick={() => loadCommits(session.branch)}
+              disabled={session.commitsLoading}
               className="flex items-center justify-center size-[24px] rounded-[4px] text-foreground/35 hover:text-foreground hover:bg-card transition-colors disabled:opacity-40 shrink-0"
               title="Refresh commits"
             >
@@ -516,49 +519,29 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {commitsLoading ? (
-              <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
-                <Loader size={20} />
-                <span className="text-[11px] text-foreground/50">Loading commits...</span>
-              </div>
-            ) : commits.length === 0 ? (
-              <div className="px-[16px] py-[20px]">
-                <p className="text-[11px] text-foreground/40">No commits found for this branch.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col">
-                {commits.map((c) => (
-                  <button
-                    key={c.sha}
-                    onClick={() => { setSelectedCommit(c); setStep('confirm'); }}
-                    className="text-left px-[16px] py-[12px] border-b border-border hover:bg-card transition-colors"
-                  >
-                    <div className="flex items-center gap-[8px] mb-[3px]">
-                      <span className="text-[10px] font-bold font-mono text-brand">{c.sha.substring(0, 7)}</span>
-                      <span className="text-[10px] text-foreground leading-tight truncate">{c.message}</span>
-                    </div>
-                    <p className="text-[9px] text-foreground/35">{c.author} · {formatTimestamp(c.timestamp)}</p>
-                  </button>
-                ))}
-              </div>
-            )}
+            <CommitList
+              commits={session.commits}
+              loading={session.commitsLoading}
+              emptyText="No commits found for this branch."
+              onSelect={(c) => patch({ selectedCommit: c, step: 'confirm' })}
+            />
           </div>
         </div>
       )}
 
       {/* Step: confirm */}
-      {step === 'confirm' && selectedCommit && (
+      {session.step === 'confirm' && session.selectedCommit && (
         <div className="flex-1 overflow-y-auto px-[16px] py-[20px]">
-          <button onClick={() => setStep('commits')} className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[20px] transition-colors">
+          <button onClick={() => patch({ step: 'commits' })} className="flex items-center gap-[6px] text-[10px] text-foreground/40 hover:text-foreground mb-[20px] transition-colors">
             <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
             Back to commits
           </button>
           <div className="bg-card border border-border rounded-[8px] p-[14px] mb-[20px]">
             <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">
-              {branch} · {selectedCommit.sha.substring(0, 7)}
+              {session.branch} · {session.selectedCommit.sha.substring(0, 7)}
             </p>
-            <p className="text-[11px] text-foreground leading-[1.5] mb-[8px]">{selectedCommit.message}</p>
-            <p className="text-[9px] text-foreground/40">{selectedCommit.author} · {formatTimestamp(selectedCommit.timestamp)}</p>
+            <p className="text-[11px] text-foreground leading-[1.5] mb-[8px]">{session.selectedCommit.message}</p>
+            <p className="text-[9px] text-foreground/40">{session.selectedCommit.author} · {formatTimestamp(session.selectedCommit.timestamp)}</p>
           </div>
           <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">Action</p>
           <div className="flex flex-col gap-[2px] mb-[20px]">
@@ -569,14 +552,14 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
             ]).map(({ mode, icon, label }) => (
               <button
                 key={mode}
-                onClick={() => setBuildMode(mode)}
+                onClick={() => patch({ buildMode: mode })}
                 className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border transition-colors text-left ${
-                  buildMode === mode
+                  session.buildMode === mode
                     ? 'bg-brand-fill/8 border-brand-fill/35 text-foreground'
                     : 'bg-background border-border text-foreground/50 hover:border-border hover:text-foreground/70'
                 }`}
               >
-                <span className={`size-[6px] rounded-full shrink-0 ${buildMode === mode ? 'bg-brand-fill' : 'bg-accent'}`} />
+                <span className={`size-[6px] rounded-full shrink-0 ${session.buildMode === mode ? 'bg-brand-fill' : 'bg-accent'}`} />
                 <Icon icon={icon} className="text-sm shrink-0" />
                 <span className="text-[11px] font-medium flex-1">{label}</span>
               </button>
@@ -584,24 +567,28 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           </div>
 
           {/* Environment picker — shown only for Build and Deploy mode */}
-          {buildMode === 'deploy' && (
+          {session.buildMode === 'deploy' && (
             <div className="mb-[20px]">
               <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono mb-[8px]">Target Environments</p>
-              {envsLoading ? (
+              {session.envsLoading ? (
                 <div className="flex items-center gap-[8px] text-[10px] text-foreground/40">
                   <Loader size={14} />
                   Loading...
                 </div>
-              ) : deployEnvs.length === 0 ? (
+              ) : session.deployEnvs.length === 0 ? (
                 <p className="text-[10px] text-foreground/30">No environments found.</p>
               ) : (
                 <div className="flex flex-col gap-[2px]">
-                  {deployEnvs.map(env => {
-                    const selected = selectedDeployEnvs.includes(env.name);
+                  {session.deployEnvs.map(env => {
+                    const selected = session.selectedDeployEnvs.includes(env.name);
                     return (
                       <button
                         key={env.name}
-                        onClick={() => setSelectedDeployEnvs(prev => selected ? prev.filter(e => e !== env.name) : [...prev, env.name])}
+                        onClick={() => patch({
+                          selectedDeployEnvs: selected
+                            ? session.selectedDeployEnvs.filter(e => e !== env.name)
+                            : [...session.selectedDeployEnvs, env.name],
+                        })}
                         className={`flex items-center gap-[10px] px-[12px] py-[9px] rounded-[6px] border transition-colors text-left ${
                           selected
                             ? 'bg-brand-fill/8 border-brand-fill/35 text-foreground'
@@ -621,176 +608,35 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
           <Button
             variant="primary"
             className="w-full justify-center py-[10px]"
-            disabled={buildMode === 'deploy' && selectedDeployEnvs.length === 0}
+            disabled={session.buildMode === 'deploy' && session.selectedDeployEnvs.length === 0}
             onClick={handleRunBuild}
           >
-            {buildMode === 'cloud' ? 'Run Cloud Build' : buildMode === 'local' ? 'Build Locally' : 'Build and Deploy'}
+            {session.buildMode === 'cloud' ? 'Run Cloud Build' : session.buildMode === 'local' ? 'Build Locally' : 'Build and Deploy'}
           </Button>
         </div>
       )}
 
       {/* Steps: running + result — build phase (single terminal) */}
-      {(step === 'running' || step === 'result') && buildPhase === 'build' && (
-        <div className="flex-1 flex flex-col min-h-0">
-          {step === 'running' && (
-            <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
-              <Loader size={20} />
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-bold text-foreground leading-tight">Running Build</p>
-                <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{progressMsg}</p>
-              </div>
-              {buildResult?.version && (
-                <span className="text-[9px] font-bold font-mono text-foreground/35 shrink-0">{buildResult.version}</span>
-              )}
-              <button onClick={copyBuildLog} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                <Icon icon={buildCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-              </button>
-            </div>
-          )}
-          {step === 'result' && (
-            <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
-              buildResult?.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'
-            }`}>
-              {buildResult?.error ? (
-                <div className="flex items-start gap-[8px]">
-                  <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                  <p className="text-[10px] text-foreground/70 leading-relaxed flex-1">{buildResult.error}</p>
-                  <button onClick={copyBuildLog} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                    <Icon icon={buildCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-[8px]">
-                  <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-foreground leading-tight">Build Complete</p>
-                    {(buildResult?.neuronVersion || buildResult?.version) && (
-                      <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
-                        {buildResult.neuronVersion || buildResult.version}
-                      </p>
-                    )}
-                  </div>
-                  <div className="ml-auto flex items-center gap-[10px] shrink-0">
-                    <button onClick={copyBuildLog} className="text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                      <Icon icon={buildCopied ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                    </button>
-                    {buildResult?.logsUrl && (
-                      <button onClick={() => Browser.OpenURL(buildResult!.logsUrl)} className="text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
-                        <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-          <BuildTerminal ref={termRef} className="flex-1 min-h-0" />
-          {step === 'result' && (
-            <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
-              <button onClick={() => loadCommits('master')} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
-                <Icon icon="solar:refresh-linear" className="text-sm" />
-                Run Build again
-              </button>
-            </div>
-          )}
-        </div>
+      {(session.step === 'running' || session.step === 'result') && session.buildPhase === 'build' && (
+        <BuildRunView
+          step={session.step}
+          progressMsg={session.progressMsg}
+          buildResult={session.buildResult}
+          bus={buildBus}
+          onRerun={session.step === 'result' ? () => loadCommits('master') : undefined}
+        />
       )}
 
       {/* Steps: running + result — deploy phase (per-env terminals) */}
-      {(step === 'running' || step === 'result') && buildPhase === 'deploy' && (
-        <div className="flex-1 flex flex-col min-h-0">
-          {deployRuns.length > 1 && (
-            <div className="shrink-0 flex border-b border-border overflow-x-auto">
-              {deployRuns.map(run => (
-                <button
-                  key={run.env}
-                  onClick={() => setActiveRunEnv(run.env)}
-                  className={`flex items-center gap-[6px] px-[12px] py-[8px] text-[10px] shrink-0 border-r border-border transition-colors ${
-                    activeRunEnv === run.env
-                      ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
-                      : 'text-foreground/40 hover:text-foreground/60 hover:bg-foreground/[2%]'
-                  }`}
-                >
-                  {run.done && run.error ? (
-                    <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px] shrink-0" />
-                  ) : run.done ? (
-                    <Icon icon="solar:check-circle-linear" className="text-success text-[11px] shrink-0" />
-                  ) : (
-                    <Loader size={10} />
-                  )}
-                  <span className="font-medium">{run.displayName}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {deployRuns.map(run => (
-            <div
-              key={run.env}
-              className="flex-1 flex flex-col min-h-0"
-              style={{ display: (activeRunEnv === run.env || deployRuns.length === 1) ? 'flex' : 'none' }}
-            >
-              {step === 'running' && !run.done && (
-                <div className="shrink-0 flex items-center gap-[10px] px-[14px] py-[10px] border-b border-border">
-                  <Loader size={20} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-foreground leading-tight">Deploying</p>
-                    <p className="text-[9px] text-foreground/40 truncate leading-tight mt-[1px]">{run.progressMsg}</p>
-                  </div>
-                  <button onClick={() => copyDeployLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                    <Icon icon={copiedDeployEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                  </button>
-                </div>
-              )}
-              {(step === 'result' || run.done) && (
-                <div className={`shrink-0 px-[14px] py-[10px] border-b border-border ${run.error ? 'bg-[rgba(255,92,95,0.05)]' : 'bg-[rgba(52,199,89,0.05)]'}`}>
-                  {run.error ? (
-                    <div className="flex items-start gap-[8px]">
-                      <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
-                      <p className="text-[10px] text-foreground/70 leading-relaxed flex-1">{run.error}</p>
-                      <button onClick={() => copyDeployLog(run.env)} className="shrink-0 text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                        <Icon icon={copiedDeployEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-[8px]">
-                      <Icon icon="solar:check-circle-linear" className="text-success text-sm shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-foreground leading-tight">Deploy Complete</p>
-                        {run.version && (
-                          <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">{run.version}</p>
-                        )}
-                      </div>
-                      <div className="ml-auto flex items-center gap-[10px] shrink-0">
-                        <button onClick={() => copyDeployLog(run.env)} className="text-foreground/30 hover:text-foreground transition-colors" title="Copy log">
-                          <Icon icon={copiedDeployEnv === run.env ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-sm" />
-                        </button>
-                        {run.logsUrl && (
-                          <button onClick={() => Browser.OpenURL(run.logsUrl)} className="text-foreground/30 hover:text-brand transition-colors" title="Open in browser">
-                            <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              <BuildTerminal
-                ref={r => { deployTermsMap.current[run.env] = r; }}
-                className="flex-1 min-h-0"
-              />
-            </div>
-          ))}
-
-          {step === 'result' && (
-            <div className="shrink-0 px-[14px] py-[10px] border-t border-border">
-              <button onClick={() => loadCommits('master')} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
-                <Icon icon="solar:refresh-linear" className="text-sm" />
-                Run again
-              </button>
-            </div>
-          )}
-        </div>
+      {(session.step === 'running' || session.step === 'result') && session.buildPhase === 'deploy' && (
+        <EnvRunView
+          runs={session.deployRuns}
+          activeEnv={session.activeRunEnv}
+          onSelectEnv={(env) => patch({ activeRunEnv: env })}
+          step={session.step}
+          busFor={(env) => getLogBus(tabId, env)}
+          onRerun={session.step === 'result' ? () => loadCommits('master') : undefined}
+        />
       )}
     </>
   );
