@@ -9,12 +9,21 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
+/**
+ * GetServices returns an empty services list. The Services page was replaced by
+ * the dynamic neuron-based UI served via ProductService.GetServicesOverview.
+ */
 export function GetServices(): $CancellablePromise<$models.Service[]> {
     return $Call.ByID(3375466178).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
+/**
+ * GetWorkspaceInfo returns an empty workspace. The frontend populates workspace
+ * info from the active product context via ProductService.GetProductOverview and
+ * ProductService.GetUserProfile.
+ */
 export function GetWorkspaceInfo(): $CancellablePromise<$models.WorkspaceInfo> {
     return $Call.ByID(3068255211).then(($result: any) => {
         return $$createType2($result);

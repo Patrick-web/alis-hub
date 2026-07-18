@@ -529,9 +529,21 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 	codeCh := make(chan string, 1)
 	errCh := make(chan error, 1)
 
+	// CSRF state: random nonce verified in the callback handler.
+	stateBytes := make([]byte, 16)
+	if _, err := rand.Read(stateBytes); err != nil {
+		return fmt.Errorf("random state: %w", err)
+	}
+	state := base64.RawURLEncoding.EncodeToString(stateBytes)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if r.URL.Query().Get("state") != state {
+			errCh <- fmt.Errorf("csrf: state parameter mismatch")
+			fmt.Fprint(w, authResultPage(false, "Invalid state parameter — possible CSRF attack."))
+			return
+		}
 		code := r.URL.Query().Get("code")
 		if errParam := r.URL.Query().Get("error"); errParam != "" {
 			errCh <- fmt.Errorf("auth error: %s — %s", errParam, r.URL.Query().Get("error_description"))
@@ -563,6 +575,7 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 	authURL := alisConsoleIdentityURL + "/authorize?" + url.Values{
 		"response_type":         {"code"},
 		"redirect_uri":          {redirectURI},
+		"state":                 {state},
 		"scope":                 {"openid email build:read build:write"},
 		"code_challenge":        {codeChallenge},
 		"code_challenge_method": {"S256"},
