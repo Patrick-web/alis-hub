@@ -228,7 +228,7 @@ func (g *GCloudService) PollSetupOutput(runID string, offset int) (*SetupChunk, 
 	errMsg := p.errMsg
 	p.mu.Unlock()
 
-	chunk := data
+	var chunk string
 	if offset < len(data) {
 		chunk = data[offset:]
 	} else {

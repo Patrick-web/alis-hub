@@ -470,53 +470,6 @@ func parseMergeBlockBranchResponse(data []byte) *MergeBlockBranchResult {
 	return out
 }
 
-// parseInstallBlockBranch extracts the branch name from a completed google.longrunning.Operation
-// whose Any response (field 5) contains a serialized InstallBlockResponse (f2=branch).
-func parseInstallBlockBranch(data []byte) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num != 5 { // field 5 = response (google.protobuf.Any)
-			continue
-		}
-		// Parse the Any: f1=type_url, f2=value(serialized InstallBlockResponse)
-		anyData := b
-		for len(anyData) > 0 {
-			fn, _, fn2 := protowire.ConsumeTag(anyData)
-			if fn2 < 0 {
-				break
-			}
-			anyData = anyData[fn2:]
-			ab, am := protowire.ConsumeBytes(anyData)
-			if am < 0 {
-				break
-			}
-			anyData = anyData[am:]
-			if fn == 2 { // value bytes = serialized InstallBlockResponse
-				// InstallBlockResponse: f1=instance, f2=branch
-				return parseStringFieldN(ab, 2)
-			}
-		}
-	}
-	return ""
-}
-
 // parseStringFieldN extracts field n (string/bytes) from a proto message.
 func parseStringFieldN(data []byte, fieldNum protowire.Number) string {
 	for len(data) > 0 {
