@@ -11,7 +11,7 @@ func TestExplainDefine_BffV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Fatalf("NewAlisClient: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestRunDefine_BffV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Fatalf("NewAlisClient: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestExplainDefine_Bookings(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Fatalf("NewAlisClient: %v", err)
 	}

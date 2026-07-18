@@ -1,4 +1,4 @@
-import { Icon } from '@iconify/react';
+import { Icon } from "@iconify/react";
 
 interface EmptyStateProps {
   icon?: string;
@@ -10,18 +10,12 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center gap-[10px] py-[60px] ${className ?? ''}`}>
-      {icon && (
-        <Icon icon={icon} className="text-5xl text-foreground/12" />
-      )}
-      <p className="text-[13px] text-foreground/30 font-mono">
-        {title}
-      </p>
-      {description && (
-        <p className="text-[11px] text-foreground/20 font-mono">
-          {description}
-        </p>
-      )}
+    <div
+      className={`flex flex-col items-center justify-center gap-[10px] py-[60px] ${className ?? ""}`}
+    >
+      {icon && <Icon icon={icon} className="text-5xl text-foreground/12" />}
+      <p className="text-[13px] text-foreground/30 font-mono">{title}</p>
+      {description && <p className="text-[11px] text-foreground/20 font-mono">{description}</p>}
       {action && (
         <button
           onClick={action.onClick}

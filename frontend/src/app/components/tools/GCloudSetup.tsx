@@ -14,8 +14,7 @@ interface Props {
 
 const INSTALL_URL = "https://cloud.google.com/sdk/docs/install";
 
-const UNIX_INSTALL_COMMAND =
-  "curl https://sdk.cloud.google.com | bash && exec -l $SHELL";
+const UNIX_INSTALL_COMMAND = "curl https://sdk.cloud.google.com | bash && exec -l $SHELL";
 
 // The setup terminal on Windows is PowerShell (see platformShell in
 // platform.go), so the Unix curl|bash one-liner can't run there. Google
@@ -67,12 +66,8 @@ function StepCard({
           )}
         </div>
         <div>
-          <p className="text-[11px] font-bold text-foreground font-mono">
-            {title}
-          </p>
-          <p className="text-[9px] text-foreground/40 uppercase">
-            {subtitle}
-          </p>
+          <p className="text-[11px] font-bold text-foreground font-mono">{title}</p>
+          <p className="text-[9px] text-foreground/40 uppercase">{subtitle}</p>
         </div>
       </div>
       <div className="px-[16px] py-[14px]">{children}</div>
@@ -82,8 +77,7 @@ function StepCard({
 
 export function GCloudSetup({ onReady }: Props) {
   const { effective } = usePlatform();
-  const INSTALL_COMMAND =
-    effective === "windows" ? WINDOWS_INSTALL_COMMAND : UNIX_INSTALL_COMMAND;
+  const INSTALL_COMMAND = effective === "windows" ? WINDOWS_INSTALL_COMMAND : UNIX_INSTALL_COMMAND;
 
   const [status, setStatus] = useState<GCloudStatus | null>(null);
   const [checking, setChecking] = useState(true);
@@ -123,11 +117,7 @@ export function GCloudSetup({ onReady }: Props) {
     "access token is valid",
   ];
 
-  const INSTALL_SUCCESS = [
-    "installation complete",
-    "google-cloud-sdk installed",
-    "update done",
-  ];
+  const INSTALL_SUCCESS = ["installation complete", "google-cloud-sdk installed", "update done"];
 
   // Poll terminal output while session is active
   useEffect(() => {
@@ -220,12 +210,10 @@ export function GCloudSetup({ onReady }: Props) {
             <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono mb-[4px]">
               Prerequisites
             </p>
-            <h2 className="text-[16px] font-bold text-foreground font-mono">
-              GCloud Tools Setup
-            </h2>
+            <h2 className="text-[16px] font-bold text-foreground font-mono">GCloud Tools Setup</h2>
             <p className="text-[11px] text-foreground/50 mt-[4px] leading-[1.6]">
-              Complete the steps below to enable Cloud Storage, Logging,
-              Artifact Registry and Secret Manager tools.
+              Complete the steps below to enable Cloud Storage, Logging, Artifact Registry and
+              Secret Manager tools.
             </p>
           </div>
 
@@ -239,10 +227,7 @@ export function GCloudSetup({ onReady }: Props) {
             >
               {gcloudOk ? (
                 <div className="flex items-center gap-[8px]">
-                  <Icon
-                    icon="solar:check-circle-bold"
-                    className="text-sm text-green-400"
-                  />
+                  <Icon icon="solar:check-circle-bold" className="text-sm text-green-400" />
                   <p className="text-[10px] text-green-400 font-mono">
                     Found at {status?.gcloudPath}
                   </p>
@@ -251,10 +236,8 @@ export function GCloudSetup({ onReady }: Props) {
                 <>
                   <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
                     The Google Cloud SDK provides the{" "}
-                    <code className="text-brand font-mono">
-                      gcloud
-                    </code>{" "}
-                    CLI used to authenticate and call GCP APIs.
+                    <code className="text-brand font-mono">gcloud</code> CLI used to authenticate
+                    and call GCP APIs.
                   </p>
 
                   {/* Install command */}
@@ -272,24 +255,16 @@ export function GCloudSetup({ onReady }: Props) {
                     <Button
                       variant="primary"
                       onClick={() => openTerminal(INSTALL_COMMAND)}
-                      icon={
-                        <Icon icon="solar:play-linear" className="text-xs" />
-                      }
+                      icon={<Icon icon="solar:play-linear" className="text-xs" />}
                     >
                       Run in Terminal
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() =>
-                        copyToClipboard(INSTALL_COMMAND, "install")
-                      }
+                      onClick={() => copyToClipboard(INSTALL_COMMAND, "install")}
                       icon={
                         <Icon
-                          icon={
-                            copied === "install"
-                              ? "solar:check-linear"
-                              : "solar:copy-linear"
-                          }
+                          icon={copied === "install" ? "solar:check-linear" : "solar:copy-linear"}
                           className="text-xs"
                         />
                       }
@@ -299,9 +274,7 @@ export function GCloudSetup({ onReady }: Props) {
                     <Button
                       variant="secondary"
                       onClick={() => Browser.OpenURL(INSTALL_URL)}
-                      icon={
-                        <Icon icon="solar:export-linear" className="text-xs" />
-                      }
+                      icon={<Icon icon="solar:export-linear" className="text-xs" />}
                     >
                       Open Docs
                     </Button>
@@ -314,19 +287,12 @@ export function GCloudSetup({ onReady }: Props) {
             <StepCard
               step={2}
               title="Authenticate with Google Cloud"
-              subtitle={
-                authOk
-                  ? `Signed in as ${status?.authAccount}`
-                  : "Not authenticated"
-              }
+              subtitle={authOk ? `Signed in as ${status?.authAccount}` : "Not authenticated"}
               status={!gcloudOk ? "pending" : authOk ? "ok" : "error"}
             >
               {authOk ? (
                 <div className="flex items-center gap-[8px]">
-                  <Icon
-                    icon="solar:check-circle-bold"
-                    className="text-sm text-green-400"
-                  />
+                  <Icon icon="solar:check-circle-bold" className="text-sm text-green-400" />
                   <p className="text-[10px] text-green-400 font-mono">
                     Authenticated as {status?.authAccount}
                   </p>
@@ -334,9 +300,8 @@ export function GCloudSetup({ onReady }: Props) {
               ) : (
                 <>
                   <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
-                    Authenticate with your Google account. Your browser will
-                    open to complete the login — the terminal below stays
-                    interactive for any prompts.
+                    Authenticate with your Google account. Your browser will open to complete the
+                    login — the terminal below stays interactive for any prompts.
                   </p>
 
                   <div className="bg-background border border-border rounded-[4px] flex items-center gap-[8px] px-[12px] py-[8px] mb-[10px]">
@@ -354,24 +319,16 @@ export function GCloudSetup({ onReady }: Props) {
                       variant="primary"
                       disabled={!gcloudOk}
                       onClick={() => openTerminal("gcloud auth login")}
-                      icon={
-                        <Icon icon="solar:play-linear" className="text-xs" />
-                      }
+                      icon={<Icon icon="solar:play-linear" className="text-xs" />}
                     >
                       Run in Terminal
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() =>
-                        copyToClipboard("gcloud auth login", "auth")
-                      }
+                      onClick={() => copyToClipboard("gcloud auth login", "auth")}
                       icon={
                         <Icon
-                          icon={
-                            copied === "auth"
-                              ? "solar:check-linear"
-                              : "solar:copy-linear"
-                          }
+                          icon={copied === "auth" ? "solar:check-linear" : "solar:copy-linear"}
                           className="text-xs"
                         />
                       }
@@ -391,9 +348,7 @@ export function GCloudSetup({ onReady }: Props) {
                 disabled={checking}
                 icon={
                   <Icon
-                    icon={
-                      checking ? "solar:refresh-bold" : "solar:refresh-linear"
-                    }
+                    icon={checking ? "solar:refresh-bold" : "solar:refresh-linear"}
                     className={`text-xs ${checking ? "animate-spin" : ""}`}
                   />
                 }
@@ -405,22 +360,13 @@ export function GCloudSetup({ onReady }: Props) {
                 variant="primary"
                 disabled={!gcloudOk || !authOk || checking}
                 onClick={onReady}
-                icon={
-                  <Icon
-                    icon="solar:alt-arrow-right-linear"
-                    className="text-xs"
-                  />
-                }
+                icon={<Icon icon="solar:alt-arrow-right-linear" className="text-xs" />}
               >
-                {gcloudOk && authOk
-                  ? "Continue to Tools"
-                  : "Complete steps above"}
+                {gcloudOk && authOk ? "Continue to Tools" : "Complete steps above"}
               </Button>
 
               {gcloudOk && authOk && (
-                <p className="text-[10px] text-green-400 font-mono">
-                  All prerequisites met
-                </p>
+                <p className="text-[10px] text-green-400 font-mono">All prerequisites met</p>
               )}
             </div>
           </div>
@@ -429,16 +375,10 @@ export function GCloudSetup({ onReady }: Props) {
 
       {/* Terminal pane */}
       {terminalOpen && (
-        <div
-          className="border-t border-border flex flex-col"
-          style={{ height: "280px" }}
-        >
+        <div className="border-t border-border flex flex-col" style={{ height: "280px" }}>
           <div className="flex items-center justify-between px-[12px] h-[30px] border-b border-border shrink-0">
             <div className="flex items-center gap-[8px]">
-              <Icon
-                icon="solar:terminal-bold"
-                className="text-xs text-foreground/40"
-              />
+              <Icon icon="solar:terminal-bold" className="text-xs text-foreground/40" />
               <p className="text-[9px] font-bold uppercase text-foreground/40 font-mono">
                 Setup Terminal
               </p>
@@ -465,8 +405,7 @@ export function GCloudSetup({ onReady }: Props) {
                 if (sessionActive) GS.WriteSetupInput(SESSION_ID, data);
               }}
               onResize={(cols, rows) => {
-                if (sessionActive)
-                  GS.ResizeSetupTerminal(SESSION_ID, cols, rows);
+                if (sessionActive) GS.ResizeSetupTerminal(SESSION_ID, cols, rows);
               }}
             />
           </div>

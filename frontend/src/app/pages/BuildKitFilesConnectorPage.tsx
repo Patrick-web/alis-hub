@@ -1,5 +1,5 @@
-import { Icon } from '@iconify/react';
-import { PageLayout } from '../components/PageLayout';
+import { Icon } from "@iconify/react";
+import { PageLayout } from "../components/PageLayout";
 
 export function BuildKitFilesConnectorPage() {
   return (
@@ -27,7 +27,10 @@ export function BuildKitFilesConnectorPage() {
             </div>
           </div>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
-            <Icon icon="solar:info-circle-linear" className="text-brand text-[15px] shrink-0 mt-[1px]" />
+            <Icon
+              icon="solar:info-circle-linear"
+              className="text-brand text-[15px] shrink-0 mt-[1px]"
+            />
             <p className="text-[11px] text-foreground/65 leading-[1.5]">
               This flow is in private preview. Please contact your Build partner for access.
             </p>

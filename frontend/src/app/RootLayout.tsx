@@ -1,39 +1,39 @@
-import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router';
-import { useTheme } from 'next-themes';
-import { TopNav } from './components/TopNav';
-import { StandaloneTopNav } from './components/StandaloneTopNav';
-import { Sidebar } from './components/Sidebar';
-import { StatusStrip } from './components/StatusStrip';
-import { SuggestionsBubble } from './components/SuggestionsBubble';
-import { PackageTerminalPane } from './components/PackageTerminalPane';
-import { DevelopTaskPanel } from './components/develop/DevelopTaskPanel';
-import { ToolsPanel } from './pages/ToolsPage';
-import { LoginPage } from './pages/LoginPage';
-import { HubPage } from './pages/HubPage';
-import { LandingZonesPage } from './pages/LandingZonesPage';
-import { ProductPickerPage } from './pages/ProductPickerPage';
-import { ReloginModal } from './components/ReloginModal';
-import { CommandPalette } from './components/CommandPalette';
-import { GlobalProfileModal } from './components/GlobalProfileModal';
-import { DevSettingsModal } from './components/DevSettingsModal';
-import { DeepLinkHandler } from './components/DeepLinkHandler';
-import { DevelopCommandsExtension } from './components/command-palette/DevelopCommandsExtension';
-import { GCloudCommandsExtension } from './components/command-palette/GCloudCommandsExtension';
-import { useCommandPalette } from './stores/commandPalette';
-import { useDevSettingsModal } from './stores/devSettingsModal';
-import { useProfileModal } from './stores/profileModal';
-import { Events } from '@wailsio/runtime';
-import { useWorkspace, type AppPhase } from './stores/workspace';
-import { usePackageSessions } from './stores/packageSessions';
-import { initAccentColor } from './stores/accent';
-import { useUserProfile } from './stores/userProfile';
-import { useUpdate } from './stores/update';
-import { useSourceControl } from './stores/sourceControl';
-import { notify } from './lib/notify';
-import * as ProductService from '../../bindings/alis-hub-v3/productservice';
-import * as GitService from '../../bindings/alis-hub-v3/gitservice';
-import { Loader } from './components/Loader';
+import { useEffect, useRef, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router";
+import { useTheme } from "next-themes";
+import { TopNav } from "./components/TopNav";
+import { StandaloneTopNav } from "./components/StandaloneTopNav";
+import { Sidebar } from "./components/Sidebar";
+import { StatusStrip } from "./components/StatusStrip";
+import { SuggestionsBubble } from "./components/SuggestionsBubble";
+import { PackageTerminalPane } from "./components/PackageTerminalPane";
+import { DevelopTaskPanel } from "./components/develop/DevelopTaskPanel";
+import { ToolsPanel } from "./pages/ToolsPage";
+import { LoginPage } from "./pages/LoginPage";
+import { HubPage } from "./pages/HubPage";
+import { LandingZonesPage } from "./pages/LandingZonesPage";
+import { ProductPickerPage } from "./pages/ProductPickerPage";
+import { ReloginModal } from "./components/ReloginModal";
+import { CommandPalette } from "./components/CommandPalette";
+import { GlobalProfileModal } from "./components/GlobalProfileModal";
+import { DevSettingsModal } from "./components/DevSettingsModal";
+import { DeepLinkHandler } from "./components/DeepLinkHandler";
+import { DevelopCommandsExtension } from "./components/command-palette/DevelopCommandsExtension";
+import { GCloudCommandsExtension } from "./components/command-palette/GCloudCommandsExtension";
+import { useCommandPalette } from "./stores/commandPalette";
+import { useDevSettingsModal } from "./stores/devSettingsModal";
+import { useProfileModal } from "./stores/profileModal";
+import { Events } from "@wailsio/runtime";
+import { useWorkspace, type AppPhase } from "./stores/workspace";
+import { usePackageSessions } from "./stores/packageSessions";
+import { initAccentColor } from "./stores/accent";
+import { useUserProfile } from "./stores/userProfile";
+import { useUpdate } from "./stores/update";
+import { useSourceControl } from "./stores/sourceControl";
+import { notify } from "./lib/notify";
+import * as ProductService from "../../bindings/alis-hub-v3/productservice";
+import * as GitService from "../../bindings/alis-hub-v3/gitservice";
+import { Loader } from "./components/Loader";
 
 const AUTH_POLL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -42,11 +42,12 @@ export function RootLayout() {
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const { state, setPhase } = useWorkspace();
-  const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } = usePackageSessions();
+  const { sessions, paneRef, onCloseSession, clearSessions, onInput, onResize } =
+    usePackageSessions();
   const { fetchProfile, clearProfile } = useUserProfile();
   const { checkForUpdate } = useUpdate();
-  const isOnDevelop = location.pathname === '/develop';
-  const isOnTools = location.pathname === '/tools';
+  const isOnDevelop = location.pathname === "/develop";
+  const isOnTools = location.pathname === "/tools";
   const [sessionExpired, setSessionExpired] = useState(false);
   const { toggle } = useCommandPalette();
   const { toggle: toggleDevSettings, open: openDevSettings } = useDevSettingsModal();
@@ -56,87 +57,100 @@ export function RootLayout() {
   const fetchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [repoPaths, setRepoPaths] = useState<{ buildDir: string; defineDir: string } | null>(null);
 
-  useEffect(() => { initAccentColor(); }, [resolvedTheme]);
+  useEffect(() => {
+    initAccentColor();
+  }, [resolvedTheme]);
 
   useEffect(() => {
-    const unauthPhases: AppPhase[] = ['init', 'login'];
+    const unauthPhases: AppPhase[] = ["init", "login"];
     if (!unauthPhases.includes(state.phase)) fetchProfile();
   }, [state.phase]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.ctrlKey && e.shiftKey && e.code === 'KeyD') {
+      if (e.ctrlKey && e.shiftKey && e.code === "KeyD") {
         e.preventDefault();
         toggleDevSettings();
       }
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [toggleDevSettings]);
 
   useEffect(() => {
-    const off = Events.On('menu:command-palette', () => toggle());
+    const off = Events.On("menu:command-palette", () => toggle());
     return () => off();
   }, [toggle]);
 
   useEffect(() => {
     const offs = [
-      Events.On('menu:navigate', (ev) => {
+      Events.On("menu:navigate", (ev) => {
         const route = ev.data as string;
         if (route) navigate(route);
       }),
-      Events.On('menu:preferences', () => openProfile()),
-      Events.On('menu:about', () => openProfile('updates')),
-      Events.On('menu:sign-out', async () => {
+      Events.On("menu:preferences", () => openProfile()),
+      Events.On("menu:about", () => openProfile("updates")),
+      Events.On("menu:sign-out", async () => {
         try {
           await ProductService.Logout();
           clearProfile();
           closeProfile();
-          setPhase('login');
+          setPhase("login");
         } catch (e) {
           notify.error(`Failed to sign out: ${String(e)}`);
         }
       }),
-      Events.On('menu:check-updates', async () => {
+      Events.On("menu:check-updates", async () => {
         try {
           const info = await checkForUpdate();
           if (!info.available) notify.success("You're on the latest version.");
         } catch (e) {
           notify.error(`Update check failed: ${String(e)}`);
         }
-        openProfile('updates');
+        openProfile("updates");
       }),
-      Events.On('menu:view-logs', () => openDevSettings('logs')),
+      Events.On("menu:view-logs", () => openDevSettings("logs")),
     ];
-    return () => offs.forEach(off => off());
-  }, [navigate, openProfile, closeProfile, openDevSettings, checkForUpdate, clearProfile, setPhase]);
+    return () => offs.forEach((off) => off());
+  }, [
+    navigate,
+    openProfile,
+    closeProfile,
+    openDevSettings,
+    checkForUpdate,
+    clearProfile,
+    setPhase,
+  ]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         toggle();
       }
     }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggle]);
 
   // On mount: check login status, then route to appropriate phase.
   // DEV: ?phase=picking-org overrides for browser testing without Wails bridge.
   useEffect(() => {
-    const devPhase = new URLSearchParams(window.location.search).get('phase') as AppPhase | null;
-    if (devPhase) { setPhase(devPhase); return; }
+    const devPhase = new URLSearchParams(window.location.search).get("phase") as AppPhase | null;
+    if (devPhase) {
+      setPhase(devPhase);
+      return;
+    }
     (ProductService.IsLoggedIn as () => Promise<boolean>)()
-      .then(loggedIn => setPhase(loggedIn ? 'hub' : 'login'))
-      .catch(() => setPhase('login'));
+      .then((loggedIn) => setPhase(loggedIn ? "hub" : "login"))
+      .catch(() => setPhase("login"));
   }, []);
 
   // Poll auth validity once the user is past the login screen.
   // Also re-check when the window regains focus (e.g. after the laptop sleeps).
   // Also listen for auth:expired events emitted by the backend (e.g. on push/pull failure).
   useEffect(() => {
-    const unauthPhases: AppPhase[] = ['init', 'login'];
+    const unauthPhases: AppPhase[] = ["init", "login"];
     if (unauthPhases.includes(state.phase)) return;
 
     // CheckAuth resolves to a definitive boolean (the Go side never errors, it
@@ -162,7 +176,7 @@ export function RootLayout() {
           return;
         } catch {
           if (attempt < MAX_ATTEMPTS) {
-            await new Promise(r => setTimeout(r, attempt * 500));
+            await new Promise((r) => setTimeout(r, attempt * 500));
             continue;
           }
           // RPC still failing after retries: fall back to the cheap on-disk
@@ -182,9 +196,9 @@ export function RootLayout() {
     authPollRef.current = setInterval(checkAuth, AUTH_POLL_MS);
 
     function onVisibilityChange() {
-      if (document.visibilityState === 'visible') checkAuth();
+      if (document.visibilityState === "visible") checkAuth();
     }
-    document.addEventListener('visibilitychange', onVisibilityChange);
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     // Treat the backend event as a hint to re-verify, not as ground truth: it's
     // raised by any git op (including the periodic background fetch) on a
@@ -193,11 +207,13 @@ export function RootLayout() {
     // checkAuth() used for polling/focus means the re-login modal only shows
     // once CheckAuth itself — the authoritative, retry-hardened path —
     // confirms the session is actually dead.
-    const offAuthExpired = Events.On('auth:expired', () => { checkAuth(); });
+    const offAuthExpired = Events.On("auth:expired", () => {
+      checkAuth();
+    });
 
     return () => {
       if (authPollRef.current) clearInterval(authPollRef.current);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       offAuthExpired();
     };
   }, [state.phase]);
@@ -206,16 +222,21 @@ export function RootLayout() {
   // Source Control tab is mounted, so background fetch can run regardless
   // of which tab is active.
   useEffect(() => {
-    if (!state.organisation || !state.product) { setRepoPaths(null); return; }
+    if (!state.organisation || !state.product) {
+      setRepoPaths(null);
+      return;
+    }
     GitService.GetProductRepoPaths(state.organisation, state.product)
-      .then(paths => setRepoPaths(paths ? { buildDir: paths.buildDir, defineDir: paths.defineDir } : null))
+      .then((paths) =>
+        setRepoPaths(paths ? { buildDir: paths.buildDir, defineDir: paths.defineDir } : null),
+      )
       .catch(() => setRepoPaths(null));
   }, [state.organisation, state.product]);
 
   // Periodically fetch from origin so ahead/behind state is fresh even
   // without a manual pull, per the "Background Fetch" setting.
   useEffect(() => {
-    const unauthPhases: AppPhase[] = ['init', 'login'];
+    const unauthPhases: AppPhase[] = ["init", "login"];
     if (unauthPhases.includes(state.phase)) return;
     if (!repoPaths || scState.fetchIntervalMinutes <= 0) return;
 
@@ -234,7 +255,7 @@ export function RootLayout() {
   }, [state.phase, repoPaths, scState.fetchIntervalMinutes]);
 
   // Pre-workspace phases render fullscreen without nav chrome
-  if (state.phase === 'init') {
+  if (state.phase === "init") {
     return (
       <div className="bg-background flex items-center justify-center h-screen w-full">
         <Loader />
@@ -243,7 +264,7 @@ export function RootLayout() {
     );
   }
 
-  if (state.phase === 'login') {
+  if (state.phase === "login") {
     return (
       <div className="bg-background flex flex-col h-screen w-full">
         <LoginPage />
@@ -252,15 +273,23 @@ export function RootLayout() {
     );
   }
 
-  const reloginModal = sessionExpired
-    ? <ReloginModal onSuccess={() => setSessionExpired(false)} />
-    : null;
+  const reloginModal = sessionExpired ? (
+    <ReloginModal onSuccess={() => setSessionExpired(false)} />
+  ) : null;
 
-  if (state.phase === 'hub') {
-    return <>{<HubPage />}{reloginModal}<DevSettingsModal /><GlobalProfileModal /><DeepLinkHandler /></>;
+  if (state.phase === "hub") {
+    return (
+      <>
+        {<HubPage />}
+        {reloginModal}
+        <DevSettingsModal />
+        <GlobalProfileModal />
+        <DeepLinkHandler />
+      </>
+    );
   }
 
-  if (state.phase === 'picking-org') {
+  if (state.phase === "picking-org") {
     return (
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <LandingZonesPage />
@@ -272,7 +301,7 @@ export function RootLayout() {
     );
   }
 
-  if (state.phase === 'picking-product') {
+  if (state.phase === "picking-product") {
     return (
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <ProductPickerPage />
@@ -285,11 +314,11 @@ export function RootLayout() {
   }
 
   const path = location.pathname;
-  const codeblockListPaths = new Set(['/codeblocks', '/codeblocks/mine', '/codeblocks/starred']);
+  const codeblockListPaths = new Set(["/codeblocks", "/codeblocks/mine", "/codeblocks/starred"]);
   const showSidebar = codeblockListPaths.has(path);
 
   // Standalone phase — slim 4-shortcut nav, no product required
-  if (state.phase === 'standalone') {
+  if (state.phase === "standalone") {
     return (
       <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
         <StandaloneTopNav />
@@ -308,10 +337,7 @@ export function RootLayout() {
   }
 
   // Workspace phase — full nav chrome + sidebar + tab content
-  const workspaceSidebar =
-    path === '/environments' ||
-    path === '/builds' ||
-    showSidebar;
+  const workspaceSidebar = path === "/environments" || path === "/builds" || showSidebar;
 
   return (
     <div className="bg-background flex flex-col h-screen w-full overflow-hidden">
@@ -321,18 +347,21 @@ export function RootLayout() {
           {workspaceSidebar && <Sidebar />}
           <Outlet key={`${state.organisation}/${state.product}`} />
           {/* Develop task panel — keep-alive at layout level so tabs persist across navigation */}
-          <div className="h-full" style={{ display: isOnDevelop ? undefined : 'none' }}>
+          <div className="h-full" style={{ display: isOnDevelop ? undefined : "none" }}>
             <DevelopTaskPanel />
           </div>
           {/* Tools panel — keep-alive so selected tool + internal state persists across navigation */}
-          <div className="flex flex-col flex-1 h-full overflow-hidden" style={{ display: isOnTools ? undefined : 'none' }}>
+          <div
+            className="flex flex-col flex-1 h-full overflow-hidden"
+            style={{ display: isOnTools ? undefined : "none" }}
+          >
             <ToolsPanel />
           </div>
         </div>
         {/* Package terminal pane — kept mounted here to preserve PTY across navigation */}
         {sessions.length > 0 && (
           <div
-            style={{ display: isOnDevelop ? undefined : 'none', height: '280px', flexShrink: 0 }}
+            style={{ display: isOnDevelop ? undefined : "none", height: "280px", flexShrink: 0 }}
           >
             <PackageTerminalPane
               ref={paneRef}

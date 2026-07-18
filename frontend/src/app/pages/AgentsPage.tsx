@@ -1,7 +1,7 @@
-import { PageLayout } from '../components/PageLayout';
-import { StageCard } from '../components/StageCard';
-import { Button } from '../components/Button';
-import { Icon } from '@iconify/react';
+import { PageLayout } from "../components/PageLayout";
+import { StageCard } from "../components/StageCard";
+import { Button } from "../components/Button";
+import { Icon } from "@iconify/react";
 
 export function AgentsPage() {
   return (
@@ -28,15 +28,17 @@ export function AgentsPage() {
             }
           >
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
-              Provisions the necessary infrastructure for hosting and managing
-              AI agents, including identity services and runtime environments.
+              Provisions the necessary infrastructure for hosting and managing AI agents, including
+              identity services and runtime environments.
             </p>
           </StageCard>
 
           <StageCard
             title="Register Agent"
             subtitle="Add an AI agent to the registry"
-            icon={<Icon icon="solar:users-group-two-rounded-linear" className="text-xl text-brand" />}
+            icon={
+              <Icon icon="solar:users-group-two-rounded-linear" className="text-xl text-brand" />
+            }
             action={
               <Button variant="secondary" className="px-[16px]">
                 Register
@@ -44,9 +46,8 @@ export function AgentsPage() {
             }
           >
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
-              Register a new AI agent with your workspace. Agents can be
-              configured with custom tools, MCP servers, and enterprise
-              integrations.
+              Register a new AI agent with your workspace. Agents can be configured with custom
+              tools, MCP servers, and enterprise integrations.
             </p>
           </StageCard>
 
@@ -61,8 +62,8 @@ export function AgentsPage() {
             }
           >
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
-              Register MCP servers that expose tools and resources to coding
-              agents like Claude Code, Codex CLI, and Gemini CLI.
+              Register MCP servers that expose tools and resources to coding agents like Claude
+              Code, Codex CLI, and Gemini CLI.
             </p>
           </StageCard>
 
@@ -77,8 +78,8 @@ export function AgentsPage() {
             }
           >
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
-              Set up client interfaces for agents, including OAuth connectors,
-              API keys for Claude Code, Codex, Gemini CLI, and OpenCode.
+              Set up client interfaces for agents, including OAuth connectors, API keys for Claude
+              Code, Codex, Gemini CLI, and OpenCode.
             </p>
           </StageCard>
         </div>

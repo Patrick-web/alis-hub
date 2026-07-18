@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -8,7 +8,7 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from './ui/alert-dialog';
+} from "./ui/alert-dialog";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -27,22 +27,27 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Delete',
+  confirmLabel = "Delete",
   loadingLabel,
   loading = false,
   onConfirm,
   requireText,
 }: ConfirmDialogProps) {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    if (open) setInputValue('');
+    if (open) setInputValue("");
   }, [open]);
 
   const confirmed = !requireText || inputValue === requireText;
 
   return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o && !loading) onOpenChange(false); }}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && !loading) onOpenChange(false);
+      }}
+    >
       <AlertDialogContent className="text-foreground">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-foreground font-mono text-[14px]">
@@ -62,7 +67,7 @@ export function ConfirmDialog({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && confirmed && !loading && onConfirm()}
+              onKeyDown={(e) => e.key === "Enter" && confirmed && !loading && onConfirm()}
               disabled={loading}
               autoFocus
               className="w-full bg-background border border-border rounded-[4px] px-[12px] py-[7px] text-foreground font-mono text-[12px] focus:outline-none focus:border-destructive disabled:opacity-50 placeholder:text-foreground/20"
@@ -80,10 +85,13 @@ export function ConfirmDialog({
           </AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive hover:bg-destructive text-destructive-foreground border-0 font-mono text-[11px] uppercase font-bold disabled:opacity-40 disabled:pointer-events-none"
-            onClick={(e) => { e.preventDefault(); onConfirm(); }}
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}
             disabled={loading || !confirmed}
           >
-            {loading ? (loadingLabel ?? 'Processing…') : confirmLabel}
+            {loading ? (loadingLabel ?? "Processing…") : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

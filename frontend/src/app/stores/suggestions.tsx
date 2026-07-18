@@ -1,12 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useCallback,
-  useMemo,
-  useReducer,
-  type ReactNode,
-} from 'react';
-import type { SuggestionCategory } from './labs';
+import { createContext, useContext, useCallback, useMemo, useReducer, type ReactNode } from "react";
+import type { SuggestionCategory } from "./labs";
 
 export interface Suggestion {
   id: string;
@@ -14,7 +7,7 @@ export interface Suggestion {
   category: SuggestionCategory;
   title: string;
   body?: string;
-  priority: 'passive' | 'interruptive';
+  priority: "passive" | "interruptive";
   timestamp: number;
 }
 
@@ -23,13 +16,13 @@ interface SuggestionsState {
 }
 
 type SuggestionsAction =
-  | { type: 'ADD'; payload: Suggestion }
-  | { type: 'DISMISS'; payload: string }
-  | { type: 'DISMISS_ALL' };
+  | { type: "ADD"; payload: Suggestion }
+  | { type: "DISMISS"; payload: string }
+  | { type: "DISMISS_ALL" };
 
 interface SuggestionsContextValue {
   state: SuggestionsState;
-  addSuggestion: (s: Omit<Suggestion, 'id' | 'timestamp'>) => void;
+  addSuggestion: (s: Omit<Suggestion, "id" | "timestamp">) => void;
   dismiss: (id: string) => void;
   dismissAll: () => void;
   count: number;
@@ -37,14 +30,14 @@ interface SuggestionsContextValue {
 
 function reducer(state: SuggestionsState, action: SuggestionsAction): SuggestionsState {
   switch (action.type) {
-    case 'ADD':
-      if (state.suggestions.some(s => s.definitionId === action.payload.definitionId)) {
+    case "ADD":
+      if (state.suggestions.some((s) => s.definitionId === action.payload.definitionId)) {
         return state;
       }
       return { suggestions: [action.payload, ...state.suggestions] };
-    case 'DISMISS':
-      return { suggestions: state.suggestions.filter(s => s.id !== action.payload) };
-    case 'DISMISS_ALL':
+    case "DISMISS":
+      return { suggestions: state.suggestions.filter((s) => s.id !== action.payload) };
+    case "DISMISS_ALL":
       return { suggestions: [] };
     default:
       return state;
@@ -56,16 +49,16 @@ const SuggestionsContext = createContext<SuggestionsContextValue | null>(null);
 export function SuggestionsProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, { suggestions: [] });
 
-  const addSuggestion = useCallback((s: Omit<Suggestion, 'id' | 'timestamp'>) => {
-    dispatch({ type: 'ADD', payload: { ...s, id: crypto.randomUUID(), timestamp: Date.now() } });
+  const addSuggestion = useCallback((s: Omit<Suggestion, "id" | "timestamp">) => {
+    dispatch({ type: "ADD", payload: { ...s, id: crypto.randomUUID(), timestamp: Date.now() } });
   }, []);
 
   const dismiss = useCallback((id: string) => {
-    dispatch({ type: 'DISMISS', payload: id });
+    dispatch({ type: "DISMISS", payload: id });
   }, []);
 
   const dismissAll = useCallback(() => {
-    dispatch({ type: 'DISMISS_ALL' });
+    dispatch({ type: "DISMISS_ALL" });
   }, []);
 
   const count = useMemo(() => state.suggestions.length, [state.suggestions]);
@@ -79,6 +72,6 @@ export function SuggestionsProvider({ children }: { children: ReactNode }) {
 
 export function useSuggestions() {
   const ctx = useContext(SuggestionsContext);
-  if (!ctx) throw new Error('useSuggestions must be used within SuggestionsProvider');
+  if (!ctx) throw new Error("useSuggestions must be used within SuggestionsProvider");
   return ctx;
 }

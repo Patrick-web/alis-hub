@@ -1,8 +1,8 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { useTheme } from 'next-themes';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import '@xterm/xterm/css/xterm.css';
+import { useEffect, useRef, forwardRef, useImperativeHandle } from "react";
+import { useTheme } from "next-themes";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import "@xterm/xterm/css/xterm.css";
 
 export interface BuildTerminalHandle {
   write: (text: string) => void;
@@ -21,13 +21,13 @@ function getCssVar(name: string): string {
 
 function buildXtermTheme() {
   return {
-    background: getCssVar('--background') || '#1e1e1e',
-    foreground: getCssVar('--foreground') || '#ffffff',
-    cursor: getCssVar('--brand') || '#F881A9',
-    cursorAccent: getCssVar('--background') || '#1e1e1e',
-    selectionBackground: 'rgba(248,129,169,0.25)',
-    black: getCssVar('--background') || '#1e1e1e',
-    brightBlack: getCssVar('--muted-foreground') || '#888888',
+    background: getCssVar("--background") || "#1e1e1e",
+    foreground: getCssVar("--foreground") || "#ffffff",
+    cursor: getCssVar("--brand") || "#F881A9",
+    cursorAccent: getCssVar("--background") || "#1e1e1e",
+    selectionBackground: "rgba(248,129,169,0.25)",
+    black: getCssVar("--background") || "#1e1e1e",
+    brightBlack: getCssVar("--muted-foreground") || "#888888",
   };
 }
 
@@ -84,9 +84,9 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, BuildTerminalProps>
         termRef.current = null;
         fitRef.current = null;
       };
-    // onInput and onResize are callbacks — intentionally excluded to avoid
-    // re-mounting the terminal on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      // onInput and onResize are callbacks — intentionally excluded to avoid
+      // re-mounting the terminal on every render.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Update xterm theme without remounting when the app theme changes
@@ -101,8 +101,8 @@ export const BuildTerminal = forwardRef<BuildTerminalHandle, BuildTerminalProps>
       clear: () => termRef.current?.clear(),
     }));
 
-    return <div ref={containerRef} className={className} style={{ overflow: 'hidden' }} />;
-  }
+    return <div ref={containerRef} className={className} style={{ overflow: "hidden" }} />;
+  },
 );
 
-BuildTerminal.displayName = 'BuildTerminal';
+BuildTerminal.displayName = "BuildTerminal";

@@ -1,4 +1,4 @@
-package main
+package alisclient
 
 import (
 	"bytes"
@@ -16,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	dbdv1 "alis-hub-v3/dbdv1"
+	"alis-hub-v3/dbdv1"
+
 	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -27,23 +28,18 @@ const (
 	alisAppVersion = "0.1.0"
 )
 
-type tokenSource interface {
+type TokenProvider interface {
 	Token() (string, error)
 }
 
 type AlisClient struct {
 	httpClient *http.Client
-	tokens     tokenSource
+	tokens     TokenProvider
 }
 
-func NewAlisClient(ctx context.Context) (*AlisClient, error) {
-	tokens, err := NewConsoleTokenSource()
-	if err != nil {
-		return nil, fmt.Errorf("token source: %w", err)
-	}
-
+func New(tokens TokenProvider) *AlisClient {
 	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+		TLSClientConfig:   &tls.Config{MinVersion: tls.VersionTLS12},
 		ForceAttemptHTTP2: true,
 	}
 
@@ -53,7 +49,7 @@ func NewAlisClient(ctx context.Context) (*AlisClient, error) {
 			Timeout:   120 * time.Second,
 		},
 		tokens: tokens,
-	}, nil
+	}
 }
 
 func (c *AlisClient) Close() error {
@@ -100,7 +96,8 @@ func (c *AlisClient) FetchURL(ctx context.Context, url string, byteOffset int64)
 }
 
 // doGRPC sends a gRPC request and handles the response including trailers.
-func (c *AlisClient) doGRPC(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
+// DoGRPC sends a gRPC request over HTTP/2 to the gRPC endpoint.
+func (c *AlisClient) DoGRPC(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
 	token, err := c.tokens.Token()
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("auth: %w", err)
@@ -164,7 +161,8 @@ func (c *AlisClient) doGRPC(ctx context.Context, method string, protoBytes []byt
 
 // doGRPCWeb sends a gRPC-web-text (base64) request and parses the framed response.
 // console.alisx.com uses application/grpc-web-text (the same encoding as the browser).
-func (c *AlisClient) doGRPCWeb(ctx context.Context, host, method string, protoBytes []byte) ([]byte, int, string, error) {
+// DoGRPC sends a gRPC request over HTTP/2 to the gRPC endpoint.
+func (c *AlisClient) DoGRPCWeb(ctx context.Context, host, method string, protoBytes []byte) ([]byte, int, string, error) {
 	token, err := c.tokens.Token()
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("auth: %w", err)
@@ -211,7 +209,7 @@ func (c *AlisClient) doGRPCWeb(ctx context.Context, host, method string, protoBy
 		return nil, 0, "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(snippet))
 	}
 
-	dataFrame, grpcStatus, grpcMessage, err := decodeGRPCWebTextFrames(rawBody)
+	dataFrame, grpcStatus, grpcMessage, err := DecodeGRPCWebTextFrames(rawBody)
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("frame decode: %w", err)
 	}
@@ -227,8 +225,57 @@ func (c *AlisClient) doGRPCWeb(ctx context.Context, host, method string, protoBy
 	return dataFrame, grpcStatus, grpcMessage, nil
 }
 
+// DecodeGRPCWebTextFrames decodes a grpc-web-text body. The wire format is
+// base64-encoded frames with a 5-byte prefix (flags + big-endian length).
+// DecodeGRPCWebTextFrames decodes a grpc-web-text body.
+func DecodeGRPCWebTextFrames(rawBody []byte) (dataFrame []byte, grpcStatus int, grpcMsg string, err error) {
+	clean := strings.Map(func(r rune) rune {
+		switch r {
+		case '\n', '\r', ' ', '\t':
+			return -1
+		}
+		return r
+	}, string(rawBody))
+
+	pos := 0
+	for pos+8 <= len(clean) {
+		hdr, e := base64.StdEncoding.DecodeString(clean[pos : pos+8])
+		if e != nil || len(hdr) < 5 {
+			break
+		}
+
+		flags := hdr[0]
+		frameLen := int(hdr[1])<<24 | int(hdr[2])<<16 | int(hdr[3])<<8 | int(hdr[4])
+
+		b64Len := ((5 + frameLen + 2) / 3) * 4
+		if pos+b64Len > len(clean) {
+			break
+		}
+
+		frameBytes, e := base64.StdEncoding.DecodeString(clean[pos : pos+b64Len])
+		if e != nil {
+			break
+		}
+		pos += b64Len
+
+		if len(frameBytes) < 5+frameLen {
+			break
+		}
+		payload := frameBytes[5 : 5+frameLen]
+
+		if flags == 0x80 {
+			grpcStatus, grpcMsg = ParseGRPCWebTrailer(payload)
+		} else if dataFrame == nil {
+			header := []byte{flags, byte(frameLen >> 24), byte(frameLen >> 16), byte(frameLen >> 8), byte(frameLen)}
+			dataFrame = append(header, payload...)
+		}
+	}
+	return
+}
+
 // parseGRPCWebTrailer parses the trailer frame body for grpc-status and grpc-message.
-func parseGRPCWebTrailer(data []byte) (int, string) {
+// ParseGRPCWebTrailer parses the trailer frame body for grpc-status and grpc-message.
+func ParseGRPCWebTrailer(data []byte) (int, string) {
 	status := 0
 	message := ""
 	for _, line := range strings.Split(string(data), "\r\n") {
@@ -262,7 +309,8 @@ func marshalRunDefineRequest(neuron, commit string) []byte {
 	return buf
 }
 
-func marshalGetOperationRequest(name string) []byte {
+// MarshalGetOperationRequest builds protobuf bytes for google.longrunning.GetOperationRequest.
+func MarshalGetOperationRequest(name string) []byte {
 	var buf []byte
 	if name != "" {
 		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
@@ -276,7 +324,7 @@ func (c *AlisClient) RunDefine(ctx context.Context, req *dbdv1.RunDefineRequest)
 	method := "alis.os.dbd.v1.DbdService/RunDefine"
 	protoBytes := marshalRunDefineRequest(req.Neuron, req.Commit)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
@@ -294,9 +342,9 @@ func (c *AlisClient) RunDefine(ctx context.Context, req *dbdv1.RunDefineRequest)
 // GetOperation polls a long-running operation by name.
 func (c *AlisClient) GetOperation(ctx context.Context, name string) (*dbdv1.Operation, error) {
 	method := "google.longrunning.Operations/GetOperation"
-	protoBytes := marshalGetOperationRequest(name)
+	protoBytes := MarshalGetOperationRequest(name)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("GetOperation: %w", err)
 	}
@@ -313,7 +361,8 @@ func (c *AlisClient) GetOperation(ctx context.Context, name string) (*dbdv1.Oper
 
 // parseOperation parses a protobuf-serialized google.longrunning.Operation.
 // google.longrunning.Operation fields:
-//   1=name (string), 2=metadata (Any), 3=done (bool/varint), 4=error (Status), 5=response (Any)
+//
+//	1=name (string), 2=metadata (Any), 3=done (bool/varint), 4=error (Status), 5=response (Any)
 func parseOperation(data []byte) (*dbdv1.Operation, error) {
 	op := &dbdv1.Operation{}
 
@@ -347,7 +396,7 @@ func parseOperation(data []byte) (*dbdv1.Operation, error) {
 			case 2:
 				op.Metadata = &anypb.Any{Value: b}
 			case 4:
-				code, msg := parseStatus(b)
+				code, msg := ParseStatus(b)
 				op.Result = &dbdv1.OperationError{Code: code, Message: msg}
 			case 5:
 				op.Result = &dbdv1.OperationResponse{
@@ -600,7 +649,7 @@ func (c *AlisClient) ExplainDefine(ctx context.Context, definition string, artif
 		return nil, fmt.Errorf("ExplainDefine: cannot derive definition name from %q", neuron)
 	}
 	protoBytes := marshalExplainDefineRequest(definition, artifacts, neuron)
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.glass.v1.GlassService/ExplainDefine", protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.glass.v1.GlassService/ExplainDefine", protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("ExplainDefine: %w", err)
 	}
@@ -643,7 +692,7 @@ func (c *AlisClient) RunBuild(ctx context.Context, req *dbdv1.RunBuildRequest) (
 	method := "alis.os.dbd.v1.DbdService/RunBuild"
 	protoBytes := marshalRunBuildRequest(req.Neuron, req.Commit, req.Images)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunBuild: %w", err)
 	}
@@ -672,11 +721,14 @@ type RunBuildResponseData struct {
 	Version       string
 }
 
-// parseBuildResponse extracts RunBuildResponse from a completed operation's result field.
+// ParseBuildResponse extracts RunBuildResponse from a completed operation's result field.
 // Field 5 of the Operation holds a google.protobuf.Any:
-//   field 1 = type_url (string), field 2 = value (RunBuildResponse proto bytes).
+//
+//	field 1 = type_url (string), field 2 = value (RunBuildResponse proto bytes).
+//
 // RunBuildResponse fields: 1=neuronVersion, 2=buildLogsUrl, 3=deployments, 4=version.
-func parseBuildResponse(op *dbdv1.Operation) *RunBuildResponseData {
+// ParseBuildResponse extracts build response data from a completed operation.
+func ParseBuildResponse(op *dbdv1.Operation) *RunBuildResponseData {
 	resp, ok := op.Result.(*dbdv1.OperationResponse)
 	if !ok || resp == nil || resp.Value == nil {
 		return nil
@@ -747,8 +799,9 @@ func parseBuildResponse(op *dbdv1.Operation) *RunBuildResponseData {
 	return result
 }
 
-// unpackBuildMetadata extracts RunBuildMetadata from an operation's metadata Any.
-func unpackBuildMetadata(op *dbdv1.Operation) *RunBuildMetadata {
+// UnpackBuildMetadata extracts RunBuildMetadata from an operation's metadata Any.
+// UnpackBuildMetadata extracts build metadata from a completed operation.
+func UnpackBuildMetadata(op *dbdv1.Operation) *RunBuildMetadata {
 	if op == nil || op.Metadata == nil {
 		return nil
 	}
@@ -845,7 +898,7 @@ func (c *AlisClient) RunDeploy(ctx context.Context, req *dbdv1.RunDeployRequest)
 	method := "alis.os.dbd.v1.DbdService/RunDeploy"
 	protoBytes := marshalRunDeployRequest(req.Environments, req.Neuron, req.Version, req.PlanOnly, req.Beta)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, method, protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("RunDeploy: %w", err)
 	}
@@ -872,8 +925,9 @@ type DeployInfo struct {
 	LogsURL string
 }
 
-// unpackDeployMetadata extracts RunDeployMetadata from an operation's metadata Any.
-func unpackDeployMetadata(op *dbdv1.Operation) *RunDeployMetadata {
+// UnpackDeployMetadata extracts RunDeployMetadata from an operation's metadata Any.
+// UnpackDeployMetadata extracts deploy metadata from a completed operation.
+func UnpackDeployMetadata(op *dbdv1.Operation) *RunDeployMetadata {
 	if op == nil || op.Metadata == nil {
 		return nil
 	}
@@ -961,7 +1015,7 @@ func marshalFinishLocalBuildRequest(neuronVersion string, failed bool) []byte {
 // failed is true when docker build exited non-zero.
 func (c *AlisClient) FinishLocalBuild(ctx context.Context, neuronVersion string, failed bool) error {
 	protoBytes := marshalFinishLocalBuildRequest(neuronVersion, failed)
-	_, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.resources.products.v1.Service/FinishLocalBuild", protoBytes)
+	_, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.resources.products.v1.Service/FinishLocalBuild", protoBytes)
 	if err != nil {
 		return fmt.Errorf("FinishLocalBuild: %w", err)
 	}
@@ -1026,7 +1080,7 @@ func (c *AlisClient) ListNeuronVersions(ctx context.Context, parent string) ([]*
 	req = protowire.AppendVarint(req, 100)
 
 	method := "alis.os.neurons.v1.NeuronVersionsService/ListNeuronVersions"
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, method, req)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, method, req)
 	if err != nil {
 		return nil, fmt.Errorf("ListNeuronVersions: %w", err)
 	}
@@ -1142,7 +1196,8 @@ func parseTimestampSeconds(data []byte) int64 {
 }
 
 // parseStatus parses google.rpc.Status: field 1=code (varint), field 2=message (string).
-func parseStatus(data []byte) (int32, string) {
+// ParseStatus extracts a status code and message from a google.rpc.Status proto.
+func ParseStatus(data []byte) (int32, string) {
 	var code int32
 	var message string
 	for len(data) > 0 {
@@ -1181,10 +1236,11 @@ func parseStatus(data []byte) (int32, string) {
 	return code, message
 }
 
-// unpackDefineMetadata extracts RunDefineMetadata from an operation's metadata.
+// UnpackDefineMetadata extracts RunDefineMetadata from an operation's metadata.
 // The metadata field in the Operation is a google.protobuf.Any containing RunDefineMetadata.
 // We parse the Any.value bytes directly with protowire.
-func unpackDefineMetadata(op *dbdv1.Operation) *dbdv1.RunDefineMetadata {
+// UnpackDefineMetadata extracts define metadata from a completed operation.
+func UnpackDefineMetadata(op *dbdv1.Operation) *dbdv1.RunDefineMetadata {
 	if op == nil || op.Metadata == nil {
 		return nil
 	}
@@ -1259,10 +1315,10 @@ func unpackDefineMetadata(op *dbdv1.Operation) *dbdv1.RunDefineMetadata {
 
 // vscodeLanguage enum values for alis.os.vscode.v2.Language
 const (
-	vscodeLanguageGO     = 1
-	vscodeLanguageNODE   = 2
-	vscodeLanguagePYTHON = 3
-	vscodeLanguageDART   = 4
+	VscodeLanguageGO     = 1
+	VscodeLanguageNODE   = 2
+	VscodeLanguagePYTHON = 3
+	VscodeLanguageDART   = 4
 )
 
 // vscodePlatform enum values for alis.os.vscode.v2.Platform
@@ -1281,7 +1337,7 @@ type PackageScriptLocation struct {
 
 // PackageScript holds server-generated shell commands for one language folder.
 type PackageScript struct {
-	Name           string `json:"name"`   // display name: "asana-v1" or "asana-v1/proto"
+	Name           string `json:"name"` // display name: "asana-v1" or "asana-v1/proto"
 	Title          string `json:"title"`
 	WorkDir        string `json:"workDir"`
 	Lang           string `json:"lang"`
@@ -1296,7 +1352,7 @@ type PackageScript struct {
 func (c *AlisClient) GeneratePackageScripts(ctx context.Context, definition string, locations []PackageScriptLocation) ([]PackageScript, error) {
 	protoBytes := marshalGeneratePackageScriptsRequest(definition, locations)
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GeneratePackageScripts", protoBytes)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GeneratePackageScripts", protoBytes)
 	if err != nil {
 		return nil, fmt.Errorf("GeneratePackageScripts: %w", err)
 	}
@@ -1527,7 +1583,7 @@ func (c *AlisClient) authArtifactRegistry(ctx context.Context, org, product stri
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.gcloud.v1.AuthService/AuthArtifactRegistry", req)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.gcloud.v1.AuthService/AuthArtifactRegistry", req)
 	if err != nil {
 		return "", err
 	}
@@ -1563,7 +1619,7 @@ func (c *AlisClient) retrieveProductNpmHosts(ctx context.Context, org, product s
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("organisations/%s/products/%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/RetrieveProductNpmHosts", req)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/RetrieveProductNpmHosts", req)
 	if err != nil {
 		return nil, err
 	}
@@ -1609,7 +1665,7 @@ func (c *AlisClient) generateLanguagePackageConfigsDart(ctx context.Context, org
 	req = protowire.AppendTag(req, 1, protowire.BytesType)
 	req = protowire.AppendString(req, fmt.Sprintf("definitions/%s.%s", org, product))
 
-	body, grpcStatus, grpcMsg, err := c.doGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GenerateLanguagePackageConfigs", req)
+	body, grpcStatus, grpcMsg, err := c.DoGRPCWeb(ctx, alisDbdHost, "alis.os.vscode.v2.VscodeService/GenerateLanguagePackageConfigs", req)
 	if err != nil {
 		return nil, err
 	}

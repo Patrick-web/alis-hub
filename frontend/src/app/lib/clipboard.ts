@@ -1,4 +1,4 @@
-import { Clipboard } from '@wailsio/runtime';
+import { Clipboard } from "@wailsio/runtime";
 
 /**
  * Copies text to the clipboard, preferring the Wails runtime clipboard which

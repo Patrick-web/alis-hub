@@ -1,12 +1,7 @@
-import { useEffect, useState } from 'react';
-import { marked } from 'marked';
-import { Browser } from '@wailsio/runtime';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
+import { useEffect, useState } from "react";
+import { marked } from "marked";
+import { Browser } from "@wailsio/runtime";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 
 interface ReleaseNotesModalProps {
   open: boolean;
@@ -25,10 +20,10 @@ export function ReleaseNotesModal({
   releaseNotes,
   releaseUrl,
 }: ReleaseNotesModalProps) {
-  const [html, setHtml] = useState('');
+  const [html, setHtml] = useState("");
 
   useEffect(() => {
-    const result = marked.parse(releaseNotes || '');
+    const result = marked.parse(releaseNotes || "");
     if (result instanceof Promise) {
       result.then(setHtml);
     } else {

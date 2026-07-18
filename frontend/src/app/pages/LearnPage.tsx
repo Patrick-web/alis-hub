@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { LearningModule } from './learn/types';
-import { useLearnProgress } from './learn/useLearnProgress';
-import { ModuleSidebar } from './learn/ModuleSidebar';
-import { StepView } from './learn/StepView';
-import { module1 } from './learn/content/module1-what-is-alis';
-import { module2 } from './learn/content/module2-define';
-import { module3 } from './learn/content/module3-build';
-import { module4 } from './learn/content/module4-deploy';
-import { module5 } from './learn/content/module5-the-map';
+import { useState, useEffect } from "react";
+import { LearningModule } from "./learn/types";
+import { useLearnProgress } from "./learn/useLearnProgress";
+import { ModuleSidebar } from "./learn/ModuleSidebar";
+import { StepView } from "./learn/StepView";
+import { module1 } from "./learn/content/module1-what-is-alis";
+import { module2 } from "./learn/content/module2-define";
+import { module3 } from "./learn/content/module3-build";
+import { module4 } from "./learn/content/module4-deploy";
+import { module5 } from "./learn/content/module5-the-map";
 
 const modules: LearningModule[] = [module1, module2, module3, module4, module5];
 
@@ -22,23 +22,23 @@ export function LearnPage() {
 
   // On first load, jump to the first incomplete step in the resumed module
   useEffect(() => {
-    const mod = modules.find(m => m.id === activeModuleId);
+    const mod = modules.find((m) => m.id === activeModuleId);
     if (!mod) return;
-    const firstIncomplete = mod.steps.findIndex(s => !isStepComplete(s.id));
+    const firstIncomplete = mod.steps.findIndex((s) => !isStepComplete(s.id));
     setActiveStepIndex(firstIncomplete === -1 ? 0 : firstIncomplete);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const activeModule = modules.find(m => m.id === activeModuleId) ?? modules[0];
+  const activeModule = modules.find((m) => m.id === activeModuleId) ?? modules[0];
   const activeStep = activeModule.steps[activeStepIndex];
-  const moduleIndex = modules.findIndex(m => m.id === activeModuleId);
+  const moduleIndex = modules.findIndex((m) => m.id === activeModuleId);
   const isLastStep = activeStepIndex === activeModule.steps.length - 1;
   const isLastModule = moduleIndex === modules.length - 1;
 
   const handleSelectModule = (id: string) => {
     setActiveModuleId(id);
-    const mod = modules.find(m => m.id === id)!;
-    const firstIncomplete = mod.steps.findIndex(s => !isStepComplete(s.id));
+    const mod = modules.find((m) => m.id === id)!;
+    const firstIncomplete = mod.steps.findIndex((s) => !isStepComplete(s.id));
     setActiveStepIndex(firstIncomplete === -1 ? 0 : firstIncomplete);
   };
 

@@ -8,11 +8,12 @@ import (
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
+	"alis-hub-v3/internal/alisclient"
 )
 
 // DeployService is a Wails-bound service that orchestrates the Deploy flow.
 type DeployService struct {
-	alisClient *AlisClient
+	alisClient *alisclient.AlisClient
 }
 
 func NewDeployService() *DeployService {
@@ -26,7 +27,7 @@ func (s *DeployService) initClient() error {
 	log.Println("[deploy] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
@@ -53,8 +54,8 @@ type DeployItem struct {
 // NeuronVersionSummary is a neuron version returned to the frontend.
 // State: 1=BUILT, 2=RETAGGED, 3=BUILDING, 4=FAILED.
 type NeuronVersionSummary struct {
-	Name        string `json:"name"`    // full resource name e.g. organisations/x/products/y/neurons/bff-v1/versions/1-0-65
-	Version     string `json:"version"` // short version string e.g. 1.0.65
+	Name        string `json:"name"`       // full resource name e.g. organisations/x/products/y/neurons/bff-v1/versions/1-0-65
+	Version     string `json:"version"`    // short version string e.g. 1.0.65
 	CreateTime  int64  `json:"createTime"` // unix seconds
 	BuildCommit string `json:"buildCommit"`
 	LogsURL     string `json:"logsUrl"`
@@ -167,7 +168,7 @@ func (s *DeployService) PollDeployOperation(name string) (*RunDeployResult, erro
 		Done:          op.Done,
 	}
 
-	meta := unpackDeployMetadata(op)
+	meta := alisclient.UnpackDeployMetadata(op)
 	if meta != nil {
 		log.Printf("[deploy] PollDeployOperation: metadata version=%q notes=%q deployments=%d", meta.Version, meta.Notes, len(meta.Deployments))
 		result.Version = meta.Version

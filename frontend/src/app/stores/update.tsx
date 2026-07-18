@@ -6,11 +6,11 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react';
-import { Events, Browser } from '@wailsio/runtime';
-import * as UpdaterService from '../../../bindings/alis-hub-v3/internal/updater/service';
-import { notify } from '../lib/notify';
-import { useNotifications } from './notifications';
+} from "react";
+import { Events, Browser } from "@wailsio/runtime";
+import * as UpdaterService from "../../../bindings/alis-hub-v3/internal/updater/service";
+import { notify } from "../lib/notify";
+import { useNotifications } from "./notifications";
 
 export interface UpdateInfo {
   available: boolean;
@@ -64,7 +64,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     const target = info ?? updateInfoRef.current;
     if (!target || downloadingRef.current) return;
 
-    if (navigator.userAgent.includes('Windows')) {
+    if (navigator.userAgent.includes("Windows")) {
       Browser.OpenURL(target.releaseUrl);
       return;
     }
@@ -73,7 +73,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     setInstallError(null);
     setDownloadProgress({ downloaded: 0, total: 0, done: false });
 
-    const offProgress = Events.On('update:progress', (ev) => {
+    const offProgress = Events.On("update:progress", (ev) => {
       const p = ev.data as DownloadProgress;
       if (p.error) {
         setDownloadProgress(null);
@@ -99,7 +99,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const offAvailable = Events.On('update:available', (ev) => {
+    const offAvailable = Events.On("update:available", (ev) => {
       const info = ev.data as UpdateInfo;
       setUpdateInfo(info);
       setUpdateDismissed(false);
@@ -107,14 +107,14 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       setInstallError(null);
       downloadingRef.current = false;
       addRef.current({
-        severity: 'info',
-        source: 'update',
+        severity: "info",
+        source: "update",
         title: `Update available: v${info.latestVersion}`,
         persistent: true,
         actions: [
           {
-            label: 'Release Notes',
-            variant: 'ghost',
+            label: "Release Notes",
+            variant: "ghost",
             onClick: () => setNotesOpen(true),
           },
         ],
@@ -131,7 +131,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const checkForUpdate = useCallback(async () => {
     setCheckingUpdate(true);
     try {
-      const info = await UpdaterService.CheckForUpdate() as UpdateInfo;
+      const info = (await UpdaterService.CheckForUpdate()) as UpdateInfo;
       setUpdateInfo(info);
       return info;
     } finally {
@@ -176,6 +176,6 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
 
 export function useUpdate() {
   const ctx = useContext(UpdateContext);
-  if (!ctx) throw new Error('useUpdate must be used within UpdateProvider');
+  if (!ctx) throw new Error("useUpdate must be used within UpdateProvider");
   return ctx;
 }

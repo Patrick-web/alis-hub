@@ -1,25 +1,25 @@
-import * as SettingsService from '../../../bindings/alis-hub-v3/settingsservice';
+import * as SettingsService from "../../../bindings/alis-hub-v3/settingsservice";
 
-const MIGRATION_FLAG_KEY = '__meta:localStorageMigrated';
+const MIGRATION_FLAG_KEY = "__meta:localStorageMigrated";
 
 // Every localStorage key ever used by a settings store, copied verbatim into
 // SQLite the first time an existing install boots after this migration.
 const LEGACY_LOCAL_STORAGE_KEYS = [
-  'alis-hub-accent',
-  'alis-hub-accent-custom',
-  'alis:develop-settings',
-  'alis:labs',
-  'alis:localai',
-  'alis:notifications',
-  'alis:platform-override',
-  'alis:source-control',
-  'alis:tools-context-defaults',
-  'alis:tab-settings',
-  'alis:recentLandingZone',
-  'alis:activeEnvName',
-  'alis:systemNotifications',
-  'alis-learn-progress',
-  'theme',
+  "alis-hub-accent",
+  "alis-hub-accent-custom",
+  "alis:develop-settings",
+  "alis:labs",
+  "alis:localai",
+  "alis:notifications",
+  "alis:platform-override",
+  "alis:source-control",
+  "alis:tools-context-defaults",
+  "alis:tab-settings",
+  "alis:recentLandingZone",
+  "alis:activeEnvName",
+  "alis:systemNotifications",
+  "alis-learn-progress",
+  "theme",
 ];
 
 let cache = new Map<string, string>();
@@ -42,9 +42,9 @@ async function migrateFromLocalStorage(): Promise<void> {
       // still works since the in-memory cache already has the value for this session
     }
   }
-  cache.set(MIGRATION_FLAG_KEY, '1');
+  cache.set(MIGRATION_FLAG_KEY, "1");
   try {
-    await SettingsService.SetSetting(MIGRATION_FLAG_KEY, '1');
+    await SettingsService.SetSetting(MIGRATION_FLAG_KEY, "1");
   } catch {}
 }
 
@@ -53,7 +53,7 @@ export async function init(): Promise<void> {
   try {
     const all = await SettingsService.GetAllSettings();
     cache = new Map(
-      Object.entries(all ?? {}).filter((e): e is [string, string] => e[1] !== undefined)
+      Object.entries(all ?? {}).filter((e): e is [string, string] => e[1] !== undefined),
     );
   } catch {
     cache = new Map();

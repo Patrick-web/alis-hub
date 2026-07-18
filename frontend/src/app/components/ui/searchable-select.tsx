@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Command as CommandPrimitive } from 'cmdk';
-import { Check, ChevronDown, Search } from 'lucide-react';
-import { cn } from './utils';
+import { useState } from "react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { Command as CommandPrimitive } from "cmdk";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { cn } from "./utils";
 
 type Option = string | { label: string; value: string };
 
 function toEntry(o: Option): { label: string; value: string } {
-  return typeof o === 'string' ? { label: o, value: o } : o;
+  return typeof o === "string" ? { label: o, value: o } : o;
 }
 
 interface SearchableSelectProps {
@@ -26,38 +26,41 @@ export function SearchableSelect({
   value,
   options,
   onChange,
-  placeholder = 'Select…',
+  placeholder = "Select…",
   label,
   className,
   loading,
   disabled,
-  emptyLabel = 'No results',
+  emptyLabel = "No results",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const entries = options.map(toEntry);
   const filtered = query.trim()
-    ? entries.filter(e => e.label.toLowerCase().includes(query.toLowerCase()))
+    ? entries.filter((e) => e.label.toLowerCase().includes(query.toLowerCase()))
     : entries;
 
-  const displayLabel = entries.find(e => e.value === value)?.label ?? value;
+  const displayLabel = entries.find((e) => e.value === value)?.label ?? value;
 
   function handleSelect(val: string) {
     onChange(val);
     setOpen(false);
-    setQuery('');
+    setQuery("");
   }
 
   return (
-    <PopoverPrimitive.Root open={disabled ? false : open} onOpenChange={disabled ? undefined : setOpen}>
+    <PopoverPrimitive.Root
+      open={disabled ? false : open}
+      onOpenChange={disabled ? undefined : setOpen}
+    >
       <PopoverPrimitive.Trigger asChild>
         <button
           disabled={disabled}
           className={cn(
-            'flex items-center gap-1 text-[10px] bg-foreground/5 border border-foreground/15 rounded px-1.5 py-1 text-foreground/70 hover:border-foreground/25 transition-colors',
-            open && 'border-foreground/30',
-            disabled && 'opacity-40 cursor-not-allowed hover:border-foreground/15',
+            "flex items-center gap-1 text-[10px] bg-foreground/5 border border-foreground/15 rounded px-1.5 py-1 text-foreground/70 hover:border-foreground/25 transition-colors",
+            open && "border-foreground/30",
+            disabled && "opacity-40 cursor-not-allowed hover:border-foreground/15",
             className,
           )}
         >
@@ -66,7 +69,13 @@ export function SearchableSelect({
           {loading ? (
             <Search size={9} className="shrink-0 text-foreground/30 animate-pulse" />
           ) : (
-            <ChevronDown size={9} className={cn('shrink-0 text-foreground/30 transition-transform', open && 'rotate-180')} />
+            <ChevronDown
+              size={9}
+              className={cn(
+                "shrink-0 text-foreground/30 transition-transform",
+                open && "rotate-180",
+              )}
+            />
           )}
         </button>
       </PopoverPrimitive.Trigger>
@@ -95,7 +104,7 @@ export function SearchableSelect({
                   {emptyLabel}
                 </CommandPrimitive.Empty>
               ) : (
-                filtered.map(entry => (
+                filtered.map((entry) => (
                   <CommandPrimitive.Item
                     key={entry.value}
                     value={entry.value}
@@ -104,7 +113,10 @@ export function SearchableSelect({
                   >
                     <Check
                       size={10}
-                      className={cn('shrink-0 text-pink-400', entry.value === value ? 'opacity-100' : 'opacity-0')}
+                      className={cn(
+                        "shrink-0 text-pink-400",
+                        entry.value === value ? "opacity-100" : "opacity-0",
+                      )}
                     />
                     <span className="truncate">{entry.label}</span>
                   </CommandPrimitive.Item>

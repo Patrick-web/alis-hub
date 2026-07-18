@@ -15,11 +15,12 @@ import (
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
+	"alis-hub-v3/internal/alisclient"
 )
 
 // BuildService is a Wails-bound service that orchestrates the Build flow.
 type BuildService struct {
-	alisClient  *AlisClient
+	alisClient  *alisclient.AlisClient
 	productSvc  *ProductService
 	localBuilds sync.Map // map[string]*localBuildState
 }
@@ -92,7 +93,7 @@ func (s *BuildService) initClient() error {
 	log.Println("[build] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
@@ -406,7 +407,7 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 		Done:          op.Done,
 	}
 
-	meta := unpackBuildMetadata(op)
+	meta := alisclient.UnpackBuildMetadata(op)
 	if meta != nil {
 		log.Printf("[build] PollBuildOperation: metadata version=%q logsUrl=%q notes=%q", meta.Version, meta.LogsURL, meta.Notes)
 		result.Version = meta.Version
@@ -417,7 +418,7 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 	}
 
 	if op.Done {
-		if resp := parseBuildResponse(op); resp != nil {
+		if resp := alisclient.ParseBuildResponse(op); resp != nil {
 			log.Printf("[build] PollBuildOperation: response neuronVersion=%q buildLogsUrl=%q version=%q",
 				resp.NeuronVersion, resp.BuildLogsURL, resp.Version)
 			if resp.BuildLogsURL != "" {

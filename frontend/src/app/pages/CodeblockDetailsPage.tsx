@@ -123,14 +123,7 @@ interface BlockPlan {
   displayName: string;
 }
 
-const TABS = [
-  "documentation",
-  "versions",
-  "instances",
-  "help",
-  "settings",
-  "access",
-] as const;
+const TABS = ["documentation", "versions", "instances", "help", "settings", "access"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABEL: Record<Tab, string> = {
   documentation: "Documentation",
@@ -162,9 +155,7 @@ function shortBlockId(blockVersion: string): string {
 export function CodeblockDetailsPage() {
   const { id, tab } = useParams<{ id: string; tab?: string }>();
   const navigate = useNavigate();
-  const activeTab: Tab = (
-    TABS.includes(tab as Tab) ? tab : "documentation"
-  ) as Tab;
+  const activeTab: Tab = (TABS.includes(tab as Tab) ? tab : "documentation") as Tab;
 
   const [block, setBlock] = useState<Codeblock | null>(null);
   const [members, setMembers] = useState<CodeblockMember[]>([]);
@@ -174,15 +165,12 @@ export function CodeblockDetailsPage() {
   const [versions, setVersions] = useState<CodeblockVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
   const [versionsLoaded, setVersionsLoaded] = useState(false);
-  const [selectedVersion, setSelectedVersion] =
-    useState<CodeblockVersion | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<CodeblockVersion | null>(null);
 
   const [doc, setDoc] = useState("");
   const [agentDoc, setAgentDoc] = useState("");
   const [docAudience, setDocAudience] = useState<"user" | "agent">("user");
-  const [docLoading, setDocLoading] = useState(
-    () => activeTab === "documentation",
-  );
+  const [docLoading, setDocLoading] = useState(() => activeTab === "documentation");
 
   const [instances, setInstances] = useState<CodeblockInstance[]>([]);
   const [instancesLoading, setInstancesLoading] = useState(false);
@@ -200,27 +188,18 @@ export function CodeblockDetailsPage() {
   // Install Block wizard state
   const [installOpen, setInstallOpen] = useState(false);
 
-  const go = useCallback(
-    (t: Tab) => navigate(`/codeblocks/${blockId}/${t}`),
-    [blockId, navigate],
-  );
+  const go = useCallback((t: Tab) => navigate(`/codeblocks/${blockId}/${t}`), [blockId, navigate]);
 
   // Load block metadata + members + caller account on mount
   useEffect(() => {
     if (!blockId) return;
     setBlockLoading(true);
     Promise.all([
-      (ProductService.GetCodeblock as (id: string) => Promise<Codeblock>)(
+      (ProductService.GetCodeblock as (id: string) => Promise<Codeblock>)(blockId),
+      (ProductService.GetCodeblockMembers as (id: string) => Promise<CodeblockMember[]>)(
         blockId,
-      ),
-      (
-        ProductService.GetCodeblockMembers as (
-          id: string,
-        ) => Promise<CodeblockMember[]>
-      )(blockId).catch(() => [] as CodeblockMember[]),
-      (ProductService.GetMyPrimaryAccountID as () => Promise<string>)().catch(
-        () => "",
-      ),
+      ).catch(() => [] as CodeblockMember[]),
+      (ProductService.GetMyPrimaryAccountID as () => Promise<string>)().catch(() => ""),
     ])
       .then(([b, m, accountID]) => {
         setBlock(b);
@@ -233,17 +212,9 @@ export function CodeblockDetailsPage() {
 
   // Lazy load versions (also needed for settings tab counts)
   useEffect(() => {
-    if (
-      (activeTab !== "versions" && activeTab !== "settings") ||
-      versions.length > 0
-    )
-      return;
+    if ((activeTab !== "versions" && activeTab !== "settings") || versions.length > 0) return;
     setVersionsLoading(true);
-    (
-      ProductService.ListCodeblockVersions as (
-        id: string,
-      ) => Promise<CodeblockVersion[]>
-    )(blockId)
+    (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
       .then((v) => {
         const list = v ?? [];
         setVersions(list);
@@ -261,29 +232,21 @@ export function CodeblockDetailsPage() {
     if (activeTab !== "documentation" || doc !== "") return;
     setDocLoading(true);
     // Get versions first to find the latest version name
-    (
-      ProductService.ListCodeblockVersions as (
-        id: string,
-      ) => Promise<CodeblockVersion[]>
-    )(blockId)
+    (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
       .then((vList) => {
         const list = vList ?? [];
         if (!selectedVersion && list.length > 0) setSelectedVersion(list[0]);
         const versionName = list[0]?.name;
         if (!versionName) return;
         return Promise.all([
-          (
-            ProductService.GetCodeblockDoc as (
-              v: string,
-              a: string,
-            ) => Promise<string>
-          )(versionName, "user"),
-          (
-            ProductService.GetCodeblockDoc as (
-              v: string,
-              a: string,
-            ) => Promise<string>
-          )(versionName, "agent"),
+          (ProductService.GetCodeblockDoc as (v: string, a: string) => Promise<string>)(
+            versionName,
+            "user",
+          ),
+          (ProductService.GetCodeblockDoc as (v: string, a: string) => Promise<string>)(
+            versionName,
+            "agent",
+          ),
         ]).then(([u, a]) => {
           setDoc(u ?? "");
           setAgentDoc(a ?? "");
@@ -295,17 +258,9 @@ export function CodeblockDetailsPage() {
 
   // Lazy load instances (also needed for settings tab counts)
   useEffect(() => {
-    if (
-      (activeTab !== "instances" && activeTab !== "settings") ||
-      instances.length > 0
-    )
-      return;
+    if ((activeTab !== "instances" && activeTab !== "settings") || instances.length > 0) return;
     setInstancesLoading(true);
-    (
-      ProductService.ListCodeblockInstances as (
-        id: string,
-      ) => Promise<CodeblockInstance[]>
-    )(blockId)
+    (ProductService.ListCodeblockInstances as (id: string) => Promise<CodeblockInstance[]>)(blockId)
       .then((v) => setInstances(v ?? []))
       .catch(console.error)
       .finally(() => {
@@ -318,9 +273,7 @@ export function CodeblockDetailsPage() {
   useEffect(() => {
     if (activeTab !== "settings" || plans.length > 0) return;
     setPlansLoading(true);
-    (ProductService.ListBlockPlans as (id: string) => Promise<BlockPlan[]>)(
-      blockId,
-    )
+    (ProductService.ListBlockPlans as (id: string) => Promise<BlockPlan[]>)(blockId)
       .then((v) => setPlans(v ?? []))
       .catch(console.error)
       .finally(() => setPlansLoading(false));
@@ -331,11 +284,7 @@ export function CodeblockDetailsPage() {
     if (activeTab !== "access" || accessData !== null) return;
     setAccessLoading(true);
     setAccessError(null);
-    (
-      ProductService.GetBlockAccessData as (
-        id: string,
-      ) => Promise<BlockAccessData>
-    )(blockId)
+    (ProductService.GetBlockAccessData as (id: string) => Promise<BlockAccessData>)(blockId)
       .then((d) => setAccessData(d ?? { members: [] }))
       .catch((e) => setAccessError(String(e)))
       .finally(() => setAccessLoading(false));
@@ -392,26 +341,20 @@ export function CodeblockDetailsPage() {
                     <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                       Latest Version
                     </p>
-                    <p className="text-foreground font-mono">
-                      {block.latestVersion}
-                    </p>
+                    <p className="text-foreground font-mono">{block.latestVersion}</p>
                   </div>
                 )}
                 <div className="px-[12px] py-[10px] border-b border-border">
                   <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                     Publisher
                   </p>
-                  <p className="text-foreground font-mono truncate">
-                    {publisherLabel}
-                  </p>
+                  <p className="text-foreground font-mono truncate">{publisherLabel}</p>
                 </div>
                 <div className="px-[12px] py-[10px]">
                   <p className="text-foreground/40 uppercase text-[9px] font-bold mb-[2px]">
                     Installs
                   </p>
-                  <p className="text-foreground font-mono">
-                    {block.installCount ?? 0}
-                  </p>
+                  <p className="text-foreground font-mono">{block.installCount ?? 0}</p>
                 </div>
               </div>
 
@@ -514,9 +457,7 @@ export function CodeblockDetailsPage() {
               key={t}
               onClick={() => go(t)}
               className={`px-[24px] py-[12px] text-[11px] font-bold uppercase tracking-wider transition-all relative ${
-                activeTab === t
-                  ? "text-brand"
-                  : "text-foreground/40 hover:text-foreground/70"
+                activeTab === t ? "text-brand" : "text-foreground/40 hover:text-foreground/70"
               }`}
             >
               {TAB_LABEL[t]}
@@ -588,8 +529,7 @@ export function CodeblockDetailsPage() {
 
 // ── Install Block Wizard ──────────────────────────────────────────────────────
 
-type InstallStep =
-  "location" | "plan" | "configure" | "installing" | "merge" | "done";
+type InstallStep = "location" | "plan" | "configure" | "installing" | "merge" | "done";
 type MergePhase = "ready" | "merging" | "done";
 
 function InstallBlockWizard({
@@ -615,9 +555,7 @@ function InstallBlockWizard({
   const [selectedProduct, setSelectedProduct] = useState("");
   const [neurons, setNeurons] = useState<InstallNeuron[]>([]);
   const [neuronsLoading, setNeuronsLoading] = useState(false);
-  const [selectedNeuron, setSelectedNeuron] = useState<InstallNeuron | null>(
-    null,
-  );
+  const [selectedNeuron, setSelectedNeuron] = useState<InstallNeuron | null>(null);
 
   // Plan step
   const [plans, setPlans] = useState<BlockPlan[]>([]);
@@ -663,9 +601,7 @@ function InstallBlockWizard({
     setNeurons([]);
     setProductsLoading(true);
     const orgId = selectedOrg.replace("organisations/", "");
-    (ProductService.ListProducts as (org: string) => Promise<InstallProduct[]>)(
-      orgId,
-    )
+    (ProductService.ListProducts as (org: string) => Promise<InstallProduct[]>)(orgId)
       .then((list) => setProducts(list ?? []))
       .catch((e) => setError(String(e)))
       .finally(() => setProductsLoading(false));
@@ -694,9 +630,7 @@ function InstallBlockWizard({
     setError("");
     setPlansLoading(true);
     setStep("plan");
-    (ProductService.ListBlockPlans as (id: string) => Promise<BlockPlan[]>)(
-      blockId,
-    )
+    (ProductService.ListBlockPlans as (id: string) => Promise<BlockPlan[]>)(blockId)
       .then((list) => {
         const l = list ?? [];
         setPlans(l);
@@ -711,11 +645,7 @@ function InstallBlockWizard({
     setError("");
     setVersionsLoading(true);
     setStep("configure");
-    (
-      ProductService.ListCodeblockVersions as (
-        id: string,
-      ) => Promise<CodeblockVersion[]>
-    )(blockId)
+    (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
       .then((list) => {
         const l = list ?? [];
         setVersions(l);
@@ -756,11 +686,9 @@ function InstallBlockWizard({
         // other long-lived branches, warn the user that this won't update them.
         const buildRepoPath = r?.repoPath ?? "";
         if (buildRepoPath) {
-          (
-            GitService.GetBranches as (
-              p: string,
-            ) => Promise<{ name: string; isRemote: boolean }[]>
-          )(buildRepoPath)
+          (GitService.GetBranches as (p: string) => Promise<{ name: string; isRemote: boolean }[]>)(
+            buildRepoPath,
+          )
             .then((branches) => {
               const remote = (branches ?? [])
                 .filter((b) => b.isRemote)
@@ -810,62 +738,54 @@ function InstallBlockWizard({
             <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Install Block
             </h2>
-            <p className="text-[11px] text-foreground/40 mt-[2px]">
-              {blockDisplayName}
-            </p>
+            <p className="text-[11px] text-foreground/40 mt-[2px]">{blockDisplayName}</p>
           </div>
-          {step !== "installing" &&
-            !(step === "merge" && mergePhase === "merging") && (
-              <button
-                onClick={onClose}
-                className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
-              >
-                <Icon icon="solar:close-circle-linear" className="text-lg" />
-              </button>
-            )}
+          {step !== "installing" && !(step === "merge" && mergePhase === "merging") && (
+            <button
+              onClick={onClose}
+              className="text-foreground/40 hover:text-foreground/80 transition-colors p-[4px]"
+            >
+              <Icon icon="solar:close-circle-linear" className="text-lg" />
+            </button>
+          )}
         </div>
 
         {/* Step indicator */}
         <div className="flex items-center px-[24px] py-[12px] border-b border-border shrink-0">
-          {(["location", "plan", "configure", "merge"] as InstallStep[]).map(
-            (s, i) => {
-              const labels: Record<string, string> = {
-                location: "1. Location",
-                plan: "2. Plan",
-                configure: "3. Configure",
-                merge: "4. Merge",
-              };
-              const stepOrder: InstallStep[] = [
-                "location",
-                "plan",
-                "configure",
-                "installing",
-                "merge",
-                "done",
-              ];
-              const currentIdx = stepOrder.indexOf(step);
-              const thisIdx = stepOrder.indexOf(s);
-              const active =
-                step === s || (s === "merge" && step === "installing");
-              const done =
-                currentIdx > thisIdx &&
-                !(s === "merge" && step === "installing");
-              return (
-                <div key={s} className="flex items-center gap-[8px]">
-                  {i > 0 && (
-                    <div
-                      className={`w-[24px] h-[1px] ${done ? "bg-brand-fill" : "bg-foreground/20"}`}
-                    />
-                  )}
-                  <span
-                    className={`text-[10px] font-bold uppercase ${active ? "text-brand" : done ? "text-foreground/60" : "text-foreground/25"}`}
-                  >
-                    {labels[s]}
-                  </span>
-                </div>
-              );
-            },
-          )}
+          {(["location", "plan", "configure", "merge"] as InstallStep[]).map((s, i) => {
+            const labels: Record<string, string> = {
+              location: "1. Location",
+              plan: "2. Plan",
+              configure: "3. Configure",
+              merge: "4. Merge",
+            };
+            const stepOrder: InstallStep[] = [
+              "location",
+              "plan",
+              "configure",
+              "installing",
+              "merge",
+              "done",
+            ];
+            const currentIdx = stepOrder.indexOf(step);
+            const thisIdx = stepOrder.indexOf(s);
+            const active = step === s || (s === "merge" && step === "installing");
+            const done = currentIdx > thisIdx && !(s === "merge" && step === "installing");
+            return (
+              <div key={s} className="flex items-center gap-[8px]">
+                {i > 0 && (
+                  <div
+                    className={`w-[24px] h-[1px] ${done ? "bg-brand-fill" : "bg-foreground/20"}`}
+                  />
+                )}
+                <span
+                  className={`text-[10px] font-bold uppercase ${active ? "text-brand" : done ? "text-foreground/60" : "text-foreground/25"}`}
+                >
+                  {labels[s]}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Content */}
@@ -878,9 +798,7 @@ function InstallBlockWizard({
 
           {step === "location" && (
             <div className="flex flex-col gap-[16px]">
-              <p className="text-[12px] text-foreground/50">
-                Select where to install this block.
-              </p>
+              <p className="text-[12px] text-foreground/50">Select where to install this block.</p>
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
@@ -895,8 +813,7 @@ function InstallBlockWizard({
                   emptyLabel="No organisations"
                   options={orgs.map((o) => ({
                     value: o.name,
-                    label:
-                      o.displayName || o.name.replace("organisations/", ""),
+                    label: o.displayName || o.name.replace("organisations/", ""),
                   }))}
                 />
               </div>
@@ -927,9 +844,7 @@ function InstallBlockWizard({
                 <SearchableSelect
                   className="w-full"
                   value={selectedNeuron?.name ?? ""}
-                  onChange={(v) =>
-                    setSelectedNeuron(neurons.find((n) => n.name === v) ?? null)
-                  }
+                  onChange={(v) => setSelectedNeuron(neurons.find((n) => n.name === v) ?? null)}
                   loading={neuronsLoading}
                   disabled={!selectedProduct}
                   placeholder="Select neuron…"
@@ -950,17 +865,13 @@ function InstallBlockWizard({
 
           {step === "plan" && (
             <div className="flex flex-col gap-[12px]">
-              <p className="text-[12px] text-foreground/50">
-                Select an entitlement plan.
-              </p>
+              <p className="text-[12px] text-foreground/50">Select an entitlement plan.</p>
               {plansLoading ? (
                 <div className="flex items-center justify-center py-[40px]">
                   <Loader />
                 </div>
               ) : plans.length === 0 ? (
-                <p className="text-[12px] text-foreground/40">
-                  No plans available.
-                </p>
+                <p className="text-[12px] text-foreground/40">No plans available.</p>
               ) : (
                 plans.map((plan) => (
                   <button
@@ -975,9 +886,7 @@ function InstallBlockWizard({
                     <p className="font-mono text-[12px] font-bold text-foreground">
                       {plan.displayName || plan.name.split("/").pop()}
                     </p>
-                    <p className="text-[10px] text-foreground/30 mt-[2px] font-mono">
-                      {plan.name}
-                    </p>
+                    <p className="text-[10px] text-foreground/30 mt-[2px] font-mono">{plan.name}</p>
                   </button>
                 ))
               )}
@@ -986,9 +895,7 @@ function InstallBlockWizard({
 
           {step === "configure" && (
             <div className="flex flex-col gap-[16px]">
-              <p className="text-[12px] text-foreground/50">
-                Configure the installation.
-              </p>
+              <p className="text-[12px] text-foreground/50">Configure the installation.</p>
 
               <div>
                 <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
@@ -1027,16 +934,11 @@ function InstallBlockWizard({
                   Summary
                 </p>
                 <p>
-                  Block:{" "}
-                  <span className="text-foreground/70 font-mono">
-                    {blockId}
-                  </span>
+                  Block: <span className="text-foreground/70 font-mono">{blockId}</span>
                 </p>
                 <p>
                   Package:{" "}
-                  <span className="text-foreground/70 font-mono">
-                    {selectedNeuron?.package}
-                  </span>
+                  <span className="text-foreground/70 font-mono">{selectedNeuron?.package}</span>
                 </p>
                 <p>
                   Plan:{" "}
@@ -1051,12 +953,8 @@ function InstallBlockWizard({
           {step === "installing" && (
             <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
               <Loader />
-              <p className="text-[13px] text-foreground/60">
-                Installing block…
-              </p>
-              <p className="text-[11px] text-foreground/30">
-                This may take a few minutes.
-              </p>
+              <p className="text-[13px] text-foreground/60">Installing block…</p>
+              <p className="text-[11px] text-foreground/30">This may take a few minutes.</p>
             </div>
           )}
 
@@ -1073,19 +971,11 @@ function InstallBlockWizard({
 
           {step === "done" && (
             <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
-              <Icon
-                icon="solar:check-circle-bold"
-                className="text-5xl text-green-400"
-              />
-              <p className="text-[14px] font-bold text-foreground">
-                Block Installed
-              </p>
+              <Icon icon="solar:check-circle-bold" className="text-5xl text-green-400" />
+              <p className="text-[14px] font-bold text-foreground">Block Installed</p>
               <p className="text-[12px] text-foreground/50 text-center">
                 The block has been installed and merged into{" "}
-                <span className="text-foreground/80 font-mono">
-                  {selectedNeuron?.package}
-                </span>
-                .
+                <span className="text-foreground/80 font-mono">{selectedNeuron?.package}</span>.
               </p>
             </div>
           )}
@@ -1098,11 +988,7 @@ function InstallBlockWizard({
               <Button variant="secondary" onClick={onClose}>
                 Cancel
               </Button>
-              <Button
-                variant="primary"
-                onClick={goToPlan}
-                disabled={!selectedNeuron}
-              >
+              <Button variant="primary" onClick={goToPlan} disabled={!selectedNeuron}>
                 Select Plan
               </Button>
             </>
@@ -1197,24 +1083,18 @@ function MergeStepContent({
     return (
       <div className="flex flex-col gap-[16px]">
         <p className="text-[12px] text-foreground/50">
-          The installation created a branch on the remote repo. Merge it into
-          master to complete the setup.
+          The installation created a branch on the remote repo. Merge it into master to complete the
+          setup.
         </p>
         <div className="p-[12px] bg-foreground/3 border border-border rounded-[4px] text-[11px] text-foreground/50 flex flex-col gap-[6px]">
           <div className="flex items-center gap-[8px]">
-            <Icon
-              icon="solar:git-branch-linear"
-              className="text-brand text-sm shrink-0"
-            />
+            <Icon icon="solar:git-branch-linear" className="text-brand text-sm shrink-0" />
             <span className="font-mono text-foreground/80">
               {branchName || "(branch name unknown)"}
             </span>
           </div>
           <div className="flex items-center gap-[8px]">
-            <Icon
-              icon="solar:folder-linear"
-              className="text-foreground/30 text-sm shrink-0"
-            />
+            <Icon icon="solar:folder-linear" className="text-foreground/30 text-sm shrink-0" />
             <span className="font-mono text-foreground/40 text-[10px] break-all">
               {repoPath || "(repo path unknown)"}
             </span>
@@ -1224,8 +1104,7 @@ function MergeStepContent({
           <div className="p-[10px] bg-yellow-500/10 border border-yellow-500/30 rounded-[4px] text-[11px] text-yellow-500 flex flex-col gap-[4px]">
             <span className="font-bold">Heads up</span>
             <span className="text-yellow-500/80">
-              Auto-merge always targets{" "}
-              <span className="font-mono">master</span> on the build repo.
+              Auto-merge always targets <span className="font-mono">master</span> on the build repo.
               This repo also has{" "}
               {otherBuildBranches.map((b) => (
                 <span key={b} className="font-mono">
@@ -1242,10 +1121,9 @@ function MergeStepContent({
           </div>
         )}
         <p className="text-[11px] text-foreground/30">
-          This merges{" "}
-          <span className="font-mono">{branchName || "…"}</span> into{" "}
-          <span className="font-mono">master</span> on both the build and
-          define repos via the Blocks backend — no local git required.
+          This merges <span className="font-mono">{branchName || "…"}</span> into{" "}
+          <span className="font-mono">master</span> on both the build and define repos via the
+          Blocks backend — no local git required.
         </p>
       </div>
     );
@@ -1256,9 +1134,7 @@ function MergeStepContent({
       <div className="flex flex-col items-center justify-center py-[40px] gap-[16px]">
         <Loader />
         <p className="text-[13px] text-foreground/60">Merging…</p>
-        <p className="text-[11px] text-foreground/30">
-          This can take a moment.
-        </p>
+        <p className="text-[11px] text-foreground/30">This can take a moment.</p>
       </div>
     );
   }
@@ -1268,8 +1144,8 @@ function MergeStepContent({
       <Icon icon="solar:check-circle-bold" className="text-5xl text-green-400" />
       <p className="text-[14px] font-bold text-foreground">Branch Merged</p>
       <p className="text-[12px] text-foreground/50 text-center">
-        <span className="font-mono text-foreground/80">{branchName}</span> has
-        been merged into {mergeResult?.branch || "master"}.
+        <span className="font-mono text-foreground/80">{branchName}</span> has been merged into{" "}
+        {mergeResult?.branch || "master"}.
       </p>
       {(mergeResult?.buildCommitSha || mergeResult?.defineCommitSha) && (
         <div className="text-[10px] font-mono text-foreground/30 flex flex-col gap-[2px] items-center">
@@ -1306,17 +1182,12 @@ function DocumentationTab({
   const proseRef = useRef<HTMLDivElement>(null);
   const content = audience === "agent" ? agentDoc : doc;
   const html = content ? (marked.parse(content) as string) : "";
-  const versionTs = versionCreateTime
-    ? new Date(versionCreateTime).getTime()
-    : NaN;
-  const isGenerating =
-    !isNaN(versionTs) && Date.now() - versionTs < 15 * 60 * 1000;
+  const versionTs = versionCreateTime ? new Date(versionCreateTime).getTime() : NaN;
+  const isGenerating = !isNaN(versionTs) && Date.now() - versionTs < 15 * 60 * 1000;
 
   useEffect(() => {
     if (!proseRef.current || !html) return;
-    const nodes = proseRef.current.querySelectorAll<HTMLElement>(
-      "pre code.language-mermaid",
-    );
+    const nodes = proseRef.current.querySelectorAll<HTMLElement>("pre code.language-mermaid");
     if (nodes.length === 0) return;
     nodes.forEach((codeEl, i) => {
       const pre = codeEl.parentElement;
@@ -1325,8 +1196,7 @@ function DocumentationTab({
       const id = `mermaid-${Date.now()}-${i}`;
       const wrapper = document.createElement("div");
       wrapper.className = "mermaid-diagram";
-      wrapper.style.cssText =
-        "margin: 16px 0; display: flex; justify-content: center;";
+      wrapper.style.cssText = "margin: 16px 0; display: flex; justify-content: center;";
       pre.replaceWith(wrapper);
       mermaid
         .parse(code)
@@ -1358,9 +1228,7 @@ function DocumentationTab({
             key={a}
             onClick={() => onAudienceChange(a)}
             className={`px-[14px] py-[8px] text-[10px] font-bold uppercase relative transition-all ${
-              audience === a
-                ? "text-brand"
-                : "text-foreground/40 hover:text-foreground/70"
+              audience === a ? "text-brand" : "text-foreground/40 hover:text-foreground/70"
             }`}
           >
             {a === "user" ? "User Facing" : "Agent Facing"}
@@ -1427,25 +1295,17 @@ function DocumentationTab({
         ) : isGenerating ? (
           <div className="flex flex-col items-center justify-center py-[60px] gap-[16px]">
             <div className="w-[48px] h-[48px] rounded-full bg-foreground/5 flex items-center justify-center">
-              <Icon
-                icon="solar:document-add-linear"
-                className="text-[24px] text-foreground/30"
-              />
+              <Icon icon="solar:document-add-linear" className="text-[24px] text-foreground/30" />
             </div>
             <div className="text-center">
-              <p className="text-foreground/60 text-[13px] font-medium">
-                Generating documentation
-              </p>
+              <p className="text-foreground/60 text-[13px] font-medium">Generating documentation</p>
               <p className="text-foreground/30 text-[11px] mt-[4px]">
                 This may take a few minutes after publishing
               </p>
             </div>
           </div>
         ) : (
-          <EmptyState
-            icon="solar:document-text-linear"
-            title="No documentation available"
-          />
+          <EmptyState icon="solar:document-text-linear" title="No documentation available" />
         )}
       </div>
     </div>
@@ -1476,9 +1336,7 @@ function VersionsTab({
   const [filter, setFilter] = useState<number | null>(null);
   const [detail, setDetail] = useState<CodeblockVersion | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set(),
-  );
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [openFile, setOpenFile] = useState<{
     name: string;
     content: string;
@@ -1489,11 +1347,9 @@ function VersionsTab({
     setDetail(null);
     setExpandedFolders(new Set());
     setDetailLoading(true);
-    (
-      ProductService.GetCodeblockVersion as (
-        name: string,
-      ) => Promise<CodeblockVersion>
-    )(selected.name)
+    (ProductService.GetCodeblockVersion as (name: string) => Promise<CodeblockVersion>)(
+      selected.name,
+    )
       .then((full) => {
         setDetail(full);
         setExpandedFolders(new Set(full.files?.map((f) => f.name) ?? []));
@@ -1522,27 +1378,19 @@ function VersionsTab({
   if (versions.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <EmptyState
-          icon="solar:box-minimalistic-linear"
-          title="No versions published yet"
-        />
+        <EmptyState icon="solar:box-minimalistic-linear" title="No versions published yet" />
       </div>
     );
   }
 
-  const filtered =
-    filter === null
-      ? versions
-      : versions.filter((v) => v.releaseLevel === filter);
+  const filtered = filter === null ? versions : versions.filter((v) => v.releaseLevel === filter);
   const displayDetail = detail ?? (detailLoading ? null : selected);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Filter bar */}
       <div className="flex items-center gap-[8px] px-[16px] py-[10px] border-b border-border shrink-0 flex-wrap">
-        <span className="text-[11px] text-foreground/40 mr-[4px]">
-          Filters:
-        </span>
+        <span className="text-[11px] text-foreground/40 mr-[4px]">Filters:</span>
         {VERSION_FILTERS.map((f) => (
           <button
             key={f.level}
@@ -1570,18 +1418,14 @@ function VersionsTab({
         {/* Version list */}
         <div className="w-[260px] shrink-0 border-r border-border overflow-auto">
           {filtered.length === 0 && (
-            <p className="text-[12px] text-foreground/30 p-[16px]">
-              No versions match this filter
-            </p>
+            <p className="text-[12px] text-foreground/30 p-[16px]">No versions match this filter</p>
           )}
           {filtered.map((v) => (
             <button
               key={v.name}
               onClick={() => onSelect(v)}
               className={`w-full text-left px-[16px] py-[14px] border-b border-border transition-colors ${
-                selected?.name === v.name
-                  ? "bg-foreground/5"
-                  : "hover:bg-foreground/3"
+                selected?.name === v.name ? "bg-foreground/5" : "hover:bg-foreground/3"
               }`}
             >
               <div className="flex items-center justify-between mb-[4px]">
@@ -1596,15 +1440,11 @@ function VersionsTab({
                       : "text-foreground/30 border-foreground/10 bg-foreground/5"
                   }`}
                 >
-                  {v.releaseLevel > 0
-                    ? (LEVEL_LABEL[v.releaseLevel] ?? "")
-                    : "Not Specified"}
+                  {v.releaseLevel > 0 ? (LEVEL_LABEL[v.releaseLevel] ?? "") : "Not Specified"}
                 </span>
               </div>
               {v.createTime && (
-                <p className="text-[10px] text-foreground/40">
-                  {formatDate(v.createTime)}
-                </p>
+                <p className="text-[10px] text-foreground/40">{formatDate(v.createTime)}</p>
               )}
             </button>
           ))}
@@ -1626,9 +1466,7 @@ function VersionsTab({
                     </h2>
                     <div className="flex items-center gap-[12px] text-[11px] text-foreground/40">
                       {displayDetail.createTime && (
-                        <span>
-                          Published {formatDate(displayDetail.createTime)}
-                        </span>
+                        <span>Published {formatDate(displayDetail.createTime)}</span>
                       )}
                       <span
                         className={`text-[9px] font-bold uppercase border rounded px-[5px] py-[1px] ${
@@ -1733,9 +1571,7 @@ function VersionsTab({
         )}
       </div>
 
-      {openFile && (
-        <FileViewerModal file={openFile} onClose={() => setOpenFile(null)} />
-      )}
+      {openFile && <FileViewerModal file={openFile} onClose={() => setOpenFile(null)} />}
     </div>
   );
 }
@@ -1753,10 +1589,8 @@ function InstancesTab({
   blockId: string;
   onRefresh: () => void;
 }) {
-  const [uninstallTarget, setUninstallTarget] =
-    useState<CodeblockInstance | null>(null);
-  const [configureTarget, setConfigureTarget] =
-    useState<CodeblockInstance | null>(null);
+  const [uninstallTarget, setUninstallTarget] = useState<CodeblockInstance | null>(null);
+  const [configureTarget, setConfigureTarget] = useState<CodeblockInstance | null>(null);
 
   if (loading) {
     return (
@@ -1782,10 +1616,7 @@ function InstancesTab({
       <div className="h-full overflow-auto p-[20px]">
         <div className="flex flex-col gap-[12px] max-w-[900px]">
           {instances.map((inst) => (
-            <div
-              key={inst.name}
-              className="bg-card border border-border rounded-[4px] p-[16px]"
-            >
+            <div key={inst.name} className="bg-card border border-border rounded-[4px] p-[16px]">
               <div className="flex items-start justify-between mb-[12px]">
                 <div>
                   <div className="flex items-center gap-[10px] mb-[4px]">
@@ -1800,9 +1631,7 @@ function InstancesTab({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-foreground/50 font-mono">
-                    {inst.package}
-                  </p>
+                  <p className="text-[11px] text-foreground/50 font-mono">{inst.package}</p>
                 </div>
                 <div className="flex items-center gap-[8px]">
                   <button
@@ -1836,9 +1665,7 @@ function InstancesTab({
                     <p className="text-foreground/30 uppercase text-[9px] font-bold mb-[2px]">
                       Installed
                     </p>
-                    <p className="text-foreground/70">
-                      {formatDate(inst.createTime)}
-                    </p>
+                    <p className="text-foreground/70">{formatDate(inst.createTime)}</p>
                   </div>
                 )}
                 {inst.entitlement && (
@@ -1901,11 +1728,7 @@ function UninstallModal({
   function doUninstall() {
     setLoading(true);
     setError("");
-    (
-      ProductService.UninstallCodeblockInstance as (
-        name: string,
-      ) => Promise<void>
-    )(inst.name)
+    (ProductService.UninstallCodeblockInstance as (name: string) => Promise<void>)(inst.name)
       .then(onDone)
       .catch((e) => {
         setError(String(e));
@@ -1917,10 +1740,7 @@ function UninstallModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
         <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-border">
-          <Icon
-            icon="solar:trash-bin-minimalistic-linear"
-            className="text-red-400 text-lg"
-          />
+          <Icon icon="solar:trash-bin-minimalistic-linear" className="text-red-400 text-lg" />
           <div>
             <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Uninstall Instance
@@ -1953,9 +1773,7 @@ function UninstallModal({
                 key={label}
                 className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
-                <span className="text-foreground/30 w-[90px] shrink-0">
-                  {label}
-                </span>
+                <span className="text-foreground/30 w-[90px] shrink-0">{label}</span>
                 {color ? (
                   <span
                     className={`text-[9px] font-bold uppercase rounded px-[6px] py-[1px] self-center ${color}`}
@@ -1963,9 +1781,7 @@ function UninstallModal({
                     {value}
                   </span>
                 ) : (
-                  <span className="text-foreground/70 font-mono break-all">
-                    {value}
-                  </span>
+                  <span className="text-foreground/70 font-mono break-all">{value}</span>
                 )}
               </div>
             ))}
@@ -1973,11 +1789,7 @@ function UninstallModal({
 
           <div>
             <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
-              Type{" "}
-              <span className="text-foreground/70 font-mono">
-                {inst.shortId}
-              </span>{" "}
-              to confirm
+              Type <span className="text-foreground/70 font-mono">{inst.shortId}</span> to confirm
             </label>
             <input
               type="text"
@@ -2024,18 +1836,12 @@ function ConfigureModal({
 }) {
   const [versions, setVersions] = useState<CodeblockVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(true);
-  const [selectedVersion, setSelectedVersion] = useState(
-    inst.blockVersion ?? "",
-  );
+  const [selectedVersion, setSelectedVersion] = useState(inst.blockVersion ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    (
-      ProductService.ListCodeblockVersions as (
-        id: string,
-      ) => Promise<CodeblockVersion[]>
-    )(blockId)
+    (ProductService.ListCodeblockVersions as (id: string) => Promise<CodeblockVersion[]>)(blockId)
       .then((list) => {
         const l = list ?? [];
         setVersions(l);
@@ -2049,12 +1855,10 @@ function ConfigureModal({
     if (!selectedVersion) return;
     setLoading(true);
     setError("");
-    (
-      ProductService.UpgradeCodeblockInstance as (
-        name: string,
-        version: string,
-      ) => Promise<void>
-    )(inst.name, selectedVersion)
+    (ProductService.UpgradeCodeblockInstance as (name: string, version: string) => Promise<void>)(
+      inst.name,
+      selectedVersion,
+    )
       .then(onDone)
       .catch((e) => {
         setError(String(e));
@@ -2070,9 +1874,7 @@ function ConfigureModal({
             <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Configure Installation
             </h2>
-            <p className="text-[11px] text-foreground/40 mt-[2px] font-mono">
-              {inst.name}
-            </p>
+            <p className="text-[11px] text-foreground/40 mt-[2px] font-mono">{inst.name}</p>
           </div>
           {!loading && (
             <button
@@ -2143,8 +1945,8 @@ function HelpTab({ blockId }: { blockId: string }) {
             Get Help
           </h2>
           <p className="text-[12px] text-foreground/60 leading-[1.6]">
-            Have questions about this block or need support? Use the links below
-            to get in touch or report an issue.
+            Have questions about this block or need support? Use the links below to get in touch or
+            report an issue.
           </p>
         </div>
 
@@ -2170,15 +1972,7 @@ function HelpTab({ blockId }: { blockId: string }) {
   );
 }
 
-function HelpLink({
-  icon,
-  title,
-  desc,
-}: {
-  icon: string;
-  title: string;
-  desc: string;
-}) {
+function HelpLink({ icon, title, desc }: { icon: string; title: string; desc: string }) {
   return (
     <button className="flex items-center gap-[16px] bg-card border border-border rounded-[4px] p-[16px] text-left hover:border-foreground/30 transition-colors group w-full">
       <Icon
@@ -2186,9 +1980,7 @@ function HelpLink({
         className="text-xl text-foreground/40 group-hover:text-foreground/70 shrink-0 transition-colors"
       />
       <div className="flex-1">
-        <p className="text-[12px] text-foreground font-bold mb-[2px]">
-          {title}
-        </p>
+        <p className="text-[12px] text-foreground font-bold mb-[2px]">{title}</p>
         <p className="text-[11px] text-foreground/40">{desc}</p>
       </div>
       <Icon
@@ -2250,9 +2042,7 @@ function SettingsTab({
             >
               <p className="text-[11px] text-foreground/40 mb-[8px]">{label}</p>
               <div className="flex items-center justify-between">
-                <span className="text-[28px] font-bold text-foreground font-mono">
-                  {count}
-                </span>
+                <span className="text-[28px] font-bold text-foreground font-mono">{count}</span>
                 {tab && (
                   <Icon
                     icon="solar:arrow-right-linear"
@@ -2271,8 +2061,8 @@ function SettingsTab({
           Plans
         </h2>
         <p className="text-[11px] text-foreground/30 mb-[16px]">
-          Configure Plans as usage models for the block. At least one Plan must
-          be configured before sharing the block.
+          Configure Plans as usage models for the block. At least one Plan must be configured before
+          sharing the block.
         </p>
         {plansLoading ? (
           <div className="flex items-center gap-[8px] text-[11px] text-foreground/40">
@@ -2281,23 +2071,16 @@ function SettingsTab({
           </div>
         ) : plans.length === 0 ? (
           <div className="bg-card border border-dashed border-border rounded-[8px] p-[24px] text-center">
-            <p className="text-[12px] text-foreground/30">
-              No plans configured.
-            </p>
+            <p className="text-[12px] text-foreground/30">No plans configured.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-[12px]">
             {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className="bg-card border border-border rounded-[8px] p-[20px]"
-              >
+              <div key={plan.name} className="bg-card border border-border rounded-[8px] p-[20px]">
                 <p className="text-[13px] font-bold text-foreground mb-[4px]">
                   {plan.displayName || plan.name}
                 </p>
-                <p className="text-[11px] text-foreground/40 font-mono break-all">
-                  {plan.name}
-                </p>
+                <p className="text-[11px] text-foreground/40 font-mono break-all">{plan.name}</p>
               </div>
             ))}
           </div>
@@ -2311,24 +2094,16 @@ function SettingsTab({
         </h2>
         <div className="bg-card border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
           <div>
-            <p className="text-[12px] font-bold text-red-400 mb-[2px]">
-              Delete Block
-            </p>
+            <p className="text-[12px] font-bold text-red-400 mb-[2px]">Delete Block</p>
             <p className="text-[11px] text-foreground/30">
-              Permanently delete this block and all associated data. This action
-              cannot be undone.
+              Permanently delete this block and all associated data. This action cannot be undone.
             </p>
           </div>
           <Button
             variant="secondary"
             onClick={() => setDeleteOpen(true)}
             className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 shrink-0 ml-[24px]"
-            icon={
-              <Icon
-                icon="solar:trash-bin-minimalistic-linear"
-                className="mr-[6px]"
-              />
-            }
+            icon={<Icon icon="solar:trash-bin-minimalistic-linear" className="mr-[6px]" />}
           >
             Delete Block
           </Button>
@@ -2379,10 +2154,7 @@ function DeleteBlockModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-background border border-border rounded-[8px] flex flex-col shadow-2xl w-[480px]">
         <div className="flex items-center gap-[12px] px-[24px] py-[18px] border-b border-border">
-          <Icon
-            icon="solar:trash-bin-minimalistic-linear"
-            className="text-red-400 text-lg"
-          />
+          <Icon icon="solar:trash-bin-minimalistic-linear" className="text-red-400 text-lg" />
           <div>
             <h2 className="font-mono font-bold text-[13px] text-foreground uppercase">
               Delete Block
@@ -2410,23 +2182,16 @@ function DeleteBlockModal({
                 key={label}
                 className="flex gap-[12px] px-[12px] py-[8px] border-b border-border last:border-0"
               >
-                <span className="text-foreground/30 w-[90px] shrink-0">
-                  {label}
-                </span>
-                <span className="text-foreground/70 font-mono break-all">
-                  {value}
-                </span>
+                <span className="text-foreground/30 w-[90px] shrink-0">{label}</span>
+                <span className="text-foreground/70 font-mono break-all">{value}</span>
               </div>
             ))}
           </div>
 
           <div>
             <label className="block text-[10px] font-bold uppercase text-foreground/40 mb-[6px]">
-              Type{" "}
-              <span className="text-foreground/70 font-mono normal-case">
-                {blockId}
-              </span>{" "}
-              to confirm
+              Type <span className="text-foreground/70 font-mono normal-case">{blockId}</span> to
+              confirm
             </label>
             <input
               type="text"
@@ -2446,9 +2211,7 @@ function DeleteBlockModal({
           <Button
             variant="primary"
             onClick={doDelete}
-            disabled={
-              confirm.toLowerCase() !== blockId.toLowerCase() || loading
-            }
+            disabled={confirm.toLowerCase() !== blockId.toLowerCase() || loading}
             className="bg-red-500/20 border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-500/60"
             icon={loading ? <Loader size={14} /> : undefined}
           >
@@ -2472,31 +2235,21 @@ function AccessRoleBadge({ roleLabel }: { roleLabel: string }) {
     case "Admin":
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(10,132,255,0.12)] border border-[rgba(10,132,255,0.25)]">
-          <Icon
-            icon="solar:shield-keyhole-linear"
-            className="text-info text-[10px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-info">
-            Admin
-          </span>
+          <Icon icon="solar:shield-keyhole-linear" className="text-info text-[10px]" />
+          <span className="text-[10px] font-bold font-mono text-info">Admin</span>
         </span>
       );
     case "Contributor":
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-[rgba(52,199,89,0.12)] border border-[rgba(52,199,89,0.25)]">
           <Icon icon="solar:users-group-rounded-linear" className="text-success text-[10px]" />
-          <span className="text-[10px] font-bold font-mono text-success">
-            Contributor
-          </span>
+          <span className="text-[10px] font-bold font-mono text-success">Contributor</span>
         </span>
       );
     default:
       return (
         <span className="inline-flex items-center gap-[4px] px-[8px] py-[2px] rounded-[4px] bg-foreground/[6%] border border-foreground/10">
-          <Icon
-            icon="solar:key-linear"
-            className="text-foreground/40 text-[10px]"
-          />
+          <Icon icon="solar:key-linear" className="text-foreground/40 text-[10px]" />
           <span className="text-[10px] font-bold font-mono text-foreground/40">
             {roleLabel || "Unknown"}
           </span>
@@ -2525,9 +2278,7 @@ function MemberAvatar({ name, photoUrl }: { name: string; photoUrl: string }) {
     .join("");
   return (
     <div className="size-[32px] rounded-full bg-brand-fill/20 border border-brand-fill/30 flex items-center justify-center shrink-0">
-      <span className="text-[11px] font-bold text-brand">
-        {initials || "?"}
-      </span>
+      <span className="text-[11px] font-bold text-brand">{initials || "?"}</span>
     </div>
   );
 }
@@ -2569,8 +2320,7 @@ function AccessTab({
   const [addError, setAddError] = useState("");
 
   // Role change for existing members
-  const [changingRoleMember, setChangingRoleMember] =
-    useState<BlockAccessMember | null>(null);
+  const [changingRoleMember, setChangingRoleMember] = useState<BlockAccessMember | null>(null);
   const [changeRole, setChangeRole] = useState("");
   const [changeRoleLoading, setChangeRoleLoading] = useState(false);
   const [changeRoleError, setChangeRoleError] = useState("");
@@ -2578,14 +2328,11 @@ function AccessTab({
   function fetchRoles(onError?: (e: string) => void) {
     if (blockRoles.length > 0) return;
     setRolesLoading(true);
-    (
-      ProductService.ListBlockRoles as (blockId: string) => Promise<BlockRole[]>
-    )(blockId)
+    (ProductService.ListBlockRoles as (blockId: string) => Promise<BlockRole[]>)(blockId)
       .then((list) => {
         const roles = list ?? [];
         setBlockRoles(roles);
-        if (roles.length > 0 && !addRole)
-          setAddRole(roles[roles.length - 1].name);
+        if (roles.length > 0 && !addRole) setAddRole(roles[roles.length - 1].name);
       })
       .catch((e) => (onError ?? setAddError)(String(e)))
       .finally(() => setRolesLoading(false));
@@ -2614,12 +2361,7 @@ function AccessTab({
   }
 
   function doChangeRole() {
-    if (
-      !changingRoleMember ||
-      !changeRole ||
-      changeRole === changingRoleMember.role
-    )
-      return;
+    if (!changingRoleMember || !changeRole || changeRole === changingRoleMember.role) return;
     setChangeRoleLoading(true);
     setChangeRoleError("");
     // Remove from old role then add to new role
@@ -2711,19 +2453,11 @@ function AccessTab({
       <div className="flex items-center justify-center h-full">
         <div className="p-[16px] bg-red-500/10 border border-red-500/30 rounded-[6px] max-w-[400px]">
           <div className="flex items-center gap-[8px] mb-[8px]">
-            <Icon
-              icon="solar:close-circle-linear"
-              className="text-red-400 text-lg"
-            />
-            <p className="text-[12px] font-bold text-foreground">
-              Failed to load access data
-            </p>
+            <Icon icon="solar:close-circle-linear" className="text-red-400 text-lg" />
+            <p className="text-[12px] font-bold text-foreground">Failed to load access data</p>
           </div>
           <p className="text-[11px] text-foreground/60">{error}</p>
-          <button
-            onClick={onRefresh}
-            className="mt-[10px] text-[10px] text-brand hover:underline"
-          >
+          <button onClick={onRefresh} className="mt-[10px] text-[10px] text-brand hover:underline">
             Try again
           </button>
         </div>
@@ -2770,13 +2504,8 @@ function AccessTab({
 
         {members.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-[10px] pt-[60px]">
-            <Icon
-              icon="solar:users-group-rounded-linear"
-              className="text-foreground/20 text-4xl"
-            />
-            <p className="text-[12px] text-foreground/30">
-              No members with explicit access
-            </p>
+            <Icon icon="solar:users-group-rounded-linear" className="text-foreground/20 text-4xl" />
+            <p className="text-[12px] text-foreground/30">No members with explicit access</p>
           </div>
         ) : (
           <div className="px-[20px] py-[12px] flex flex-col gap-[4px]">
@@ -2791,14 +2520,10 @@ function AccessTab({
                     {m.displayName || m.member}
                   </p>
                   {m.email && (
-                    <p className="text-[10px] font-mono text-foreground/40 truncate">
-                      {m.email}
-                    </p>
+                    <p className="text-[10px] font-mono text-foreground/40 truncate">{m.email}</p>
                   )}
                   {!m.email && m.displayName !== m.member && (
-                    <p className="text-[10px] font-mono text-foreground/30 truncate">
-                      {m.member}
-                    </p>
+                    <p className="text-[10px] font-mono text-foreground/30 truncate">{m.member}</p>
                   )}
                 </div>
                 {isOwner ? (
@@ -2822,10 +2547,7 @@ function AccessTab({
                     {removingMember === m.member ? (
                       <Loader size={14} />
                     ) : (
-                      <Icon
-                        icon="solar:trash-bin-minimalistic-linear"
-                        className="text-sm"
-                      />
+                      <Icon icon="solar:trash-bin-minimalistic-linear" className="text-sm" />
                     )}
                   </button>
                 )}
@@ -2890,9 +2612,7 @@ function AccessTab({
                       );
                     }).length === 0 ? (
                     <div className="py-[12px] px-[12px] text-[11px] text-foreground/30 text-center">
-                      {accountUsers.length === 0
-                        ? "No users found"
-                        : "No matches"}
+                      {accountUsers.length === 0 ? "No users found" : "No matches"}
                     </div>
                   ) : (
                     accountUsers
@@ -2915,10 +2635,7 @@ function AccessTab({
                               : "hover:bg-foreground/[3%]"
                           }`}
                         >
-                          <MemberAvatar
-                            name={u.displayName}
-                            photoUrl={u.photoUrl}
-                          />
+                          <MemberAvatar name={u.displayName} photoUrl={u.photoUrl} />
                           <div className="flex-1 min-w-0">
                             <p className="text-[12px] text-foreground font-semibold truncate">
                               {u.displayName}
@@ -2963,9 +2680,7 @@ function AccessTab({
                       >
                         <div
                           className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
-                            addRole === r.name
-                              ? "border-brand-fill"
-                              : "border-foreground/30"
+                            addRole === r.name ? "border-brand-fill" : "border-foreground/30"
                           }`}
                         >
                           {addRole === r.name && (
@@ -2981,11 +2696,7 @@ function AccessTab({
             </div>
 
             <div className="flex items-center justify-end gap-[8px] px-[24px] py-[16px] border-t border-border shrink-0">
-              <Button
-                variant="secondary"
-                onClick={() => setAddOpen(false)}
-                disabled={addLoading}
-              >
+              <Button variant="secondary" onClick={() => setAddOpen(false)} disabled={addLoading}>
                 Cancel
               </Button>
               <Button
@@ -3047,9 +2758,7 @@ function AccessTab({
                     >
                       <div
                         className={`w-[14px] h-[14px] rounded-full border-2 flex items-center justify-center shrink-0 ${
-                          changeRole === r.name
-                            ? "border-brand-fill"
-                            : "border-foreground/30"
+                          changeRole === r.name ? "border-brand-fill" : "border-foreground/30"
                         }`}
                       >
                         {changeRole === r.name && (
@@ -3075,9 +2784,7 @@ function AccessTab({
                 variant="primary"
                 onClick={doChangeRole}
                 disabled={
-                  !changeRole ||
-                  changeRole === changingRoleMember.role ||
-                  changeRoleLoading
+                  !changeRole || changeRole === changingRoleMember.role || changeRoleLoading
                 }
                 icon={changeRoleLoading ? <Loader size={14} /> : undefined}
               >

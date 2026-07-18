@@ -1,5 +1,5 @@
-import { Icon } from '@iconify/react';
-import { Loader } from '../../Loader';
+import { Icon } from "@iconify/react";
+import { Loader } from "../../Loader";
 
 interface DefineRunViewProps {
   error: string | null;
@@ -24,7 +24,7 @@ export function DefineRunView({ error, progressMsg, version, onRetry }: DefineRu
         )}
         <div className="text-center">
           <p className="text-[12px] font-bold text-foreground mb-[6px]">
-            {error ? 'Define Failed' : 'Running Define'}
+            {error ? "Define Failed" : "Running Define"}
           </p>
           <p className="text-[10px] text-foreground/50 leading-[1.5] max-w-[280px] text-center">
             {error || progressMsg}
@@ -36,7 +36,10 @@ export function DefineRunView({ error, progressMsg, version, onRetry }: DefineRu
           </div>
         )}
         {error && onRetry && (
-          <button onClick={onRetry} className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]">
+          <button
+            onClick={onRetry}
+            className="text-[10px] text-foreground/35 hover:text-foreground transition-colors flex items-center gap-[6px]"
+          >
             <Icon icon="solar:refresh-linear" className="text-sm" />
             Try again
           </button>

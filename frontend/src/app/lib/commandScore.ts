@@ -84,7 +84,8 @@ function commandScoreInner(
     if (
       (score < SCORE_TRANSPOSITION &&
         lowerString.charAt(index - 1) === lowerAbbreviation.charAt(abbreviationIndex + 1)) ||
-      (lowerAbbreviation.charAt(abbreviationIndex + 1) === lowerAbbreviation.charAt(abbreviationIndex) &&
+      (lowerAbbreviation.charAt(abbreviationIndex + 1) ===
+        lowerAbbreviation.charAt(abbreviationIndex) &&
         lowerString.charAt(index - 1) !== lowerAbbreviation.charAt(abbreviationIndex))
     ) {
       transposedScore = commandScoreInner(
@@ -115,11 +116,11 @@ function commandScoreInner(
 }
 
 function formatInput(string: string): string {
-  return string.toLowerCase().replace(COUNT_SPACE_REGEXP, ' ');
+  return string.toLowerCase().replace(COUNT_SPACE_REGEXP, " ");
 }
 
 export function commandScore(string: string, abbreviation: string, aliases?: string[]): number {
-  const target = aliases && aliases.length > 0 ? `${string} ${aliases.join(' ')}` : string;
+  const target = aliases && aliases.length > 0 ? `${string} ${aliases.join(" ")}` : string;
   return commandScoreInner(
     target,
     abbreviation,

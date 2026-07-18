@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
-import * as GitService from '../../../../bindings/alis-hub-v3/gitservice';
-import { Loader } from '../Loader';
+import { useState, useEffect } from "react";
+import { Icon } from "@iconify/react";
+import * as GitService from "../../../../bindings/alis-hub-v3/gitservice";
+import { Loader } from "../Loader";
 
 interface ConflictHunk {
   index: number;
@@ -24,13 +24,20 @@ interface Props {
   onAbort: () => void;
 }
 
-export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComplete, onAbort }: Props) {
-  const startFile = (initialFile && conflictFiles.includes(initialFile)) ? initialFile : (conflictFiles[0] ?? '');
+export function GitConflictEditor({
+  repoPath,
+  conflictFiles,
+  initialFile,
+  onComplete,
+  onAbort,
+}: Props) {
+  const startFile =
+    initialFile && conflictFiles.includes(initialFile) ? initialFile : (conflictFiles[0] ?? "");
   const [selectedFile, setSelectedFile] = useState(startFile);
   const [conflictContent, setConflictContent] = useState<ConflictFileContent | null>(null);
   const [hunkResolutions, setHunkResolutions] = useState<Record<string, (string[] | null)[]>>({});
   const [resolvedFiles, setResolvedFiles] = useState<Set<string>>(new Set());
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [completing, setCompleting] = useState(false);
   const [aborting, setAborting] = useState(false);
 
@@ -41,19 +48,22 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
   function loadFile(fp: string) {
     setSelectedFile(fp);
     setConflictContent(null);
-    (GitService.GetConflictContent as (rp: string, fp: string) => Promise<ConflictFileContent>)(repoPath, fp)
-      .then(content => {
+    (GitService.GetConflictContent as (rp: string, fp: string) => Promise<ConflictFileContent>)(
+      repoPath,
+      fp,
+    )
+      .then((content) => {
         setConflictContent(content);
-        setHunkResolutions(prev => {
+        setHunkResolutions((prev) => {
           if (prev[fp]) return prev;
           return { ...prev, [fp]: Array(content.hunks.length).fill(null) };
         });
       })
-      .catch(e => setError(String(e)));
+      .catch((e) => setError(String(e)));
   }
 
   function resolveHunk(fp: string, idx: number, lines: string[] | null) {
-    setHunkResolutions(prev => {
+    setHunkResolutions((prev) => {
       const arr = [...(prev[fp] ?? [])];
       arr[idx] = lines;
       return { ...prev, [fp]: arr };
@@ -72,32 +82,42 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
 
   function saveFile(fp: string) {
     const resolutions = hunkResolutions[fp];
-    if (!resolutions?.every(r => r !== null)) return;
-    const hunkStrings = resolutions.map(r => (r ?? []).join('\n'));
-    (GitService.SaveConflictResolution as (rp: string, fp: string, res: string[]) => Promise<void>)(repoPath, fp, hunkStrings)
-      .then(() => setResolvedFiles(prev => new Set([...prev, fp])))
-      .catch(e => setError(String(e)));
+    if (!resolutions?.every((r) => r !== null)) return;
+    const hunkStrings = resolutions.map((r) => (r ?? []).join("\n"));
+    (GitService.SaveConflictResolution as (rp: string, fp: string, res: string[]) => Promise<void>)(
+      repoPath,
+      fp,
+      hunkStrings,
+    )
+      .then(() => setResolvedFiles((prev) => new Set([...prev, fp])))
+      .catch((e) => setError(String(e)));
   }
 
   function handleComplete() {
     setCompleting(true);
     (GitService.CompleteMerge as (rp: string) => Promise<void>)(repoPath)
       .then(onComplete)
-      .catch(e => { setError(String(e)); setCompleting(false); });
+      .catch((e) => {
+        setError(String(e));
+        setCompleting(false);
+      });
   }
 
   function handleAbort() {
     setAborting(true);
     (GitService.AbortMerge as (rp: string) => Promise<void>)(repoPath)
       .then(onAbort)
-      .catch(e => { setError(String(e)); setAborting(false); });
+      .catch((e) => {
+        setError(String(e));
+        setAborting(false);
+      });
   }
 
   const fileResolutions = hunkResolutions[selectedFile] ?? [];
   const allHunksResolved =
     conflictContent !== null &&
     fileResolutions.length === conflictContent.hunks.length &&
-    fileResolutions.every(r => r !== null);
+    fileResolutions.every((r) => r !== null);
   const isFileSaved = resolvedFiles.has(selectedFile);
   const allFilesResolved = resolvedFiles.size >= conflictFiles.length;
 
@@ -108,7 +128,7 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
         <div className="flex items-center gap-2">
           <Icon icon="solar:danger-triangle-linear" className="text-amber-400 text-sm" />
           <span className="text-[11px] font-semibold text-amber-400">
-            Merge Conflicts — {conflictFiles.length} file{conflictFiles.length === 1 ? '' : 's'}
+            Merge Conflicts — {conflictFiles.length} file{conflictFiles.length === 1 ? "" : "s"}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -117,14 +137,14 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
             disabled={aborting || completing}
             className="text-[10px] px-[8px] py-[2px] rounded-[3px] border border-red-400/30 hover:border-red-400/60 text-red-400 transition-colors disabled:opacity-40"
           >
-            {aborting ? 'Aborting…' : 'Abort Merge'}
+            {aborting ? "Aborting…" : "Abort Merge"}
           </button>
           <button
             onClick={handleComplete}
             disabled={!allFilesResolved || completing || aborting}
             className="text-[10px] px-[8px] py-[2px] rounded-[3px] border border-green-400/30 hover:border-green-400/60 text-green-400 transition-colors disabled:opacity-40"
           >
-            {completing ? 'Completing…' : 'Complete Merge'}
+            {completing ? "Completing…" : "Complete Merge"}
           </button>
         </div>
       </div>
@@ -139,23 +159,26 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
         {/* Left: file list */}
         <div className="w-[160px] shrink-0 border-r border-border flex flex-col overflow-hidden">
           <div className="flex-1 overflow-auto py-1">
-            {conflictFiles.map(fp => {
+            {conflictFiles.map((fp) => {
               const saved = resolvedFiles.has(fp);
               const res = hunkResolutions[fp] ?? [];
-              const unresolved = res.filter(r => r === null).length;
+              const unresolved = res.filter((r) => r === null).length;
               const isActive = fp === selectedFile;
-              const fileName = fp.split('/').pop() ?? fp;
+              const fileName = fp.split("/").pop() ?? fp;
               return (
                 <button
                   key={fp}
                   onClick={() => loadFile(fp)}
-                  className={`w-full flex items-center gap-1.5 px-3 py-[6px] text-left transition-colors ${isActive ? 'bg-foreground/8 text-foreground' : 'text-foreground/60 hover:bg-foreground/4 hover:text-foreground/80'}`}
+                  className={`w-full flex items-center gap-1.5 px-3 py-[6px] text-left transition-colors ${isActive ? "bg-foreground/8 text-foreground" : "text-foreground/60 hover:bg-foreground/4 hover:text-foreground/80"}`}
                 >
                   {saved ? (
-                    <Icon icon="solar:check-circle-bold" className="text-green-400 text-xs shrink-0" />
+                    <Icon
+                      icon="solar:check-circle-bold"
+                      className="text-green-400 text-xs shrink-0"
+                    />
                   ) : (
                     <span className="w-4 h-4 shrink-0 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 text-[9px] font-bold leading-none">
-                      {unresolved > 0 ? unresolved : '!'}
+                      {unresolved > 0 ? unresolved : "!"}
                     </span>
                   )}
                   <span className="text-[11px] font-mono truncate">{fileName}</span>
@@ -169,7 +192,9 @@ export function GitConflictEditor({ repoPath, conflictFiles, initialFile, onComp
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Toolbar */}
           <div className="flex items-center justify-between px-3 py-[6px] border-b border-border shrink-0 gap-2">
-            <span className="text-[10px] font-mono text-foreground/40 truncate">{selectedFile}</span>
+            <span className="text-[10px] font-mono text-foreground/40 truncate">
+              {selectedFile}
+            </span>
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={acceptAllCurrent}
@@ -237,7 +262,9 @@ function ConflictHunkView({
       parts.push(
         <div key={`before-${idx}`}>
           {hunk.before.map((line, i) => (
-            <div key={i} className="px-3 py-[1px] text-foreground/50 leading-[1.6]">{line || ' '}</div>
+            <div key={i} className="px-3 py-[1px] text-foreground/50 leading-[1.6]">
+              {line || " "}
+            </div>
           ))}
         </div>,
       );
@@ -257,7 +284,9 @@ function ConflictHunkView({
             </button>
           </div>
           {resolved.map((line, i) => (
-            <div key={i} className="px-3 py-[1px] text-foreground/70 leading-[1.6]">{line || ' '}</div>
+            <div key={i} className="px-3 py-[1px] text-foreground/70 leading-[1.6]">
+              {line || " "}
+            </div>
           ))}
         </div>,
       );
@@ -290,12 +319,16 @@ function ConflictHunkView({
               <span className="text-[10px] text-green-400 font-bold">Current Change (HEAD)</span>
             </div>
             {hunk.current.map((line, i) => (
-              <div key={i} className="px-3 py-[1px] text-green-100/80 leading-[1.6]">{line || ' '}</div>
+              <div key={i} className="px-3 py-[1px] text-green-100/80 leading-[1.6]">
+                {line || " "}
+              </div>
             ))}
           </div>
           <div className="flex items-center px-3 py-[2px] bg-muted">
             <div className="flex-1 h-[1px] bg-foreground/10" />
-            <span className="px-2 text-[9px] text-foreground/20 uppercase tracking-widest">=======</span>
+            <span className="px-2 text-[9px] text-foreground/20 uppercase tracking-widest">
+              =======
+            </span>
             <div className="flex-1 h-[1px] bg-foreground/10" />
           </div>
           <div className="bg-blue-950/30 border-l-[3px] border-blue-500">
@@ -304,7 +337,9 @@ function ConflictHunkView({
               <span className="text-[10px] text-blue-400 font-bold">Incoming Change</span>
             </div>
             {hunk.incoming.map((line, i) => (
-              <div key={i} className="px-3 py-[1px] text-blue-100/80 leading-[1.6]">{line || ' '}</div>
+              <div key={i} className="px-3 py-[1px] text-blue-100/80 leading-[1.6]">
+                {line || " "}
+              </div>
             ))}
           </div>
         </div>,
@@ -315,7 +350,9 @@ function ConflictHunkView({
       parts.push(
         <div key={`after-${idx}`}>
           {hunk.after.map((line, i) => (
-            <div key={i} className="px-3 py-[1px] text-foreground/50 leading-[1.6]">{line || ' '}</div>
+            <div key={i} className="px-3 py-[1px] text-foreground/50 leading-[1.6]">
+              {line || " "}
+            </div>
           ))}
         </div>,
       );

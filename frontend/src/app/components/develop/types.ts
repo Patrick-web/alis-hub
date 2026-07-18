@@ -80,28 +80,35 @@ export interface PackageScript {
   add: string;
 }
 
-export type DefineStep = 'commits' | 'confirm' | 'running' | 'glass';
-export type BuildStep = 'commits' | 'confirm' | 'running' | 'result';
-export type BuildMode = 'cloud' | 'local' | 'deploy';
-export type DeployStep = 'loading' | 'confirm' | 'running' | 'result';
-export type PackagesStep = 'scan' | 'select-action' | 'select-folders' | 'venv-setup' | 'preparing' | 'running';
+export type DefineStep = "commits" | "confirm" | "running" | "glass";
+export type BuildStep = "commits" | "confirm" | "running" | "result";
+export type BuildMode = "cloud" | "local" | "deploy";
+export type DeployStep = "loading" | "confirm" | "running" | "result";
+export type PackagesStep =
+  "scan" | "select-action" | "select-folders" | "venv-setup" | "preparing" | "running";
 
 export function parseNeuron(name: string) {
   const mDot = name.match(/^(.+)\.(v\d+)$/);
   if (mDot) return { id: mDot[1], version: mDot[2] };
   const mHyphen = name.match(/^(.+)-(v\d+)$/);
   if (mHyphen) return { id: mHyphen[1], version: mHyphen[2] };
-  return { id: name, version: 'v1' };
+  return { id: name, version: "v1" };
 }
 
 export function formatTimestamp(ts: number): string {
   const d = new Date(ts * 1000);
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function formatRelativeTime(unixSeconds: number): string {
   const diff = Math.floor(Date.now() / 1000) - unixSeconds;
-  if (diff < 60) return 'just now';
+  if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
@@ -109,5 +116,9 @@ export function formatRelativeTime(unixSeconds: number): string {
 
 export function isAuthError(e: unknown): boolean {
   const s = String(e);
-  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+  return (
+    s.includes("invalid_grant") ||
+    s.includes("refresh token has expired") ||
+    s.includes("console token expired")
+  );
 }

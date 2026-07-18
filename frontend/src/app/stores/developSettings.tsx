@@ -5,11 +5,11 @@ import {
   useReducer,
   useEffect,
   type ReactNode,
-} from 'react';
-import { useWorkspace } from './workspace';
-import * as settingsClient from '../lib/settingsClient';
+} from "react";
+import { useWorkspace } from "./workspace";
+import * as settingsClient from "../lib/settingsClient";
 
-export type SmartSortKey = 'defined' | 'built' | 'deployed' | 'committed';
+export type SmartSortKey = "defined" | "built" | "deployed" | "committed";
 
 export interface ProductDevelopSettings {
   ignoreHiddenFolders: boolean;
@@ -22,19 +22,19 @@ export interface ProductDevelopSettings {
 const DEFAULT_PRODUCT_SETTINGS: ProductDevelopSettings = {
   ignoreHiddenFolders: true,
   ignoredFolderPatterns: [],
-  defaultBranch: 'local',
+  defaultBranch: "local",
   smartSortEnabled: false,
-  smartSortKey: 'built',
+  smartSortKey: "built",
 };
 
 type DevelopSettingsMap = Record<string, ProductDevelopSettings>;
 
 type DevelopSettingsAction =
-  | { type: 'SET_IGNORE_HIDDEN'; key: string; payload: boolean }
-  | { type: 'SET_IGNORED_PATTERNS'; key: string; payload: string[] }
-  | { type: 'SET_DEFAULT_BRANCH'; key: string; payload: string }
-  | { type: 'SET_SMART_SORT_ENABLED'; key: string; payload: boolean }
-  | { type: 'SET_SMART_SORT_KEY'; key: string; payload: SmartSortKey };
+  | { type: "SET_IGNORE_HIDDEN"; key: string; payload: boolean }
+  | { type: "SET_IGNORED_PATTERNS"; key: string; payload: string[] }
+  | { type: "SET_DEFAULT_BRANCH"; key: string; payload: string }
+  | { type: "SET_SMART_SORT_ENABLED"; key: string; payload: boolean }
+  | { type: "SET_SMART_SORT_KEY"; key: string; payload: SmartSortKey };
 
 interface DevelopSettingsContextValue {
   settings: ProductDevelopSettings;
@@ -45,7 +45,7 @@ interface DevelopSettingsContextValue {
   setSmartSortKey: (v: SmartSortKey) => void;
 }
 
-const STORAGE_KEY = 'alis:develop-settings';
+const STORAGE_KEY = "alis:develop-settings";
 
 function loadFromStorage(): DevelopSettingsMap {
   try {
@@ -64,15 +64,15 @@ function saveToStorage(map: DevelopSettingsMap) {
 function reducer(state: DevelopSettingsMap, action: DevelopSettingsAction): DevelopSettingsMap {
   const prev = state[action.key] ?? DEFAULT_PRODUCT_SETTINGS;
   switch (action.type) {
-    case 'SET_IGNORE_HIDDEN':
+    case "SET_IGNORE_HIDDEN":
       return { ...state, [action.key]: { ...prev, ignoreHiddenFolders: action.payload } };
-    case 'SET_IGNORED_PATTERNS':
+    case "SET_IGNORED_PATTERNS":
       return { ...state, [action.key]: { ...prev, ignoredFolderPatterns: action.payload } };
-    case 'SET_DEFAULT_BRANCH':
+    case "SET_DEFAULT_BRANCH":
       return { ...state, [action.key]: { ...prev, defaultBranch: action.payload } };
-    case 'SET_SMART_SORT_ENABLED':
+    case "SET_SMART_SORT_ENABLED":
       return { ...state, [action.key]: { ...prev, smartSortEnabled: action.payload } };
-    case 'SET_SMART_SORT_KEY':
+    case "SET_SMART_SORT_KEY":
       return { ...state, [action.key]: { ...prev, smartSortKey: action.payload } };
     default:
       return state;
@@ -92,35 +92,52 @@ export function DevelopSettingsProvider({ children }: { children: ReactNode }) {
   const key = `${workspace.organisation}/${workspace.product}`;
   const settings: ProductDevelopSettings = map[key] ?? DEFAULT_PRODUCT_SETTINGS;
 
-  const setIgnoreHiddenFolders = useCallback((v: boolean) => {
-    dispatch({ type: 'SET_IGNORE_HIDDEN', key, payload: v });
-  }, [key]);
+  const setIgnoreHiddenFolders = useCallback(
+    (v: boolean) => {
+      dispatch({ type: "SET_IGNORE_HIDDEN", key, payload: v });
+    },
+    [key],
+  );
 
-  const setIgnoredFolderPatterns = useCallback((v: string[]) => {
-    dispatch({ type: 'SET_IGNORED_PATTERNS', key, payload: v });
-  }, [key]);
+  const setIgnoredFolderPatterns = useCallback(
+    (v: string[]) => {
+      dispatch({ type: "SET_IGNORED_PATTERNS", key, payload: v });
+    },
+    [key],
+  );
 
-  const setDefaultBranch = useCallback((v: string) => {
-    dispatch({ type: 'SET_DEFAULT_BRANCH', key, payload: v });
-  }, [key]);
+  const setDefaultBranch = useCallback(
+    (v: string) => {
+      dispatch({ type: "SET_DEFAULT_BRANCH", key, payload: v });
+    },
+    [key],
+  );
 
-  const setSmartSortEnabled = useCallback((v: boolean) => {
-    dispatch({ type: 'SET_SMART_SORT_ENABLED', key, payload: v });
-  }, [key]);
+  const setSmartSortEnabled = useCallback(
+    (v: boolean) => {
+      dispatch({ type: "SET_SMART_SORT_ENABLED", key, payload: v });
+    },
+    [key],
+  );
 
-  const setSmartSortKey = useCallback((v: SmartSortKey) => {
-    dispatch({ type: 'SET_SMART_SORT_KEY', key, payload: v });
-  }, [key]);
+  const setSmartSortKey = useCallback(
+    (v: SmartSortKey) => {
+      dispatch({ type: "SET_SMART_SORT_KEY", key, payload: v });
+    },
+    [key],
+  );
 
   return (
-    <DevelopSettingsContext.Provider value={{
-      settings,
-      setIgnoreHiddenFolders,
-      setIgnoredFolderPatterns,
-      setDefaultBranch,
-      setSmartSortEnabled,
-      setSmartSortKey,
-    }}>
+    <DevelopSettingsContext.Provider
+      value={{
+        settings,
+        setIgnoreHiddenFolders,
+        setIgnoredFolderPatterns,
+        setDefaultBranch,
+        setSmartSortEnabled,
+        setSmartSortKey,
+      }}
+    >
       {children}
     </DevelopSettingsContext.Provider>
   );
@@ -128,6 +145,6 @@ export function DevelopSettingsProvider({ children }: { children: ReactNode }) {
 
 export function useDevelopSettings(): DevelopSettingsContextValue {
   const ctx = useContext(DevelopSettingsContext);
-  if (!ctx) throw new Error('useDevelopSettings must be used within DevelopSettingsProvider');
+  if (!ctx) throw new Error("useDevelopSettings must be used within DevelopSettingsProvider");
   return ctx;
 }

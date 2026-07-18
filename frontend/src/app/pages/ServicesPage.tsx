@@ -1,12 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Icon } from '@iconify/react';
-import { FilterInput } from '../components/FilterInput';
-import { Toolbar } from '../components/Toolbar';
-import { EmptyState } from '../components/EmptyState';
-import { useWorkspace } from '../stores/workspace';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
-import { Loader } from '../components/Loader';
-import { NewServiceModal } from '../components/NewServiceModal';
+import { useState, useEffect, useMemo } from "react";
+import { Icon } from "@iconify/react";
+import { FilterInput } from "../components/FilterInput";
+import { Toolbar } from "../components/Toolbar";
+import { EmptyState } from "../components/EmptyState";
+import { useWorkspace } from "../stores/workspace";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
+import { Loader } from "../components/Loader";
+import { NewServiceModal } from "../components/NewServiceModal";
 
 type NeuronItem = { id: string; version: string; state: number };
 type DeploymentItem = { neuronId: string; version: string; state: number; logsUrl: string };
@@ -93,9 +93,7 @@ function EnvCell({ neuronVersion, dep }: { neuronVersion: string; dep?: Deployme
   return (
     <div className="flex flex-col items-start gap-[5px]">
       <div className="flex items-center gap-[5px]">
-        <span className="text-[11px] font-mono text-foreground/70">
-          v{dep.version}
-        </span>
+        <span className="text-[11px] font-mono text-foreground/70">v{dep.version}</span>
         {isBehind && (
           <span className="size-[6px] rounded-full bg-warning shrink-0" title="Behind latest" />
         )}
@@ -110,7 +108,7 @@ export function ServicesPage() {
   const [overview, setOverview] = useState<ServicesOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [newServiceOpen, setNewServiceOpen] = useState(false);
 
   const refresh = () => {
@@ -134,16 +132,14 @@ export function ServicesPage() {
   const filtered = useMemo(() => {
     if (!overview) return [];
     const q = filter.toLowerCase();
-    return q ? overview.neurons.filter(n => n.id.toLowerCase().includes(q)) : overview.neurons;
+    return q ? overview.neurons.filter((n) => n.id.toLowerCase().includes(q)) : overview.neurons;
   }, [overview, filter]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between shrink-0">
-        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
-          Services
-        </p>
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">Services</p>
         {overview && (
           <p className="text-[10px] text-foreground/30 font-mono">
             {overview.neurons.length} services · {overview.environments.length} environments
@@ -156,7 +152,7 @@ export function ServicesPage() {
         <FilterInput
           placeholder="Filter services..."
           value={filter}
-          onChange={e => setFilter(e.target.value)}
+          onChange={(e) => setFilter(e.target.value)}
         />
         {!loading && !error && (
           <button
@@ -218,11 +214,16 @@ export function ServicesPage() {
                     Latest
                   </span>
                 </th>
-                {overview.environments.map(env => {
+                {overview.environments.map((env) => {
                   const isActive = env.name === state.activeEnvName;
                   return (
-                    <th key={env.name} className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? 'border-b-2 border-brand-fill' : ''}`}>
-                      <span className={`text-[10px] font-bold font-mono uppercase ${isActive ? 'text-brand' : 'text-foreground/40'}`}>
+                    <th
+                      key={env.name}
+                      className={`text-left px-[16px] py-[8px] min-w-[180px] ${isActive ? "border-b-2 border-brand-fill" : ""}`}
+                    >
+                      <span
+                        className={`text-[10px] font-bold font-mono uppercase ${isActive ? "text-brand" : "text-foreground/40"}`}
+                      >
                         {env.displayName}
                       </span>
                     </th>
@@ -231,7 +232,7 @@ export function ServicesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(neuron => (
+              {filtered.map((neuron) => (
                 <tr
                   key={neuron.id}
                   className="border-b border-border hover:bg-foreground/[2%] transition-colors"
@@ -246,11 +247,14 @@ export function ServicesPage() {
                       v{neuron.version}
                     </span>
                   </td>
-                  {overview.environments.map(env => {
-                    const dep = env.deployments.find(d => d.neuronId === neuron.id);
+                  {overview.environments.map((env) => {
+                    const dep = env.deployments.find((d) => d.neuronId === neuron.id);
                     const isActive = env.name === state.activeEnvName;
                     return (
-                      <td key={env.name} className={`px-[16px] py-[12px] ${isActive ? 'bg-brand-fill/3' : ''}`}>
+                      <td
+                        key={env.name}
+                        className={`px-[16px] py-[12px] ${isActive ? "bg-brand-fill/3" : ""}`}
+                      >
                         <EnvCell neuronVersion={neuron.version} dep={dep} />
                       </td>
                     );
@@ -262,7 +266,7 @@ export function ServicesPage() {
                   <td colSpan={2 + (overview.environments.length || 0)}>
                     <EmptyState
                       icon="solar:server-minimalistic-linear"
-                      title={filter ? `No services match "${filter}"` : 'No services found'}
+                      title={filter ? `No services match "${filter}"` : "No services found"}
                       className="py-[32px]"
                     />
                   </td>

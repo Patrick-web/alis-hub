@@ -1,5 +1,5 @@
-import { ForgejoPR } from './types';
-import { GitPullRequest, Loader2, Plus, RefreshCw } from 'lucide-react';
+import { ForgejoPR } from "./types";
+import { GitPullRequest, Loader2, Plus, RefreshCw } from "lucide-react";
 
 interface Props {
   prs: ForgejoPR[];
@@ -13,7 +13,7 @@ interface Props {
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return 'just now';
+  if (s < 60) return "just now";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
@@ -42,7 +42,7 @@ export function GitPRList({ prs, selectedPR, loading, onSelect, onNewPR, onRefre
           title="Refresh"
           className="p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors disabled:opacity-40"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
         </button>
         <button
           onClick={onNewPR}
@@ -65,7 +65,7 @@ export function GitPRList({ prs, selectedPR, loading, onSelect, onNewPR, onRefre
             <p className="text-[11px] text-foreground/30">No open PRs</p>
           </div>
         ) : (
-          prs.map(pr => {
+          prs.map((pr) => {
             const isSelected = selectedPR?.number === pr.number;
             return (
               <button
@@ -73,15 +73,17 @@ export function GitPRList({ prs, selectedPR, loading, onSelect, onNewPR, onRefre
                 onClick={() => onSelect(pr)}
                 className={`w-full text-left flex items-start gap-2 px-3 py-2 border-b border-foreground/8 transition-colors ${
                   isSelected
-                    ? 'bg-pink-600/10 border-l-2 border-l-pink-500'
-                    : 'hover:bg-foreground/[0.03]'
+                    ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                    : "hover:bg-foreground/[0.03]"
                 }`}
               >
                 <GitPullRequest size={11} className="mt-0.5 shrink-0 text-green-400/70" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1 min-w-0">
                     <span className="text-[10px] text-foreground/30 shrink-0">#{pr.number}</span>
-                    <span className="text-[11px] text-foreground/80 truncate leading-snug">{pr.title}</span>
+                    <span className="text-[11px] text-foreground/80 truncate leading-snug">
+                      {pr.title}
+                    </span>
                   </div>
                   <div className="text-[10px] text-foreground/35 truncate mt-0.5">
                     {pr.headBranch} → {pr.baseBranch}

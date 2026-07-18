@@ -1,7 +1,8 @@
-import { createContext, useContext, useCallback, useState, type ReactNode } from 'react';
-import * as settingsClient from '../lib/settingsClient';
+import { createContext, useContext, useCallback, useState, type ReactNode } from "react";
+import * as settingsClient from "../lib/settingsClient";
 
-export type AppPhase = 'init' | 'login' | 'hub' | 'picking-org' | 'picking-product' | 'workspace' | 'standalone';
+export type AppPhase =
+  "init" | "login" | "hub" | "picking-org" | "picking-product" | "workspace" | "standalone";
 
 export interface RecentLandingZone {
   org: string;
@@ -30,16 +31,16 @@ export interface Neuron {
 export interface Environment {
   id: string;
   name: string;
-  type: 'dev' | 'staging' | 'prod';
+  type: "dev" | "staging" | "prod";
   googleProjectId: string;
   googleRegion: string;
 }
 
 export interface LoadedEnv {
-  name: string;        // full resource name e.g. organisations/voyage/products/vp/environments/...
+  name: string; // full resource name e.g. organisations/voyage/products/vp/environments/...
   displayName: string; // e.g. "Production"
   state: number;
-  envType?: number;    // 1=DEV, 2=STAGING, 3=PROD
+  envType?: number; // 1=DEV, 2=STAGING, 3=PROD
   gcpProjectId?: string;
   gcpProjectNumber?: string;
   gcpRegion?: string;
@@ -67,67 +68,70 @@ export interface WorkspaceState {
 }
 
 type WorkspaceAction =
-  | { type: 'SET_PHASE'; payload: AppPhase }
-  | { type: 'SET_WORKSPACE'; payload: Partial<WorkspaceState> }
-  | { type: 'SET_ORG'; payload: Organisation }
-  | { type: 'SET_PRODUCT'; payload: { org: string; orgDisplayName: string; product: string; productDisplayName: string } }
-  | { type: 'SET_NEURONS'; payload: Neuron[] }
-  | { type: 'SET_ENVIRONMENTS'; payload: Environment[] }
-  | { type: 'SET_ACTIVE_NEURONS'; payload: string[] }
-  | { type: 'SET_ENVIRONMENT'; payload: string }
-  | { type: 'SET_LOADED_ENVS'; payload: LoadedEnv[] }
-  | { type: 'SET_ACTIVE_ENV'; payload: string };
+  | { type: "SET_PHASE"; payload: AppPhase }
+  | { type: "SET_WORKSPACE"; payload: Partial<WorkspaceState> }
+  | { type: "SET_ORG"; payload: Organisation }
+  | {
+      type: "SET_PRODUCT";
+      payload: { org: string; orgDisplayName: string; product: string; productDisplayName: string };
+    }
+  | { type: "SET_NEURONS"; payload: Neuron[] }
+  | { type: "SET_ENVIRONMENTS"; payload: Environment[] }
+  | { type: "SET_ACTIVE_NEURONS"; payload: string[] }
+  | { type: "SET_ENVIRONMENT"; payload: string }
+  | { type: "SET_LOADED_ENVS"; payload: LoadedEnv[] }
+  | { type: "SET_ACTIVE_ENV"; payload: string };
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
-    case 'SET_PHASE':
+    case "SET_PHASE":
       return { ...state, phase: action.payload };
-    case 'SET_WORKSPACE':
+    case "SET_WORKSPACE":
       return { ...state, ...action.payload };
-    case 'SET_ORG':
-      return { ...state, selectedOrg: action.payload, phase: 'picking-product' };
-    case 'SET_PRODUCT': {
+    case "SET_ORG":
+      return { ...state, selectedOrg: action.payload, phase: "picking-product" };
+    case "SET_PRODUCT": {
       const recent: RecentLandingZone = {
         org: action.payload.org,
         orgDisplayName: action.payload.orgDisplayName,
         product: action.payload.product,
         productDisplayName: action.payload.productDisplayName,
       };
-      settingsClient.set('alis:recentLandingZone', JSON.stringify(recent));
-      settingsClient.set('alis:activeEnvName', '');
+      settingsClient.set("alis:recentLandingZone", JSON.stringify(recent));
+      settingsClient.set("alis:activeEnvName", "");
       return {
         ...state,
         organisation: action.payload.org,
         organisationDisplayName: action.payload.orgDisplayName,
         product: action.payload.product,
         productDisplayName: action.payload.productDisplayName,
-        phase: 'workspace',
+        phase: "workspace",
         recentLandingZone: recent,
-        environment: 'production',
-        environmentDisplayName: 'Production',
-        environmentGoogleProjectId: '',
-        environmentGoogleRegion: '',
-        rootDirectory: '',
+        environment: "production",
+        environmentDisplayName: "Production",
+        environmentGoogleProjectId: "",
+        environmentGoogleRegion: "",
+        rootDirectory: "",
         neurons: [],
         environments: [],
         activeNeuronIds: [],
         loadedEnvs: [],
-        activeEnvName: '',
+        activeEnvName: "",
         envsError: null,
       };
     }
-    case 'SET_NEURONS':
+    case "SET_NEURONS":
       return { ...state, neurons: action.payload };
-    case 'SET_ENVIRONMENTS':
+    case "SET_ENVIRONMENTS":
       return { ...state, environments: action.payload };
-    case 'SET_ACTIVE_NEURONS':
+    case "SET_ACTIVE_NEURONS":
       return { ...state, activeNeuronIds: action.payload };
-    case 'SET_ENVIRONMENT':
+    case "SET_ENVIRONMENT":
       return { ...state, environment: action.payload };
-    case 'SET_LOADED_ENVS':
+    case "SET_LOADED_ENVS":
       return { ...state, loadedEnvs: action.payload };
-    case 'SET_ACTIVE_ENV':
-      settingsClient.set('alis:activeEnvName', action.payload);
+    case "SET_ACTIVE_ENV":
+      settingsClient.set("alis:activeEnvName", action.payload);
       return { ...state, activeEnvName: action.payload };
     default:
       return state;
@@ -139,24 +143,26 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
 function buildInitialState(): WorkspaceState {
   let recentLandingZone: RecentLandingZone | null = null;
   try {
-    const raw = settingsClient.getCached('alis:recentLandingZone');
+    const raw = settingsClient.getCached("alis:recentLandingZone");
     recentLandingZone = raw ? (JSON.parse(raw) as RecentLandingZone) : null;
-  } catch { recentLandingZone = null; }
-  const activeEnvName = settingsClient.getCached('alis:activeEnvName') ?? '';
+  } catch {
+    recentLandingZone = null;
+  }
+  const activeEnvName = settingsClient.getCached("alis:activeEnvName") ?? "";
 
   return {
-    phase: 'init',
+    phase: "init",
     recentLandingZone,
-    organisation: '',
-    organisationDisplayName: '',
+    organisation: "",
+    organisationDisplayName: "",
     selectedOrg: null,
-    product: '',
-    productDisplayName: '',
-    environment: 'production',
-    environmentDisplayName: 'Production',
-    environmentGoogleProjectId: '',
-    environmentGoogleRegion: '',
-    rootDirectory: '',
+    product: "",
+    productDisplayName: "",
+    environment: "production",
+    environmentDisplayName: "Production",
+    environmentGoogleProjectId: "",
+    environmentGoogleRegion: "",
+    rootDirectory: "",
     neurons: [],
     activeNeuronIds: [],
     environments: [],
@@ -170,7 +176,12 @@ interface WorkspaceContextValue {
   state: WorkspaceState;
   setPhase: (phase: AppPhase) => void;
   setOrg: (org: Organisation) => void;
-  setProduct: (org: string, orgDisplayName: string, product: string, productDisplayName: string) => void;
+  setProduct: (
+    org: string,
+    orgDisplayName: string,
+    product: string,
+    productDisplayName: string,
+  ) => void;
   setNeurons: (neurons: Neuron[]) => void;
   setActiveNeurons: (ids: string[]) => void;
   setEnvironment: (envId: string) => void;
@@ -185,23 +196,66 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<WorkspaceState>(buildInitialState);
 
   const dispatch = useCallback((action: WorkspaceAction) => {
-    setState(prev => workspaceReducer(prev, action));
+    setState((prev) => workspaceReducer(prev, action));
   }, []);
 
-  const setPhase = useCallback((phase: AppPhase) => dispatch({ type: 'SET_PHASE', payload: phase }), [dispatch]);
-  const setOrg = useCallback((org: Organisation) => dispatch({ type: 'SET_ORG', payload: org }), [dispatch]);
-  const setProduct = useCallback((org: string, orgDisplayName: string, product: string, productDisplayName: string) => {
-    dispatch({ type: 'SET_PRODUCT', payload: { org, orgDisplayName, product, productDisplayName } });
-  }, [dispatch]);
-  const setNeurons = useCallback((neurons: Neuron[]) => dispatch({ type: 'SET_NEURONS', payload: neurons }), [dispatch]);
-  const setActiveNeurons = useCallback((ids: string[]) => dispatch({ type: 'SET_ACTIVE_NEURONS', payload: ids }), [dispatch]);
-  const setEnvironment = useCallback((envId: string) => dispatch({ type: 'SET_ENVIRONMENT', payload: envId }), [dispatch]);
-  const setLoadedEnvs = useCallback((envs: LoadedEnv[]) => dispatch({ type: 'SET_LOADED_ENVS', payload: envs }), [dispatch]);
-  const setActiveEnv = useCallback((envName: string) => dispatch({ type: 'SET_ACTIVE_ENV', payload: envName }), [dispatch]);
-  const updateWorkspace = useCallback((partial: Partial<WorkspaceState>) => dispatch({ type: 'SET_WORKSPACE', payload: partial }), [dispatch]);
+  const setPhase = useCallback(
+    (phase: AppPhase) => dispatch({ type: "SET_PHASE", payload: phase }),
+    [dispatch],
+  );
+  const setOrg = useCallback(
+    (org: Organisation) => dispatch({ type: "SET_ORG", payload: org }),
+    [dispatch],
+  );
+  const setProduct = useCallback(
+    (org: string, orgDisplayName: string, product: string, productDisplayName: string) => {
+      dispatch({
+        type: "SET_PRODUCT",
+        payload: { org, orgDisplayName, product, productDisplayName },
+      });
+    },
+    [dispatch],
+  );
+  const setNeurons = useCallback(
+    (neurons: Neuron[]) => dispatch({ type: "SET_NEURONS", payload: neurons }),
+    [dispatch],
+  );
+  const setActiveNeurons = useCallback(
+    (ids: string[]) => dispatch({ type: "SET_ACTIVE_NEURONS", payload: ids }),
+    [dispatch],
+  );
+  const setEnvironment = useCallback(
+    (envId: string) => dispatch({ type: "SET_ENVIRONMENT", payload: envId }),
+    [dispatch],
+  );
+  const setLoadedEnvs = useCallback(
+    (envs: LoadedEnv[]) => dispatch({ type: "SET_LOADED_ENVS", payload: envs }),
+    [dispatch],
+  );
+  const setActiveEnv = useCallback(
+    (envName: string) => dispatch({ type: "SET_ACTIVE_ENV", payload: envName }),
+    [dispatch],
+  );
+  const updateWorkspace = useCallback(
+    (partial: Partial<WorkspaceState>) => dispatch({ type: "SET_WORKSPACE", payload: partial }),
+    [dispatch],
+  );
 
   return (
-    <WorkspaceContext.Provider value={{ state, setPhase, setOrg, setProduct, setNeurons, setActiveNeurons, setEnvironment, setLoadedEnvs, setActiveEnv, updateWorkspace }}>
+    <WorkspaceContext.Provider
+      value={{
+        state,
+        setPhase,
+        setOrg,
+        setProduct,
+        setNeurons,
+        setActiveNeurons,
+        setEnvironment,
+        setLoadedEnvs,
+        setActiveEnv,
+        updateWorkspace,
+      }}
+    >
       {children}
     </WorkspaceContext.Provider>
   );
@@ -209,6 +263,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
 export function useWorkspace(): WorkspaceContextValue {
   const ctx = useContext(WorkspaceContext);
-  if (!ctx) throw new Error('useWorkspace must be used within a WorkspaceProvider');
+  if (!ctx) throw new Error("useWorkspace must be used within a WorkspaceProvider");
   return ctx;
 }

@@ -1,10 +1,10 @@
-import { useMemo } from 'react';
-import { useSourceControl } from '../../stores/sourceControl';
-import { DiffFile, DiffModeEnum, DiffView } from '@git-diff-view/react';
-import '@git-diff-view/react/styles/diff-view-pure.css';
-import { Columns2, AlignJustify } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { GitFileDiff } from './types';
+import { useMemo } from "react";
+import { useSourceControl } from "../../stores/sourceControl";
+import { DiffFile, DiffModeEnum, DiffView } from "@git-diff-view/react";
+import "@git-diff-view/react/styles/diff-view-pure.css";
+import { Columns2, AlignJustify } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { GitFileDiff } from "./types";
 
 interface Props {
   diff: GitFileDiff | null;
@@ -15,7 +15,7 @@ interface Props {
 
 export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
   const { state: scState, setDiffView } = useSourceControl();
-  const splitMode = scState.diffView === 'split';
+  const splitMode = scState.diffView === "split";
 
   const diffFile = useMemo(() => {
     if (!diff || !filePath) return null;
@@ -38,16 +38,16 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
     );
   }
 
-  const allLines = diff!.hunks.flatMap(h => h.split('\n'));
-  const addCount = allLines.filter(l => l.startsWith('+') && !l.startsWith('+++')).length;
-  const delCount = allLines.filter(l => l.startsWith('-') && !l.startsWith('---')).length;
+  const allLines = diff!.hunks.flatMap((h) => h.split("\n"));
+  const addCount = allLines.filter((l) => l.startsWith("+") && !l.startsWith("+++")).length;
+  const delCount = allLines.filter((l) => l.startsWith("-") && !l.startsWith("---")).length;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-foreground/10 text-xs text-foreground/60">
         <span className="truncate font-mono">{filePath}</span>
         <span className="shrink-0 text-foreground/30">
-          {commitHash ? `@${commitHash.slice(0, 7)}` : staged ? '(staged)' : '(unstaged)'}
+          {commitHash ? `@${commitHash.slice(0, 7)}` : staged ? "(staged)" : "(unstaged)"}
         </span>
         {diff!.hunks.length > 0 && (
           <span className="shrink-0 text-foreground/30">
@@ -58,8 +58,8 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setDiffView('unified')}
-                className={`p-1 rounded transition-colors ${!splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
+                onClick={() => setDiffView("unified")}
+                className={`p-1 rounded transition-colors ${!splitMode ? "text-foreground/80 bg-foreground/10" : "text-foreground/30 hover:text-foreground/50"}`}
               >
                 <AlignJustify size={13} />
               </button>
@@ -69,8 +69,8 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setDiffView('split')}
-                className={`p-1 rounded transition-colors ${splitMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
+                onClick={() => setDiffView("split")}
+                className={`p-1 rounded transition-colors ${splitMode ? "text-foreground/80 bg-foreground/10" : "text-foreground/30 hover:text-foreground/50"}`}
               >
                 <Columns2 size={13} />
               </button>
@@ -80,7 +80,15 @@ export function GitDiffViewer({ diff, filePath, staged, commitHash }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto" style={{ '--diff-plain-content--': '#1e1e1e', '--diff-plain-lineNumber--': '#1e1e1e' } as React.CSSProperties}>
+      <div
+        className="flex-1 overflow-auto"
+        style={
+          {
+            "--diff-plain-content--": "#1e1e1e",
+            "--diff-plain-lineNumber--": "#1e1e1e",
+          } as React.CSSProperties
+        }
+      >
         <DiffView
           diffFile={diffFile}
           diffViewTheme="dark"

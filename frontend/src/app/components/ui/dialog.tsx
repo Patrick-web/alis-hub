@@ -6,9 +6,7 @@ import { XIcon } from "lucide-react";
 
 import { cn } from "./utils";
 
-function Dialog({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
@@ -20,18 +18,14 @@ const DialogTrigger = React.forwardRef<
 ));
 DialogTrigger.displayName = DialogPrimitive.Trigger.displayName;
 
-function DialogPortal({
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
+function DialogPortal({ ...props }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
 const DialogClose = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
->(({ ...props }, ref) => (
-  <DialogPrimitive.Close ref={ref} data-slot="dialog-close" {...props} />
-));
+>(({ ...props }, ref) => <DialogPrimitive.Close ref={ref} data-slot="dialog-close" {...props} />);
 DialogClose.displayName = DialogPrimitive.Close.displayName;
 
 const DialogOverlay = React.forwardRef<
@@ -51,10 +45,11 @@ const DialogOverlay = React.forwardRef<
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const VIBRANCY_STYLE: React.CSSProperties = {
-  background: 'var(--modal-bg)',
-  backdropFilter: 'blur(40px) saturate(180%)',
-  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-  boxShadow: '0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 24px 48px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3)',
+  background: "var(--modal-bg)",
+  backdropFilter: "blur(40px) saturate(180%)",
+  WebkitBackdropFilter: "blur(40px) saturate(180%)",
+  boxShadow:
+    "0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 24px 48px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.3)",
 };
 
 const DialogContent = React.forwardRef<
@@ -97,10 +92,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className,
-      )}
+      className={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
       {...props}
     />
   );

@@ -1,16 +1,16 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
 
 export type ProfileTab =
-  | 'account'
-  | 'appearance'
-  | 'tabs'
-  | 'notifications'
-  | 'labs'
-  | 'updates'
-  | 'source-control'
-  | 'develop'
-  | 'tools'
-  | 'environments';
+  | "account"
+  | "appearance"
+  | "tabs"
+  | "notifications"
+  | "labs"
+  | "updates"
+  | "source-control"
+  | "develop"
+  | "tools"
+  | "environments";
 
 interface ProfileModalState {
   isOpen: boolean;
@@ -40,6 +40,6 @@ export function ProfileModalProvider({ children }: { children: ReactNode }) {
 
 export function useProfileModal(): ProfileModalState {
   const ctx = useContext(ProfileModalContext);
-  if (!ctx) throw new Error('useProfileModal must be used within ProfileModalProvider');
+  if (!ctx) throw new Error("useProfileModal must be used within ProfileModalProvider");
   return ctx;
 }

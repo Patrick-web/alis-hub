@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"alis-hub-v3/internal/alisclient"
 	"alis-hub-v3/internal/terminal"
 )
 
 // PackageService orchestrates the Manage Packages flow: scan → GeneratePackageScripts → run scripts.
 type PackageService struct {
 	mu         sync.Mutex
-	alisClient *AlisClient
+	alisClient *alisclient.AlisClient
 	processes  sync.Map // map[runID]*packageProcess
 }
 
@@ -41,7 +42,7 @@ func (s *PackageService) initClient() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	c, err := NewAlisClient(ctx)
+	c, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("alis client: %w", err)
 	}
@@ -51,7 +52,7 @@ func (s *PackageService) initClient() error {
 
 // PreparePackageScripts scans the neuron build directory for language manifests, then calls
 // VscodeService/GeneratePackageScripts to obtain the shell commands for each folder.
-func (s *PackageService) PreparePackageScripts(org, product, neuron, version string, ignoreHidden bool, extraPatterns []string) ([]PackageScript, error) {
+func (s *PackageService) PreparePackageScripts(org, product, neuron, version string, ignoreHidden bool, extraPatterns []string) ([]alisclient.PackageScript, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -105,16 +106,16 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 
 // scanBuildDirForLocations finds language manifest files and returns PackageScriptLocations
 // along with a map of workDir → display name (e.g. "asana-v1" or "asana-v1/proto").
-func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHidden bool, extraPatterns []string) ([]PackageScriptLocation, map[string]string, error) {
+func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHidden bool, extraPatterns []string) ([]alisclient.PackageScriptLocation, map[string]string, error) {
 	if _, err := os.Stat(buildDir); err != nil {
 		return nil, nil, fmt.Errorf("build dir not found at %s: %w", buildDir, err)
 	}
 
 	manifests := map[string]int{
-		"go.mod":           vscodeLanguageGO,
-		"package.json":     vscodeLanguageNODE,
-		"requirements.txt": vscodeLanguagePYTHON,
-		"pubspec.yaml":     vscodeLanguageDART,
+		"go.mod":           alisclient.VscodeLanguageGO,
+		"package.json":     alisclient.VscodeLanguageNODE,
+		"requirements.txt": alisclient.VscodeLanguagePYTHON,
+		"pubspec.yaml":     alisclient.VscodeLanguageDART,
 	}
 
 	skipDirs := map[string]bool{
@@ -128,7 +129,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHid
 	}
 
 	seen := map[string]bool{}
-	var locations []PackageScriptLocation
+	var locations []alisclient.PackageScriptLocation
 	names := map[string]string{}
 	err := filepath.WalkDir(buildDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -158,7 +159,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHid
 			return nil
 		}
 		seen[key] = true
-		locations = append(locations, PackageScriptLocation{
+		locations = append(locations, alisclient.PackageScriptLocation{
 			WorkingDirectory: dir,
 			Language:         langEnum,
 			BuildDirectory:   productDir,

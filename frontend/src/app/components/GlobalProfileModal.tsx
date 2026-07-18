@@ -1,5 +1,5 @@
-import { ProfileModal } from './ProfileModal';
-import { useProfileModal } from '../stores/profileModal';
+import { ProfileModal } from "./ProfileModal";
+import { useProfileModal } from "../stores/profileModal";
 
 export function GlobalProfileModal() {
   const { isOpen, initialTab, open, close } = useProfileModal();

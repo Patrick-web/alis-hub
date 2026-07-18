@@ -37,6 +37,11 @@ func main() {
 		return
 	}
 
+	// Widen PATH before anything shells out: GUI launches inherit a minimal
+	// PATH missing /usr/local/bin, /opt/homebrew/bin, ~/.docker/bin, etc., so
+	// installed tools like docker would otherwise report "not found".
+	fixPathEnv()
+
 	// Best-effort: refresh git auth on launch, then keep it fresh. The
 	// underlying access token is short-lived (~5min), so only syncing at
 	// launch/login leaves git-auth.gitconfig stale for most of the session.

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Icon } from '@iconify/react';
-import { Button } from './Button';
-import { BuildTerminal, type BuildTerminalHandle } from './BuildTerminal';
-import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Icon } from "@iconify/react";
+import { Button } from "./Button";
+import { BuildTerminal, type BuildTerminalHandle } from "./BuildTerminal";
+import * as WorkflowService from "../../../bindings/alis-hub-v3/workflowservice";
 
 type StepRunStatus = {
   id: string;
@@ -10,7 +10,7 @@ type StepRunStatus = {
   position: number;
   type: string;
   label: string;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+  status: "pending" | "running" | "success" | "failed" | "skipped";
   startedAt?: number;
   completedAt?: number;
 };
@@ -23,23 +23,23 @@ type RunLogChunk = {
 };
 
 const STATUS_ICON: Record<string, string> = {
-  pending: 'solar:circle-linear',
-  running: 'solar:spinner-linear',
-  success: 'solar:check-circle-bold',
-  failed: 'solar:close-circle-bold',
-  skipped: 'solar:minus-circle-linear',
+  pending: "solar:circle-linear",
+  running: "solar:spinner-linear",
+  success: "solar:check-circle-bold",
+  failed: "solar:close-circle-bold",
+  skipped: "solar:minus-circle-linear",
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: 'text-foreground/20',
-  running: 'text-blue-400',
-  success: 'text-green-400',
-  failed: 'text-red-400',
-  skipped: 'text-foreground/20',
+  pending: "text-foreground/20",
+  running: "text-blue-400",
+  success: "text-green-400",
+  failed: "text-red-400",
+  skipped: "text-foreground/20",
 };
 
 function formatDuration(startedAt?: number, completedAt?: number): string {
-  if (!startedAt) return '';
+  if (!startedAt) return "";
   const end = completedAt ?? Math.floor(Date.now() / 1000);
   const s = end - startedAt;
   if (s < 60) return `${s}s`;
@@ -58,7 +58,7 @@ export function WorkflowRunModal({
   const [runId, setRunId] = useState<string | null>(null);
   const [stepRuns, setStepRuns] = useState<StepRunStatus[]>([]);
   const [done, setDone] = useState(false);
-  const [finalStatus, setFinalStatus] = useState<string>('running');
+  const [finalStatus, setFinalStatus] = useState<string>("running");
   const [error, setError] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
 
@@ -82,36 +82,41 @@ export function WorkflowRunModal({
     }
   }, []);
 
-  const poll = useCallback(async (id: string) => {
-    try {
-      const chunk = await WorkflowService.PollRunLogs(id, offsetRef.current) as RunLogChunk;
-      if (!chunk) return;
+  const poll = useCallback(
+    async (id: string) => {
+      try {
+        const chunk = (await WorkflowService.PollRunLogs(id, offsetRef.current)) as RunLogChunk;
+        if (!chunk) return;
 
-      if (chunk.logText) {
-        termRef.current?.write(chunk.logText);
-        offsetRef.current = chunk.nextOffset;
+        if (chunk.logText) {
+          termRef.current?.write(chunk.logText);
+          offsetRef.current = chunk.nextOffset;
+        }
+
+        if (chunk.stepRuns) setStepRuns(chunk.stepRuns);
+
+        if (chunk.done) {
+          stopPolling();
+          setDone(true);
+          const failed = chunk.stepRuns?.some((s) => s.status === "failed");
+          const stopped =
+            chunk.stepRuns?.some((s) => s.status === "failed") &&
+            chunk.stepRuns?.some((s) => s.status === "skipped");
+          setFinalStatus(failed ? (stopped ? "stopped" : "failed") : "success");
+        }
+      } catch (e) {
+        console.error("PollRunLogs error:", e);
       }
-
-      if (chunk.stepRuns) setStepRuns(chunk.stepRuns);
-
-      if (chunk.done) {
-        stopPolling();
-        setDone(true);
-        const failed = chunk.stepRuns?.some((s) => s.status === 'failed');
-        const stopped = chunk.stepRuns?.some((s) => s.status === 'failed') && chunk.stepRuns?.some((s) => s.status === 'skipped');
-        setFinalStatus(failed ? (stopped ? 'stopped' : 'failed') : 'success');
-      }
-    } catch (e) {
-      console.error('PollRunLogs error:', e);
-    }
-  }, [stopPolling]);
+    },
+    [stopPolling],
+  );
 
   // Start the run on mount
   useEffect(() => {
     let cancelled = false;
     async function start() {
       try {
-        const id = await WorkflowService.RunWorkflow(workflowId, {}, 0) as string;
+        const id = (await WorkflowService.RunWorkflow(workflowId, {}, 0)) as string;
         if (cancelled) return;
         setRunId(id);
         runIdRef.current = id;
@@ -145,7 +150,9 @@ export function WorkflowRunModal({
     onClose();
   };
 
-  const completedCount = stepRuns.filter((s) => ['success', 'failed', 'skipped'].includes(s.status)).length;
+  const completedCount = stepRuns.filter((s) =>
+    ["success", "failed", "skipped"].includes(s.status),
+  ).length;
   const progress = stepRuns.length > 0 ? Math.round((completedCount / stepRuns.length) * 100) : 0;
 
   return (
@@ -157,10 +164,14 @@ export function WorkflowRunModal({
             <div className="text-sm font-semibold">{workflowName}</div>
             <div className="text-xs text-foreground/40 mt-0.5">
               {done
-                ? finalStatus === 'success' ? 'Completed successfully' : finalStatus === 'stopped' ? 'Stopped' : 'Completed with errors'
+                ? finalStatus === "success"
+                  ? "Completed successfully"
+                  : finalStatus === "stopped"
+                    ? "Stopped"
+                    : "Completed with errors"
                 : error
-                ? 'Failed to start'
-                : 'Running…'}
+                  ? "Failed to start"
+                  : "Running…"}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -190,12 +201,14 @@ export function WorkflowRunModal({
               <div key={sr.id} className="flex items-center gap-2.5">
                 <Icon
                   icon={STATUS_ICON[sr.status] ?? STATUS_ICON.pending}
-                  className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ''} ${sr.status === 'running' ? 'animate-spin' : ''}`}
+                  className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ""} ${sr.status === "running" ? "animate-spin" : ""}`}
                 />
-                <span className={`text-xs flex-1 truncate ${sr.status === 'pending' || sr.status === 'skipped' ? 'text-foreground/30' : ''}`}>
+                <span
+                  className={`text-xs flex-1 truncate ${sr.status === "pending" || sr.status === "skipped" ? "text-foreground/30" : ""}`}
+                >
                   {sr.label}
                 </span>
-                {(sr.status === 'success' || sr.status === 'failed') && sr.startedAt && (
+                {(sr.status === "success" || sr.status === "failed") && sr.startedAt && (
                   <span className="text-[10px] text-foreground/25 flex-shrink-0">
                     {formatDuration(sr.startedAt, sr.completedAt)}
                   </span>
@@ -209,7 +222,10 @@ export function WorkflowRunModal({
         {error && (
           <div className="flex-1 flex items-center justify-center p-6">
             <div className="text-center">
-              <Icon icon="solar:danger-triangle-linear" className="text-red-400 text-3xl mx-auto mb-2" />
+              <Icon
+                icon="solar:danger-triangle-linear"
+                className="text-red-400 text-3xl mx-auto mb-2"
+              />
               <p className="text-sm text-red-400 font-medium">Failed to start workflow</p>
               <p className="text-xs text-foreground/40 mt-1">{error}</p>
             </div>
@@ -228,13 +244,21 @@ export function WorkflowRunModal({
           <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                finalStatus === 'success' ? 'bg-green-400' : finalStatus === 'failed' ? 'bg-red-400' : 'bg-brand-fill'
+                finalStatus === "success"
+                  ? "bg-green-400"
+                  : finalStatus === "failed"
+                    ? "bg-red-400"
+                    : "bg-brand-fill"
               }`}
               style={{ width: `${done ? 100 : progress}%` }}
             />
           </div>
           <span className="text-[10px] text-foreground/30 flex-shrink-0">
-            {done ? (finalStatus === 'success' ? 'Done' : finalStatus) : `${completedCount} / ${stepRuns.length}`}
+            {done
+              ? finalStatus === "success"
+                ? "Done"
+                : finalStatus
+              : `${completedCount} / ${stepRuns.length}`}
           </span>
         </div>
       </div>

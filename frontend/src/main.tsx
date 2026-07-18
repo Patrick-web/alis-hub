@@ -1,4 +1,3 @@
-
 import { createRoot } from "react-dom/client";
 import { ThemeProvider, useTheme } from "next-themes";
 import { useEffect } from "react";
@@ -44,41 +43,41 @@ async function bootstrap() {
       <ErrorBoundary>
         <NotificationProvider>
           <UpdateProvider>
-          <WorkspaceProvider>
-            <LabsProvider>
-              <LocalAIProvider>
-              <SourceControlProvider>
-              <DevelopSettingsProvider>
-              <ProtectedEnvironmentsProvider>
-              <SuggestionsProvider>
-                <PackageSessionsProvider>
-                  <WorkflowRunsProvider>
-                  <CommandPaletteProvider>
-                    <PlatformProvider>
-                    <DevSettingsModalProvider>
-                    <ProfileModalProvider>
-                      <ThemeSettingsSync />
-                      <App />
-                      <Toaster position="bottom-right" />
-                      <WailsNotificationBridge />
-                      <NetworkStatus />
-                    </ProfileModalProvider>
-                    </DevSettingsModalProvider>
-                    </PlatformProvider>
-                  </CommandPaletteProvider>
-                  </WorkflowRunsProvider>
-                </PackageSessionsProvider>
-              </SuggestionsProvider>
-              </ProtectedEnvironmentsProvider>
-              </DevelopSettingsProvider>
-              </SourceControlProvider>
-              </LocalAIProvider>
-            </LabsProvider>
-          </WorkspaceProvider>
+            <WorkspaceProvider>
+              <LabsProvider>
+                <LocalAIProvider>
+                  <SourceControlProvider>
+                    <DevelopSettingsProvider>
+                      <ProtectedEnvironmentsProvider>
+                        <SuggestionsProvider>
+                          <PackageSessionsProvider>
+                            <WorkflowRunsProvider>
+                              <CommandPaletteProvider>
+                                <PlatformProvider>
+                                  <DevSettingsModalProvider>
+                                    <ProfileModalProvider>
+                                      <ThemeSettingsSync />
+                                      <App />
+                                      <Toaster position="bottom-right" />
+                                      <WailsNotificationBridge />
+                                      <NetworkStatus />
+                                    </ProfileModalProvider>
+                                  </DevSettingsModalProvider>
+                                </PlatformProvider>
+                              </CommandPaletteProvider>
+                            </WorkflowRunsProvider>
+                          </PackageSessionsProvider>
+                        </SuggestionsProvider>
+                      </ProtectedEnvironmentsProvider>
+                    </DevelopSettingsProvider>
+                  </SourceControlProvider>
+                </LocalAIProvider>
+              </LabsProvider>
+            </WorkspaceProvider>
           </UpdateProvider>
         </NotificationProvider>
       </ErrorBoundary>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }
 

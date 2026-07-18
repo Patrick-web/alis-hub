@@ -35,14 +35,17 @@ export function RightPane({
   const startX = useRef(0);
   const startWidth = useRef(0);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = paneWidth;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, [paneWidth]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = paneWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [paneWidth],
+  );
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -93,12 +96,8 @@ export function RightPane({
       <div className="px-[16px] py-[12px] border-b border-border flex items-center justify-between shrink-0">
         {title ? (
           <div className="min-w-0 flex-1 mr-[8px]">
-            <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">
-              {label}
-            </p>
-            <p className="text-[13px] font-bold text-foreground font-mono truncate">
-              {title}
-            </p>
+            <p className="text-[9px] text-foreground/40 uppercase font-bold font-mono">{label}</p>
+            <p className="text-[13px] font-bold text-foreground font-mono truncate">{title}</p>
           </div>
         ) : (
           <p className="font-mono font-bold text-[11px] text-foreground uppercase opacity-70 flex-1 mr-[8px]">
@@ -128,14 +127,10 @@ export function RightPane({
         </div>
       </div>
       {/* Content */}
-      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-        {children}
-      </div>
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">{children}</div>
       {/* Footer */}
       {footer && (
-        <div className="shrink-0 border-t border-border px-[16px] py-[12px]">
-          {footer}
-        </div>
+        <div className="shrink-0 border-t border-border px-[16px] py-[12px]">{footer}</div>
       )}
     </div>
   );

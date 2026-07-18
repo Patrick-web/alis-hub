@@ -5,14 +5,14 @@ interface CodeBlockProps {
   className?: string;
 }
 
-export function CodeBlock({ code, language = 'plaintext', title, className = '' }: CodeBlockProps) {
+export function CodeBlock({ code, language = "plaintext", title, className = "" }: CodeBlockProps) {
   return (
-    <div className={`bg-background border border-border rounded-[4px] overflow-hidden ${className}`}>
+    <div
+      className={`bg-background border border-border rounded-[4px] overflow-hidden ${className}`}
+    >
       {title && (
         <div className="px-[12px] py-[6px] border-b border-border bg-card">
-          <p className="text-[9px] text-foreground/50 uppercase font-bold font-mono">
-            {title}
-          </p>
+          <p className="text-[9px] text-foreground/50 uppercase font-bold font-mono">{title}</p>
         </div>
       )}
       <pre className="p-[12px] overflow-x-auto">

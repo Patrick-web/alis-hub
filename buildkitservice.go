@@ -1,6 +1,7 @@
 package main
 
 import (
+	"alis-hub-v3/internal/alisclient"
 	"context"
 	"fmt"
 	"log"
@@ -13,14 +14,14 @@ import (
 type BuildSpecItem struct {
 	Name        string   `json:"name"`
 	DisplayName string   `json:"displayName"`
-	Status      int32    `json:"status"`   // 0=unspecified, 1=new, 2=active, 3=completed
+	Status      int32    `json:"status"` // 0=unspecified, 1=new, 2=active, 3=completed
 	Summary     string   `json:"summary"`
 	Products    []string `json:"products"` // resource names: organisations/{org}/products/{product}
 }
 
 // BuildKitService is a Wails-bound service for Build Kit operations.
 type BuildKitService struct {
-	alisClient *AlisClient
+	alisClient *alisclient.AlisClient
 }
 
 func NewBuildKitService() *BuildKitService {
@@ -34,7 +35,7 @@ func (s *BuildKitService) initClient() error {
 	log.Println("[buildkit] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
@@ -66,7 +67,7 @@ func (s *BuildKitService) ListBuildSpecs() ([]BuildSpecItem, error) {
 	req = protowire.AppendTag(req, 5, protowire.BytesType)
 	req = protowire.AppendBytes(req, readMask)
 
-	body, grpcStatus, grpcMsg, err := s.alisClient.doGRPC(ctx, "alis.os.buildspecs.v1.BuildSpecsService/ListBuildSpecs", req)
+	body, grpcStatus, grpcMsg, err := s.alisClient.DoGRPC(ctx, "alis.os.buildspecs.v1.BuildSpecsService/ListBuildSpecs", req)
 	if err != nil {
 		return nil, fmt.Errorf("ListBuildSpecs: %w", err)
 	}

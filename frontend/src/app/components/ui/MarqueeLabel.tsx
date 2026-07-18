@@ -8,12 +8,7 @@ interface MarqueeLabelProps {
   onDoubleClick?: (e: React.MouseEvent) => void;
 }
 
-export function MarqueeLabel({
-  text,
-  maxWidth,
-  className,
-  onDoubleClick,
-}: MarqueeLabelProps) {
+export function MarqueeLabel({ text, maxWidth, className, onDoubleClick }: MarqueeLabelProps) {
   const containerRef = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [overflow, setOverflow] = useState(0);

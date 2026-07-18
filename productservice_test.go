@@ -378,9 +378,15 @@ func TestDebugGetProduct(t *testing.T) {
 				t.Logf("parseProduct error: %v", err)
 			} else {
 				t.Logf("parseProduct result: Name=%q DisplayName=%q State=%d", p.Name, p.DisplayName, p.State)
-				if p.GoogleProject != nil { t.Logf("  GoogleProject.ID=%q Region=%q", p.GoogleProject.ID, p.GoogleProject.Region) }
-				if p.GitRepo != nil { t.Logf("  GitRepo.RemoteURI=%q", p.GitRepo.RemoteURI) }
-				if p.PackageRegistries != nil { t.Logf("  Pkgs.Go=%q", p.PackageRegistries.Go) }
+				if p.GoogleProject != nil {
+					t.Logf("  GoogleProject.ID=%q Region=%q", p.GoogleProject.ID, p.GoogleProject.Region)
+				}
+				if p.GitRepo != nil {
+					t.Logf("  GitRepo.RemoteURI=%q", p.GitRepo.RemoteURI)
+				}
+				if p.PackageRegistries != nil {
+					t.Logf("  Pkgs.Go=%q", p.PackageRegistries.Go)
+				}
 			}
 		}
 	}
@@ -403,15 +409,22 @@ func TestDebugGetProduct(t *testing.T) {
 				switch typ {
 				case protowire.VarintType:
 					v, m := protowire.ConsumeVarint(data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					t.Logf("  field %d (varint) = %d", num, v)
 					data = data[m:]
 				case protowire.BytesType:
 					b, m := protowire.ConsumeBytes(data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					printable := true
 					for _, c := range b {
-						if c < 32 && c != '\n' && c != '\r' { printable = false; break }
+						if c < 32 && c != '\n' && c != '\r' {
+							printable = false
+							break
+						}
 					}
 					if printable && len(b) < 100 {
 						t.Logf("  field %d (bytes, %d) = %q", num, len(b), string(b))
@@ -421,7 +434,9 @@ func TestDebugGetProduct(t *testing.T) {
 					data = data[m:]
 				default:
 					m := protowire.ConsumeFieldValue(num, typ, data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					t.Logf("  field %d (type %d, skip %d bytes)", num, typ, m)
 					data = data[m:]
 				}
@@ -1349,7 +1364,7 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 	t.Run("GetBuildCommits — changelog data", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		client, err := NewAlisClient(ctx)
+		client, err := newAlisClient(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1361,7 +1376,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 		}
 		t.Logf("commits on master (%d):", len(commits))
 		for i, c := range commits {
-			if i >= 5 { break }
+			if i >= 5 {
+				break
+			}
 			t.Logf("  sha=%s author=%q ts=%d msg=%q", c.SHA[:7], c.Author, c.Timestamp, truncateStr(c.Message, 60))
 		}
 	})
@@ -1369,7 +1386,7 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 	t.Run("FetchBuildLogs — full pipeline for latest and an old version", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		client, err := NewAlisClient(ctx)
+		client, err := newAlisClient(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1381,7 +1398,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 
 		probes := []int{0, 5, 20}
 		for _, i := range probes {
-			if i >= len(vers) { continue }
+			if i >= len(vers) {
+				continue
+			}
 			v := vers[i]
 			if v.LogsURL == "" {
 				t.Logf("[%d] version=%s — no logsUrl (retagged)", i, v.Version)
@@ -1395,7 +1414,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 			t.Logf("[%d] version=%s — OK: %d chars", i, v.Version, len(result.Content))
 			if len(result.Content) > 0 {
 				snippet := result.Content
-				if len(snippet) > 200 { snippet = snippet[:200] }
+				if len(snippet) > 200 {
+					snippet = snippet[:200]
+				}
 				t.Logf("  first 200 chars:\n%s", snippet)
 			}
 		}
@@ -1405,7 +1426,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 // buildGCSRUrlTest is the same pure function used in BuildsPage — copied here for testing.
 func buildGCSRUrlTest(remoteUri string, sha string) string {
 	m := regexp.MustCompile(`source\.developers\.google\.com/p/([^/]+)/r/([^/]+)`).FindStringSubmatch(remoteUri)
-	if m == nil { return "" }
+	if m == nil {
+		return ""
+	}
 	return fmt.Sprintf("https://source.cloud.google.com/%s/%s/+/%s", m[1], m[2], sha)
 }
 
@@ -1416,7 +1439,7 @@ func TestProbeBFFNeuronVersionLogs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1663,4 +1686,3 @@ func TestContributeBlock(t *testing.T) {
 	}
 	t.Logf("created version: %s", result)
 }
-

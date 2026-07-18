@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { Icon } from '@iconify/react';
-import { Loader } from '../components/Loader';
-import { useWorkspace } from '../stores/workspace';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { useState } from "react";
+import { Icon } from "@iconify/react";
+import { Loader } from "../components/Loader";
+import { useWorkspace } from "../stores/workspace";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
 export function LoginPage() {
   const { setPhase } = useWorkspace();
@@ -14,7 +14,7 @@ export function LoginPage() {
     setError(null);
     try {
       await (ProductService.Login as () => Promise<void>)();
-      setPhase('hub');
+      setPhase("hub");
     } catch (e) {
       setError(String(e));
     } finally {
@@ -37,7 +37,10 @@ export function LoginPage() {
       <div className="w-[320px] bg-card border border-border rounded-[12px] p-[24px] flex flex-col gap-[16px]">
         {error && (
           <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
-            <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
+            <Icon
+              icon="solar:close-circle-linear"
+              className="text-destructive text-sm shrink-0 mt-[1px]"
+            />
             <p className="text-[11px] text-foreground/70 leading-relaxed">{error}</p>
           </div>
         )}

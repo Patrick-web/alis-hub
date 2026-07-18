@@ -1,5 +1,5 @@
 export function hexToRgb(hex: string): [number, number, number] {
-  const clean = hex.replace('#', '');
+  const clean = hex.replace("#", "");
   return [
     parseInt(clean.slice(0, 2), 16),
     parseInt(clean.slice(2, 4), 16),
@@ -9,11 +9,11 @@ export function hexToRgb(hex: string): [number, number, number] {
 
 function rgbToHex(r: number, g: number, b: number): string {
   const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
-  return '#' + [r, g, b].map(v => clamp(v).toString(16).padStart(2, '0')).join('');
+  return "#" + [r, g, b].map((v) => clamp(v).toString(16).padStart(2, "0")).join("");
 }
 
 export function hexToHsl(hex: string): [number, number, number] {
-  const [r, g, b] = hexToRgb(hex).map(v => v / 255);
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255);
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const l = (max + min) / 2;
@@ -23,9 +23,15 @@ export function hexToHsl(hex: string): [number, number, number] {
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
   let h: number;
   switch (max) {
-    case r: h = ((g - b) / d + (g < b ? 6 : 0)); break;
-    case g: h = (b - r) / d + 2; break;
-    default: h = (r - g) / d + 4; break;
+    case r:
+      h = (g - b) / d + (g < b ? 6 : 0);
+      break;
+    case g:
+      h = (b - r) / d + 2;
+      break;
+    default:
+      h = (r - g) / d + 4;
+      break;
   }
   return [h * 60, s * 100, l * 100];
 }
@@ -90,8 +96,8 @@ export function contrastRatio(hexA: string, hexB: string): number {
 
 /** Best of near-black/near-white text color to sit on top of `bgHex`. */
 export function getAccessibleForeground(bgHex: string): string {
-  const black = '#1a1a1a';
-  const white = '#ffffff';
+  const black = "#1a1a1a";
+  const white = "#ffffff";
   return contrastRatio(bgHex, black) >= contrastRatio(bgHex, white) ? black : white;
 }
 
@@ -103,7 +109,7 @@ export function getAccessibleForeground(bgHex: string): string {
 export function getAccessibleTextColor(
   hueHex: string,
   pageBackgroundHex: string,
-  targetRatio = 4.5
+  targetRatio = 4.5,
 ): string {
   const [h, s, startL] = hexToHsl(hueHex);
   const bgLuminance = relativeLuminance(pageBackgroundHex);
@@ -125,9 +131,11 @@ export function getAccessibleTextColor(
     const ratio = contrastRatio(candidate, pageBackgroundHex);
     if (ratio >= targetRatio) {
       best = candidate;
-      if (darkening) lo = mid; else hi = mid;
+      if (darkening) lo = mid;
+      else hi = mid;
     } else {
-      if (darkening) hi = mid; else lo = mid;
+      if (darkening) hi = mid;
+      else lo = mid;
     }
   }
   return best;

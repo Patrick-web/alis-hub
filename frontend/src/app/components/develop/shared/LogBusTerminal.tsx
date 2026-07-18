@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
-import { BuildTerminal, type BuildTerminalHandle } from '../../BuildTerminal';
-import type { LogBus } from '../../../lib/logBus';
+import { useEffect, useRef } from "react";
+import { BuildTerminal, type BuildTerminalHandle } from "../../BuildTerminal";
+import type { LogBus } from "../../../lib/logBus";
 
 /**
  * A read-only terminal bound to a LogBus. Multiple instances can mirror the

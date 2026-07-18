@@ -6,8 +6,7 @@ import { Loader } from "./Loader";
 export function extToLang(filename: string): string {
   const name = filename.split("/").pop() ?? filename;
   const ext = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "";
-  if (name === "Dockerfile" || name.startsWith("Dockerfile."))
-    return "dockerfile";
+  if (name === "Dockerfile" || name.startsWith("Dockerfile.")) return "dockerfile";
   if (name === "Makefile" || name === "makefile") return "makefile";
   if (name === "go.mod" || name === "go.sum") return "go";
   const map: Record<string, string> = {
@@ -98,17 +97,10 @@ export function FileViewerModal({
       {/* Header */}
       <div className="flex items-center justify-between px-[20px] py-[12px] border-b border-border shrink-0">
         <div className="flex items-center gap-[10px]">
-          <Icon
-            icon="solar:file-code-linear"
-            className="text-foreground/50 text-base"
-          />
-          <span className="font-mono text-[13px] text-foreground">
-            {shortName}
-          </span>
+          <Icon icon="solar:file-code-linear" className="text-foreground/50 text-base" />
+          <span className="font-mono text-[13px] text-foreground">{shortName}</span>
           {shortName !== file.name && (
-            <span className="text-[11px] text-foreground/30 font-mono">
-              {file.name}
-            </span>
+            <span className="text-[11px] text-foreground/30 font-mono">{file.name}</span>
           )}
           <span className="text-[10px] font-bold uppercase text-foreground/30 border border-foreground/15 rounded px-[6px] py-[1px]">
             {extToLang(file.name)}

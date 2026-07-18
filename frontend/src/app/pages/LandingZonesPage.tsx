@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
-import { useWorkspace, type Organisation } from '../stores/workspace';
-import { EmptyState } from '../components/EmptyState';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
-import { Loader } from '../components/Loader';
+import { useState, useEffect } from "react";
+import { Icon } from "@iconify/react";
+import { useWorkspace, type Organisation } from "../stores/workspace";
+import { EmptyState } from "../components/EmptyState";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
+import { Loader } from "../components/Loader";
 
 function isAuthError(e: unknown): boolean {
   const s = String(e);
-  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+  return (
+    s.includes("invalid_grant") ||
+    s.includes("refresh token has expired") ||
+    s.includes("console token expired")
+  );
 }
 
 type LandingZonesData = {
@@ -16,7 +20,7 @@ type LandingZonesData = {
 };
 
 function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
-  const orgId = org.name.replace('organisations/', '');
+  const orgId = org.name.replace("organisations/", "");
   return (
     <button
       onClick={onClick}
@@ -28,12 +32,14 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
             src={org.logo}
             alt={org.displayName}
             className="size-[36px] rounded-[8px] object-cover shrink-0 border border-foreground/8"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
           />
         ) : (
           <div className="size-[36px] rounded-[8px] bg-brand-fill/12 border border-brand-fill/20 flex items-center justify-center shrink-0">
             <span className="text-[14px] font-bold text-brand">
-              {org.displayName[0]?.toUpperCase() ?? '?'}
+              {org.displayName[0]?.toUpperCase() ?? "?"}
             </span>
           </div>
         )}
@@ -44,11 +50,12 @@ function OrgCard({ org, onClick }: { org: Organisation; onClick: () => void }) {
           {org.description && (
             <p className="text-[11px] text-foreground/40 mt-[2px] truncate">{org.description}</p>
           )}
-          <p className="text-[10px] font-mono text-foreground/25 mt-[6px]">
-            {orgId}
-          </p>
+          <p className="text-[10px] font-mono text-foreground/25 mt-[6px]">{orgId}</p>
         </div>
-        <Icon icon="solar:alt-arrow-right-linear" className="text-foreground/20 group-hover:text-brand text-base shrink-0 mt-[2px] transition-colors" />
+        <Icon
+          icon="solar:alt-arrow-right-linear"
+          className="text-foreground/20 group-hover:text-brand text-base shrink-0 mt-[2px] transition-colors"
+        />
       </div>
     </button>
   );
@@ -59,15 +66,18 @@ export function LandingZonesPage() {
   const [data, setData] = useState<LandingZonesData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
 
   const load = () => {
     setLoading(true);
     setError(null);
     (ProductService.ListLandingZones as () => Promise<LandingZonesData>)()
-      .then(result => setData(result ?? { own: [], shared: [] }))
+      .then((result) => setData(result ?? { own: [], shared: [] }))
       .catch((e: unknown) => {
-        if (isAuthError(e)) { setPhase('login'); return; }
+        if (isAuthError(e)) {
+          setPhase("login");
+          return;
+        }
         setError(String(e));
       })
       .finally(() => setLoading(false));
@@ -94,7 +104,7 @@ export function LandingZonesPage() {
       {/* Page header */}
       <div className="px-[24px] pt-[28px] pb-[20px] shrink-0">
         <button
-          onClick={() => setPhase('hub')}
+          onClick={() => setPhase("hub")}
           className="flex items-center gap-[6px] text-[11px] text-foreground/40 hover:text-foreground transition-colors mb-[16px] font-mono"
         >
           <Icon icon="solar:alt-arrow-left-linear" className="text-sm" />
@@ -113,19 +123,22 @@ export function LandingZonesPage() {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search landing zones…"
             className="flex-1 bg-transparent text-[12px] text-foreground outline-none placeholder:text-foreground/25"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="text-foreground/30 hover:text-foreground">
+            <button
+              onClick={() => setSearch("")}
+              className="text-foreground/30 hover:text-foreground"
+            >
               <Icon icon="solar:close-circle-linear" className="text-sm" />
             </button>
           )}
         </div>
         {!loading && data && (
           <span className="text-[10px] font-mono text-foreground/30 shrink-0">
-            {total} zone{total !== 1 ? 's' : ''}
+            {total} zone{total !== 1 ? "s" : ""}
           </span>
         )}
         {!loading && (
@@ -167,7 +180,7 @@ export function LandingZonesPage() {
             {/* Own orgs */}
             {filteredOwn.length > 0 && (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-[10px]">
-                {filteredOwn.map(org => (
+                {filteredOwn.map((org) => (
                   <OrgCard key={org.name} org={org} onClick={() => setOrg(org)} />
                 ))}
               </div>
@@ -179,7 +192,10 @@ export function LandingZonesPage() {
                 <div className="flex items-center gap-[12px] mb-[14px]">
                   <div className="h-px flex-1 bg-accent" />
                   <div className="flex items-center gap-[6px]">
-                    <Icon icon="solar:users-group-two-rounded-linear" className="text-foreground/25 text-sm" />
+                    <Icon
+                      icon="solar:users-group-two-rounded-linear"
+                      className="text-foreground/25 text-sm"
+                    />
                     <span className="text-[10px] font-mono text-foreground/30 uppercase tracking-wide">
                       Shared from other Accounts
                     </span>
@@ -187,7 +203,7 @@ export function LandingZonesPage() {
                   <div className="h-px flex-1 bg-accent" />
                 </div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-[10px]">
-                  {filteredShared.map(org => (
+                  {filteredShared.map((org) => (
                     <OrgCard key={org.name} org={org} onClick={() => setOrg(org)} />
                   ))}
                 </div>
@@ -197,7 +213,7 @@ export function LandingZonesPage() {
             {filteredOwn.length === 0 && filteredShared.length === 0 && (
               <EmptyState
                 icon="solar:cloud-linear"
-                title={search ? 'No matching landing zones' : 'No landing zones found'}
+                title={search ? "No matching landing zones" : "No landing zones found"}
                 className="pt-[80px] pb-0"
               />
             )}

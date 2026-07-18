@@ -116,9 +116,7 @@ export function SpannerExplorer({ projectID }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [expandedInstance, setExpandedInstance] = useState<string | null>(null);
-  const [databases, setDatabases] = useState<Record<string, SpannerDatabase[]>>(
-    {},
-  );
+  const [databases, setDatabases] = useState<Record<string, SpannerDatabase[]>>({});
   const [dbLoading, setDbLoading] = useState<Record<string, boolean>>({});
 
   const [expandedDatabase, setExpandedDatabase] = useState<string | null>(null);
@@ -131,7 +129,10 @@ export function SpannerExplorer({ projectID }: Props) {
     setError(null);
     GS.ListSpannerInstances(projectID)
       .then((items: SpannerInstance[]) => setInstances(items || []))
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        setError(String(e));
+      })
       .finally(() => setLoading(false));
   }, [projectID]);
 
@@ -162,9 +163,7 @@ export function SpannerExplorer({ projectID }: Props) {
     if (!tables[db.name]) {
       setTableLoading((v) => ({ ...v, [db.name]: true }));
       GS.ListSpannerTables(db.name)
-        .then((ts: SpannerTable[]) =>
-          setTables((v) => ({ ...v, [db.name]: ts || [] })),
-        )
+        .then((ts: SpannerTable[]) => setTables((v) => ({ ...v, [db.name]: ts || [] })))
         .catch(() => setTables((v) => ({ ...v, [db.name]: [] })))
         .finally(() => setTableLoading((v) => ({ ...v, [db.name]: false })));
     }
@@ -173,14 +172,10 @@ export function SpannerExplorer({ projectID }: Props) {
   // ── Tab system ─────────────────────────────────────────────────────────────
   const [tabs, setTabs] = useState<string[]>([QUERY_TAB]);
   const [activeTab, setActiveTab] = useState<string>(QUERY_TAB);
-  const [mountedTabs, setMountedTabs] = useState<Set<string>>(
-    new Set([QUERY_TAB]),
-  );
+  const [mountedTabs, setMountedTabs] = useState<Set<string>>(new Set([QUERY_TAB]));
   const [tableTabs, setTableTabs] = useState<Record<string, TableTabInfo>>({});
   const [queryTabCounter, setQueryTabCounter] = useState(2);
-  const [queryTabNames, setQueryTabNames] = useState<Record<string, string>>(
-    {},
-  );
+  const [queryTabNames, setQueryTabNames] = useState<Record<string, string>>({});
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
@@ -271,8 +266,7 @@ export function SpannerExplorer({ projectID }: Props) {
     // Always keep at least one query tab
     const qInRemove = ids.filter(isQueryTab);
     const qOutsideRemove = tabs.filter((t) => isQueryTab(t) && !removeSet.has(t));
-    if (qOutsideRemove.length === 0 && qInRemove.length > 0)
-      removeSet.delete(qInRemove[0]);
+    if (qOutsideRemove.length === 0 && qInRemove.length > 0) removeSet.delete(qInRemove[0]);
 
     removeSet.forEach((tabId) => {
       const txn = openRWTxnsRef.current.get(tabId);
@@ -334,14 +328,10 @@ export function SpannerExplorer({ projectID }: Props) {
 
   // ── Query panel state ──────────────────────────────────────────────────────
   const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null);
-  const [queryTabStates, setQueryTabStates] = useState<
-    Record<string, QueryTabState>
-  >({
+  const [queryTabStates, setQueryTabStates] = useState<Record<string, QueryTabState>>({
     [QUERY_TAB]: { ...DEFAULT_QUERY_TAB_STATE },
   });
-  const [destructivePendingTab, setDestructivePendingTab] = useState<
-    string | null
-  >(null);
+  const [destructivePendingTab, setDestructivePendingTab] = useState<string | null>(null);
   const [queryPanelHeight, setQueryPanelHeight] = useState(200);
   const [treePaneWidth, setTreePaneWidth] = useState(220);
 
@@ -395,7 +385,10 @@ export function SpannerExplorer({ projectID }: Props) {
           openRWTxnsRef.current.set(tabId, txn);
           updateTabQuery(tabId, { pendingRWTxn: txn });
         })
-        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
+        .catch((e: unknown) => {
+          if (useGCloud.getState().handleError(e)) return;
+          updateTabQuery(tabId, { queryError: String(e) });
+        })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     } else if (isDMLSQL(sqlTrimmed)) {
       GS.ExecuteSpannerDML(selectedDatabase, sqlTrimmed)
@@ -404,20 +397,23 @@ export function SpannerExplorer({ projectID }: Props) {
             dmlResult: { rowsAffected: Number(r?.rowsAffected ?? 0) },
           }),
         )
-        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
+        .catch((e: unknown) => {
+          if (useGCloud.getState().handleError(e)) return;
+          updateTabQuery(tabId, { queryError: String(e) });
+        })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     } else if (isDestructiveSQL(sqlTrimmed)) {
       updateTabQuery(tabId, {
-        queryError:
-          "DDL statements (DROP, TRUNCATE, ALTER) are not supported via this tool.",
+        queryError: "DDL statements (DROP, TRUNCATE, ALTER) are not supported via this tool.",
         queryLoading: false,
       });
     } else {
       GS.ExecuteSpannerQuery(selectedDatabase, sqlTrimmed)
-        .then((r: SpannerQueryResult | null) =>
-          updateTabQuery(tabId, { queryResult: r }),
-        )
-        .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
+        .then((r: SpannerQueryResult | null) => updateTabQuery(tabId, { queryResult: r }))
+        .catch((e: unknown) => {
+          if (useGCloud.getState().handleError(e)) return;
+          updateTabQuery(tabId, { queryError: String(e) });
+        })
         .finally(() => updateTabQuery(tabId, { queryLoading: false }));
     }
   }
@@ -434,7 +430,10 @@ export function SpannerExplorer({ projectID }: Props) {
           dmlResult: { rowsAffected: txn.rowsAffected },
         });
       })
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        updateTabQuery(tabId, { queryError: String(e) });
+      })
       .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
   }
 
@@ -447,7 +446,10 @@ export function SpannerExplorer({ projectID }: Props) {
         openRWTxnsRef.current.delete(tabId);
         updateTabQuery(tabId, { pendingRWTxn: null, dmlResult: null });
       })
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; updateTabQuery(tabId, { queryError: String(e) }); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        updateTabQuery(tabId, { queryError: String(e) });
+      })
       .finally(() => updateTabQuery(tabId, { txnActionLoading: null }));
   }
 
@@ -462,9 +464,7 @@ export function SpannerExplorer({ projectID }: Props) {
     const startY = e.clientY;
     const startHeight = queryPanelHeight;
     function onMove(ev: MouseEvent) {
-      setQueryPanelHeight(
-        Math.max(80, Math.min(600, startHeight + ev.clientY - startY)),
-      );
+      setQueryPanelHeight(Math.max(80, Math.min(600, startHeight + ev.clientY - startY)));
     }
     function onUp() {
       document.removeEventListener("mousemove", onMove);
@@ -479,9 +479,7 @@ export function SpannerExplorer({ projectID }: Props) {
     const startX = e.clientX;
     const startWidth = treePaneWidth;
     function onMove(ev: MouseEvent) {
-      setTreePaneWidth(
-        Math.max(180, Math.min(600, startWidth + ev.clientX - startX)),
-      );
+      setTreePaneWidth(Math.max(180, Math.min(600, startWidth + ev.clientX - startX)));
     }
     function onUp() {
       document.removeEventListener("mousemove", onMove);
@@ -519,24 +517,18 @@ export function SpannerExplorer({ projectID }: Props) {
             </div>
           ) : error ? (
             <div className="m-[10px] p-[8px] bg-red-900/20 border border-red-800 rounded-[4px]">
-              <p className="text-[10px] text-red-400 font-mono">
-                {error}
-              </p>
+              <p className="text-[10px] text-red-400 font-mono">{error}</p>
             </div>
           ) : instances.length === 0 ? (
             <div className="flex items-center justify-center py-[40px]">
-              <p className="text-[10px] text-foreground/30 font-mono">
-                No instances
-              </p>
+              <p className="text-[10px] text-foreground/30 font-mono">No instances</p>
             </div>
           ) : (
             instances.map((instance) => {
               const expanded = expandedInstance === instance.name;
               const dbs = databases[instance.name] ?? [];
               const loadingDbs = dbLoading[instance.name] ?? false;
-              const ss =
-                STATE_STYLE[instance.state] ??
-                "text-foreground/30 bg-foreground/5";
+              const ss = STATE_STYLE[instance.state] ?? "text-foreground/30 bg-foreground/5";
 
               return (
                 <div key={instance.name} className="border-b border-border">
@@ -546,9 +538,7 @@ export function SpannerExplorer({ projectID }: Props) {
                   >
                     <Icon
                       icon={
-                        expanded
-                          ? "solar:alt-arrow-down-linear"
-                          : "solar:alt-arrow-right-linear"
+                        expanded ? "solar:alt-arrow-down-linear" : "solar:alt-arrow-right-linear"
                       }
                       className="text-[10px] text-foreground/30 shrink-0"
                     />
@@ -582,22 +572,15 @@ export function SpannerExplorer({ projectID }: Props) {
                           const dbSelected = selectedDatabase === db.name;
                           const dbTables = tables[db.name] ?? [];
                           const loadingTables = tableLoading[db.name] ?? false;
-                          const ds =
-                            STATE_STYLE[db.state] ??
-                            "text-foreground/30 bg-foreground/5";
+                          const ds = STATE_STYLE[db.state] ?? "text-foreground/30 bg-foreground/5";
                           const filteredTables = tableFilter
                             ? dbTables.filter((t) =>
-                                t.name
-                                  .toLowerCase()
-                                  .includes(tableFilter.toLowerCase()),
+                                t.name.toLowerCase().includes(tableFilter.toLowerCase()),
                               )
                             : dbTables;
 
                           return (
-                            <div
-                              key={db.name}
-                              className="border-t border-border"
-                            >
+                            <div key={db.name} className="border-t border-border">
                               <button
                                 onClick={() => toggleDatabase(db)}
                                 className={`w-full flex items-center gap-[7px] pl-[24px] pr-[10px] py-[7px] transition-colors text-left ${dbSelected ? "bg-brand-fill/7" : "hover:bg-foreground/[2%]"}`}
@@ -637,18 +620,14 @@ export function SpannerExplorer({ projectID }: Props) {
                                       {dbTables.length > 3 && (
                                         <input
                                           value={tableFilter}
-                                          onChange={(e) =>
-                                            setTableFilter(e.target.value)
-                                          }
+                                          onChange={(e) => setTableFilter(e.target.value)}
                                           placeholder="Filter tables…"
                                           className="w-full px-[8px] py-[3px] bg-background border border-border rounded-[3px] text-[9px] font-mono text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-foreground/25 mb-[4px]"
                                         />
                                       )}
                                       {filteredTables.length === 0 ? (
                                         <p className="text-[9px] text-foreground/20 font-mono py-[4px]">
-                                          {dbTables.length === 0
-                                            ? "No tables"
-                                            : "No match"}
+                                          {dbTables.length === 0 ? "No tables" : "No match"}
                                         </p>
                                       ) : (
                                         filteredTables.map((table) => {
@@ -658,12 +637,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                           return (
                                             <button
                                               key={table.name}
-                                              onClick={() =>
-                                                openTableTab(
-                                                  table.name,
-                                                  db.name,
-                                                )
-                                              }
+                                              onClick={() => openTableTab(table.name, db.name)}
                                               className={`w-full flex items-center gap-[7px] px-[4px] py-[4px] rounded-[2px] transition-colors text-left group ${isActive ? "bg-brand-fill/10" : "hover:bg-foreground/[3%]"}`}
                                             >
                                               <Icon
@@ -726,41 +700,42 @@ export function SpannerExplorer({ projectID }: Props) {
                   className={`text-xs shrink-0 ${isActive && !isQTab ? "text-brand" : ""}`}
                 />
               ),
-              label: isQTab && editingTabId === tabId ? (
-                <input
-                  autoFocus
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => commitRename(tabId)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      commitRename(tabId);
+              label:
+                isQTab && editingTabId === tabId ? (
+                  <input
+                    autoFocus
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={() => commitRename(tabId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitRename(tabId);
+                      }
+                      if (e.key === "Escape") {
+                        setEditingTabId(null);
+                        setEditingName("");
+                      }
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-brand-fill/60"
+                  />
+                ) : (
+                  <MarqueeLabel
+                    text={label}
+                    maxWidth={110}
+                    onDoubleClick={
+                      isQTab
+                        ? (e) => {
+                            e.stopPropagation();
+                            startRename(tabId);
+                          }
+                        : undefined
                     }
-                    if (e.key === "Escape") {
-                      setEditingTabId(null);
-                      setEditingName("");
-                    }
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  className="w-[90px] bg-transparent outline-none text-foreground text-[10px] font-mono border-b border-brand-fill/60"
-                />
-              ) : (
-                <MarqueeLabel
-                  text={label}
-                  maxWidth={110}
-                  onDoubleClick={
-                    isQTab
-                      ? (e) => {
-                          e.stopPropagation();
-                          startRename(tabId);
-                        }
-                      : undefined
-                  }
-                />
-              ),
+                  />
+                ),
               closeable: !isQTab || tabs.filter(isQueryTab).length > 1,
             };
           })}
@@ -777,10 +752,7 @@ export function SpannerExplorer({ projectID }: Props) {
             className="flex items-center justify-center w-[32px] shrink-0 border-l border-border text-foreground/50 hover:text-foreground hover:bg-foreground/[6%] transition-colors self-stretch"
             title="New query tab"
           >
-            <Icon
-              icon="solar:add-square-bold-duotone"
-              className="text-[16px]"
-            />
+            <Icon icon="solar:add-square-bold-duotone" className="text-[16px]" />
           </button>
         </TabBar>
 
@@ -821,10 +793,7 @@ export function SpannerExplorer({ projectID }: Props) {
                       <>
                         <div className="flex items-center justify-between px-[16px] py-[10px] border-b border-border shrink-0">
                           <div className="flex items-center gap-[7px]">
-                            <Icon
-                              icon="solar:database-bold"
-                              className="text-sm text-brand"
-                            />
+                            <Icon icon="solar:database-bold" className="text-sm text-brand" />
                             <p className="text-[10px] font-mono text-foreground/70">
                               {shortName(selectedDatabase)}
                             </p>
@@ -846,9 +815,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                 </button>
                               </div>
                             )}
-                            <p className="text-[9px] text-foreground/30 font-mono">
-                              ⌘↩ to run
-                            </p>
+                            <p className="text-[9px] text-foreground/30 font-mono">⌘↩ to run</p>
                           </div>
                         </div>
 
@@ -860,9 +827,7 @@ export function SpannerExplorer({ projectID }: Props) {
                             <div className="flex-1 min-h-0 border border-border rounded-[4px] overflow-hidden focus-within:border-brand-fill/40 transition-colors">
                               <SqlEditor
                                 value={sql}
-                                onChange={(val) =>
-                                  updateTabQuery(tabId, { sql: val })
-                                }
+                                onChange={(val) => updateTabQuery(tabId, { sql: val })}
                                 onRun={() => handleRunQuery(tabId)}
                                 placeholder="SELECT * FROM MyTable LIMIT 20"
                               />
@@ -879,10 +844,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                       className="text-xs animate-spin"
                                     />
                                   ) : (
-                                    <Icon
-                                      icon="solar:play-linear"
-                                      className="text-xs"
-                                    />
+                                    <Icon icon="solar:play-linear" className="text-xs" />
                                   )
                                 }
                               >
@@ -912,7 +874,9 @@ export function SpannerExplorer({ projectID }: Props) {
                                   className="text-yellow-400 text-sm shrink-0"
                                 />
                                 <p className="text-[10px] text-yellow-400 font-mono flex-1">
-                                  {pendingRWTxn.rowsAffected} row{pendingRWTxn.rowsAffected !== 1 ? "s" : ""} staged — transaction is open
+                                  {pendingRWTxn.rowsAffected} row
+                                  {pendingRWTxn.rowsAffected !== 1 ? "s" : ""} staged — transaction
+                                  is open
                                 </p>
                               </div>
                               <div className="flex items-center gap-[6px]">
@@ -922,7 +886,10 @@ export function SpannerExplorer({ projectID }: Props) {
                                   className="flex items-center gap-[5px] px-[10px] py-[4px] rounded-[3px] border border-border text-[10px] font-mono text-foreground/70 hover:text-foreground hover:bg-foreground/[6%] transition-colors disabled:opacity-40"
                                 >
                                   {txnActionLoading === "rollback" ? (
-                                    <Icon icon="solar:refresh-linear" className="text-xs animate-spin" />
+                                    <Icon
+                                      icon="solar:refresh-linear"
+                                      className="text-xs animate-spin"
+                                    />
                                   ) : (
                                     <Icon icon="solar:close-circle-linear" className="text-xs" />
                                   )}
@@ -934,7 +901,10 @@ export function SpannerExplorer({ projectID }: Props) {
                                   className="flex items-center gap-[5px] px-[10px] py-[4px] rounded-[3px] bg-green-700/30 border border-green-700/50 text-[10px] font-mono text-green-400 hover:bg-green-700/50 transition-colors disabled:opacity-40"
                                 >
                                   {txnActionLoading === "commit" ? (
-                                    <Icon icon="solar:refresh-linear" className="text-xs animate-spin" />
+                                    <Icon
+                                      icon="solar:refresh-linear"
+                                      className="text-xs animate-spin"
+                                    />
                                   ) : (
                                     <Icon icon="solar:check-circle-linear" className="text-xs" />
                                   )}
@@ -951,16 +921,13 @@ export function SpannerExplorer({ projectID }: Props) {
                               />
                               <p className="text-[10px] text-green-400 font-mono">
                                 {dmlResult.rowsAffected} row
-                                {dmlResult.rowsAffected !== 1 ? "s" : ""}{" "}
-                                affected
+                                {dmlResult.rowsAffected !== 1 ? "s" : ""} affected
                               </p>
                             </div>
                           )}
                           {queryResult && queryResult.columns.length === 0 && (
                             <div className="flex items-center justify-center py-[40px]">
-                              <p className="text-[10px] text-foreground/30 font-mono">
-                                No results
-                              </p>
+                              <p className="text-[10px] text-foreground/30 font-mono">No results</p>
                             </div>
                           )}
                           {queryResult && queryResult.columns.length > 0 && (
@@ -996,9 +963,7 @@ export function SpannerExplorer({ projectID }: Props) {
                                           className="px-[12px] py-[6px] border-r border-border last:border-0 max-w-[280px]"
                                         >
                                           {cell === "NULL" ? (
-                                            <span className="text-foreground/20 italic">
-                                              NULL
-                                            </span>
+                                            <span className="text-foreground/20 italic">NULL</span>
                                           ) : (
                                             <span className="text-foreground/72 truncate block">
                                               {cell}
@@ -1039,9 +1004,7 @@ export function SpannerExplorer({ projectID }: Props) {
                       org={workspaceState.organisation}
                       product={workspaceState.product}
                       protoDecodeEnabled={protoDecodeEnabled}
-                      onNavigateToQuery={(navSql) =>
-                        handleNavigateToQuery(navSql, info.dbName)
-                      }
+                      onNavigateToQuery={(navSql) => handleNavigateToQuery(navSql, info.dbName)}
                     />
                   )}
                 </div>
@@ -1063,12 +1026,9 @@ export function SpannerExplorer({ projectID }: Props) {
               Destructive statement
             </AlertDialogTitle>
             <AlertDialogDescription className="text-foreground/50 text-[10px] font-mono">
-              This will permanently modify or destroy data. This cannot be
-              undone.
+              This will permanently modify or destroy data. This cannot be undone.
               <pre className="mt-[10px] text-[9px] text-red-400 bg-background border border-border p-[8px] rounded-[3px] overflow-x-auto whitespace-pre-wrap break-all">
-                {(
-                  queryTabStates[destructivePendingTab ?? ""]?.sql ?? ""
-                ).trim()}
+                {(queryTabStates[destructivePendingTab ?? ""]?.sql ?? "").trim()}
               </pre>
             </AlertDialogDescription>
           </AlertDialogHeader>
