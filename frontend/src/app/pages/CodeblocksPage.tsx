@@ -41,6 +41,7 @@ interface Codeblock {
   displayName: string;
   releaseLevel: number;
   publisher: string;
+  publisherDisplayName: string;
   latestVersion: string;
   headline: string;
   description: string;
@@ -179,7 +180,7 @@ export function CodeblocksPage({ view = "all" }: { view?: "all" | "mine" }) {
                   </p>
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] text-foreground/40 font-mono truncate">
-                      {cb.publisher || "Alis Exchange"}
+                      {cb.publisherDisplayName || cb.publisher || "Alis Exchange"}
                     </p>
                     <div className="flex items-center gap-[5px]">
                       <Icon

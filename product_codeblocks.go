@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"google.golang.org/protobuf/encoding/protowire"
@@ -33,7 +34,14 @@ func (s *ProductService) ListCodeblocks() ([]Codeblock, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListCodeblocks: response too short (%d bytes)", len(body))
 	}
-	return parseCodeblocksResponse(body[5:])
+	blocks, err := parseCodeblocksResponse(body[5:])
+	if err != nil {
+		return nil, err
+	}
+
+	s.resolvePublisherDisplayNames(ctx, blocks)
+
+	return blocks, nil
 }
 
 // GetCodeblock fetches a single block by its short ID (e.g. "skills").
@@ -57,6 +65,11 @@ func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
 	}
 	var cb Codeblock
 	parseBlockInto(body[5:], &cb)
+	if cb.Publisher != "" {
+		blocks := []Codeblock{cb}
+		s.resolvePublisherDisplayNames(ctx, blocks)
+		cb = blocks[0]
+	}
 	return &cb, nil
 }
 
@@ -253,4 +266,46 @@ func (s *ProductService) ListMyCodeblocks() ([]Codeblock, error) {
 		}
 	}
 	return mine, nil
+}
+
+// resolvePublisherDisplayNames populates PublisherDisplayName on each block by
+// calling RetrieveMaskedAccounts for the unique publisher account IDs.
+func (s *ProductService) resolvePublisherDisplayNames(ctx context.Context, blocks []Codeblock) {
+	ids := make(map[string]bool)
+	for _, cb := range blocks {
+		if cb.Publisher != "" && strings.HasPrefix(cb.Publisher, "accounts/") {
+			id := strings.TrimPrefix(cb.Publisher, "accounts/")
+			ids[id] = true
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+
+	var buf []byte
+	for id := range ids {
+		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+		buf = protowire.AppendString(buf, "accounts/"+id)
+	}
+
+	fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	resp, grpcStatus, _, err := s.doConsoleGRPCWeb(fetchCtx,
+		"alis.os.accounts.v1.AccountsService/RetrieveMaskedAccounts", buf)
+	if err != nil || grpcStatus != 0 || len(resp) < 5 {
+		return
+	}
+
+	displayNames := make(map[string]string)
+	for _, acc := range parseMaskedAccountsResponse(resp[5:]) {
+		if acc.DisplayName != "" {
+			displayNames[acc.Name] = acc.DisplayName
+		}
+	}
+
+	for i, cb := range blocks {
+		if name, ok := displayNames[cb.Publisher]; ok {
+			blocks[i].PublisherDisplayName = name
+		}
+	}
 }

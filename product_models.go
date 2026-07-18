@@ -128,11 +128,12 @@ type InstallBlockResult struct {
 // ── Codeblocks ────────────────────────────────────────────────────────────────
 
 type Codeblock struct {
-	Name             string             `json:"name"`
-	DisplayName      string             `json:"displayName"`
-	ReleaseLevel     int32              `json:"releaseLevel"`
-	Publisher        string             `json:"publisher"`
-	LatestVersion    string             `json:"latestVersion"`
+	Name                  string             `json:"name"`
+	DisplayName           string             `json:"displayName"`
+	ReleaseLevel          int32              `json:"releaseLevel"`
+	Publisher             string             `json:"publisher"`
+	PublisherDisplayName  string             `json:"publisherDisplayName"`
+	LatestVersion         string             `json:"latestVersion"`
 	Tagline          string             `json:"tagline"`
 	Headline         string             `json:"headline"`
 	Description      string             `json:"description"`

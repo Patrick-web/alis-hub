@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
-import { SidebarNavItem } from "./SidebarNavItem";
+import { SidebarListItem } from "./SidebarListItem";
 import { Button } from "./Button";
 import { Input } from "./Input";
 import { EnvFormSheet } from "./EnvFormSheet";
@@ -22,17 +22,17 @@ const envNavItems = [
   {
     id: "production",
     label: "Production",
-    icon: <Icon icon="solar:earth-linear" className="text-brand text-xl" />,
+    icon: <Icon icon="solar:earth-linear" className="text-xl" />,
   },
   {
     id: "staging",
     label: "Staging",
-    icon: <Icon icon="solar:cloud-linear" className="text-foreground text-xl" />,
+    icon: <Icon icon="solar:cloud-linear" className="text-xl" />,
   },
   {
     id: "development",
     label: "Development",
-    icon: <Icon icon="solar:code-linear" className="text-foreground text-xl" />,
+    icon: <Icon icon="solar:code-linear" className="text-xl" />,
   },
 ];
 
@@ -41,19 +41,13 @@ const codeblockNavItems = [
     id: "all",
     label: "All Codeblocks",
     route: "/codeblocks",
-    icon: <Icon icon="solar:box-linear" className="text-brand text-xl" />,
+    icon: <Icon icon="solar:box-linear" className="text-xl" />,
   },
   {
     id: "mine",
     label: "My Codeblocks",
     route: "/codeblocks/mine",
-    icon: <Icon icon="solar:user-linear" className="text-foreground text-xl" />,
-  },
-  {
-    id: "starred",
-    label: "Starred",
-    route: null,
-    icon: <Icon icon="solar:star-linear" className="text-foreground text-xl" />,
+    icon: <Icon icon="solar:user-linear" className="text-xl" />,
   },
 ];
 
@@ -82,7 +76,7 @@ export function Sidebar() {
   const dynamicEnvItems = state.loadedEnvs.map((env) => ({
     id: env.name,
     label: env.displayName,
-    icon: <Icon icon="solar:server-square-cloud-linear" className="text-brand text-xl" />,
+    icon: <Icon icon="solar:server-square-cloud-linear" className="text-xl" />,
   }));
 
   let items: {
@@ -117,9 +111,6 @@ export function Sidebar() {
           <Icon
             icon="solar:sledgehammer-line-duotone"
             className="text-xl"
-            style={{
-              color: state.activeNeuronIds[0] === n.name ? "#F881A9" : "white",
-            }}
           />
         ),
       }));
@@ -281,7 +272,7 @@ export function Sidebar() {
               </div>
             )}
             {items.map((item, i) => (
-              <SidebarNavItem
+              <SidebarListItem
                 key={item.id}
                 ref={(el) => {
                   if (el) itemRefs.current.set(item.id, el);
@@ -295,25 +286,35 @@ export function Sidebar() {
                 }
                 onKeyDown={(e) => handleItemKeyDown(e, i)}
                 onClick={() => handleItemClick(item)}
-                onEdit={
-                  isEnvironments && dynamicEnvItems.length > 0
-                    ? () => {
-                        const env = state.loadedEnvs.find((e) => e.name === item.id);
-                        if (env) {
-                          setEditTarget(env);
-                          setSheetMode("edit");
-                          setSheetOpen(true);
-                        }
-                      }
-                    : undefined
-                }
-                onDelete={
-                  isEnvironments && dynamicEnvItems.length > 0
-                    ? () => {
-                        const env = state.loadedEnvs.find((e) => e.name === item.id);
-                        if (env) setDeleteTarget(env);
-                      }
-                    : undefined
+                rightElement={
+                  isEnvironments && dynamicEnvItems.length > 0 ? (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const env = state.loadedEnvs.find((e) => e.name === item.id);
+                          if (env) {
+                            setEditTarget(env);
+                            setSheetMode("edit");
+                            setSheetOpen(true);
+                          }
+                        }}
+                        className="p-[3px] rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground transition-colors"
+                      >
+                        <Icon icon="solar:pen-linear" className="text-[14px]" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const env = state.loadedEnvs.find((e) => e.name === item.id);
+                          if (env) setDeleteTarget(env);
+                        }}
+                        className="p-[3px] rounded hover:bg-[rgba(255,80,80,0.15)] text-foreground/50 hover:text-destructive transition-colors"
+                      >
+                        <Icon icon="solar:trash-bin-trash-linear" className="text-[14px]" />
+                      </button>
+                    </>
+                  ) : undefined
                 }
               />
             ))}

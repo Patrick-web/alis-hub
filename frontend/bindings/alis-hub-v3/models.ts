@@ -505,6 +505,7 @@ export class Codeblock {
     "displayName": string;
     "releaseLevel": number;
     "publisher": string;
+    "publisherDisplayName": string;
     "latestVersion": string;
     "tagline": string;
     "headline": string;
@@ -528,6 +529,9 @@ export class Codeblock {
         }
         if (!("publisher" in $$source)) {
             this["publisher"] = "";
+        }
+        if (!("publisherDisplayName" in $$source)) {
+            this["publisherDisplayName"] = "";
         }
         if (!("latestVersion" in $$source)) {
             this["latestVersion"] = "";
@@ -564,18 +568,18 @@ export class Codeblock {
      * Creates a new Codeblock instance from a string or object.
      */
     static createFrom($$source: any = {}): Codeblock {
-        const $$createField10_0 = $$createType4;
-        const $$createField11_0 = $$createType6;
-        const $$createField12_0 = $$createType8;
+        const $$createField11_0 = $$createType4;
+        const $$createField12_0 = $$createType6;
+        const $$createField13_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("highlights" in $$parsedSource) {
-            $$parsedSource["highlights"] = $$createField10_0($$parsedSource["highlights"]);
+            $$parsedSource["highlights"] = $$createField11_0($$parsedSource["highlights"]);
         }
         if ("keyFeatures" in $$parsedSource) {
-            $$parsedSource["keyFeatures"] = $$createField11_0($$parsedSource["keyFeatures"]);
+            $$parsedSource["keyFeatures"] = $$createField12_0($$parsedSource["keyFeatures"]);
         }
         if ("codeArchitecture" in $$parsedSource) {
-            $$parsedSource["codeArchitecture"] = $$createField12_0($$parsedSource["codeArchitecture"]);
+            $$parsedSource["codeArchitecture"] = $$createField13_0($$parsedSource["codeArchitecture"]);
         }
         return new Codeblock($$parsedSource as Partial<Codeblock>);
     }
