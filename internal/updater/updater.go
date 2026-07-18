@@ -193,6 +193,9 @@ func (s *Service) DownloadUpdate() (string, error) {
 	if err := os.MkdirAll(extractDir, 0o755); err != nil {
 		return "", err
 	}
+	// TODO(security): verify checksum of downloaded archive before extraction.
+	// The worker should return a SHA-256 hash alongside the download URL so the
+	// client can verify integrity before unzipping.
 	var newPath string
 	switch runtime.GOOS {
 	case "darwin":
