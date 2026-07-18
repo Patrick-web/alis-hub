@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notification Center — macOS Redesign Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --surface2: #222222;
+  --surface3: #2c2c2c;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text-mid: rgba(240,240,240,0.65);
+  --text-dim: rgba(240,240,240,0.35);
+  --text-faint: rgba(240,240,240,0.18);
+  --brand: #f881a9;
+  --brand-dim: rgba(248,129,169,0.12);
+  --brand-dim2: rgba(248,129,169,0.2);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --green: #34c759;
+  --green-dim: rgba(52,199,89,0.15);
+  --yellow: #fac800;
+  --yellow-dim: rgba(250,200,0,0.15);
+  --red: #d4183d;
+  --red-dim: rgba(212,24,61,0.15);
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 100px;
+  min-height: 100vh;
+}
+
+/* ── Page layout ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.variant-num {
+  color: var(--brand);
+  font-size: 10px;
+  font-family: var(--mono);
+}
+.panels-row {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ═══════════════════════════════════════════
+   VARIANT 1 — Frosted Vibrancy
+   macOS Big Sur / Ventura vibrancy panel
+═══════════════════════════════════════════ */
+.v1-panel {
+  width: 360px;
+  background: rgba(30,30,35,0.85);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.06) inset,
+    0 24px 48px rgba(0,0,0,0.5),
+    0 2px 8px rgba(0,0,0,0.3);
+}
+.v1-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.v1-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v1-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.v1-badge {
+  background: var(--brand-dim);
+  color: var(--brand);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+}
+.v1-header-actions {
+  display: flex;
+  gap: 10px;
+}
+.v1-action-btn {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.v1-action-btn:hover { background: var(--brand-dim); }
+.v1-action-btn.ghost { color: var(--text-dim); }
+.v1-action-btn.ghost:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+
+.v1-date-header {
+  padding: 8px 16px 4px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: -0.1px;
+  position: sticky;
+  top: 0;
+  background: rgba(26,26,30,0.8);
+  backdrop-filter: blur(8px);
+}
+
+.v1-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.v1-item:last-child { border-bottom: none; }
+.v1-item:hover { background: rgba(255,255,255,0.035); }
+.v1-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+.v1-item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.icon-blue { background: var(--blue-dim); color: var(--blue); }
+.icon-green { background: var(--green-dim); color: var(--green); }
+.icon-yellow { background: var(--yellow-dim); color: var(--yellow); }
+.icon-red { background: var(--red-dim); color: var(--red); }
+.icon-brand { background: var(--brand-dim); color: var(--brand); }
+
+.v1-item-body { flex: 1; min-width: 0; }
+.v1-item-title {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.1px;
+  line-height: 1.35;
+}
+.v1-item.read .v1-item-title { color: var(--text-mid); font-weight: 500; }
+.v1-item-body-text {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.v1-item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+}
+.v1-source {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.v1-time {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.v1-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 7px;
+}
+.v1-action {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.v1-action.primary {
+  background: var(--brand-dim);
+  border-color: rgba(248,129,169,0.25);
+  color: var(--brand);
+}
+.v1-action.primary:hover { background: var(--brand-dim2); }
+.v1-action.ghost {
+  background: transparent;
+  border-color: rgba(255,255,255,0.1);
+  color: var(--text-dim);
+}
+.v1-action.ghost:hover { border-color: rgba(255,255,255,0.2); color: var(--text-mid); }
+
+.v1-footer {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+.v1-debug {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.v1-debug:hover { color: var(--text-dim); }
+
+
+/* ═══════════════════════════════════════════
+   VARIANT 2 — Control Center Compact
+   macOS Control Center density + icon tiles
+═══════════════════════════════════════════ */
+.v2-panel {
+  width: 340px;
+  background: #1c1c1e;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.08) inset,
+    0 20px 60px rgba(0,0,0,0.6),
+    0 4px 16px rgba(0,0,0,0.3);
+}
+.v2-header {
+  padding: 16px 16px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.v2-title {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+.v2-count {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+.v2-segment {
+  padding: 4px 16px 6px;
+}
+.v2-segment-label {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 2px;
+}
+.v2-group {
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.v2-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 12px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.1s;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.v2-row:last-child { border-bottom: none; }
+.v2-row:hover { background: rgba(255,255,255,0.04); }
+.v2-row-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.v2-row-content { flex: 1; min-width: 0; }
+.v2-row-title {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v2-row.read .v2-row-title { color: var(--text-mid); font-weight: 400; }
+.v2-row-sub {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.v2-row-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.v2-row-time {
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.v2-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+.v2-clear-row {
+  padding: 8px 16px 12px;
+  display: flex;
+  gap: 8px;
+}
+.v2-pill-btn {
+  flex: 1;
+  padding: 7px 0;
+  border-radius: 20px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+.v2-pill-btn.primary {
+  background: var(--brand-dim2);
+  color: var(--brand);
+}
+.v2-pill-btn.primary:hover { background: rgba(248,129,169,0.3); }
+.v2-pill-btn.secondary {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-mid);
+}
+.v2-pill-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+
+
+/* ═══════════════════════════════════════════
+   VARIANT 3 — Banner Cards
+   Each notif looks like a macOS banner toast
+═══════════════════════════════════════════ */
+.v3-panel {
+  width: 380px;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.v3-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+.v3-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.v3-header-btns { display: flex; gap: 8px; }
+.v3-hbtn {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.v3-hbtn:hover { background: var(--brand-dim); }
+.v3-date-strip {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-dim);
+  margin: 10px 0 6px;
+  padding-left: 2px;
+  letter-spacing: -0.2px;
+}
+.v3-card {
+  background: #1e1e22;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 13px;
+  padding: 12px 14px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+.v3-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 13px 0 0 13px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.v3-card.unread::before { opacity: 1; }
+.v3-card.severity-info::before { background: var(--blue); }
+.v3-card.severity-success::before { background: var(--green); }
+.v3-card.severity-warning::before { background: var(--yellow); }
+.v3-card.severity-error::before { background: var(--red); }
+.v3-card:hover {
+  background: #232328;
+  border-color: rgba(255,255,255,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.v3-card.read { opacity: 0.55; }
+.v3-card.read:hover { opacity: 0.8; transform: none; }
+.v3-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.v3-app-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.v3-app-name {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex: 1;
+}
+.v3-time {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.v3-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+}
+.v3-card-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+  line-height: 1.3;
+}
+.v3-card-body {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text-mid);
+  line-height: 1.45;
+  margin-top: 3px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.v3-card-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+.v3-btn {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.v3-btn.primary {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.v3-btn.primary:hover { background: rgba(255,255,255,0.16); }
+.v3-btn.brand {
+  background: var(--brand-dim2);
+  color: var(--brand);
+}
+.v3-btn.brand:hover { background: rgba(248,129,169,0.3); }
+.v3-dismiss-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.v3-card:hover .v3-dismiss-btn { opacity: 1; }
+
+
+/* ═══════════════════════════════════════════
+   VARIANT 4 — Source-Grouped
+   Notifications grouped by source app,
+   accordion-style like macOS notification groups
+═══════════════════════════════════════════ */
+.v4-panel {
+  width: 360px;
+  background: #191919;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.v4-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 13px 15px 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.v4-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.v4-badge {
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 700;
+  background: var(--brand);
+  color: #111;
+  padding: 2px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+.v4-mark-all {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.v4-mark-all:hover { background: var(--brand-dim); }
+.v4-date-label {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 10px 15px 4px;
+  background: rgba(255,255,255,0.015);
+}
+.v4-source-group {
+  margin: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 11px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.v4-source-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.v4-source-header:hover { background: rgba(255,255,255,0.03); }
+.v4-source-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+.v4-source-name {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-mid);
+  letter-spacing: -0.1px;
+  flex: 1;
+  text-transform: capitalize;
+}
+.v4-source-count {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-faint);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.v4-notif {
+  display: flex;
+  gap: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid rgba(255,255,255,0.035);
+  position: relative;
+}
+.v4-notif:last-child { border-bottom: none; }
+.v4-notif:hover { background: rgba(255,255,255,0.03); }
+.v4-sev-bar {
+  width: 2.5px;
+  border-radius: 2px;
+  align-self: stretch;
+  flex-shrink: 0;
+  min-height: 14px;
+}
+.sev-info { background: var(--blue); }
+.sev-success { background: var(--green); }
+.sev-warning { background: var(--yellow); }
+.sev-error { background: var(--red); }
+.v4-notif-content { flex: 1; min-width: 0; }
+.v4-notif-title {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  letter-spacing: -0.1px;
+}
+.v4-notif.read .v4-notif-title { color: var(--text-dim); font-weight: 400; }
+.v4-notif-body {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  color: var(--text-dim);
+  line-height: 1.4;
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.v4-notif-time {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.v4-footer {
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 8px 15px;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+.v4-footer-btn {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 5px;
+  transition: all 0.12s;
+}
+.v4-footer-btn:hover { color: var(--text-dim); background: rgba(255,255,255,0.04); }
+.v4-footer-btn.danger:hover { color: var(--red); }
+
+
+/* ═══════════════════════════════════════════
+   VARIANT 5 — Minimal Sequoia
+   Ultra-clean typographic list,
+   macOS Sequoia / minimalist direction
+═══════════════════════════════════════════ */
+.v5-panel {
+  width: 340px;
+  background: #161618;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+}
+.v5-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 15px 10px;
+  gap: 8px;
+}
+.v5-bell-wrapper {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--brand-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.v5-title-block { flex: 1; }
+.v5-title {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.v5-subtitle {
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 1px;
+}
+.v5-header-btn {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--brand);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+.v5-header-btn:hover { background: var(--brand-dim); }
+
+.v5-list { padding: 2px 0; }
+.v5-day-marker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 15px 4px;
+}
+.v5-day-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.055);
+}
+.v5-day-text {
+  font-family: var(--sans);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.v5-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 15px;
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+.v5-item:hover { background: rgba(255,255,255,0.03); }
+.v5-item.unread { background: rgba(248,129,169,0.025); }
+.v5-item.unread:hover { background: rgba(248,129,169,0.04); }
+.v5-sev-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.v5-item-main { flex: 1; min-width: 0; }
+.v5-item-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+.v5-item-title {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v5-item.read .v5-item-title { color: var(--text-dim); font-weight: 400; }
+.v5-item-time {
+  font-family: var(--sans);
+  font-size: 10px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+.v5-item-body {
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.45;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v5-item-tags {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+}
+.v5-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text-faint);
+  background: rgba(255,255,255,0.05);
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.v5-item-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.v5-act-btn {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent;
+  color: var(--text-mid);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.v5-act-btn:hover { background: rgba(255,255,255,0.07); }
+.v5-act-btn.brand {
+  border-color: rgba(248,129,169,0.25);
+  color: var(--brand);
+}
+.v5-act-btn.brand:hover { background: var(--brand-dim); }
+.v5-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 8px;
+  margin-top: 2px;
+}
+.v5-footer-btn {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 5px;
+  transition: all 0.12s;
+}
+.v5-footer-btn:hover { color: var(--text-dim); background: rgba(255,255,255,0.04); }
+.v5-footer-btn.danger:hover { color: var(--red); }
+
+/* Empty state */
+.v5-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 0;
+  color: var(--text-faint);
+}
+.v5-empty-icon { font-size: 28px; }
+.v5-empty-text {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* SVG icon helpers */
+svg { display: inline-block; vertical-align: middle; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     VARIANT 1 — Frosted Vibrancy
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">01</span>
+    Frosted Vibrancy — macOS Notification Center glass aesthetic
+  </div>
+
+  <div class="panels-row">
+    <div class="v1-panel">
+      <!-- Header -->
+      <div class="v1-header">
+        <div class="v1-header-left">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f881a9" stroke-width="1.8">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span class="v1-title">Notifications</span>
+          <span class="v1-badge">4</span>
+        </div>
+        <div class="v1-header-actions">
+          <button class="v1-action-btn">Mark all read</button>
+          <button class="v1-action-btn ghost">Clear all</button>
+        </div>
+      </div>
+
+      <!-- Today -->
+      <div class="v1-date-header">Today</div>
+
+      <div class="v1-item unread">
+        <div class="v1-item-icon icon-green">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="v1-item-body">
+          <div class="v1-item-title">Build succeeded — alis-hub-v3 / main</div>
+          <div class="v1-item-body-text">All 12 packages compiled successfully. Deploy is ready to trigger.</div>
+          <div class="v1-item-meta">
+            <span class="v1-source">build</span>
+            <span class="v1-time">2m ago</span>
+          </div>
+          <div class="v1-actions">
+            <button class="v1-action brand">View logs</button>
+            <button class="v1-action ghost">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="v1-item unread">
+        <div class="v1-item-icon icon-blue">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <div class="v1-item-body">
+          <div class="v1-item-title">Deploy in progress</div>
+          <div class="v1-item-body-text">Deploying neurons.alis.build — step 3 of 7: updating service mesh…</div>
+          <div class="v1-item-meta">
+            <span class="v1-source">deploy</span>
+            <span class="v1-time">5m ago</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="v1-item unread">
+        <div class="v1-item-icon icon-yellow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div class="v1-item-body">
+          <div class="v1-item-title">Define warning: unused export in payments-api</div>
+          <div class="v1-item-body-text">PaymentProcessor.reconcile is defined but never referenced.</div>
+          <div class="v1-item-meta">
+            <span class="v1-source">define</span>
+            <span class="v1-time">18m ago</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Yesterday -->
+      <div class="v1-date-header">Yesterday</div>
+
+      <div class="v1-item read">
+        <div class="v1-item-icon icon-brand">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+            <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+          </svg>
+        </div>
+        <div class="v1-item-body">
+          <div class="v1-item-title">Update available — v2.4.1</div>
+          <div class="v1-item-body-text">A new version of alis hub is ready to install.</div>
+          <div class="v1-item-meta">
+            <span class="v1-source">update</span>
+            <span class="v1-time">Yesterday</span>
+          </div>
+          <div class="v1-actions">
+            <button class="v1-action primary">Install now</button>
+            <button class="v1-action ghost">Later</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="v1-footer">
+        <button class="v1-debug">⬡ debug</button>
+      </div>
+    </div>
+
+    <!-- Annotations -->
+    <div style="max-width:260px;padding-top:8px;">
+      <p style="font-family:var(--sans);font-size:11.5px;color:var(--text-mid);line-height:1.6;margin-bottom:12px;">
+        Translucent panel with backdrop-blur. Rounded 16px container floats over the app. Icon tiles use colored tinted circles matching severity. Actions are pill buttons. Header is compact, sans-serif.
+      </p>
+      <ul style="font-family:var(--sans);font-size:11px;color:var(--text-dim);line-height:1.7;padding-left:14px;">
+        <li>backdrop-filter: blur(32px)</li>
+        <li>Rounded icon tiles 30×30px, r:8</li>
+        <li>Pill action buttons</li>
+        <li>Sans-serif title, mono source badge</li>
+        <li>Sticky date headers w/ micro blur</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     VARIANT 2 — Control Center Compact
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">02</span>
+    Control Center Compact — macOS CC density, grouped by recency
+  </div>
+
+  <div class="panels-row">
+    <div class="v2-panel">
+      <div class="v2-header">
+        <span class="v2-title">Notifications</span>
+        <span class="v2-count">4 unread</span>
+      </div>
+
+      <div class="v2-segment">
+        <div class="v2-segment-label">Today</div>
+        <div class="v2-group">
+          <div class="v2-row">
+            <div class="v2-row-icon icon-green">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <div class="v2-row-content">
+              <div class="v2-row-title">Build succeeded — main</div>
+              <div class="v2-row-sub">All 12 packages compiled</div>
+            </div>
+            <div class="v2-row-right">
+              <span class="v2-row-time">2m</span>
+              <div class="v2-dot"></div>
+            </div>
+          </div>
+          <div class="v2-row">
+            <div class="v2-row-icon icon-blue">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <div class="v2-row-content">
+              <div class="v2-row-title">Deploy in progress</div>
+              <div class="v2-row-sub">Step 3 of 7 — service mesh</div>
+            </div>
+            <div class="v2-row-right">
+              <span class="v2-row-time">5m</span>
+              <div class="v2-dot"></div>
+            </div>
+          </div>
+          <div class="v2-row">
+            <div class="v2-row-icon icon-yellow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+              </svg>
+            </div>
+            <div class="v2-row-content">
+              <div class="v2-row-title">Unused export warning</div>
+              <div class="v2-row-sub">payments-api / define</div>
+            </div>
+            <div class="v2-row-right">
+              <span class="v2-row-time">18m</span>
+              <div class="v2-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v2-segment">
+        <div class="v2-segment-label">Yesterday</div>
+        <div class="v2-group">
+          <div class="v2-row read">
+            <div class="v2-row-icon icon-brand">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </div>
+            <div class="v2-row-content">
+              <div class="v2-row-title">Update available — v2.4.1</div>
+              <div class="v2-row-sub">New version ready to install</div>
+            </div>
+            <div class="v2-row-right">
+              <span class="v2-row-time">Yesterday</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v2-clear-row">
+        <button class="v2-pill-btn primary">Mark all read</button>
+        <button class="v2-pill-btn secondary">Clear all</button>
+      </div>
+    </div>
+
+    <div style="max-width:260px;padding-top:8px;">
+      <p style="font-family:var(--sans);font-size:11.5px;color:var(--text-mid);line-height:1.6;margin-bottom:12px;">
+        Dense list optimized for scan speed. Title is large and bold (CC style). Rows are grouped in tinted cards. No body text visible in list — just title + sub. Unread dot is in the far right column.
+      </p>
+      <ul style="font-family:var(--sans);font-size:11px;color:var(--text-dim);line-height:1.7;padding-left:14px;">
+        <li>18px large "Notifications" heading</li>
+        <li>Group cards with 4% tint</li>
+        <li>Compact 9px+11px type scale</li>
+        <li>Pill action row at bottom</li>
+        <li>Read items visually flatten</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     VARIANT 3 — Banner Cards
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">03</span>
+    Banner Cards — each notification as a distinct macOS banner
+  </div>
+
+  <div class="panels-row">
+    <div class="v3-panel">
+      <div class="v3-header">
+        <span class="v3-title">Notifications</span>
+        <div class="v3-header-btns">
+          <button class="v3-hbtn">Mark all read</button>
+          <button class="v3-hbtn" style="color:var(--text-dim)">Clear all</button>
+        </div>
+      </div>
+
+      <div class="v3-date-strip">Today</div>
+
+      <!-- Banner: success + actions -->
+      <div class="v3-card unread severity-success">
+        <button class="v3-dismiss-btn">✕</button>
+        <div class="v3-card-top">
+          <div class="v3-app-icon icon-green">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>
+            </svg>
+          </div>
+          <span class="v3-app-name">Build</span>
+          <span class="v3-time">2m ago</span>
+          <div class="v3-unread-dot"></div>
+        </div>
+        <div class="v3-card-title">Build succeeded — alis-hub-v3 / main</div>
+        <div class="v3-card-body">All 12 packages compiled successfully. Deploy is ready to trigger from the hub dashboard.</div>
+        <div class="v3-card-footer">
+          <button class="v3-btn brand">View logs</button>
+          <button class="v3-btn primary">Dismiss</button>
+        </div>
+      </div>
+
+      <!-- Banner: info, running -->
+      <div class="v3-card unread severity-info">
+        <button class="v3-dismiss-btn">✕</button>
+        <div class="v3-card-top">
+          <div class="v3-app-icon icon-blue">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <span class="v3-app-name">Deploy</span>
+          <span class="v3-time">5m ago</span>
+          <div class="v3-unread-dot"></div>
+        </div>
+        <div class="v3-card-title">Deploy in progress</div>
+        <div class="v3-card-body">Deploying neurons.alis.build — step 3 of 7: updating service mesh configuration…</div>
+      </div>
+
+      <!-- Banner: warning -->
+      <div class="v3-card unread severity-warning">
+        <button class="v3-dismiss-btn">✕</button>
+        <div class="v3-card-top">
+          <div class="v3-app-icon icon-yellow">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2L2 22h20L12 2z"/><line x1="12" y1="10" x2="12" y2="14"/>
+            </svg>
+          </div>
+          <span class="v3-app-name">Define</span>
+          <span class="v3-time">18m ago</span>
+          <div class="v3-unread-dot"></div>
+        </div>
+        <div class="v3-card-title">Unused export in payments-api</div>
+        <div class="v3-card-body">PaymentProcessor.reconcile is defined but never referenced by any neuron.</div>
+      </div>
+
+      <div class="v3-date-strip" style="margin-top:14px;">Yesterday</div>
+
+      <!-- Banner: read, with actions -->
+      <div class="v3-card read">
+        <button class="v3-dismiss-btn">✕</button>
+        <div class="v3-card-top">
+          <div class="v3-app-icon icon-brand">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </div>
+          <span class="v3-app-name">Update</span>
+          <span class="v3-time">Yesterday</span>
+        </div>
+        <div class="v3-card-title">Update available — v2.4.1</div>
+        <div class="v3-card-body">A new version of alis hub is ready to install with performance improvements.</div>
+        <div class="v3-card-footer">
+          <button class="v3-btn brand">Install now</button>
+          <button class="v3-btn primary">Remind me later</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="max-width:260px;padding-top:8px;">
+      <p style="font-family:var(--sans);font-size:11.5px;color:var(--text-mid);line-height:1.6;margin-bottom:12px;">
+        No containing panel — cards float directly. Each notification is a fully self-contained banner card with 13px rounded corners. Left severity bar replaces inline icon. Source + time in a mini app row, then big title + body.
+      </p>
+      <ul style="font-family:var(--sans);font-size:11px;color:var(--text-dim);line-height:1.7;padding-left:14px;">
+        <li>No panel wrapper — cards stack open</li>
+        <li>3px severity bar on left edge</li>
+        <li>13px card title, 12px body</li>
+        <li>Dismiss button appears on hover</li>
+        <li>Hover lifts card with shadow + translate</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     VARIANT 4 — Source-Grouped Accordion
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">04</span>
+    Source-Grouped — macOS groups notifications by app
+  </div>
+
+  <div class="panels-row">
+    <div class="v4-panel">
+      <div class="v4-header">
+        <div class="v4-title">
+          Notifications
+          <span class="v4-badge">4</span>
+        </div>
+        <button class="v4-mark-all">Mark all read</button>
+      </div>
+
+      <div class="v4-date-label">Today</div>
+
+      <!-- Build group -->
+      <div class="v4-source-group" style="margin-top:8px;">
+        <div class="v4-source-header">
+          <div class="v4-source-icon icon-green">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/>
+            </svg>
+          </div>
+          <span class="v4-source-name">Build</span>
+          <span class="v4-source-count">1 new</span>
+        </div>
+        <div class="v4-notif unread">
+          <div class="v4-sev-bar sev-success"></div>
+          <div class="v4-notif-content">
+            <div class="v4-notif-title">Build succeeded — alis-hub-v3 / main</div>
+            <div class="v4-notif-body">All 12 packages compiled successfully.</div>
+          </div>
+          <span class="v4-notif-time">2m ago</span>
+        </div>
+      </div>
+
+      <!-- Deploy group -->
+      <div class="v4-source-group">
+        <div class="v4-source-header">
+          <div class="v4-source-icon icon-blue">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </div>
+          <span class="v4-source-name">Deploy</span>
+          <span class="v4-source-count">1 new</span>
+        </div>
+        <div class="v4-notif unread">
+          <div class="v4-sev-bar sev-info"></div>
+          <div class="v4-notif-content">
+            <div class="v4-notif-title">Deploy in progress — neurons.alis.build</div>
+            <div class="v4-notif-body">Step 3 of 7: updating service mesh…</div>
+          </div>
+          <span class="v4-notif-time">5m ago</span>
+        </div>
+      </div>
+
+      <!-- Define group: 2 items -->
+      <div class="v4-source-group">
+        <div class="v4-source-header">
+          <div class="v4-source-icon icon-yellow">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+            </svg>
+          </div>
+          <span class="v4-source-name">Define</span>
+          <span class="v4-source-count">2 new</span>
+        </div>
+        <div class="v4-notif unread">
+          <div class="v4-sev-bar sev-warning"></div>
+          <div class="v4-notif-content">
+            <div class="v4-notif-title">Unused export in payments-api</div>
+            <div class="v4-notif-body">PaymentProcessor.reconcile never referenced.</div>
+          </div>
+          <span class="v4-notif-time">18m ago</span>
+        </div>
+        <div class="v4-notif unread">
+          <div class="v4-sev-bar sev-error"></div>
+          <div class="v4-notif-content">
+            <div class="v4-notif-title">Proto breaking change detected</div>
+            <div class="v4-notif-body">Field 12 removed from CreateUserRequest.</div>
+          </div>
+          <span class="v4-notif-time">22m ago</span>
+        </div>
+      </div>
+
+      <div class="v4-date-label">Yesterday</div>
+
+      <div class="v4-source-group" style="margin-bottom:8px;">
+        <div class="v4-source-header">
+          <div class="v4-source-icon icon-brand">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </div>
+          <span class="v4-source-name">Update</span>
+          <span class="v4-source-count">read</span>
+        </div>
+        <div class="v4-notif read">
+          <div class="v4-sev-bar" style="background:rgba(255,255,255,0.1)"></div>
+          <div class="v4-notif-content">
+            <div class="v4-notif-title">Update available — v2.4.1</div>
+            <div class="v4-notif-body">New version ready to install.</div>
+          </div>
+          <span class="v4-notif-time">Yesterday</span>
+        </div>
+      </div>
+
+      <div class="v4-footer">
+        <button class="v4-footer-btn">⬡ debug</button>
+        <button class="v4-footer-btn danger">Clear all</button>
+      </div>
+    </div>
+
+    <div style="max-width:260px;padding-top:8px;">
+      <p style="font-family:var(--sans);font-size:11.5px;color:var(--text-mid);line-height:1.6;margin-bottom:12px;">
+        Source-grouped just like macOS groups notifications by app. Each source gets a header row with its icon and new count. Items within show a 2.5px severity bar instead of an icon. Dense layout, no body wrapping.
+      </p>
+      <ul style="font-family:var(--sans);font-size:11px;color:var(--text-dim);line-height:1.7;padding-left:14px;">
+        <li>Source header: icon + name + count badge</li>
+        <li>Severity bar 2.5px on left of each item</li>
+        <li>Items clamp body to 1 line</li>
+        <li>Group cards with 11px radius</li>
+        <li>Most useful when 1 source fires many notifs</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     VARIANT 5 — Minimal Sequoia
+════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">05</span>
+    Minimal Sequoia — ultra-clean typographic list, maximum readability
+  </div>
+
+  <div class="panels-row">
+    <div class="v5-panel">
+      <!-- Header -->
+      <div class="v5-header">
+        <div class="v5-bell-wrapper">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f881a9" stroke-width="1.8">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </div>
+        <div class="v5-title-block">
+          <div class="v5-title">Notifications</div>
+          <div class="v5-subtitle">4 unread · today</div>
+        </div>
+        <button class="v5-header-btn">Mark read</button>
+      </div>
+
+      <div class="v5-list">
+        <!-- Today marker -->
+        <div class="v5-day-marker">
+          <div class="v5-day-line"></div>
+          <span class="v5-day-text">Today</span>
+          <div class="v5-day-line"></div>
+        </div>
+
+        <!-- Build success with action -->
+        <div class="v5-item unread">
+          <div class="v5-sev-dot" style="background:var(--green)"></div>
+          <div class="v5-item-main">
+            <div class="v5-item-row">
+              <span class="v5-item-title">Build succeeded — main</span>
+              <span class="v5-item-time">2m ago</span>
+            </div>
+            <div class="v5-item-body">All 12 packages compiled. Deploy ready to trigger.</div>
+            <div class="v5-item-tags">
+              <span class="v5-tag">build</span>
+              <span class="v5-tag">success</span>
+            </div>
+            <div class="v5-item-actions">
+              <button class="v5-act-btn brand">View logs</button>
+              <button class="v5-act-btn">Dismiss</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deploy running -->
+        <div class="v5-item unread">
+          <div class="v5-sev-dot" style="background:var(--blue)"></div>
+          <div class="v5-item-main">
+            <div class="v5-item-row">
+              <span class="v5-item-title">Deploy in progress</span>
+              <span class="v5-item-time">5m ago</span>
+            </div>
+            <div class="v5-item-body">Updating service mesh — step 3/7</div>
+            <div class="v5-item-tags">
+              <span class="v5-tag">deploy</span>
+              <span class="v5-tag">running</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Define warning -->
+        <div class="v5-item unread">
+          <div class="v5-sev-dot" style="background:var(--yellow)"></div>
+          <div class="v5-item-main">
+            <div class="v5-item-row">
+              <span class="v5-item-title">Unused export warning</span>
+              <span class="v5-item-time">18m ago</span>
+            </div>
+            <div class="v5-item-body">payments-api / PaymentProcessor.reconcile</div>
+            <div class="v5-item-tags">
+              <span class="v5-tag">define</span>
+              <span class="v5-tag">warning</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Proto breaking change error -->
+        <div class="v5-item unread">
+          <div class="v5-sev-dot" style="background:var(--red)"></div>
+          <div class="v5-item-main">
+            <div class="v5-item-row">
+              <span class="v5-item-title">Proto breaking change</span>
+              <span class="v5-item-time">22m ago</span>
+            </div>
+            <div class="v5-item-body">Field 12 removed from CreateUserRequest</div>
+            <div class="v5-item-tags">
+              <span class="v5-tag">define</span>
+              <span class="v5-tag">error</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Yesterday marker -->
+        <div class="v5-day-marker">
+          <div class="v5-day-line"></div>
+          <span class="v5-day-text">Yesterday</span>
+          <div class="v5-day-line"></div>
+        </div>
+
+        <!-- Update (read) -->
+        <div class="v5-item read">
+          <div class="v5-sev-dot" style="background:rgba(255,255,255,0.12)"></div>
+          <div class="v5-item-main">
+            <div class="v5-item-row">
+              <span class="v5-item-title">Update available — v2.4.1</span>
+              <span class="v5-item-time">Yesterday</span>
+            </div>
+            <div class="v5-item-body">New version ready. Install from settings.</div>
+            <div class="v5-item-tags">
+              <span class="v5-tag">update</span>
+            </div>
+            <div class="v5-item-actions">
+              <button class="v5-act-btn brand">Install now</button>
+              <button class="v5-act-btn">Later</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v5-footer">
+        <button class="v5-footer-btn danger">Clear all</button>
+        <button class="v5-footer-btn">⬡ debug</button>
+      </div>
+    </div>
+
+    <div style="max-width:260px;padding-top:8px;">
+      <p style="font-family:var(--sans);font-size:11.5px;color:var(--text-mid);line-height:1.6;margin-bottom:12px;">
+        Maximum signal density with minimum chrome. A 6px severity dot is the only visual indicator. Day separators are centered rules. Tags are mono chip labels for source/status. Actions sit inline below body.
+      </p>
+      <ul style="font-family:var(--sans);font-size:11px;color:var(--text-dim);line-height:1.7;padding-left:14px;">
+        <li>6px severity dot, no icons</li>
+        <li>Centered rule day separators</li>
+        <li>Mono tag chips: source + status</li>
+        <li>Title bold → regular on read</li>
+        <li>Unread row has a very subtle tint</li>
+        <li>Brand-colored header action button</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
