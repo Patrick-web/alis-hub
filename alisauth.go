@@ -226,18 +226,18 @@ func writeFileAtomic(path string, data []byte, perm os.FileMode) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName)
+	defer func() { _ = os.Remove(tmpName) }()
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Chmod(perm); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Sync(); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return err
 	}
 	if err := tmp.Close(); err != nil {
@@ -267,7 +267,7 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 		log.Printf("[auth] refresh request to identity server errored: %v", err)
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
@@ -560,7 +560,7 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 			return
 		}
 		codeCh <- code
-		fmt.Fprint(w, authResultPage(true, ""))
+		_, _ = fmt.Fprint(w, authResultPage(true, ""))
 	})
 
 	server := &http.Server{Handler: mux}
@@ -569,7 +569,7 @@ func PKCELogin(ctx context.Context, openBrowser func(string)) error {
 			errCh <- err
 		}
 	}()
-	defer server.Shutdown(context.Background())
+	defer func() { _ = server.Shutdown(context.Background()) }()
 
 	// Open browser to auth page.
 	authURL := alisConsoleIdentityURL + "/authorize?" + url.Values{
@@ -635,7 +635,7 @@ func exchangeCode(code, redirectURI, codeVerifier string) (*consoleCredentials, 
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
