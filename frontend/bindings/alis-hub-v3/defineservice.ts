@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as alisclient$0 from "./internal/alisclient/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -20,7 +24,7 @@ import * as $models from "./models.js";
  * artifacts is from RunDefineResult.DefinitionArtifacts.
  * neuron is the neuron resource name (e.g. "organisations/voyage/products/vp/neurons/bff-v1").
  */
-export function ExplainDefine(definition: string, artifacts: string[], neuron: string): $CancellablePromise<$models.GlassResult | null> {
+export function ExplainDefine(definition: string, artifacts: string[], neuron: string): $CancellablePromise<alisclient$0.GlassResult | null> {
     return $Call.ByID(4045319554, definition, artifacts, neuron).then(($result: any) => {
         return $$createType1($result);
     });
@@ -60,7 +64,7 @@ export function ScanNeuronPackages(org: string, product: string, neuron: string,
 }
 
 // Private type creation functions
-const $$createType0 = $models.GlassResult.createFrom;
+const $$createType0 = alisclient$0.GlassResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.DefineCommit.createFrom;
 const $$createType3 = $Create.Array($$createType2);

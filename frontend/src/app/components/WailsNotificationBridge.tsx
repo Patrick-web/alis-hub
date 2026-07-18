@@ -1,12 +1,17 @@
-import { useEffect, useRef } from 'react';
-import { Events } from '@wailsio/runtime';
-import { notify } from '../lib/notify';
-import { systemNotify, isSystemNotificationsEnabled, requestNotificationAuthorization, setSystemNotificationsEnabled } from '../lib/systemNotify';
-import { useNotifications } from '../stores/notifications';
-import type { WailsNotificationPayload } from '../stores/notifications';
-import { useUpdate } from '../stores/update';
-import { ReleaseNotesModal } from './ReleaseNotesModal';
-import { UpdateNotification } from './UpdateNotification';
+import { useEffect, useRef } from "react";
+import { Events } from "@wailsio/runtime";
+import { notify } from "../lib/notify";
+import {
+  systemNotify,
+  isSystemNotificationsEnabled,
+  requestNotificationAuthorization,
+  setSystemNotificationsEnabled,
+} from "../lib/systemNotify";
+import { useNotifications } from "../stores/notifications";
+import type { WailsNotificationPayload } from "../stores/notifications";
+import { useUpdate } from "../stores/update";
+import { ReleaseNotesModal } from "./ReleaseNotesModal";
+import { UpdateNotification } from "./UpdateNotification";
 
 export function WailsNotificationBridge() {
   const { addNotification } = useNotifications();
@@ -27,12 +32,12 @@ export function WailsNotificationBridge() {
 
   useEffect(() => {
     if (isSystemNotificationsEnabled()) {
-      requestNotificationAuthorization().then(granted => {
+      requestNotificationAuthorization().then((granted) => {
         if (!granted) setSystemNotificationsEnabled(false);
       });
     }
 
-    const offPush = Events.On('notification:push', (ev) => {
+    const offPush = Events.On("notification:push", (ev) => {
       const payload = ev.data as WailsNotificationPayload;
       addRef.current({
         severity: payload.severity,
@@ -41,7 +46,7 @@ export function WailsNotificationBridge() {
         body: payload.body,
         persistent: payload.persistent ?? true,
         deeplink: payload.deeplink,
-        actions: payload.actions?.map(a => ({
+        actions: payload.actions?.map((a) => ({
           label: a.label,
           variant: a.variant,
           onClick: () => {
@@ -54,13 +59,13 @@ export function WailsNotificationBridge() {
         ...(payload.deeplink
           ? {
               action: {
-                label: 'View',
-                onClick: () => Events.Emit('deep-link', payload.deeplink),
+                label: "View",
+                onClick: () => Events.Emit("deep-link", payload.deeplink),
               },
             }
           : {}),
       });
-      systemNotify(payload.title, payload.body ?? '', payload.deeplink);
+      systemNotify(payload.title, payload.body ?? "", payload.deeplink);
     });
 
     return () => {

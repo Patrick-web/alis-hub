@@ -13,10 +13,9 @@ export const module5: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Now that you've seen each stage in isolation, here's how they
-            connect. Every service you build on Alis follows this exact pipeline
-            — from a text file on your machine to a live, authenticated,
-            auto-scaling API on Google Cloud.
+            Now that you've seen each stage in isolation, here's how they connect. Every service you
+            build on Alis follows this exact pipeline — from a text file on your machine to a live,
+            authenticated, auto-scaling API on Google Cloud.
           </p>
           <div className="flex flex-col gap-[6px]">
             {[
@@ -46,22 +45,16 @@ export const module5: LearningModule = {
                 className="flex items-start gap-[12px] px-[12px] py-[10px] bg-muted border border-border rounded-[4px]"
               >
                 <div className="size-[22px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0 mt-[1px]">
-                  <span className="text-[10px] font-bold text-brand font-mono">
-                    {i + 1}
-                  </span>
+                  <span className="text-[10px] font-bold text-brand font-mono">{i + 1}</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-[8px] mb-[4px]">
-                    <span className="text-[11px] font-bold text-foreground font-mono">
-                      {stage}
-                    </span>
+                    <span className="text-[11px] font-bold text-foreground font-mono">{stage}</span>
                     <code className="text-[9px] text-foreground/35 bg-background px-[6px] py-[1px] rounded">
                       {cmd}
                     </code>
                   </div>
-                  <p className="text-[11px] text-foreground/55 leading-[1.5]">
-                    {desc}
-                  </p>
+                  <p className="text-[11px] text-foreground/55 leading-[1.5]">{desc}</p>
                 </div>
               </div>
             ))}
@@ -119,20 +112,15 @@ export const module5: LearningModule = {
                   {n}
                 </span>
                 <div>
-                  <span className="text-[11px] font-bold text-foreground font-mono">
-                    {title}{" "}
-                  </span>
-                  <span className="text-[11px] text-foreground/50">
-                    — {detail}
-                  </span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">{title} </span>
+                  <span className="text-[11px] text-foreground/50">— {detail}</span>
                 </div>
               </div>
             ))}
           </div>
           <p className="text-[11px] text-foreground/40 leading-[1.5]">
-            End-to-end latency overhead from the ESP layer is typically under 2
-            ms. The cost is authentication security and free transcoding, both
-            worth the trade.
+            End-to-end latency overhead from the ESP layer is typically under 2 ms. The cost is
+            authentication security and free transcoding, both worth the trade.
           </p>
         </div>
       ),
@@ -143,8 +131,8 @@ export const module5: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            You've covered the core mental model. Here's how the rest of the hub
-            maps to what you've learned:
+            You've covered the core mental model. Here's how the rest of the hub maps to what you've
+            learned:
           </p>
           <div className="flex flex-col gap-[8px]">
             {[
@@ -178,12 +166,8 @@ export const module5: LearningModule = {
                 key={tab}
                 className="px-[12px] py-[10px] bg-muted border border-border rounded-[4px]"
               >
-                <p className="text-[11px] font-bold text-foreground font-mono mb-[3px]">
-                  {tab}
-                </p>
-                <p className="text-[11px] text-foreground/50 leading-[1.4]">
-                  {desc}
-                </p>
+                <p className="text-[11px] font-bold text-foreground font-mono mb-[3px]">{tab}</p>
+                <p className="text-[11px] text-foreground/50 leading-[1.4]">{desc}</p>
               </div>
             ))}
           </div>
@@ -191,9 +175,8 @@ export const module5: LearningModule = {
             <p className="text-[11px] text-foreground/70 leading-[1.5]">
               <span className="text-brand font-bold">You're ready. </span>
               Go define your first service — start with a simple{" "}
-              <code className="text-foreground/80 text-[10px]">GetX</code>{" "}
-              method on a resource you know well. The first deploy is the
-              steepest part of the curve.
+              <code className="text-foreground/80 text-[10px]">GetX</code> method on a resource you
+              know well. The first deploy is the steepest part of the curve.
             </p>
           </div>
         </div>

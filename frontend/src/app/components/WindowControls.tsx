@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Window, Events } from '@wailsio/runtime';
+import React, { useState, useEffect } from "react";
+import { Window, Events } from "@wailsio/runtime";
 
 export function MacWindowControls() {
   return (
-    <div className="flex items-center gap-[6px]" style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}>
+    <div
+      className="flex items-center gap-[6px]"
+      style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
+    >
       <button
         onClick={() => Window.Close()}
         className="w-[12px] h-[12px] rounded-full bg-destructive hover:bg-destructive transition-colors shrink-0 focus:outline-none"
@@ -53,15 +56,18 @@ export function WindowsWindowControls() {
 
   useEffect(() => {
     Window.IsMaximised().then(setIsMaximised);
-    const offMax = Events.On('common:WindowMaximise', () => setIsMaximised(true));
-    const offUnmax = Events.On('common:WindowUnMaximise', () => setIsMaximised(false));
-    return () => { offMax(); offUnmax(); };
+    const offMax = Events.On("common:WindowMaximise", () => setIsMaximised(true));
+    const offUnmax = Events.On("common:WindowUnMaximise", () => setIsMaximised(false));
+    return () => {
+      offMax();
+      offUnmax();
+    };
   }, []);
 
   return (
     <div
       className="flex items-stretch h-full ml-[4px]"
-      style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
+      style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
     >
       <button
         onClick={() => Window.Minimise()}
@@ -73,7 +79,7 @@ export function WindowsWindowControls() {
       <button
         onClick={() => Window.ToggleMaximise()}
         className="flex items-center justify-center w-[46px] h-full text-foreground/70 hover:text-foreground hover:bg-foreground/[0.07] transition-colors focus:outline-none"
-        title={isMaximised ? 'Restore' : 'Maximise'}
+        title={isMaximised ? "Restore" : "Maximise"}
       >
         {isMaximised ? <RestoreIcon /> : <MaximizeIcon />}
       </button>
@@ -96,21 +102,24 @@ export function LinuxWindowControls() {
 
   useEffect(() => {
     Window.IsMaximised().then(setIsMaximised);
-    const offMax = Events.On('common:WindowMaximise', () => setIsMaximised(true));
-    const offUnmax = Events.On('common:WindowUnMaximise', () => setIsMaximised(false));
-    return () => { offMax(); offUnmax(); };
+    const offMax = Events.On("common:WindowMaximise", () => setIsMaximised(true));
+    const offUnmax = Events.On("common:WindowUnMaximise", () => setIsMaximised(false));
+    return () => {
+      offMax();
+      offUnmax();
+    };
   }, []);
 
   const base =
-    'flex items-center justify-center w-[24px] h-[24px] rounded-full bg-foreground/[0.06] ' +
-    'text-foreground/70 transition-colors focus:outline-none shrink-0';
+    "flex items-center justify-center w-[24px] h-[24px] rounded-full bg-foreground/[0.06] " +
+    "text-foreground/70 transition-colors focus:outline-none shrink-0";
   const neutral = `${base} hover:text-foreground hover:bg-foreground/[0.12]`;
   const danger = `${base} hover:text-white hover:bg-destructive`;
 
   return (
     <div
       className="flex items-center gap-[8px] px-[10px] h-full"
-      style={{ '--wails-draggable': 'no-drag' } as React.CSSProperties}
+      style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
     >
       <button onClick={() => Window.Minimise()} className={neutral} title="Minimise">
         <MinimizeIcon />
@@ -118,7 +127,7 @@ export function LinuxWindowControls() {
       <button
         onClick={() => Window.ToggleMaximise()}
         className={neutral}
-        title={isMaximised ? 'Restore' : 'Maximise'}
+        title={isMaximised ? "Restore" : "Maximise"}
       >
         {isMaximised ? <RestoreIcon /> : <MaximizeIcon />}
       </button>

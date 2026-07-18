@@ -58,7 +58,11 @@ export function BuildKitGlassModePage() {
       subtitle="Understand the transparent explanation layer behind Alis Build actions and generated outputs."
       parentRoute="/buildkit"
       actions={
-        <Button variant="secondary" onClick={() => navigate("/builds")} icon={<Icon icon="solar:eye-linear" className="text-sm" />}>
+        <Button
+          variant="secondary"
+          onClick={() => navigate("/builds")}
+          icon={<Icon icon="solar:eye-linear" className="text-sm" />}
+        >
           Open Builds
         </Button>
       }
@@ -68,10 +72,7 @@ export function BuildKitGlassModePage() {
           {/* Hero */}
           <div className="p-[20px] bg-card border border-border rounded-[4px]">
             <div className="flex items-center gap-[8px] mb-[8px]">
-              <Icon
-                icon="solar:eye-linear"
-                className="text-brand text-[16px]"
-              />
+              <Icon icon="solar:eye-linear" className="text-brand text-[16px]" />
               <span className="text-[10px] font-bold text-foreground/40 uppercase font-mono">
                 Glass Mode
               </span>
@@ -80,41 +81,29 @@ export function BuildKitGlassModePage() {
               Understand what Alis Build just did
             </h2>
             <p className="text-[12px] text-foreground/65 leading-[1.6]">
-              Glass Mode is a just-in-time explanation layer for Alis Build
-              actions. It opens a transparent view of the generated code,
-              artifacts, resources, commits, and follow-up work behind a
-              platform operation.
+              Glass Mode is a just-in-time explanation layer for Alis Build actions. It opens a
+              transparent view of the generated code, artifacts, resources, commits, and follow-up
+              work behind a platform operation.
             </p>
           </div>
 
           {/* Where to find it */}
           <StageCard
             title="Where to find it"
-            icon={
-              <Icon icon="solar:eye-scan-linear" className="text-brand" />
-            }
+            icon={<Icon icon="solar:eye-scan-linear" className="text-brand" />}
           >
             <p className="text-[11px] text-foreground/60 mb-[12px] leading-[1.5]">
-              Look for <strong className="text-foreground">Glass Mode</strong>{" "}
-              buttons that appear after an action completes in the Builds tab.
-              These open a detailed explanation of exactly what the platform did
-              and what to do next.
+              Look for <strong className="text-foreground">Glass Mode</strong> buttons that appear
+              after an action completes in the Builds tab. These open a detailed explanation of
+              exactly what the platform did and what to do next.
             </p>
             <div className="flex items-center gap-[10px] flex-wrap">
               <div className="flex items-center gap-[6px] px-[10px] py-[5px] bg-brand-fill/12 border border-brand-fill/40 rounded-[4px]">
-                <Icon
-                  icon="solar:eye-linear"
-                  className="text-brand text-[13px]"
-                />
-                <span className="text-[11px] font-bold text-brand font-mono">
-                  Glass Mode
-                </span>
+                <Icon icon="solar:eye-linear" className="text-brand text-[13px]" />
+                <span className="text-[11px] font-bold text-brand font-mono">Glass Mode</span>
               </div>
 
-              <Button
-                variant="secondary"
-                icon={<Icon icon="solar:eye-linear" />}
-              >
+              <Button variant="secondary" icon={<Icon icon="solar:eye-linear" />}>
                 View Explanation
               </Button>
             </div>
@@ -132,15 +121,10 @@ export function BuildKitGlassModePage() {
                   className="flex items-start gap-[12px] px-[14px] py-[12px] bg-card border border-border rounded-[4px]"
                 >
                   <div className="size-[28px] rounded-[4px] bg-brand-fill/10 border border-brand-fill/30 flex items-center justify-center shrink-0 mt-[1px]">
-                    <Icon
-                      icon={ex.icon}
-                      className="text-brand text-[14px]"
-                    />
+                    <Icon icon={ex.icon} className="text-brand text-[14px]" />
                   </div>
                   <div>
-                    <p className="text-[11px] font-bold text-foreground font-mono">
-                      {ex.title}
-                    </p>
+                    <p className="text-[11px] font-bold text-foreground font-mono">{ex.title}</p>
                     <p className="text-[10px] text-foreground/55 leading-[1.5] mt-[2px]">
                       {ex.description}
                     </p>
@@ -157,20 +141,12 @@ export function BuildKitGlassModePage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-[8px]">
               {principles.map((p) => (
-                <div
-                  key={p.title}
-                  className="p-[14px] bg-card border border-border rounded-[4px]"
-                >
-                  <Icon
-                    icon={p.icon}
-                    className="text-brand text-[18px] mb-[8px]"
-                  />
+                <div key={p.title} className="p-[14px] bg-card border border-border rounded-[4px]">
+                  <Icon icon={p.icon} className="text-brand text-[18px] mb-[8px]" />
                   <p className="text-[11px] font-bold text-foreground font-mono mb-[4px]">
                     {p.title}
                   </p>
-                  <p className="text-[10px] text-foreground/55 leading-[1.5]">
-                    {p.description}
-                  </p>
+                  <p className="text-[10px] text-foreground/55 leading-[1.5]">{p.description}</p>
                 </div>
               ))}
             </div>

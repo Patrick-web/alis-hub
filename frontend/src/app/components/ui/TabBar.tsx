@@ -53,9 +53,7 @@ export function TabBar({
     else ids.forEach((id) => onClose(id));
   }
 
-  const closeableIds = items
-    .filter((t) => t.closeable !== false)
-    .map((t) => t.id);
+  const closeableIds = items.filter((t) => t.closeable !== false).map((t) => t.id);
 
   const containerClass = cn(
     "shrink-0 overflow-x-auto",
@@ -118,15 +116,9 @@ export function TabBar({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") onActivate(item.id);
                 }}
-                onDoubleClick={
-                  onDoubleClick
-                    ? () => onDoubleClick(item.id)
-                    : undefined
-                }
+                onDoubleClick={onDoubleClick ? () => onDoubleClick(item.id) : undefined}
                 draggable={!!onReorder}
-                onDragStart={
-                  onReorder ? () => setDraggedId(item.id) : undefined
-                }
+                onDragStart={onReorder ? () => setDraggedId(item.id) : undefined}
                 onDragEnd={
                   onReorder
                     ? () => {
@@ -143,15 +135,12 @@ export function TabBar({
                       }
                     : undefined
                 }
-                onDragLeave={
-                  onReorder ? () => setDragOverId(null) : undefined
-                }
+                onDragLeave={onReorder ? () => setDragOverId(null) : undefined}
                 onDrop={
                   onReorder
                     ? (e) => {
                         e.preventDefault();
-                        if (draggedId && draggedId !== item.id)
-                          onReorder(draggedId, item.id);
+                        if (draggedId && draggedId !== item.id) onReorder(draggedId, item.id);
                         setDraggedId(null);
                         setDragOverId(null);
                       }
@@ -159,23 +148,14 @@ export function TabBar({
                 }
                 className={tabClass}
               >
-                {item.icon && (
-                  <span className="shrink-0 flex items-center">
-                    {item.icon}
-                  </span>
-                )}
+                {item.icon && <span className="shrink-0 flex items-center">{item.icon}</span>}
                 {typeof item.label === "string" ? (
-                  <MarqueeLabel
-                    text={item.label}
-                    maxWidth={variant === "underline" ? 110 : 160}
-                  />
+                  <MarqueeLabel text={item.label} maxWidth={variant === "underline" ? 110 : 160} />
                 ) : (
                   item.label
                 )}
                 {item.statusSlot && (
-                  <span className="shrink-0 flex items-center">
-                    {item.statusSlot}
-                  </span>
+                  <span className="shrink-0 flex items-center">{item.statusSlot}</span>
                 )}
                 {closeable ? (
                   <button
@@ -193,23 +173,16 @@ export function TabBar({
                   >
                     <Icon
                       icon="solar:close-circle-linear"
-                      className={
-                        variant === "filled" ? "text-[10px]" : "text-[9px]"
-                      }
+                      className={variant === "filled" ? "text-[10px]" : "text-[9px]"}
                     />
                   </button>
                 ) : (
-                  variant === "underline" && (
-                    <span className="ml-[2px] w-[15px] shrink-0" />
-                  )
+                  variant === "underline" && <span className="ml-[2px] w-[15px] shrink-0" />
                 )}
               </div>
             </ContextMenuTrigger>
             <ContextMenuContent className="min-w-[160px]">
-              <ContextMenuItem
-                disabled={!closeable}
-                onClick={() => onClose(item.id)}
-              >
+              <ContextMenuItem disabled={!closeable} onClick={() => onClose(item.id)}>
                 Close
               </ContextMenuItem>
               <ContextMenuSeparator />

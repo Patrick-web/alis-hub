@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Icon } from '@iconify/react';
+import { useState } from "react";
+import { Icon } from "@iconify/react";
 
 interface DropdownProps {
   label: string;
@@ -10,7 +10,14 @@ interface DropdownProps {
   error?: string | null;
 }
 
-export function Dropdown({ label, options = [], onSelect, onSettingsClick, loading, error }: DropdownProps) {
+export function Dropdown({
+  label,
+  options = [],
+  onSelect,
+  onSettingsClick,
+  loading,
+  error,
+}: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -26,18 +33,27 @@ export function Dropdown({ label, options = [], onSelect, onSettingsClick, loadi
       </button>
 
       {/* Settings icon as a separate block */}
-      <button onClick={onSettingsClick} className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-foreground/5 transition-colors">
+      <button
+        onClick={onSettingsClick}
+        className="h-full border-l border-border flex items-center justify-center px-[10px] hover:bg-foreground/5 transition-colors"
+      >
         <Icon icon="solar:settings-linear" className="text-foreground text-base opacity-70" />
       </button>
 
       {isOpen && (
         <div className="absolute top-full right-0 mt-0 bg-card border border-border z-50 min-w-[150px] shadow-xl">
           {loading ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-foreground/40 font-mono">Loading…</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-foreground/40 font-mono">
+              Loading…
+            </div>
           ) : error ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-destructive font-mono max-w-[260px] leading-[1.5]">Session expired — sign in again via your profile.</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-destructive font-mono max-w-[260px] leading-[1.5]">
+              Session expired — sign in again via your profile.
+            </div>
           ) : options.length === 0 ? (
-            <div className="px-[12px] py-[10px] text-[11px] text-foreground/40 font-mono">No environments</div>
+            <div className="px-[12px] py-[10px] text-[11px] text-foreground/40 font-mono">
+              No environments
+            </div>
           ) : (
             options.map((option, index) => (
               <button

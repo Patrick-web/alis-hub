@@ -1,19 +1,21 @@
-import { useEffect } from 'react';
-import { Icon } from '@iconify/react';
-import { useLocalAI, type LocalAIModel } from '../stores/localai';
+import { useEffect } from "react";
+import { Icon } from "@iconify/react";
+import { useLocalAI, type LocalAIModel } from "../stores/localai";
 
 const MODELS: { id: LocalAIModel; label: string; size: string }[] = [
-  { id: 'gemma4:e2b', label: 'e2b · fast',   size: '~1.5 GB' },
-  { id: 'gemma4:12b', label: '12b · better', size: '~7 GB' },
+  { id: "gemma4:e2b", label: "e2b · fast", size: "~1.5 GB" },
+  { id: "gemma4:12b", label: "12b · better", size: "~7 GB" },
 ];
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${checked ? 'bg-success' : 'bg-foreground/[0.1]'}`}
+      className={`relative w-[32px] h-[18px] rounded-full transition-colors shrink-0 ${checked ? "bg-success" : "bg-foreground/[0.1]"}`}
     >
-      <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${checked ? 'left-[16px]' : 'left-[2px]'}`} />
+      <span
+        className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-all ${checked ? "left-[16px]" : "left-[2px]"}`}
+      />
     </button>
   );
 }
@@ -23,32 +25,45 @@ function ProgressBar({ pct, indeterminate }: { pct: number; indeterminate?: bool
     <div className="h-[3px] rounded-full bg-foreground/[0.08] overflow-hidden">
       <div
         className="h-full bg-purple-400/60 rounded-full transition-all duration-300"
-        style={indeterminate
-          ? { width: '40%', animation: 'pulse 1.5s ease-in-out infinite' }
-          : { width: `${pct}%` }
+        style={
+          indeterminate
+            ? { width: "40%", animation: "pulse 1.5s ease-in-out infinite" }
+            : { width: `${pct}%` }
         }
       />
     </div>
   );
 }
 
-function StatusBadge({ state }: { state: ReturnType<typeof useLocalAI>['state'] }) {
-  if (state.binaryDownloading) return <span className="text-[10px] text-purple-300/80 font-mono">Downloading Ollama…</span>;
-  if (state.ollamaStarting)    return <span className="text-[10px] text-foreground/40 font-mono">Starting…</span>;
-  if (state.pulling)           return <span className="text-[10px] text-purple-300/80 font-mono">Downloading model…</span>;
-  if (state.modelPulled)       return <span className="text-[10px] text-success font-mono">Ready</span>;
-  if (state.ollamaRunning)     return <span className="text-[10px] text-amber-400/80 font-mono">Model not downloaded</span>;
-  if (state.binaryReady)       return <span className="text-[10px] text-amber-400/80 font-mono">Ollama not running</span>;
-  if (state.binaryError)       return <span className="text-[10px] text-destructive/70 font-mono">Download failed</span>;
+function StatusBadge({ state }: { state: ReturnType<typeof useLocalAI>["state"] }) {
+  if (state.binaryDownloading)
+    return <span className="text-[10px] text-purple-300/80 font-mono">Downloading Ollama…</span>;
+  if (state.ollamaStarting)
+    return <span className="text-[10px] text-foreground/40 font-mono">Starting…</span>;
+  if (state.pulling)
+    return <span className="text-[10px] text-purple-300/80 font-mono">Downloading model…</span>;
+  if (state.modelPulled) return <span className="text-[10px] text-success font-mono">Ready</span>;
+  if (state.ollamaRunning)
+    return <span className="text-[10px] text-amber-400/80 font-mono">Model not downloaded</span>;
+  if (state.binaryReady)
+    return <span className="text-[10px] text-amber-400/80 font-mono">Ollama not running</span>;
+  if (state.binaryError)
+    return <span className="text-[10px] text-destructive/70 font-mono">Download failed</span>;
   return <span className="text-[10px] text-foreground/30 font-mono">Not set up</span>;
 }
 
 export function LocalAISetupCard() {
-  const { state, setEnabled, setModel, startDownloadBinary, startOllama, startPull, refresh } = useLocalAI();
+  const { state, setEnabled, setModel, startDownloadBinary, startOllama, startPull, refresh } =
+    useLocalAI();
 
   // After binary download completes, auto-start Ollama
   useEffect(() => {
-    if (state.binaryReady && !state.ollamaRunning && !state.ollamaStarting && !state.binaryDownloading) {
+    if (
+      state.binaryReady &&
+      !state.ollamaRunning &&
+      !state.ollamaStarting &&
+      !state.binaryDownloading
+    ) {
       startOllama();
     }
   }, [state.binaryReady]);
@@ -81,7 +96,11 @@ export function LocalAISetupCard() {
         <div className="flex items-center gap-[6px]">
           <StatusBadge state={state} />
           {!state.binaryDownloading && !state.ollamaStarting && !state.pulling && (
-            <button onClick={refresh} className="text-foreground/25 hover:text-foreground/55 transition-colors" title="Re-check">
+            <button
+              onClick={refresh}
+              className="text-foreground/25 hover:text-foreground/55 transition-colors"
+              title="Re-check"
+            >
               <Icon icon="solar:refresh-linear" className="text-[12px]" />
             </button>
           )}
@@ -92,7 +111,7 @@ export function LocalAISetupCard() {
       <div className="flex items-center justify-between px-[12px] py-[8px] border-b border-foreground/10">
         <span className="text-[12px] text-foreground/70 font-medium">Model</span>
         <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-          {MODELS.map(m => (
+          {MODELS.map((m) => (
             <button
               key={m.id}
               onClick={() => setModel(m.id)}
@@ -100,8 +119,8 @@ export function LocalAISetupCard() {
               title={m.size}
               className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors disabled:opacity-40 ${
                 state.model === m.id
-                  ? 'bg-foreground/[0.1] text-foreground'
-                  : 'text-foreground/35 hover:text-foreground/70'
+                  ? "bg-foreground/[0.1] text-foreground"
+                  : "text-foreground/35 hover:text-foreground/70"
               }`}
             >
               {m.label}
@@ -114,14 +133,15 @@ export function LocalAISetupCard() {
       {state.enabled && state.modelPulled && (
         <div className="px-[12px] py-[8px] flex items-center gap-[6px] border-t border-foreground/[0.06]">
           <Icon icon="solar:check-circle-linear" className="text-[12px] text-success/60 shrink-0" />
-          <span className="text-[10px] text-foreground/35 font-mono">Commit message generation and AI Insights are active</span>
+          <span className="text-[10px] text-foreground/35 font-mono">
+            Commit message generation and AI Insights are active
+          </span>
         </div>
       )}
 
       {/* Action area */}
       {state.enabled && !state.modelPulled && (
         <div className="px-[12px] py-[8px] flex flex-col gap-[6px]">
-
           {/* Step 1: Download Ollama binary */}
           {!state.binaryReady && !state.binaryDownloading && !state.binaryError && (
             <button
@@ -137,8 +157,12 @@ export function LocalAISetupCard() {
           {state.binaryDownloading && (
             <div className="flex flex-col gap-[4px]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-foreground/40 font-mono">{state.binaryDownloadLabel || 'Preparing…'}</span>
-                <span className="text-[10px] text-foreground/40 font-mono">{state.binaryDownloadPct}%</span>
+                <span className="text-[10px] text-foreground/40 font-mono">
+                  {state.binaryDownloadLabel || "Preparing…"}
+                </span>
+                <span className="text-[10px] text-foreground/40 font-mono">
+                  {state.binaryDownloadPct}%
+                </span>
               </div>
               <ProgressBar pct={state.binaryDownloadPct} />
             </div>
@@ -148,8 +172,13 @@ export function LocalAISetupCard() {
           {state.binaryError && !state.binaryDownloading && (
             <div className="flex flex-col gap-[4px]">
               <div className="flex items-start gap-[5px]">
-                <Icon icon="solar:danger-triangle-linear" className="text-[12px] text-destructive/70 shrink-0 mt-[1px]" />
-                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed flex-1">{state.binaryError}</p>
+                <Icon
+                  icon="solar:danger-triangle-linear"
+                  className="text-[12px] text-destructive/70 shrink-0 mt-[1px]"
+                />
+                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed flex-1">
+                  {state.binaryError}
+                </p>
               </div>
               <button
                 onClick={startDownloadBinary}
@@ -163,7 +192,9 @@ export function LocalAISetupCard() {
           {/* Ollama starting indicator */}
           {state.ollamaStarting && (
             <div className="flex flex-col gap-[4px]">
-              <span className="text-[10px] text-foreground/35 font-mono">Starting Ollama runtime…</span>
+              <span className="text-[10px] text-foreground/35 font-mono">
+                Starting Ollama runtime…
+              </span>
               <ProgressBar pct={0} indeterminate />
             </div>
           )}
@@ -172,8 +203,13 @@ export function LocalAISetupCard() {
           {state.ollamaError && !state.ollamaStarting && (
             <div className="flex flex-col gap-[4px]">
               <div className="flex items-start gap-[5px]">
-                <Icon icon="solar:danger-triangle-linear" className="text-[12px] text-destructive/70 shrink-0 mt-[1px]" />
-                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed">{state.ollamaError}</p>
+                <Icon
+                  icon="solar:danger-triangle-linear"
+                  className="text-[12px] text-destructive/70 shrink-0 mt-[1px]"
+                />
+                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed">
+                  {state.ollamaError}
+                </p>
               </div>
               <button
                 onClick={startOllama}
@@ -191,7 +227,7 @@ export function LocalAISetupCard() {
               className="w-full flex items-center justify-center gap-[5px] py-[5px] rounded-[6px] bg-purple-500/15 hover:bg-purple-500/20 border border-purple-500/20 text-[11px] text-purple-300/80 font-mono transition-colors"
             >
               <Icon icon="solar:download-minimalistic-linear" className="text-[13px]" />
-              Download {state.model} ({MODELS.find(m => m.id === state.model)?.size})
+              Download {state.model} ({MODELS.find((m) => m.id === state.model)?.size})
             </button>
           )}
 
@@ -199,7 +235,9 @@ export function LocalAISetupCard() {
           {state.pulling && (
             <div className="flex flex-col gap-[4px]">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-foreground/40 font-mono">{state.pullProgress?.status || 'Downloading…'}</span>
+                <span className="text-[10px] text-foreground/40 font-mono">
+                  {state.pullProgress?.status || "Downloading…"}
+                </span>
                 {state.pullProgress?.total ? (
                   <span className="text-[10px] text-foreground/40 font-mono">{pullPct}%</span>
                 ) : null}
@@ -212,8 +250,13 @@ export function LocalAISetupCard() {
           {state.pullError && !state.pulling && (
             <div className="flex flex-col gap-[4px]">
               <div className="flex items-start gap-[5px]">
-                <Icon icon="solar:danger-triangle-linear" className="text-[12px] text-destructive/70 shrink-0 mt-[1px]" />
-                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed">{state.pullError}</p>
+                <Icon
+                  icon="solar:danger-triangle-linear"
+                  className="text-[12px] text-destructive/70 shrink-0 mt-[1px]"
+                />
+                <p className="text-[10px] text-destructive/70 font-mono leading-relaxed">
+                  {state.pullError}
+                </p>
               </div>
               <button
                 onClick={startPull}
@@ -223,7 +266,6 @@ export function LocalAISetupCard() {
               </button>
             </div>
           )}
-
         </div>
       )}
     </div>

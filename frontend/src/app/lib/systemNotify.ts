@@ -1,10 +1,10 @@
-import * as NotificationService from '../../../bindings/github.com/wailsapp/wails/v3/pkg/services/notifications/notificationservice';
-import * as settingsClient from './settingsClient';
+import * as NotificationService from "../../../bindings/github.com/wailsapp/wails/v3/pkg/services/notifications/notificationservice";
+import * as settingsClient from "./settingsClient";
 
-const PREF_KEY = 'alis:systemNotifications';
+const PREF_KEY = "alis:systemNotifications";
 
 export function isSystemNotificationsEnabled(): boolean {
-  return settingsClient.getCached(PREF_KEY) === 'true';
+  return settingsClient.getCached(PREF_KEY) === "true";
 }
 
 export function setSystemNotificationsEnabled(enabled: boolean): void {
@@ -33,6 +33,5 @@ export async function systemNotify(title: string, body: string, deeplink?: strin
       body,
       ...(deeplink ? { data: { deeplink } } : {}),
     });
-  } catch {
-  }
+  } catch {}
 }

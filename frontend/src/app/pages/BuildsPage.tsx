@@ -6,10 +6,7 @@ import { FilterInput } from "../components/FilterInput";
 import { Toolbar } from "../components/Toolbar";
 import { Button } from "../components/Button";
 import { Table } from "../components/Table";
-import {
-  BuildTerminal,
-  type BuildTerminalHandle,
-} from "../components/BuildTerminal";
+import { BuildTerminal, type BuildTerminalHandle } from "../components/BuildTerminal";
 import { RightPane } from "../components/RightPane";
 import { Tab } from "../components/Tab";
 import { useWorkspace } from "../stores/workspace";
@@ -93,9 +90,7 @@ function parseNeuron(name: string) {
 }
 
 function buildGCSRUrl(remoteUri: string, sha: string): string | null {
-  const m = remoteUri.match(
-    /source\.developers\.google\.com\/p\/([^/]+)\/r\/([^/]+)/,
-  );
+  const m = remoteUri.match(/source\.developers\.google\.com\/p\/([^/]+)\/r\/([^/]+)/);
   if (!m) return null;
   return `https://source.cloud.google.com/${m[1]}/${m[2]}/+/${sha}`;
 }
@@ -129,9 +124,7 @@ export function BuildsPage() {
   const [buildBranches, setBuildBranches] = useState<string[]>(["master"]);
   const [buildCommits, setBuildCommits] = useState<DefineCommit[]>([]);
   const [buildCommitsLoading, setBuildCommitsLoading] = useState(false);
-  const [selectedCommit, setSelectedCommit] = useState<DefineCommit | null>(
-    null,
-  );
+  const [selectedCommit, setSelectedCommit] = useState<DefineCommit | null>(null);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [buildProgressMsg, setBuildProgressMsg] = useState("Starting...");
 
@@ -144,18 +137,14 @@ export function BuildsPage() {
   const [logsError, setLogsError] = useState<string | null>(null);
 
   // Deployed environments per version (keyed by "neuronId::version")
-  const [deployedEnvsMap, setDeployedEnvsMap] = useState<Map<string, string[]>>(
-    new Map(),
-  );
+  const [deployedEnvsMap, setDeployedEnvsMap] = useState<Map<string, string[]>>(new Map());
 
   // Changelog between versions
   const [changelogCommits, setChangelogCommits] = useState<DefineCommit[]>([]);
   const [changelogLoading, setChangelogLoading] = useState(false);
 
   // Detail pane tab
-  const [detailTab, setDetailTab] = useState<"details" | "logs" | "commits">(
-    "details",
-  );
+  const [detailTab, setDetailTab] = useState<"details" | "logs" | "commits">("details");
 
   // Repo remote URI for GCSR links (product-level)
   const [repoRemoteUri, setRepoRemoteUri] = useState<string | null>(null);
@@ -163,9 +152,7 @@ export function BuildsPage() {
   // Deploy flow state (right panel)
   const [deployStep, setDeployStep] = useState<DeployStep | null>(null);
   const [deploySelectedEnvs, setDeploySelectedEnvs] = useState<string[]>([]);
-  const [deployResult, setDeployResult] = useState<DeployResultState | null>(
-    null,
-  );
+  const [deployResult, setDeployResult] = useState<DeployResultState | null>(null);
   const [deployProgressMsg, setDeployProgressMsg] = useState("Starting...");
   const deployTermRef = useRef<BuildTerminalHandle>(null);
   const deployLogOffsetRef = useRef<number>(0);
@@ -195,8 +182,7 @@ export function BuildsPage() {
           for (const dep of env.deployments ?? []) {
             const key = `${dep.neuronId}::${dep.version}`;
             const existing = map.get(key) ?? [];
-            if (!existing.includes(env.displayName))
-              existing.push(env.displayName);
+            if (!existing.includes(env.displayName)) existing.push(env.displayName);
             map.set(key, existing);
           }
         }
@@ -271,11 +257,9 @@ export function BuildsPage() {
     const parsed = parseNeuron(activeNeuron);
     setBuildCommitsLoading(true);
     const [, commitsResult] = await Promise.allSettled([
-      BuildService.GetBuildBranches(state.organisation, state.product).then(
-        (b) => {
-          if (b?.length) setBuildBranches(b as string[]);
-        },
-      ),
+      BuildService.GetBuildBranches(state.organisation, state.product).then((b) => {
+        if (b?.length) setBuildBranches(b as string[]);
+      }),
       BuildService.GetBuildCommits(
         state.organisation,
         state.product,
@@ -326,10 +310,7 @@ export function BuildsPage() {
     termRef.current?.clear();
     logOffsetRef.current = 0;
     try {
-      const result = await BuildService.RunBuild(
-        neuronResource,
-        selectedCommit.sha,
-      );
+      const result = await BuildService.RunBuild(neuronResource, selectedCommit.sha);
       setBuildResult(result as BuildResult);
     } catch (e: any) {
       setBuildProgressMsg(`Failed: ${e?.message ?? e}`);
@@ -356,8 +337,7 @@ export function BuildsPage() {
   }, []);
 
   const handleRunDeploy = async () => {
-    if (!activeNeuron || !activeVersionId || deploySelectedEnvs.length === 0)
-      return;
+    if (!activeNeuron || !activeVersionId || deploySelectedEnvs.length === 0) return;
     const neuronResource = `organisations/${state.organisation}/products/${state.product}/neurons/${activeNeuron}`;
     setDeployStep("running");
     setDeployProgressMsg("Starting...");
@@ -390,9 +370,7 @@ export function BuildsPage() {
     if (!deployResult || deployResult.done || deployStep !== "running") return;
     const interval = setInterval(async () => {
       try {
-        const result = await DeployService.PollDeployOperation(
-          deployResult.operationName,
-        );
+        const result = await DeployService.PollDeployOperation(deployResult.operationName);
         setDeployResult(result as DeployResultState);
         if (result?.done) {
           clearInterval(interval);
@@ -413,10 +391,7 @@ export function BuildsPage() {
     const logsUrl = deployResult.deployments[0].logsUrl;
     const fetchLogs = async () => {
       try {
-        const chunk = await DeployService.FetchDeployLogs(
-          logsUrl,
-          deployLogOffsetRef.current,
-        );
+        const chunk = await DeployService.FetchDeployLogs(logsUrl, deployLogOffsetRef.current);
         if (chunk?.content) {
           deployTermRef.current?.write(chunk.content);
           deployLogOffsetRef.current = chunk.nextOffset;
@@ -482,10 +457,7 @@ export function BuildsPage() {
     if (!buildResult?.logsUrl) return;
     const fetchLogs = async () => {
       try {
-        const chunk = await BuildService.FetchBuildLogs(
-          buildResult.logsUrl,
-          logOffsetRef.current,
-        );
+        const chunk = await BuildService.FetchBuildLogs(buildResult.logsUrl, logOffsetRef.current);
         if (chunk?.content) {
           termRef.current?.write(chunk.content);
           logOffsetRef.current = chunk.nextOffset;
@@ -503,17 +475,9 @@ export function BuildsPage() {
   // Load changelog when a version is selected
   useEffect(() => {
     setChangelogCommits([]);
-    if (
-      !activeVersionId ||
-      !activeNeuron ||
-      !state.organisation ||
-      !state.product
-    )
-      return;
+    if (!activeVersionId || !activeNeuron || !state.organisation || !state.product) return;
 
-    const selectedIdx = versions.findIndex(
-      (v) => v.version === activeVersionId,
-    );
+    const selectedIdx = versions.findIndex((v) => v.version === activeVersionId);
     if (selectedIdx < 0) return;
     const selectedVer = versions[selectedIdx];
     const prevVer = versions[selectedIdx + 1];
@@ -534,9 +498,7 @@ export function BuildsPage() {
         if (!all.length) return;
 
         const selIdx = all.findIndex((c) => c.sha === selectedVer.buildCommit);
-        const prevIdx = prevVer
-          ? all.findIndex((c) => c.sha === prevVer.buildCommit)
-          : -1;
+        const prevIdx = prevVer ? all.findIndex((c) => c.sha === prevVer.buildCommit) : -1;
 
         if (selIdx >= 0 && prevIdx > selIdx) {
           setChangelogCommits(all.slice(selIdx, prevIdx));
@@ -547,9 +509,7 @@ export function BuildsPage() {
               c.timestamp <= selectedVer.createTime &&
               (!prevVer || c.timestamp > prevVer.createTime),
           );
-          setChangelogCommits(
-            ts.length > 0 ? ts : all.slice(selIdx, selIdx + 5),
-          );
+          setChangelogCommits(ts.length > 0 ? ts : all.slice(selIdx, selIdx + 5));
         } else {
           // selected SHA not in list either — use timestamps
           setChangelogCommits(
@@ -576,11 +536,10 @@ export function BuildsPage() {
       .then((result: any) => {
         const text = result?.content ?? "";
         setLogsContent(text.trim() || null);
-        if (!text.trim())
-          setLogsError("Logs are no longer available for this build.");
+        if (!text.trim()) setLogsError("Logs are no longer available for this build.");
       })
       .catch((e: any) => {
-        const msg: string = e?.message ?? String(e) ?? "";
+        const msg: string = e?.message || String(e) || "";
         setLogsError(
           msg.includes("HTTP 5")
             ? "Logs are no longer available for this build."
@@ -657,9 +616,7 @@ export function BuildsPage() {
     {
       header: "DATE",
       render: (item: VersionEntry) => (
-        <span className="opacity-70 text-[11px]">
-          {formatDate(item.createTime)}
-        </span>
+        <span className="opacity-70 text-[11px]">{formatDate(item.createTime)}</span>
       ),
       className: "w-[160px]",
     },
@@ -689,9 +646,7 @@ export function BuildsPage() {
       render: (item: VersionEntry) => (
         <span className="text-[9px] text-foreground/30">
           {item.createTime > 0 ? formatRelativeTime(item.createTime) : ""}
-          {isLatest(item) && (
-            <span className="ml-[6px] text-brand">LATEST</span>
-          )}
+          {isLatest(item) && <span className="ml-[6px] text-brand">LATEST</span>}
         </span>
       ),
       className: "w-[110px] text-right",
@@ -746,9 +701,7 @@ export function BuildsPage() {
           {versionsLoading ? (
             <div className="flex items-center justify-center h-full gap-[10px]">
               <Loader size={20} />
-              <span className="text-[11px] text-foreground/50">
-                Loading versions...
-              </span>
+              <span className="text-[11px] text-foreground/50">Loading versions...</span>
             </div>
           ) : !activeNeuron ? (
             <div className="px-[20px] py-[20px]">
@@ -759,14 +712,8 @@ export function BuildsPage() {
           ) : filteredVersions.length === 0 && !versionsLoading ? (
             <EmptyState
               icon="solar:box-minimalistic-linear"
-              title={
-                filterText
-                  ? "No versions match the filter"
-                  : "No versions found"
-              }
-              description={
-                filterText ? undefined : "Click BUILD to create the first one"
-              }
+              title={filterText ? "No versions match the filter" : "No versions found"}
+              description={filterText ? undefined : "Click BUILD to create the first one"}
             />
           ) : (
             <Table
@@ -774,9 +721,7 @@ export function BuildsPage() {
               data={filteredVersions}
               rowId={(v) => v.version}
               onRowClick={(v) => {
-                setActiveVersionId(
-                  v.version === activeVersionId ? null : v.version,
-                );
+                setActiveVersionId(v.version === activeVersionId ? null : v.version);
                 setLogsContent(null);
                 setLogsError(null);
                 setDetailTab("details");
@@ -788,9 +733,7 @@ export function BuildsPage() {
       </div>
 
       {/* Right Section: Build flow / Logs Panel — only shown when a version is selected or a flow is active */}
-      {(activeVersionId !== null ||
-        buildStep !== null ||
-        deployStep !== null) && (
+      {(activeVersionId !== null || buildStep !== null || deployStep !== null) && (
         <RightPane
           label={
             deployStep === "select-env"
@@ -835,9 +778,7 @@ export function BuildsPage() {
                   className="w-full justify-center py-[10px]"
                   onClick={openDeployFlow}
                 >
-                  {isLatest(selectedVersion)
-                    ? "Redeploy"
-                    : "Revert to this version"}
+                  {isLatest(selectedVersion) ? "Redeploy" : "Revert to this version"}
                 </Button>
                 <Button
                   variant="secondary"
@@ -849,14 +790,9 @@ export function BuildsPage() {
                 {repoRemoteUri &&
                   selectedVersion.buildCommit &&
                   (() => {
-                    const idx = versions.findIndex(
-                      (v) => v.version === selectedVersion.version,
-                    );
+                    const idx = versions.findIndex((v) => v.version === selectedVersion.version);
                     const prev = versions[idx + 1];
-                    const commitUrl = buildGCSRUrl(
-                      repoRemoteUri,
-                      selectedVersion.buildCommit,
-                    );
+                    const commitUrl = buildGCSRUrl(repoRemoteUri, selectedVersion.buildCommit);
                     const compareUrl = prev?.buildCommit
                       ? buildGCSRUrl(
                           repoRemoteUri,
@@ -870,30 +806,18 @@ export function BuildsPage() {
                           onClick={() => Browser.OpenURL(commitUrl)}
                           className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-foreground/35 hover:text-foreground border border-border hover:border-border rounded-[4px] transition-colors"
                         >
-                          <Icon
-                            icon="solar:code-square-linear"
-                            className="text-sm"
-                          />
+                          <Icon icon="solar:code-square-linear" className="text-sm" />
                           View commit
-                          <Icon
-                            icon="solar:arrow-right-up-linear"
-                            className="text-[10px]"
-                          />
+                          <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
                         </button>
                         {compareUrl && (
                           <button
                             onClick={() => Browser.OpenURL(compareUrl!)}
                             className="flex-1 flex items-center justify-center gap-[5px] py-[7px] text-[10px] text-foreground/35 hover:text-foreground border border-border hover:border-border rounded-[4px] transition-colors"
                           >
-                            <Icon
-                              icon="solar:graph-new-up-linear"
-                              className="text-sm"
-                            />
+                            <Icon icon="solar:graph-new-up-linear" className="text-sm" />
                             View changes
-                            <Icon
-                              icon="solar:arrow-right-up-linear"
-                              className="text-[10px]"
-                            />
+                            <Icon icon="solar:arrow-right-up-linear" className="text-[10px]" />
                           </button>
                         )}
                       </div>
@@ -912,31 +836,19 @@ export function BuildsPage() {
                   <div className="flex h-[36px] border-b border-border shrink-0">
                     <Tab
                       label="Details"
-                      icon={
-                        <Icon
-                          icon="solar:info-circle-linear"
-                          className="text-sm"
-                        />
-                      }
+                      icon={<Icon icon="solar:info-circle-linear" className="text-sm" />}
                       active={detailTab === "details"}
                       onClick={() => setDetailTab("details")}
                     />
                     <Tab
                       label="Logs"
-                      icon={
-                        <Icon
-                          icon="solar:document-text-linear"
-                          className="text-sm"
-                        />
-                      }
+                      icon={<Icon icon="solar:document-text-linear" className="text-sm" />}
                       active={detailTab === "logs"}
                       onClick={() => setDetailTab("logs")}
                     />
                     <Tab
                       label="Commits"
-                      icon={
-                        <Icon icon="solar:history-linear" className="text-sm" />
-                      }
+                      icon={<Icon icon="solar:history-linear" className="text-sm" />}
                       active={detailTab === "commits"}
                       onClick={() => setDetailTab("commits")}
                     />
@@ -1004,9 +916,7 @@ export function BuildsPage() {
                             );
                           })()}
                         {(() => {
-                          const envNames = deployedEnvsForVersion(
-                            selectedVersion.version,
-                          );
+                          const envNames = deployedEnvsForVersion(selectedVersion.version);
                           return envNames.length > 0 ? (
                             <div>
                               <p className="text-[9px] text-foreground/35 uppercase font-bold font-mono mb-[6px]">
@@ -1038,16 +948,12 @@ export function BuildsPage() {
                             icon="solar:document-text-linear"
                             className="text-foreground text-[24px]"
                           />
-                          <p className="text-[11px] text-foreground">
-                            No logs for this build
-                          </p>
+                          <p className="text-[11px] text-foreground">No logs for this build</p>
                         </div>
                       ) : logsLoading ? (
                         <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                           <Loader size={20} />
-                          <span className="text-[11px] text-foreground/50">
-                            Loading logs...
-                          </span>
+                          <span className="text-[11px] text-foreground/50">Loading logs...</span>
                         </div>
                       ) : logsError ? (
                         <p className="text-[10px] text-[rgba(255,92,95,0.8)] px-[16px] py-[20px]">
@@ -1063,9 +969,7 @@ export function BuildsPage() {
                             icon="solar:document-text-linear"
                             className="text-foreground text-[24px]"
                           />
-                          <p className="text-[11px] text-foreground">
-                            No log output
-                          </p>
+                          <p className="text-[11px] text-foreground">No log output</p>
                         </div>
                       )}
                     </div>
@@ -1077,9 +981,7 @@ export function BuildsPage() {
                       {changelogLoading ? (
                         <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                           <Loader size={20} />
-                          <span className="text-[11px] text-foreground/30">
-                            Loading commits...
-                          </span>
+                          <span className="text-[11px] text-foreground/30">Loading commits...</span>
                         </div>
                       ) : changelogCommits.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full gap-[8px] opacity-30">
@@ -1087,22 +989,15 @@ export function BuildsPage() {
                             icon="solar:history-linear"
                             className="text-foreground text-[24px]"
                           />
-                          <p className="text-[11px] text-foreground">
-                            No changelog available
-                          </p>
+                          <p className="text-[11px] text-foreground">No changelog available</p>
                         </div>
                       ) : (
                         <div className="flex flex-col">
                           <p className="px-[16px] pt-[12px] pb-[8px] text-[9px] text-foreground/30 uppercase font-bold font-mono">
                             {changelogCommits.length} commit
-                            {changelogCommits.length !== 1
-                              ? "s"
-                              : ""} since{" "}
-                            {versions[
-                              versions.findIndex(
-                                (v) => v.version === activeVersionId,
-                              ) + 1
-                            ]?.version ?? "start"}
+                            {changelogCommits.length !== 1 ? "s" : ""} since{" "}
+                            {versions[versions.findIndex((v) => v.version === activeVersionId) + 1]
+                              ?.version ?? "start"}
                           </p>
                           {changelogCommits.map((c) => (
                             <div
@@ -1129,10 +1024,7 @@ export function BuildsPage() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-[12px] opacity-30 pb-[40px]">
-                  <Icon
-                    icon="solar:box-linear"
-                    className="text-foreground text-[32px]"
-                  />
+                  <Icon icon="solar:box-linear" className="text-foreground text-[32px]" />
                   <p className="text-[11px] text-foreground">
                     {activeNeuron
                       ? "Select a version or click BUILD"
@@ -1148,10 +1040,7 @@ export function BuildsPage() {
             <div className="flex-1 flex flex-col min-h-0">
               {/* Branch selector */}
               <div className="shrink-0 flex items-center gap-[8px] px-[14px] py-[9px] border-b border-border">
-                <Icon
-                  icon="solar:branch-linear"
-                  className="text-foreground/35 text-sm shrink-0"
-                />
+                <Icon icon="solar:branch-linear" className="text-foreground/35 text-sm shrink-0" />
                 <SearchableSelect
                   value={buildBranch}
                   options={buildBranches}
@@ -1165,9 +1054,7 @@ export function BuildsPage() {
                 {buildCommitsLoading ? (
                   <div className="flex items-center gap-[10px] px-[16px] py-[20px]">
                     <Loader size={20} />
-                    <span className="text-[11px] text-foreground/50">
-                      Loading commits...
-                    </span>
+                    <span className="text-[11px] text-foreground/50">Loading commits...</span>
                   </div>
                 ) : buildCommits.length === 0 ? (
                   <div className="px-[16px] py-[20px]">
@@ -1224,8 +1111,7 @@ export function BuildsPage() {
                   {selectedCommit.message}
                 </p>
                 <p className="text-[9px] text-foreground/40">
-                  {selectedCommit.author} ·{" "}
-                  {formatTimestamp(selectedCommit.timestamp)}
+                  {selectedCommit.author} · {formatTimestamp(selectedCommit.timestamp)}
                 </p>
               </div>
 
@@ -1265,9 +1151,7 @@ export function BuildsPage() {
                           key={env.name}
                           onClick={() =>
                             setDeploySelectedEnvs((prev) =>
-                              selected
-                                ? prev.filter((n) => n !== env.name)
-                                : [...prev, env.name],
+                              selected ? prev.filter((n) => n !== env.name) : [...prev, env.name],
                             )
                           }
                           className={`flex items-center gap-[10px] px-[12px] py-[10px] rounded-[6px] border text-left transition-colors ${
@@ -1278,16 +1162,11 @@ export function BuildsPage() {
                         >
                           <div
                             className={`size-[14px] rounded-[3px] border flex items-center justify-center shrink-0 ${
-                              selected
-                                ? "bg-brand-fill border-brand-fill"
-                                : "border-border"
+                              selected ? "bg-brand-fill border-brand-fill" : "border-border"
                             }`}
                           >
                             {selected && (
-                              <Icon
-                                icon="solar:check-linear"
-                                className="text-black text-[10px]"
-                              />
+                              <Icon icon="solar:check-linear" className="text-black text-[10px]" />
                             )}
                           </div>
                           <div className="min-w-0">
@@ -1309,10 +1188,8 @@ export function BuildsPage() {
                   disabled={deploySelectedEnvs.length === 0}
                   onClick={handleRunDeploy}
                 >
-                  {selectedVersion && isLatest(selectedVersion)
-                    ? "Redeploy"
-                    : "Revert"}{" "}
-                  · {deploySelectedEnvs.length} env
+                  {selectedVersion && isLatest(selectedVersion) ? "Redeploy" : "Revert"} ·{" "}
+                  {deploySelectedEnvs.length} env
                   {deploySelectedEnvs.length !== 1 ? "s" : ""}
                 </Button>
               </div>
@@ -1338,9 +1215,7 @@ export function BuildsPage() {
               {deployStep === "result" && (
                 <div
                   className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
-                    deployResult?.error
-                      ? "bg-[rgba(255,92,95,0.05)]"
-                      : "bg-[rgba(52,199,89,0.05)]"
+                    deployResult?.error ? "bg-[rgba(255,92,95,0.05)]" : "bg-[rgba(52,199,89,0.05)]"
                   }`}
                 >
                   {deployResult?.error ? (
@@ -1371,18 +1246,11 @@ export function BuildsPage() {
                       </div>
                       {deployResult?.deployments?.[0]?.logsUrl && (
                         <button
-                          onClick={() =>
-                            Browser.OpenURL(
-                              deployResult!.deployments[0].logsUrl,
-                            )
-                          }
+                          onClick={() => Browser.OpenURL(deployResult!.deployments[0].logsUrl)}
                           className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                           title="Open in browser"
                         >
-                          <Icon
-                            icon="solar:arrow-right-up-linear"
-                            className="text-sm"
-                          />
+                          <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
                         </button>
                       )}
                     </div>
@@ -1431,9 +1299,7 @@ export function BuildsPage() {
               {buildStep === "result" && (
                 <div
                   className={`shrink-0 px-[14px] py-[10px] border-b border-border ${
-                    buildResult?.error
-                      ? "bg-[rgba(255,92,95,0.05)]"
-                      : "bg-[rgba(52,199,89,0.05)]"
+                    buildResult?.error ? "bg-[rgba(255,92,95,0.05)]" : "bg-[rgba(52,199,89,0.05)]"
                   }`}
                 >
                   {buildResult?.error ? (
@@ -1456,8 +1322,7 @@ export function BuildsPage() {
                         <p className="text-[11px] font-bold text-foreground leading-tight">
                           Build Complete
                         </p>
-                        {(buildResult?.neuronVersion ||
-                          buildResult?.version) && (
+                        {(buildResult?.neuronVersion || buildResult?.version) && (
                           <p className="text-[9px] text-foreground/40 font-mono truncate leading-tight mt-[1px]">
                             {buildResult.neuronVersion || buildResult.version}
                           </p>
@@ -1469,10 +1334,7 @@ export function BuildsPage() {
                           className="ml-auto shrink-0 text-foreground/30 hover:text-brand transition-colors"
                           title="Open in browser"
                         >
-                          <Icon
-                            icon="solar:arrow-right-up-linear"
-                            className="text-sm"
-                          />
+                          <Icon icon="solar:arrow-right-up-linear" className="text-sm" />
                         </button>
                       )}
                     </div>

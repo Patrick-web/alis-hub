@@ -5,9 +5,9 @@ import {
   useReducer,
   useEffect,
   type ReactNode,
-} from 'react';
-import { useWorkspace } from './workspace';
-import * as settingsClient from '../lib/settingsClient';
+} from "react";
+import { useWorkspace } from "./workspace";
+import * as settingsClient from "../lib/settingsClient";
 
 export interface ProtectedEnvSettings {
   protectedEnvNames: string[];
@@ -20,7 +20,7 @@ const DEFAULT_PRODUCT_SETTINGS: ProtectedEnvSettings = {
 type ProtectedEnvironmentsMap = Record<string, ProtectedEnvSettings>;
 
 type ProtectedEnvironmentsAction = {
-  type: 'TOGGLE_PROTECTED';
+  type: "TOGGLE_PROTECTED";
   key: string;
   payload: string;
 };
@@ -31,7 +31,7 @@ interface ProtectedEnvironmentsContextValue {
   toggleProtected: (envName: string) => void;
 }
 
-const STORAGE_KEY = 'alis:protected-environments';
+const STORAGE_KEY = "alis:protected-environments";
 
 function loadFromStorage(): ProtectedEnvironmentsMap {
   try {
@@ -47,13 +47,16 @@ function saveToStorage(map: ProtectedEnvironmentsMap) {
   settingsClient.set(STORAGE_KEY, JSON.stringify(map));
 }
 
-function reducer(state: ProtectedEnvironmentsMap, action: ProtectedEnvironmentsAction): ProtectedEnvironmentsMap {
+function reducer(
+  state: ProtectedEnvironmentsMap,
+  action: ProtectedEnvironmentsAction,
+): ProtectedEnvironmentsMap {
   const prev = state[action.key] ?? DEFAULT_PRODUCT_SETTINGS;
   switch (action.type) {
-    case 'TOGGLE_PROTECTED': {
+    case "TOGGLE_PROTECTED": {
       const isCurrentlyProtected = prev.protectedEnvNames.includes(action.payload);
       const protectedEnvNames = isCurrentlyProtected
-        ? prev.protectedEnvNames.filter(name => name !== action.payload)
+        ? prev.protectedEnvNames.filter((name) => name !== action.payload)
         : [...prev.protectedEnvNames, action.payload];
       return { ...state, [action.key]: { ...prev, protectedEnvNames } };
     }
@@ -75,20 +78,28 @@ export function ProtectedEnvironmentsProvider({ children }: { children: ReactNod
   const key = `${workspace.organisation}/${workspace.product}`;
   const settings: ProtectedEnvSettings = map[key] ?? DEFAULT_PRODUCT_SETTINGS;
 
-  const toggleProtected = useCallback((envName: string) => {
-    dispatch({ type: 'TOGGLE_PROTECTED', key, payload: envName });
-  }, [key]);
+  const toggleProtected = useCallback(
+    (envName: string) => {
+      dispatch({ type: "TOGGLE_PROTECTED", key, payload: envName });
+    },
+    [key],
+  );
 
-  const isProtected = useCallback((envName: string) => {
-    return settings.protectedEnvNames.includes(envName);
-  }, [settings.protectedEnvNames]);
+  const isProtected = useCallback(
+    (envName: string) => {
+      return settings.protectedEnvNames.includes(envName);
+    },
+    [settings.protectedEnvNames],
+  );
 
   return (
-    <ProtectedEnvironmentsContext.Provider value={{
-      protectedEnvNames: settings.protectedEnvNames,
-      isProtected,
-      toggleProtected,
-    }}>
+    <ProtectedEnvironmentsContext.Provider
+      value={{
+        protectedEnvNames: settings.protectedEnvNames,
+        isProtected,
+        toggleProtected,
+      }}
+    >
       {children}
     </ProtectedEnvironmentsContext.Provider>
   );
@@ -96,6 +107,7 @@ export function ProtectedEnvironmentsProvider({ children }: { children: ReactNod
 
 export function useProtectedEnvironments(): ProtectedEnvironmentsContextValue {
   const ctx = useContext(ProtectedEnvironmentsContext);
-  if (!ctx) throw new Error('useProtectedEnvironments must be used within ProtectedEnvironmentsProvider');
+  if (!ctx)
+    throw new Error("useProtectedEnvironments must be used within ProtectedEnvironmentsProvider");
   return ctx;
 }

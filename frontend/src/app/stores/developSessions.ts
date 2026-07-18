@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { disposeLogBuses } from '../lib/logBus';
+import { create } from "zustand";
+import { disposeLogBuses } from "../lib/logBus";
 import type {
   BuildMode,
   BuildResult,
@@ -13,7 +13,7 @@ import type {
   GlassResult,
   PackageScript,
   PackagesStep,
-} from '../components/develop/types';
+} from "../components/develop/types";
 
 // ── Session shapes ─────────────────────────────────────────────────────────────
 // One session per Develop tab, keyed by tab id. Sessions hold the full step
@@ -22,7 +22,7 @@ import type {
 // (polling, log streaming) are owned exclusively by the always-mounted panes.
 
 export interface DefineSession {
-  kind: 'define';
+  kind: "define";
   tabId: string;
   neuron: string;
   step: DefineStep;
@@ -37,7 +37,7 @@ export interface DefineSession {
 }
 
 export interface BuildSession {
-  kind: 'build';
+  kind: "build";
   tabId: string;
   neuron: string;
   step: BuildStep;
@@ -53,13 +53,13 @@ export interface BuildSession {
   deployEnvs: DeployEnv[];
   selectedDeployEnvs: string[];
   envsLoading: boolean;
-  buildPhase: 'build' | 'deploy';
+  buildPhase: "build" | "deploy";
   deployRuns: EnvRunState[];
   activeRunEnv: string;
 }
 
 export interface DeploySession {
-  kind: 'deploy';
+  kind: "deploy";
   tabId: string;
   neuron: string;
   step: DeployStep;
@@ -75,12 +75,12 @@ export interface DeploySession {
 }
 
 export interface PackagesSession {
-  kind: 'packages';
+  kind: "packages";
   tabId: string;
   neuron: string;
   neuronNames: string[];
   step: PackagesStep;
-  action: 'upgrade_defined' | 'upgrade' | 'install' | 'add';
+  action: "upgrade_defined" | "upgrade" | "install" | "add";
   scripts: PackageScript[];
   selectedScripts: string[];
   error: string;
@@ -90,36 +90,78 @@ export type DevelopSession = DefineSession | BuildSession | DeploySession | Pack
 
 export function initialDefineSession(tabId: string, neuron: string): DefineSession {
   return {
-    kind: 'define', tabId, neuron,
-    step: 'commits', commits: [], commitsLoading: true, selectedCommit: null,
-    defineResult: null, progressMsg: 'Starting...', glassResult: null,
-    glassLoading: false, defineError: null,
+    kind: "define",
+    tabId,
+    neuron,
+    step: "commits",
+    commits: [],
+    commitsLoading: true,
+    selectedCommit: null,
+    defineResult: null,
+    progressMsg: "Starting...",
+    glassResult: null,
+    glassLoading: false,
+    defineError: null,
   };
 }
 
 export function initialBuildSession(tabId: string, neuron: string): BuildSession {
   return {
-    kind: 'build', tabId, neuron,
-    step: 'commits', commits: [], commitsLoading: true, selectedCommit: null,
-    buildResult: null, progressMsg: 'Starting...', branch: 'master', branches: ['master'],
-    buildMode: 'cloud', localBuildId: null, deployEnvs: [], selectedDeployEnvs: [],
-    envsLoading: false, buildPhase: 'build', deployRuns: [], activeRunEnv: '',
+    kind: "build",
+    tabId,
+    neuron,
+    step: "commits",
+    commits: [],
+    commitsLoading: true,
+    selectedCommit: null,
+    buildResult: null,
+    progressMsg: "Starting...",
+    branch: "master",
+    branches: ["master"],
+    buildMode: "cloud",
+    localBuildId: null,
+    deployEnvs: [],
+    selectedDeployEnvs: [],
+    envsLoading: false,
+    buildPhase: "build",
+    deployRuns: [],
+    activeRunEnv: "",
   };
 }
 
 export function initialDeploySession(tabId: string, neuron: string): DeploySession {
   return {
-    kind: 'deploy', tabId, neuron,
-    step: 'loading', deployError: null, envs: [], selectedEnvs: [],
-    versions: [], version: '', planOnly: false, beta: false,
-    envRuns: [], activeRunEnv: '',
+    kind: "deploy",
+    tabId,
+    neuron,
+    step: "loading",
+    deployError: null,
+    envs: [],
+    selectedEnvs: [],
+    versions: [],
+    version: "",
+    planOnly: false,
+    beta: false,
+    envRuns: [],
+    activeRunEnv: "",
   };
 }
 
-export function initialPackagesSession(tabId: string, neuron: string, neuronNames: string[]): PackagesSession {
+export function initialPackagesSession(
+  tabId: string,
+  neuron: string,
+  neuronNames: string[],
+): PackagesSession {
   return {
-    kind: 'packages', tabId, neuron, neuronNames,
-    step: 'scan', action: 'upgrade_defined', scripts: [], selectedScripts: [], error: '',
+    kind: "packages",
+    tabId,
+    neuron,
+    neuronNames,
+    step: "scan",
+    action: "upgrade_defined",
+    scripts: [],
+    selectedScripts: [],
+    error: "",
   };
 }
 
@@ -129,20 +171,20 @@ export function initialPackagesSession(tabId: string, neuron: string, neuronName
 // stays with the always-mounted pane and actions are never duplicated.
 
 export interface DefineController {
-  kind: 'define';
+  kind: "define";
   loadCommits: () => void;
   runDefine: () => void;
 }
 
 export interface BuildController {
-  kind: 'build';
+  kind: "build";
   loadCommits: (branch: string) => void;
   changeBranch: (branch: string) => void;
   runBuild: () => void;
 }
 
 export interface DeployController {
-  kind: 'deploy';
+  kind: "deploy";
   reload: () => void;
   /** Starts the deploy immediately — protected-environment confirmation must
    * be handled by the calling surface before invoking this. */
@@ -150,7 +192,7 @@ export interface DeployController {
 }
 
 export interface PackagesController {
-  kind: 'packages';
+  kind: "packages";
   scan: () => void;
   /** Resolves after the venv pre-check; read the session step afterwards to
    * know whether the flow moved to 'venv-setup' or started running. */
@@ -158,7 +200,8 @@ export interface PackagesController {
   runScripts: (withVenv: boolean) => void;
 }
 
-export type SessionController = DefineController | BuildController | DeployController | PackagesController;
+export type SessionController =
+  DefineController | BuildController | DeployController | PackagesController;
 
 const controllers = new Map<string, SessionController>();
 
@@ -185,23 +228,28 @@ interface DevelopSessionsStore {
 
 export const useDevelopSessions = create<DevelopSessionsStore>((set) => ({
   sessions: {},
-  ensureSession: (session) => set(state => {
-    if (state.sessions[session.tabId]) return state;
-    return { sessions: { ...state.sessions, [session.tabId]: session } };
-  }),
-  patchSession: (tabId, patch) => set(state => {
-    const existing = state.sessions[tabId];
-    if (!existing) return state;
-    return { sessions: { ...state.sessions, [tabId]: { ...existing, ...patch } as DevelopSession } };
-  }),
-  removeSession: (tabId) => set(state => {
-    if (!state.sessions[tabId]) return state;
-    unregisterSessionController(tabId);
-    disposeLogBuses(tabId);
-    const next = { ...state.sessions };
-    delete next[tabId];
-    return { sessions: next };
-  }),
+  ensureSession: (session) =>
+    set((state) => {
+      if (state.sessions[session.tabId]) return state;
+      return { sessions: { ...state.sessions, [session.tabId]: session } };
+    }),
+  patchSession: (tabId, patch) =>
+    set((state) => {
+      const existing = state.sessions[tabId];
+      if (!existing) return state;
+      return {
+        sessions: { ...state.sessions, [tabId]: { ...existing, ...patch } as DevelopSession },
+      };
+    }),
+  removeSession: (tabId) =>
+    set((state) => {
+      if (!state.sessions[tabId]) return state;
+      unregisterSessionController(tabId);
+      disposeLogBuses(tabId);
+      const next = { ...state.sessions };
+      delete next[tabId];
+      return { sessions: next };
+    }),
 }));
 
 export function patchSession<T extends DevelopSession>(tabId: string, patch: Partial<T>): void {

@@ -8,15 +8,7 @@ import { Dialog, DialogContent } from "../components/ui/dialog";
 import { useWorkspace } from "../stores/workspace";
 import * as PS from "../../../bindings/alis-hub-v3/productservice";
 
-function TileLink({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: string;
-  label: string;
-  onClick: () => void;
-}) {
+function TileLink({ icon, label, onClick }: { icon: string; label: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
@@ -166,16 +158,10 @@ export function AboutPage() {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-[16px] max-w-[320px] text-center">
-          <Icon
-            icon="solar:lock-keyhole-linear"
-            className="text-[48px] text-foreground/20"
-          />
-          <p className="text-[13px] text-foreground font-bold">
-            Sign in to Alis
-          </p>
+          <Icon icon="solar:lock-keyhole-linear" className="text-[48px] text-foreground/20" />
+          <p className="text-[13px] text-foreground font-bold">Sign in to Alis</p>
           <p className="text-[11px] text-foreground/50 leading-[1.6]">
-            Your browser will open to complete authentication with
-            identity.alisx.com.
+            Your browser will open to complete authentication with identity.alisx.com.
           </p>
           {error && <p className="text-[11px] text-destructive">{error}</p>}
           <Button variant="primary" onClick={handleLogin} className="w-full">
@@ -192,33 +178,24 @@ export function AboutPage() {
       <div className="bg-card border-b border-border px-[20px] py-[16px] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-[12px]">
           <div className="size-[38px] bg-brand-fill/8 border border-brand-fill/18 flex items-center justify-center shrink-0">
-            <Icon
-              icon="solar:box-minimalistic-linear"
-              className="text-brand text-lg"
-            />
+            <Icon icon="solar:box-minimalistic-linear" className="text-brand text-lg" />
           </div>
           <div>
             <p className="font-['Fira_Code',sans-serif] font-medium text-[17px] text-foreground leading-tight">
               {productName}
             </p>
-            <p className="text-[10px] text-foreground/35 font-mono mt-[2px]">
-              {orgName}
-            </p>
+            <p className="text-[10px] text-foreground/35 font-mono mt-[2px]">{orgName}</p>
           </div>
         </div>
         <div className="flex items-center gap-[14px]">
           {!loading && gp?.region && (
             <div className="px-[8px] py-[3px] bg-foreground/5 border border-border">
-              <span className="text-[10px] text-foreground/45 font-mono">
-                {gp.region}
-              </span>
+              <span className="text-[10px] text-foreground/45 font-mono">{gp.region}</span>
             </div>
           )}
           {!loading && gp?.id && (
             <div className="flex items-center gap-[6px]">
-              <span className="text-[11px] text-foreground/55 font-mono">
-                {gp.id}
-              </span>
+              <span className="text-[11px] text-foreground/55 font-mono">{gp.id}</span>
               <button
                 onClick={() => copy(gp.id)}
                 className="text-foreground/30 hover:text-foreground transition-colors"
@@ -256,9 +233,7 @@ export function AboutPage() {
                         label="Browse Repository"
                         onClick={() =>
                           PS.OpenForgejoWindow(
-                            git.remoteUri
-                              .replace(/\.git$/, "")
-                              .replace(/\/\w*$/gm, ""),
+                            git.remoteUri.replace(/\.git$/, "").replace(/\/\w*$/gm, ""),
                           )
                         }
                       />
@@ -345,15 +320,9 @@ export function AboutPage() {
                         },
                         (gp.billingAccountId || gp.managedBillingAccount) && {
                           label: "Billing Account",
-                          value: gp.managedBillingAccount
-                            ? "Alis Managed"
-                            : gp.billingAccountId,
+                          value: gp.managedBillingAccount ? "Alis Managed" : gp.billingAccountId,
                           onCopy: () =>
-                            copy(
-                              gp.managedBillingAccount
-                                ? "Alis Managed"
-                                : gp.billingAccountId,
-                            ),
+                            copy(gp.managedBillingAccount ? "Alis Managed" : gp.billingAccountId),
                         },
                         gp.region && {
                           label: "Default Region",
@@ -374,11 +343,7 @@ export function AboutPage() {
                     label="Sharing"
                     onClick={() => navigate("/share")}
                   />
-                  <TileLink
-                    icon="solar:map-point-linear"
-                    label="Routes"
-                    onClick={() => {}}
-                  />
+                  <TileLink icon="solar:map-point-linear" label="Routes" onClick={() => {}} />
                   <TileLink
                     icon="solar:shield-keyhole-linear"
                     label="Product Access"
@@ -401,22 +366,16 @@ export function AboutPage() {
         const productName = `organisations/${state.organisation}/products/${state.product}`;
         const open = (ide: string) => {
           setIdeModalOpen(false);
-          (PS.OpenInIDE as (n: string, ide: string) => Promise<void>)(
-            productName,
-            ide,
-          ).catch(() => {});
+          (PS.OpenInIDE as (n: string, ide: string) => Promise<void>)(productName, ide).catch(
+            () => {},
+          );
         };
         return (
           <Dialog open={ideModalOpen} onOpenChange={setIdeModalOpen}>
             <DialogContent className="text-foreground p-0 max-w-[400px] overflow-hidden">
               <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
-                <Icon
-                  icon="solar:code-2-linear"
-                  className="text-brand text-lg"
-                />
-                <span className="text-[13px] font-bold text-foreground font-mono">
-                  Open in IDE
-                </span>
+                <Icon icon="solar:code-2-linear" className="text-brand text-lg" />
+                <span className="text-[13px] font-bold text-foreground font-mono">Open in IDE</span>
               </div>
               <div className="py-[6px]">
                 {/* Web workstation */}
@@ -426,18 +385,13 @@ export function AboutPage() {
                   className="w-full flex items-center gap-[12px] px-[16px] py-[12px] text-left transition-colors hover:bg-foreground/[4%] disabled:opacity-40 disabled:cursor-not-allowed group"
                 >
                   <div className="size-[32px] bg-foreground/[6%] border border-border flex items-center justify-center shrink-0 group-hover:border-foreground/12 transition-colors">
-                    <Icon
-                      icon="solar:global-linear"
-                      className="text-foreground/70 text-base"
-                    />
+                    <Icon icon="solar:global-linear" className="text-foreground/70 text-base" />
                   </div>
                   <div className="min-w-0">
                     <p className="text-[12px] text-foreground font-mono">
                       Open in Web
                       {workstationLoading && (
-                        <span className="ml-[6px] text-[10px] text-foreground/40">
-                          loading…
-                        </span>
+                        <span className="ml-[6px] text-[10px] text-foreground/40">loading…</span>
                       )}
                     </p>
                     <p className="text-[10px] text-foreground/40 mt-[2px]">
@@ -459,9 +413,7 @@ export function AboutPage() {
                     />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] text-foreground font-mono">
-                      Open in VS Code
-                    </p>
+                    <p className="text-[12px] text-foreground font-mono">Open in VS Code</p>
                     <p className="text-[10px] text-foreground/40 mt-[2px]">
                       Opens locally via the Alis Build extension
                     </p>
@@ -473,15 +425,10 @@ export function AboutPage() {
                   className="w-full flex items-center gap-[12px] px-[16px] py-[12px] text-left transition-colors hover:bg-foreground/[4%] group"
                 >
                   <div className="size-[32px] bg-foreground/[6%] border border-border flex items-center justify-center shrink-0 group-hover:border-foreground/12 transition-colors">
-                    <Icon
-                      icon="solar:cursor-linear"
-                      className="text-foreground/70 text-base"
-                    />
+                    <Icon icon="solar:cursor-linear" className="text-foreground/70 text-base" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] text-foreground font-mono">
-                      Open in Cursor
-                    </p>
+                    <p className="text-[12px] text-foreground font-mono">Open in Cursor</p>
                     <p className="text-[10px] text-foreground/40 mt-[2px]">
                       Opens locally via the Alis Build extension
                     </p>

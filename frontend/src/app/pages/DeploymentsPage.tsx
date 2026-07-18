@@ -31,37 +31,22 @@ function DeployBadge({ state }: { state: number }) {
     case 1:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(52,199,89,0.12)] border border-[rgba(52,199,89,0.25)]">
-          <Icon
-            icon="solar:check-circle-linear"
-            className="text-success text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-success">
-            Running
-          </span>
+          <Icon icon="solar:check-circle-linear" className="text-success text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-success">Running</span>
         </div>
       );
     case 2:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(10,132,255,0.12)] border border-[rgba(10,132,255,0.25)]">
-          <Icon
-            icon="solar:cloud-upload-linear"
-            className="text-info text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-info">
-            Deploying
-          </span>
+          <Icon icon="solar:cloud-upload-linear" className="text-info text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-info">Deploying</span>
         </div>
       );
     case 3:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon
-            icon="solar:close-circle-linear"
-            className="text-destructive text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-destructive">
-            Deploy failed
-          </span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Deploy failed</span>
         </div>
       );
     case 4:
@@ -70,58 +55,36 @@ function DeployBadge({ state }: { state: number }) {
     case 9:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,214,10,0.12)] border border-[rgba(255,214,10,0.25)]">
-          <Icon
-            icon="solar:refresh-linear"
-            className="text-warning text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-warning">
-            Planning
-          </span>
+          <Icon icon="solar:refresh-linear" className="text-warning text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-warning">Planning</span>
         </div>
       );
     case 6:
     case 8:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon
-            icon="solar:close-circle-linear"
-            className="text-destructive text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-destructive">
-            Plan failed
-          </span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Plan failed</span>
         </div>
       );
     case 10:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,159,10,0.12)] border border-[rgba(255,159,10,0.25)]">
-          <Icon
-            icon="solar:trash-bin-2-linear"
-            className="text-warning text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-warning">
-            Destroying
-          </span>
+          <Icon icon="solar:trash-bin-2-linear" className="text-warning text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-warning">Destroying</span>
         </div>
       );
     case 11:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-[rgba(255,92,95,0.12)] border border-[rgba(255,92,95,0.25)]">
-          <Icon
-            icon="solar:close-circle-linear"
-            className="text-destructive text-[11px]"
-          />
-          <span className="text-[10px] font-bold font-mono text-destructive">
-            Destroy failed
-          </span>
+          <Icon icon="solar:close-circle-linear" className="text-destructive text-[11px]" />
+          <span className="text-[10px] font-bold font-mono text-destructive">Destroy failed</span>
         </div>
       );
     case 12:
       return (
         <div className="inline-flex items-center gap-[4px] px-[8px] py-[3px] rounded-[4px] bg-foreground/[6%] border border-foreground/10">
-          <span className="text-[10px] font-bold font-mono text-foreground/40">
-            Destroyed
-          </span>
+          <span className="text-[10px] font-bold font-mono text-foreground/40">Destroyed</span>
         </div>
       );
     default:
@@ -129,13 +92,7 @@ function DeployBadge({ state }: { state: number }) {
   }
 }
 
-function EnvCell({
-  neuronVersion,
-  dep,
-}: {
-  neuronVersion: string;
-  dep?: DeploymentItem;
-}) {
+function EnvCell({ neuronVersion, dep }: { neuronVersion: string; dep?: DeploymentItem }) {
   if (!dep) {
     return (
       <div className="flex flex-col items-start gap-[4px]">
@@ -149,14 +106,9 @@ function EnvCell({
   return (
     <div className="flex flex-col items-start gap-[5px]">
       <div className="flex items-center gap-[5px]">
-        <span className="text-[11px] font-mono text-foreground/70">
-          v{dep.version}
-        </span>
+        <span className="text-[11px] font-mono text-foreground/70">v{dep.version}</span>
         {isBehind && (
-          <span
-            className="size-[6px] rounded-full bg-warning shrink-0"
-            title="Behind latest"
-          />
+          <span className="size-[6px] rounded-full bg-warning shrink-0" title="Behind latest" />
         )}
       </div>
       <DeployBadge state={dep.state} />
@@ -186,33 +138,24 @@ export function DeploymentsPage() {
   }, [state.organisation, state.product]);
 
   const handleCreateService = async (neuronId: string) => {
-    await ProductService.CreateNeuron(
-      state.organisation,
-      state.product,
-      neuronId,
-    );
+    await ProductService.CreateNeuron(state.organisation, state.product, neuronId);
     refresh();
   };
 
   const filtered = useMemo(() => {
     if (!overview) return [];
     const q = filter.toLowerCase();
-    return q
-      ? overview.neurons.filter((n) => n.id.toLowerCase().includes(q))
-      : overview.neurons;
+    return q ? overview.neurons.filter((n) => n.id.toLowerCase().includes(q)) : overview.neurons;
   }, [overview, filter]);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between shrink-0">
-        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
-          Deployments
-        </p>
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">Deployments</p>
         {overview && (
           <p className="text-[10px] text-foreground/30 font-mono">
-            {overview.neurons.length} services · {overview.environments.length}{" "}
-            environments
+            {overview.neurons.length} services · {overview.environments.length} environments
           </p>
         )}
       </div>
@@ -264,13 +207,8 @@ export function DeploymentsPage() {
           <div className="flex items-center justify-center h-full">
             <div className="p-[16px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px] max-w-[400px]">
               <div className="flex items-center gap-[8px] mb-[8px]">
-                <Icon
-                  icon="solar:close-circle-linear"
-                  className="text-destructive text-lg"
-                />
-                <p className="text-[12px] font-bold text-foreground">
-                  Failed to load
-                </p>
+                <Icon icon="solar:close-circle-linear" className="text-destructive text-lg" />
+                <p className="text-[12px] font-bold text-foreground">Failed to load</p>
               </div>
               <p className="text-[11px] text-foreground/60">{error}</p>
             </div>
@@ -325,9 +263,7 @@ export function DeploymentsPage() {
                     </span>
                   </td>
                   {overview.environments.map((env) => {
-                    const dep = env.deployments.find(
-                      (d) => d.neuronId === neuron.id,
-                    );
+                    const dep = env.deployments.find((d) => d.neuronId === neuron.id);
                     const isActive = env.name === state.activeEnvName;
                     return (
                       <td
@@ -345,11 +281,7 @@ export function DeploymentsPage() {
                   <td colSpan={2 + (overview.environments.length || 0)}>
                     <EmptyState
                       icon="solar:server-minimalistic-linear"
-                      title={
-                        filter
-                          ? `No services match "${filter}"`
-                          : "No services found"
-                      }
+                      title={filter ? `No services match "${filter}"` : "No services found"}
                       className="py-[32px]"
                     />
                   </td>

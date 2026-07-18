@@ -4,10 +4,7 @@ import { Loader } from "../Loader";
 import { Button } from "../Button";
 import { EmptyState } from "../EmptyState";
 import * as GS from "../../../../bindings/alis-hub-v3/gcloudservice";
-import type {
-  SpannerInstance,
-  SpannerBackup,
-} from "../../../../bindings/alis-hub-v3/models";
+import type { SpannerInstance, SpannerBackup } from "../../../../bindings/alis-hub-v3/models";
 import { useGCloud } from "../../stores/gcloud";
 
 interface Props {
@@ -52,8 +49,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
   const [instances, setInstances] = useState<SpannerInstance[]>([]);
   const [instancesLoading, setInstancesLoading] = useState(true);
   const [instancesError, setInstancesError] = useState<string | null>(null);
-  const [selectedInstance, setSelectedInstance] =
-    useState<SpannerInstance | null>(null);
+  const [selectedInstance, setSelectedInstance] = useState<SpannerInstance | null>(null);
 
   const [backups, setBackups] = useState<SpannerBackup[]>([]);
   const [backupsLoading, setBackupsLoading] = useState(false);
@@ -66,7 +62,10 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
     setBackups([]);
     GS.ListSpannerInstances(projectID)
       .then((items: SpannerInstance[]) => setInstances(items || []))
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setInstancesError(String(e)); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        setInstancesError(String(e));
+      })
       .finally(() => setInstancesLoading(false));
   }, [projectID]);
 
@@ -77,7 +76,10 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
     setBackups([]);
     GS.ListSpannerBackups(instance.name)
       .then((items: SpannerBackup[]) => setBackups(items || []))
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setBackupsError(String(e)); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        setBackupsError(String(e));
+      })
       .finally(() => setBackupsLoading(false));
   }
 
@@ -108,30 +110,22 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
             </div>
           ) : instancesError ? (
             <div className="m-[10px] p-[8px] bg-red-900/20 border border-red-800 rounded-[4px]">
-              <p className="text-[10px] text-red-400 font-mono">
-                {instancesError}
-              </p>
+              <p className="text-[10px] text-red-400 font-mono">{instancesError}</p>
             </div>
           ) : instances.length === 0 ? (
             <div className="flex items-center justify-center py-[40px]">
-              <p className="text-[10px] text-foreground/30 font-mono">
-                No instances
-              </p>
+              <p className="text-[10px] text-foreground/30 font-mono">No instances</p>
             </div>
           ) : (
             instances.map((instance) => {
               const isActive = selectedInstance?.name === instance.name;
-              const ss =
-                STATE_STYLE[instance.state] ??
-                "text-foreground/30 bg-foreground/5";
+              const ss = STATE_STYLE[instance.state] ?? "text-foreground/30 bg-foreground/5";
               return (
                 <button
                   key={instance.name}
                   onClick={() => handleSelectInstance(instance)}
                   className={`w-full flex items-center gap-[7px] px-[10px] py-[8px] transition-colors text-left border-b border-border ${
-                    isActive
-                      ? "bg-brand-fill/7"
-                      : "hover:bg-foreground/[3%]"
+                    isActive ? "bg-brand-fill/7" : "hover:bg-foreground/[3%]"
                   }`}
                 >
                   <Icon
@@ -160,13 +154,9 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
         <div className="flex items-center justify-between px-[16px] py-[9px] border-b border-border shrink-0">
           {selectedInstance ? (
             <div className="flex items-center gap-[7px]">
-              <Icon
-                icon="solar:server-bold"
-                className="text-sm text-brand shrink-0"
-              />
+              <Icon icon="solar:server-bold" className="text-sm text-brand shrink-0" />
               <p className="text-[10px] font-mono text-foreground/70">
-                {selectedInstance.displayName ||
-                  shortName(selectedInstance.name)}
+                {selectedInstance.displayName || shortName(selectedInstance.name)}
               </p>
               {!backupsLoading && (
                 <span className="text-[8px] text-foreground/30 font-mono">
@@ -175,19 +165,13 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
               )}
             </div>
           ) : (
-            <p className="text-[10px] font-mono text-foreground/25">
-              Select an instance
-            </p>
+            <p className="text-[10px] font-mono text-foreground/25">Select an instance</p>
           )}
           {selectedInstance && (
             <Button
               variant="ghost"
               onClick={() =>
-                GS.OpenInConsole(
-                  "spanner-backups",
-                  projectID,
-                  shortName(selectedInstance.name),
-                )
+                GS.OpenInConsole("spanner-backups", projectID, shortName(selectedInstance.name))
               }
               icon={<Icon icon="solar:export-linear" className="text-xs" />}
               className="text-foreground/40 hover:text-foreground"
@@ -200,10 +184,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
         <div className="flex-1 overflow-auto">
           {!selectedInstance ? (
             <div className="flex-1 flex flex-col items-center justify-center h-full gap-[8px]">
-              <Icon
-                icon="solar:server-bold"
-                className="text-[28px] text-foreground/8"
-              />
+              <Icon icon="solar:server-bold" className="text-[28px] text-foreground/8" />
               <p className="text-[11px] text-foreground/30 font-mono">
                 Select an instance to view backups
               </p>
@@ -214,9 +195,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
             </div>
           ) : backupsError ? (
             <div className="m-[16px] p-[12px] bg-red-900/20 border border-red-800 rounded-[4px]">
-              <p className="text-[10px] text-red-400 font-mono">
-                {backupsError}
-              </p>
+              <p className="text-[10px] text-red-400 font-mono">{backupsError}</p>
             </div>
           ) : backups.length === 0 ? (
             <EmptyState
@@ -248,9 +227,7 @@ export function SpannerBackupsExplorer({ projectID }: Props) {
               </thead>
               <tbody>
                 {backups.map((backup) => {
-                  const ss =
-                    STATE_STYLE[backup.state] ??
-                    "text-foreground/30 bg-foreground/5";
+                  const ss = STATE_STYLE[backup.state] ?? "text-foreground/30 bg-foreground/5";
                   return (
                     <tr
                       key={backup.name}

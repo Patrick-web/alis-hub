@@ -1,28 +1,28 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Icon } from '@iconify/react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { Dialog, DialogPortal, DialogOverlay } from './ui/dialog';
-import { useDevSettingsModal, type DevSettingsTab } from '../stores/devSettingsModal';
-import { usePlatform, type PlatformOverride } from '../stores/platform';
-import { useLocalAI } from '../stores/localai';
-import { SettingRow, SectionTitle, SettingsCard } from './ProfileModal';
-import { NotificationsDebugPage } from '../pages/NotificationsDebugPage';
-import { Loader } from './Loader';
-import * as LogService from '../../../bindings/alis-hub-v3/logservice';
-import type { LogInfo } from '../../../bindings/alis-hub-v3/models';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Icon } from "@iconify/react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogPortal, DialogOverlay } from "./ui/dialog";
+import { useDevSettingsModal, type DevSettingsTab } from "../stores/devSettingsModal";
+import { usePlatform, type PlatformOverride } from "../stores/platform";
+import { useLocalAI } from "../stores/localai";
+import { SettingRow, SectionTitle, SettingsCard } from "./ProfileModal";
+import { NotificationsDebugPage } from "../pages/NotificationsDebugPage";
+import { Loader } from "./Loader";
+import * as LogService from "../../../bindings/alis-hub-v3/logservice";
+import type { LogInfo } from "../../../bindings/alis-hub-v3/models";
 
 const SIDEBAR_ITEMS: { id: DevSettingsTab; label: string; icon: string }[] = [
-  { id: 'platform', label: 'Title Bar', icon: 'solar:window-frame-linear' },
-  { id: 'notifications', label: 'Notifications', icon: 'solar:bell-bing-linear' },
-  { id: 'ai', label: 'Local AI', icon: 'solar:cpu-bolt-linear' },
-  { id: 'logs', label: 'Logs', icon: 'solar:document-text-linear' },
+  { id: "platform", label: "Title Bar", icon: "solar:window-frame-linear" },
+  { id: "notifications", label: "Notifications", icon: "solar:bell-bing-linear" },
+  { id: "ai", label: "Local AI", icon: "solar:cpu-bolt-linear" },
+  { id: "logs", label: "Logs", icon: "solar:document-text-linear" },
 ];
 
 const OVERRIDE_OPTIONS: { id: PlatformOverride; label: string }[] = [
-  { id: 'auto', label: 'Auto' },
-  { id: 'darwin', label: 'macOS' },
-  { id: 'windows', label: 'Windows' },
-  { id: 'linux', label: 'Linux' },
+  { id: "auto", label: "Auto" },
+  { id: "darwin", label: "macOS" },
+  { id: "windows", label: "Windows" },
+  { id: "linux", label: "Linux" },
 ];
 
 // Inert, icon-only previews — deliberately NOT the real MacWindowControls /
@@ -65,7 +65,12 @@ function LinuxControlsPreview() {
   const glyphs = [
     <line key="min" x1="0" y1="7" x2="10" y2="7" stroke="currentColor" strokeWidth="1.1" />,
     <rect key="max" x="0.5" y="0.5" width="9" height="9" stroke="currentColor" strokeWidth="1.1" />,
-    <path key="close" d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" stroke="currentColor" strokeWidth="1.1" />,
+    <path
+      key="close"
+      d="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5"
+      stroke="currentColor"
+      strokeWidth="1.1"
+    />,
   ];
   return (
     <div className="flex items-center gap-[8px] h-[28px]">
@@ -74,7 +79,9 @@ function LinuxControlsPreview() {
           key={i}
           className="flex items-center justify-center w-[24px] h-[24px] rounded-full bg-foreground/[0.08] text-foreground/50"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">{glyph}</svg>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            {glyph}
+          </svg>
         </span>
       ))}
     </div>
@@ -83,8 +90,8 @@ function LinuxControlsPreview() {
 
 function LocalAITestTab() {
   const { state, generate } = useLocalAI();
-  const [systemPrompt, setSystemPrompt] = useState('You are a helpful assistant.');
-  const [userPrompt, setUserPrompt] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState("You are a helpful assistant.");
+  const [userPrompt, setUserPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<string | null>(null);
@@ -114,10 +121,10 @@ function LocalAITestTab() {
       <div className="flex flex-col gap-[5px]">
         <SectionTitle>Status</SectionTitle>
         <SettingsCard>
-          <SettingRow label="Enabled" value={state.enabled ? 'Yes' : 'No'} />
+          <SettingRow label="Enabled" value={state.enabled ? "Yes" : "No"} />
           <SettingRow label="Model" value={state.model} />
-          <SettingRow label="Ollama running" value={state.ollamaRunning ? 'Yes' : 'No'} />
-          <SettingRow label="Model pulled" value={state.modelPulled ? 'Yes' : 'No'} />
+          <SettingRow label="Ollama running" value={state.ollamaRunning ? "Yes" : "No"} />
+          <SettingRow label="Model pulled" value={state.modelPulled ? "Yes" : "No"} />
         </SettingsCard>
         {!ready && (
           <p className="text-[10px] text-warning font-mono leading-relaxed">
@@ -131,7 +138,7 @@ function LocalAITestTab() {
         <SettingsCard>
           <textarea
             value={systemPrompt}
-            onChange={e => setSystemPrompt(e.target.value)}
+            onChange={(e) => setSystemPrompt(e.target.value)}
             rows={2}
             spellCheck={false}
             className="w-full bg-transparent text-[11px] font-mono text-foreground/70 placeholder:text-foreground/20 px-[12px] py-[9px] resize-none outline-none"
@@ -144,7 +151,7 @@ function LocalAITestTab() {
         <SettingsCard>
           <textarea
             value={userPrompt}
-            onChange={e => setUserPrompt(e.target.value)}
+            onChange={(e) => setUserPrompt(e.target.value)}
             placeholder="Ask something…"
             rows={3}
             spellCheck={false}
@@ -158,20 +165,26 @@ function LocalAITestTab() {
         disabled={!ready || running || !userPrompt.trim()}
         className="flex items-center justify-center gap-[7px] h-[32px] rounded-[7px] bg-foreground/[0.05] hover:bg-foreground/[0.08] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-[11px] text-foreground/70 font-mono"
       >
-        {running ? <Loader size={14} /> : <Icon icon="solar:play-circle-linear" className="text-sm" />}
-        {running ? 'Running…' : 'Run'}
+        {running ? (
+          <Loader size={14} />
+        ) : (
+          <Icon icon="solar:play-circle-linear" className="text-sm" />
+        )}
+        {running ? "Running…" : "Run"}
       </button>
 
       {(response || error) && (
         <div className="flex flex-col gap-[5px]">
           <div className="flex items-center justify-between">
-            <SectionTitle>{error ? 'Error' : 'Response'}</SectionTitle>
+            <SectionTitle>{error ? "Error" : "Response"}</SectionTitle>
             {elapsedMs !== null && (
               <span className="text-[9px] text-foreground/25 font-mono">{elapsedMs}ms</span>
             )}
           </div>
           <SettingsCard>
-            <pre className={`whitespace-pre-wrap break-words text-[11px] font-mono px-[12px] py-[9px] max-h-[200px] overflow-y-auto ${error ? 'text-destructive' : 'text-foreground/75'}`}>
+            <pre
+              className={`whitespace-pre-wrap break-words text-[11px] font-mono px-[12px] py-[9px] max-h-[200px] overflow-y-auto ${error ? "text-destructive" : "text-foreground/75"}`}
+            >
               {error || response}
             </pre>
           </SettingsCard>
@@ -214,7 +227,7 @@ function DevButton({
 
 function LogsTab() {
   const [info, setInfo] = useState<LogInfo | null>(null);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -225,10 +238,7 @@ function LogsTab() {
     setLoading(true);
     setError(null);
     try {
-      const [logInfo, text] = await Promise.all([
-        LogService.GetLogInfo(),
-        LogService.ReadLog(0),
-      ]);
+      const [logInfo, text] = await Promise.all([LogService.GetLogInfo(), LogService.ReadLog(0)]);
       setInfo(logInfo);
       setContent(text);
     } catch (e) {
@@ -252,7 +262,7 @@ function LogsTab() {
     setStatus(null);
     try {
       const saved = await LogService.DownloadLog();
-      setStatus(saved ? `Saved to ${saved}` : 'Download cancelled.');
+      setStatus(saved ? `Saved to ${saved}` : "Download cancelled.");
     } catch (e) {
       setStatus(`Error: ${String(e)}`);
     } finally {
@@ -273,10 +283,10 @@ function LogsTab() {
       <div className="flex flex-col gap-[5px]">
         <SectionTitle>Log file</SectionTitle>
         <SettingsCard>
-          <SettingRow label="Location" value={info?.path ?? 'pending…'} />
+          <SettingRow label="Location" value={info?.path ?? "pending…"} />
           <SettingRow
             label="Size"
-            value={info?.exists ? formatBytes(info.sizeBytes) : 'no log yet'}
+            value={info?.exists ? formatBytes(info.sizeBytes) : "no log yet"}
           />
         </SettingsCard>
         <div className="flex flex-wrap items-center gap-[8px]">
@@ -296,7 +306,9 @@ function LogsTab() {
           />
         </div>
         {status && (
-          <p className="text-[10px] text-foreground/45 font-mono leading-relaxed break-all">{status}</p>
+          <p className="text-[10px] text-foreground/45 font-mono leading-relaxed break-all">
+            {status}
+          </p>
         )}
       </div>
 
@@ -306,7 +318,9 @@ function LogsTab() {
           ref={viewerRef}
           className="whitespace-pre-wrap break-words text-[10px] font-mono leading-relaxed text-foreground/70 bg-foreground/[0.03] border border-border rounded-[9px] px-[12px] py-[9px] h-[240px] overflow-y-auto"
         >
-          {error ? `Failed to read log: ${error}` : content || (loading ? 'Loading…' : 'Log is empty.')}
+          {error
+            ? `Failed to read log: ${error}`
+            : content || (loading ? "Loading…" : "Log is empty.")}
         </pre>
       </div>
 
@@ -320,7 +334,9 @@ function LogsTab() {
           <DevButton
             icon="solar:code-square-linear"
             label="Open inspector"
-            onClick={() => { LogService.OpenInspector().catch(() => {}); }}
+            onClick={() => {
+              LogService.OpenInspector().catch(() => {});
+            }}
           />
         </div>
       </div>
@@ -337,19 +353,19 @@ export function DevSettingsModal() {
     (e: React.KeyboardEvent, idx: number) => {
       const n = SIDEBAR_ITEMS.length;
       let next = idx;
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         next = (idx + 1) % n;
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
         next = (idx - 1 + n) % n;
-      } else if (e.key === 'Home') {
+      } else if (e.key === "Home") {
         e.preventDefault();
         next = 0;
-      } else if (e.key === 'End') {
+      } else if (e.key === "End") {
         e.preventDefault();
         next = n - 1;
-      } else if (e.key === 'Enter' || e.key === ' ') {
+      } else if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         open(SIDEBAR_ITEMS[idx].id);
         return;
@@ -364,7 +380,7 @@ export function DevSettingsModal() {
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={v => (v ? open() : close())}>
+    <Dialog open={isOpen} onOpenChange={(v) => (v ? open() : close())}>
       <DialogPortal>
         <DialogOverlay className="bg-black/25" />
 
@@ -376,10 +392,11 @@ export function DevSettingsModal() {
                      data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95
                      duration-200"
           style={{
-            background: 'var(--modal-bg)',
-            backdropFilter: 'blur(40px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(40px) saturate(180%)',
-            boxShadow: '0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)',
+            background: "var(--modal-bg)",
+            backdropFilter: "blur(40px) saturate(180%)",
+            WebkitBackdropFilter: "blur(40px) saturate(180%)",
+            boxShadow:
+              "0 0 0 0.5px rgba(255,255,255,0.06) inset, 0 32px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.35)",
           }}
         >
           {/* Title bar */}
@@ -399,7 +416,6 @@ export function DevSettingsModal() {
           </div>
 
           <div className="flex min-h-[440px]">
-
             {/* Sidebar */}
             <div className="w-[160px] border-r border-border flex flex-col shrink-0">
               <div className="px-[12px] pt-[10px] pb-[3px]">
@@ -417,15 +433,17 @@ export function DevSettingsModal() {
                   onKeyDown={(e) => handleSidebarKeyDown(e, i)}
                   onClick={() => open(item.id)}
                   className={`flex items-center gap-[8px] text-left mx-[5px] px-[9px] py-[7px] rounded-[7px] transition-colors focus:ring-1 focus:ring-inset focus:ring-ring ${
-                    activeTab === item.id ? 'bg-foreground/[0.07]' : 'hover:bg-foreground/[0.04]'
+                    activeTab === item.id ? "bg-foreground/[0.07]" : "hover:bg-foreground/[0.04]"
                   }`}
-                  style={{ width: 'calc(100% - 10px)' }}
+                  style={{ width: "calc(100% - 10px)" }}
                 >
                   <Icon
                     icon={item.icon}
-                    className={`text-[15px] shrink-0 ${activeTab === item.id ? 'text-foreground/90' : 'text-foreground/35'}`}
+                    className={`text-[15px] shrink-0 ${activeTab === item.id ? "text-foreground/90" : "text-foreground/35"}`}
                   />
-                  <span className={`text-[12px] font-medium ${activeTab === item.id ? 'text-foreground/90' : 'text-foreground/45'}`}>
+                  <span
+                    className={`text-[12px] font-medium ${activeTab === item.id ? "text-foreground/90" : "text-foreground/45"}`}
+                  >
                     {item.label}
                   </span>
                 </button>
@@ -434,15 +452,14 @@ export function DevSettingsModal() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
-
               {/* ── Title Bar ── */}
-              {activeTab === 'platform' && (
+              {activeTab === "platform" && (
                 <div className="p-[14px] flex flex-col gap-[12px]">
                   <div className="flex flex-col gap-[5px]">
                     <SectionTitle>Diagnostics</SectionTitle>
                     <SettingsCard>
                       <SettingRow label="Detected platform" value={real} />
-                      <SettingRow label="Raw OS (backend)" value={envInfo?.OS ?? 'pending…'} />
+                      <SettingRow label="Raw OS (backend)" value={envInfo?.OS ?? "pending…"} />
                     </SettingsCard>
                   </div>
 
@@ -456,12 +473,16 @@ export function DevSettingsModal() {
                           className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]"
                           onKeyDown={(e) => {
                             const currentIdx = OVERRIDE_OPTIONS.findIndex((o) => o.id === override);
-                            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                            if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
                               e.preventDefault();
-                              const dir = e.key === 'ArrowRight' ? 1 : -1;
-                              const next = (currentIdx + dir + OVERRIDE_OPTIONS.length) % OVERRIDE_OPTIONS.length;
+                              const dir = e.key === "ArrowRight" ? 1 : -1;
+                              const next =
+                                (currentIdx + dir + OVERRIDE_OPTIONS.length) %
+                                OVERRIDE_OPTIONS.length;
                               setOverride(OVERRIDE_OPTIONS[next].id);
-                              const buttons = (e.currentTarget as HTMLElement).querySelectorAll<HTMLButtonElement>('button');
+                              const buttons = (
+                                e.currentTarget as HTMLElement
+                              ).querySelectorAll<HTMLButtonElement>("button");
                               buttons[next]?.focus();
                             }
                           }}
@@ -473,7 +494,7 @@ export function DevSettingsModal() {
                               aria-checked={override === opt.id}
                               tabIndex={override === opt.id ? 0 : -1}
                               onClick={() => setOverride(opt.id)}
-                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${override === opt.id ? 'bg-foreground/[0.1] text-foreground' : 'text-foreground/35 hover:text-foreground/70'}`}
+                              className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono transition-colors ${override === opt.id ? "bg-foreground/[0.1] text-foreground" : "text-foreground/35 hover:text-foreground/70"}`}
                             >
                               {opt.label}
                             </button>
@@ -482,27 +503,31 @@ export function DevSettingsModal() {
                       </SettingRow>
                     </SettingsCard>
                     <div className="flex items-center justify-center bg-foreground/[0.03] border border-border rounded-[9px] py-[16px]">
-                      {effective === 'windows' ? <WindowsControlsPreview /> : effective === 'linux' ? <LinuxControlsPreview /> : <MacControlsPreview />}
+                      {effective === "windows" ? (
+                        <WindowsControlsPreview />
+                      ) : effective === "linux" ? (
+                        <LinuxControlsPreview />
+                      ) : (
+                        <MacControlsPreview />
+                      )}
                     </div>
                     <p className="text-[10px] text-foreground/25 font-mono leading-relaxed">
                       Overrides which title bar chrome renders across the app, for previewing
-                      Windows or Linux controls without that hardware. Persisted locally — doesn't change the real OS.
+                      Windows or Linux controls without that hardware. Persisted locally — doesn't
+                      change the real OS.
                     </p>
                   </div>
                 </div>
               )}
 
               {/* ── Notifications ── */}
-              {activeTab === 'notifications' && (
-                <NotificationsDebugPage />
-              )}
+              {activeTab === "notifications" && <NotificationsDebugPage />}
 
               {/* ── Local AI ── */}
-              {activeTab === 'ai' && <LocalAITestTab />}
+              {activeTab === "ai" && <LocalAITestTab />}
 
               {/* ── Logs ── */}
-              {activeTab === 'logs' && <LogsTab />}
-
+              {activeTab === "logs" && <LogsTab />}
             </div>
           </div>
         </DialogPrimitive.Content>

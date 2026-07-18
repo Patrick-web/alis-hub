@@ -1,11 +1,23 @@
-import * as Collapsible from '@radix-ui/react-collapsible';
-import { Icon } from '@iconify/react';
-import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderTree, List, Minus, Plus, RefreshCw, RotateCcw, Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { useSourceControl } from '../../stores/sourceControl';
-import { getFileIcon } from '../../utils/fileIcon';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { GitFileStatus, GitStatus } from './types';
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { Icon } from "@iconify/react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  FolderTree,
+  List,
+  Minus,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
+import { useState } from "react";
+import { useSourceControl } from "../../stores/sourceControl";
+import { getFileIcon } from "../../utils/fileIcon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { GitFileStatus, GitStatus } from "./types";
 
 interface Props {
   status: GitStatus;
@@ -40,15 +52,20 @@ interface TreeNode {
 }
 
 function buildTree(files: Array<GitFileStatus | string>): TreeNode {
-  const root: TreeNode = { name: '', key: 'root', children: new Map(), items: [] };
+  const root: TreeNode = { name: "", key: "root", children: new Map(), items: [] };
   for (const file of files) {
-    const path = typeof file === 'string' ? file : file.path;
-    const parts = path.split('/');
+    const path = typeof file === "string" ? file : file.path;
+    const parts = path.split("/");
     let node = root;
     for (let i = 0; i < parts.length - 1; i++) {
       const seg = parts[i];
       if (!node.children.has(seg)) {
-        node.children.set(seg, { name: seg, key: `${node.key}/${seg}`, children: new Map(), items: [] });
+        node.children.set(seg, {
+          name: seg,
+          key: `${node.key}/${seg}`,
+          children: new Map(),
+          items: [],
+        });
       }
       node = node.children.get(seg)!;
     }
@@ -60,7 +77,7 @@ function buildTree(files: Array<GitFileStatus | string>): TreeNode {
 function collectPaths(node: TreeNode): string[] {
   const paths: string[] = [];
   for (const item of node.items) {
-    paths.push(typeof item === 'string' ? item : item.path);
+    paths.push(typeof item === "string" ? item : item.path);
   }
   for (const child of node.children.values()) {
     paths.push(...collectPaths(child));
@@ -70,11 +87,16 @@ function collectPaths(node: TreeNode): string[] {
 
 function statusIcon(code: string) {
   switch (code) {
-    case 'A': return <span className="text-green-400 text-[10px] font-bold w-3 shrink-0">A</span>;
-    case 'D': return <span className="text-red-400 text-[10px] font-bold w-3 shrink-0">D</span>;
-    case 'R': return <span className="text-blue-400 text-[10px] font-bold w-3 shrink-0">R</span>;
-    case '?': return <span className="text-green-400/70 text-[10px] font-bold w-3 shrink-0">U</span>;
-    default:  return <span className="text-yellow-400 text-[10px] font-bold w-3 shrink-0">M</span>;
+    case "A":
+      return <span className="text-green-400 text-[10px] font-bold w-3 shrink-0">A</span>;
+    case "D":
+      return <span className="text-red-400 text-[10px] font-bold w-3 shrink-0">D</span>;
+    case "R":
+      return <span className="text-blue-400 text-[10px] font-bold w-3 shrink-0">R</span>;
+    case "?":
+      return <span className="text-green-400/70 text-[10px] font-bold w-3 shrink-0">U</span>;
+    default:
+      return <span className="text-yellow-400 text-[10px] font-bold w-3 shrink-0">M</span>;
   }
 }
 
@@ -83,12 +105,22 @@ function conflictStatusIcon() {
 }
 
 function filePart(path: string) {
-  return path.split('/').pop() ?? path;
+  return path.split("/").pop() ?? path;
 }
 
 function FileRow({
-  file, staged, selected, onSelect, onAction1, onAction2,
-  action1Icon, action2Icon, action1Title, action2Title, indent, conflict,
+  file,
+  staged,
+  selected,
+  onSelect,
+  onAction1,
+  onAction2,
+  action1Icon,
+  action2Icon,
+  action1Title,
+  action2Title,
+  indent,
+  conflict,
 }: {
   file: GitFileStatus | string;
   staged: boolean;
@@ -104,13 +136,15 @@ function FileRow({
   conflict?: boolean;
 }) {
   const [hover, setHover] = useState(false);
-  const path = typeof file === 'string' ? file : file.path;
-  const code = typeof file === 'string' ? '?' : file.statusCode;
+  const path = typeof file === "string" ? file : file.path;
+  const code = typeof file === "string" ? "?" : file.statusCode;
 
   return (
     <div
       className={`group flex items-center gap-1.5 py-[3px] pr-3 cursor-pointer text-xs transition-colors ${
-        selected ? 'bg-pink-500/15 text-foreground' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground/80'
+        selected
+          ? "bg-pink-500/15 text-foreground"
+          : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground/80"
       }`}
       style={{ paddingLeft: `${indent ?? 12}px` }}
       onMouseEnter={() => setHover(true)}
@@ -122,14 +156,22 @@ function FileRow({
       <Icon icon={getFileIcon(path)} className="shrink-0 text-sm" />
       <span className="flex-1 truncate">{filePart(path)}</span>
       {hover && (
-        <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           {onAction1 && (
-            <button title={action1Title} onClick={onAction1} className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90">
+            <button
+              title={action1Title}
+              onClick={onAction1}
+              className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90"
+            >
               {action1Icon}
             </button>
           )}
           {onAction2 && (
-            <button title={action2Title} onClick={onAction2} className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90">
+            <button
+              title={action2Title}
+              onClick={onAction2}
+              className="p-0.5 rounded hover:bg-foreground/10 text-foreground/50 hover:text-foreground/90"
+            >
               {action2Icon}
             </button>
           )}
@@ -140,9 +182,21 @@ function FileRow({
 }
 
 function TreeDir({
-  node, depth, staged, selectedFile, selectedStaged,
-  onSelectFile, onAction1, onAction2, action1Icon, action2Icon, action1Title, action2Title,
-  onFolderAction1, onFolderAction2, conflict,
+  node,
+  depth,
+  staged,
+  selectedFile,
+  selectedStaged,
+  onSelectFile,
+  onAction1,
+  onAction2,
+  action1Icon,
+  action2Icon,
+  action1Title,
+  action2Title,
+  onFolderAction1,
+  onFolderAction2,
+  conflict,
 }: {
   node: TreeNode;
   depth: number;
@@ -175,19 +229,24 @@ function TreeDir({
           style={{ paddingLeft: `${pl}px` }}
           onMouseEnter={() => setFolderHover(true)}
           onMouseLeave={() => setFolderHover(false)}
-          onClick={() => setOpen(o => !o)}
+          onClick={() => setOpen((o) => !o)}
         >
-          {open
-            ? <ChevronDown size={10} className="shrink-0" />
-            : <ChevronRight size={10} className="shrink-0" />
-          }
-          {open
-            ? <FolderOpen size={11} className="shrink-0 text-foreground/30" />
-            : <Folder size={11} className="shrink-0 text-foreground/30" />
-          }
+          {open ? (
+            <ChevronDown size={10} className="shrink-0" />
+          ) : (
+            <ChevronRight size={10} className="shrink-0" />
+          )}
+          {open ? (
+            <FolderOpen size={11} className="shrink-0 text-foreground/30" />
+          ) : (
+            <Folder size={11} className="shrink-0 text-foreground/30" />
+          )}
           <span className="flex-1 truncate">{node.name}</span>
           {folderHover && (onFolderAction1 || onFolderAction2) && (
-            <div className="flex items-center gap-0.5 shrink-0" onClick={e => e.stopPropagation()}>
+            <div
+              className="flex items-center gap-0.5 shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
               {onFolderAction1 && (
                 <button
                   title={action1Title}
@@ -212,7 +271,7 @@ function TreeDir({
       )}
       {open && (
         <>
-          {dirs.map(child => (
+          {dirs.map((child) => (
             <TreeDir
               key={child.key}
               node={child}
@@ -232,8 +291,8 @@ function TreeDir({
               conflict={conflict}
             />
           ))}
-          {node.items.map(file => {
-            const path = typeof file === 'string' ? file : file.path;
+          {node.items.map((file) => {
+            const path = typeof file === "string" ? file : file.path;
             return (
               <FileRow
                 key={path}
@@ -259,7 +318,12 @@ function TreeDir({
 }
 
 function Section({
-  title, count, defaultOpen, children, headerAction, hideCount,
+  title,
+  count,
+  defaultOpen,
+  children,
+  headerAction,
+  hideCount,
 }: {
   title: string;
   count: number;
@@ -273,10 +337,20 @@ function Section({
     <Collapsible.Root open={open} onOpenChange={setOpen}>
       <Collapsible.Trigger asChild>
         <div className="flex items-center gap-1.5 px-3 py-1.5 cursor-pointer hover:bg-foreground/5 group">
-          {open ? <ChevronDown size={11} className="text-foreground/40 shrink-0" /> : <ChevronRight size={11} className="text-foreground/40 shrink-0" />}
-          <span className="text-[10px] uppercase tracking-wider text-foreground/50 font-semibold flex-1">{title}</span>
+          {open ? (
+            <ChevronDown size={11} className="text-foreground/40 shrink-0" />
+          ) : (
+            <ChevronRight size={11} className="text-foreground/40 shrink-0" />
+          )}
+          <span className="text-[10px] uppercase tracking-wider text-foreground/50 font-semibold flex-1">
+            {title}
+          </span>
           {!hideCount && <span className="text-[10px] text-foreground/30">{count}</span>}
-          {headerAction && <div className="flex items-center gap-0.5" onClick={e => e.stopPropagation()}>{headerAction}</div>}
+          {headerAction && (
+            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+              {headerAction}
+            </div>
+          )}
         </div>
       </Collapsible.Trigger>
       <Collapsible.Content>{children}</Collapsible.Content>
@@ -285,13 +359,31 @@ function Section({
 }
 
 export function GitFileList({
-  status, selectedFile, selectedStaged, commitMessage, committing, generatingCommitMsg,
-  ahead, behind, isMerging,
-  onSelectFile, onSelectConflictFile, onStage, onUnstage, onStageMany, onUnstageMany, onDiscard, onStageAll, onCommit, onContinueMerge, onCommitMessageChange, onGenerateCommitMessage,
+  status,
+  selectedFile,
+  selectedStaged,
+  commitMessage,
+  committing,
+  generatingCommitMsg,
+  ahead,
+  behind,
+  isMerging,
+  onSelectFile,
+  onSelectConflictFile,
+  onStage,
+  onUnstage,
+  onStageMany,
+  onUnstageMany,
+  onDiscard,
+  onStageAll,
+  onCommit,
+  onContinueMerge,
+  onCommitMessageChange,
+  onGenerateCommitMessage,
   onSync,
 }: Props) {
   const { state: scState, setFileListView } = useSourceControl();
-  const treeMode = scState.fileListView === 'tree';
+  const treeMode = scState.fileListView === "tree";
   const mergeUntracked = scState.mergeUntracked;
   const canCommit = status.staged.length > 0 && commitMessage.trim().length > 0 && !committing;
   const canContinue = isMerging && status.conflicted.length === 0 && !committing;
@@ -299,7 +391,7 @@ export function GitFileList({
   const changesItems: Array<GitFileStatus | string> = mergeUntracked
     ? [...status.unstaged, ...status.untracked]
     : status.unstaged;
-  const changesPaths = changesItems.map(f => (typeof f === 'string' ? f : f.path));
+  const changesPaths = changesItems.map((f) => (typeof f === "string" ? f : f.path));
 
   const conflictedTree = buildTree(status.conflicted);
   const stagedTree = buildTree(status.staged);
@@ -315,7 +407,7 @@ export function GitFileList({
           rows={3}
           placeholder="Commit message…"
           value={commitMessage}
-          onChange={e => onCommitMessageChange(e.target.value)}
+          onChange={(e) => onCommitMessageChange(e.target.value)}
         />
         {!isMerging && (
           <button
@@ -324,7 +416,7 @@ export function GitFileList({
             className="w-full py-1 rounded text-[11px] font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-foreground/[0.06] hover:bg-foreground/[0.1] text-foreground/60 flex items-center justify-center gap-1.5"
           >
             <Sparkles size={11} className="text-purple-400/80" />
-            {generatingCommitMsg ? 'Generating…' : 'Generate with AI'}
+            {generatingCommitMsg ? "Generating…" : "Generate with AI"}
           </button>
         )}
         {isMerging ? (
@@ -335,11 +427,13 @@ export function GitFileList({
                 disabled={!canContinue}
                 className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white"
               >
-                {committing ? 'Continuing…' : 'Continue'}
+                {committing ? "Continuing…" : "Continue"}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              {status.conflicted.length > 0 ? 'Resolve all conflicts to continue the merge' : 'Continue Merge'}
+              {status.conflicted.length > 0
+                ? "Resolve all conflicts to continue the merge"
+                : "Continue Merge"}
             </TooltipContent>
           </Tooltip>
         ) : (
@@ -348,7 +442,9 @@ export function GitFileList({
             disabled={!canCommit}
             className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
           >
-            {committing ? 'Committing…' : `Commit (${status.staged.length} file${status.staged.length !== 1 ? 's' : ''})`}
+            {committing
+              ? "Committing…"
+              : `Commit (${status.staged.length} file${status.staged.length !== 1 ? "s" : ""})`}
           </button>
         )}
         {(!!ahead || !!behind) && onSync && (
@@ -357,7 +453,8 @@ export function GitFileList({
             className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-1.5"
           >
             <RefreshCw size={11} />
-            Sync Changes{ahead ? ` ${ahead}↑` : ''}{behind ? ` ${behind}↓` : ''}
+            Sync Changes{ahead ? ` ${ahead}↑` : ""}
+            {behind ? ` ${behind}↓` : ""}
           </button>
         )}
       </div>
@@ -367,8 +464,8 @@ export function GitFileList({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => setFileListView('list')}
-              className={`p-1 rounded transition-colors ${!treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
+              onClick={() => setFileListView("list")}
+              className={`p-1 rounded transition-colors ${!treeMode ? "text-foreground/80 bg-foreground/10" : "text-foreground/30 hover:text-foreground/50"}`}
             >
               <List size={12} />
             </button>
@@ -378,8 +475,8 @@ export function GitFileList({
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => setFileListView('tree')}
-              className={`p-1 rounded transition-colors ${treeMode ? 'text-foreground/80 bg-foreground/10' : 'text-foreground/30 hover:text-foreground/50'}`}
+              onClick={() => setFileListView("tree")}
+              className={`p-1 rounded transition-colors ${treeMode ? "text-foreground/80 bg-foreground/10" : "text-foreground/30 hover:text-foreground/50"}`}
             >
               <FolderTree size={12} />
             </button>
@@ -403,7 +500,7 @@ export function GitFileList({
                 conflict
               />
             ) : (
-              status.conflicted.map(f => (
+              status.conflicted.map((f) => (
                 <FileRow
                   key={f.path}
                   file={f}
@@ -425,7 +522,7 @@ export function GitFileList({
             status.staged.length > 0 ? (
               <button
                 title="Unstage all"
-                onClick={() => onUnstageMany(status.staged.map(f => f.path))}
+                onClick={() => onUnstageMany(status.staged.map((f) => f.path))}
                 className="p-0.5 rounded hover:bg-foreground/10 text-foreground/30 hover:text-foreground/70"
               >
                 <Minus size={11} />
@@ -447,7 +544,7 @@ export function GitFileList({
               onFolderAction1={onUnstageMany}
             />
           ) : (
-            status.staged.map(f => (
+            status.staged.map((f) => (
               <FileRow
                 key={f.path}
                 file={f}
@@ -509,8 +606,8 @@ export function GitFileList({
               onFolderAction2={onDiscard}
             />
           ) : (
-            changesItems.map(f => {
-              const path = typeof f === 'string' ? f : f.path;
+            changesItems.map((f) => {
+              const path = typeof f === "string" ? f : f.path;
               return (
                 <FileRow
                   key={path}
@@ -550,10 +647,10 @@ export function GitFileList({
                 onFolderAction1={onStageMany}
               />
             ) : (
-              status.untracked.map(p => (
+              status.untracked.map((p) => (
                 <FileRow
                   key={p}
-                  file={{ path: p, statusCode: '?', oldPath: '' }}
+                  file={{ path: p, statusCode: "?", oldPath: "" }}
                   staged={false}
                   selected={false}
                   onSelect={() => onSelectFile(p, false)}
@@ -566,7 +663,6 @@ export function GitFileList({
           </Section>
         )}
       </div>
-
     </div>
   );
 }

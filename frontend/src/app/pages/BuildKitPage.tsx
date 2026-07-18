@@ -1,99 +1,107 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { Browser } from '@wailsio/runtime';
-import { Icon } from '@iconify/react';
-import { useWorkspace } from '../stores/workspace';
-import * as BuildKitService from '../../../bindings/alis-hub-v3/buildkitservice';
-import { SearchableSelect } from '../components/ui/searchable-select';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
+import { Browser } from "@wailsio/runtime";
+import { Icon } from "@iconify/react";
+import { useWorkspace } from "../stores/workspace";
+import * as BuildKitService from "../../../bindings/alis-hub-v3/buildkitservice";
+import { SearchableSelect } from "../components/ui/searchable-select";
 
 const flows = [
   {
-    title: 'Build Custom APIs',
-    description: 'Master the core Alis Build workflow to define, build, and deploy your own APIs.',
-    route: 'custom-apis',
-    status: 'GA',
+    title: "Build Custom APIs",
+    description: "Master the core Alis Build workflow to define, build, and deploy your own APIs.",
+    route: "custom-apis",
+    status: "GA",
   },
   {
-    title: 'Manage your Agent',
-    description: 'Create a new custom Agent using ADK and deploy to Google Cloud.',
-    route: 'agent',
-    status: 'Beta',
+    title: "Manage your Agent",
+    description: "Create a new custom Agent using ADK and deploy to Google Cloud.",
+    route: "agent",
+    status: "Beta",
   },
   {
-    title: 'Develop an Agent Tool',
+    title: "Develop an Agent Tool",
     description: "Extend your Agent's functionality with custom capabilities and logic.",
-    route: 'agent-tool',
-    status: 'Beta',
+    route: "agent-tool",
+    status: "Beta",
   },
   {
-    title: 'Agentic Launchpad',
-    description: 'Register and manage your agents, MCPs, and client interfaces.',
-    route: 'launchpad',
-    status: 'Preview',
+    title: "Agentic Launchpad",
+    description: "Register and manage your agents, MCPs, and client interfaces.",
+    route: "launchpad",
+    status: "Preview",
   },
   {
-    title: 'Reporting Exchange',
-    description: 'Master the reporting workflow to initialise, template, and manage your reports.',
-    route: 'reporting',
-    status: 'Preview',
+    title: "Reporting Exchange",
+    description: "Master the reporting workflow to initialise, template, and manage your reports.",
+    route: "reporting",
+    status: "Preview",
   },
   {
-    title: 'AI Launchpad',
-    description: 'Configure users, domains, and launchpad services for an enterprise AI launchpad.',
-    route: 'ai-launchpad',
-    status: 'Beta',
+    title: "AI Launchpad",
+    description: "Configure users, domains, and launchpad services for an enterprise AI launchpad.",
+    route: "ai-launchpad",
+    status: "Beta",
   },
   {
-    title: 'Gemini Enterprise',
-    description: 'Configure Gemini Enterprise access, subscriptions, workforce federation, and data connectors.',
-    route: 'gemini-enterprise',
-    status: 'Beta',
+    title: "Gemini Enterprise",
+    description:
+      "Configure Gemini Enterprise access, subscriptions, workforce federation, and data connectors.",
+    route: "gemini-enterprise",
+    status: "Beta",
   },
   {
-    title: 'MCP',
-    description: 'Build and deploy robust MCP servers for coding agents.',
-    route: 'mcp',
-    status: 'Beta',
+    title: "MCP",
+    description: "Build and deploy robust MCP servers for coding agents.",
+    route: "mcp",
+    status: "Beta",
   },
   {
-    title: 'Skills',
-    description: 'Build and deploy a Skills service for reusable Alis Build guidance and codeblock knowledge.',
-    route: 'skills',
-    status: 'Beta',
+    title: "Skills",
+    description:
+      "Build and deploy a Skills service for reusable Alis Build guidance and codeblock knowledge.",
+    route: "skills",
+    status: "Beta",
   },
   {
-    title: 'Files Connector',
-    description: 'Connect external file systems and storage providers to Alis Build.',
-    route: 'files-connector',
-    status: 'Private Preview',
+    title: "Files Connector",
+    description: "Connect external file systems and storage providers to Alis Build.",
+    route: "files-connector",
+    status: "Private Preview",
   },
   {
-    title: 'Identity',
-    description: 'Manage identity, access, and application integrations for agent and enterprise workflows.',
-    route: 'identity',
-    status: 'Beta',
+    title: "Identity",
+    description:
+      "Manage identity, access, and application integrations for agent and enterprise workflows.",
+    route: "identity",
+    status: "Beta",
   },
 ];
 
-const STATUS_LABELS: Record<number, string> = { 0: 'Unknown', 1: 'New', 2: 'Active', 3: 'Completed' };
+const STATUS_LABELS: Record<number, string> = {
+  0: "Unknown",
+  1: "New",
+  2: "Active",
+  3: "Completed",
+};
 const STATUS_COLORS: Record<number, string> = {
-  0: 'text-foreground/40 border-border',
-  1: 'text-warning border-warning',
-  2: 'text-success border-success',
-  3: 'text-foreground/40 border-border',
+  0: "text-foreground/40 border-border",
+  1: "text-warning border-warning",
+  2: "text-success border-success",
+  3: "text-foreground/40 border-border",
 };
 
 function productResourceToLandingZoneUrl(resource: string): string {
   // resource: organisations/{org}/products/{product}
-  const parts = resource.split('/');
+  const parts = resource.split("/");
   if (parts.length >= 4) {
     return `https://console.alisx.com/build/landing-zone/${parts[1]}/${parts[3]}/overview`;
   }
-  return 'https://console.alisx.com';
+  return "https://console.alisx.com";
 }
 
 function productResourceToLabel(resource: string): string {
-  const parts = resource.split('/');
+  const parts = resource.split("/");
   if (parts.length >= 4) return `${parts[1]} / ${parts[3]}`;
   return resource;
 }
@@ -107,7 +115,7 @@ export function BuildKitPage() {
   const [specs, setSpecs] = useState<any[]>([]);
   const [specsLoading, setSpecsLoading] = useState(true);
   const [specsError, setSpecsError] = useState<string | null>(null);
-  const [selectedSpecName, setSelectedSpecName] = useState<string>('');
+  const [selectedSpecName, setSelectedSpecName] = useState<string>("");
 
   useEffect(() => {
     setSpecsLoading(true);
@@ -129,49 +137,49 @@ export function BuildKitPage() {
 
   const shortcuts: Array<{ title: string; description: string; url?: string; route?: string }> = [
     {
-      title: 'Build Specifications',
-      description: 'Navigate to your set of build specs',
-      url: 'https://console.alisx.com/build/specifications',
+      title: "Build Specifications",
+      description: "Navigate to your set of build specs",
+      url: "https://console.alisx.com/build/specifications",
     },
     {
-      title: 'CodeBlocks',
-      description: 'Where Innovation Meets Code',
-      url: 'https://console.alisx.com/build/blocks/overview',
+      title: "CodeBlocks",
+      description: "Where Innovation Meets Code",
+      url: "https://console.alisx.com/build/blocks/overview",
     },
     {
-      title: 'Your Landing Zone',
-      description: 'Navigate to your product landing zone',
+      title: "Your Landing Zone",
+      description: "Navigate to your product landing zone",
       url: `https://console.alisx.com/build/landing-zone/${orgID}/${productID}/overview`,
     },
     {
-      title: 'Alis Build Plugins',
-      description: 'Install the Alis Build plugin for your coding agent.',
-      route: '/buildkit/plugins',
+      title: "Alis Build Plugins",
+      description: "Install the Alis Build plugin for your coding agent.",
+      route: "/buildkit/plugins",
     },
     {
-      title: 'Private Git',
-      description: 'Access managed private Git repositories for your organisation.',
-      route: '/buildkit/private-git',
+      title: "Private Git",
+      description: "Access managed private Git repositories for your organisation.",
+      route: "/buildkit/private-git",
     },
     {
-      title: 'Alis Build Agent',
-      description: 'Open the Alis Build AI agent for guided development.',
-      url: 'https://agent.alis.build',
+      title: "Alis Build Agent",
+      description: "Open the Alis Build AI agent for guided development.",
+      url: "https://agent.alis.build",
     },
     {
-      title: 'Alis Build MCP Server',
-      description: 'Connect your coding agents to the Alis Build MCP server.',
-      route: '/buildkit/mcp-server',
+      title: "Alis Build MCP Server",
+      description: "Connect your coding agents to the Alis Build MCP server.",
+      route: "/buildkit/mcp-server",
     },
     {
-      title: 'Alis Build Skills',
-      description: 'Browse the Alis Build skills registry on GitHub.',
-      url: 'https://github.com/alis-build/skills',
+      title: "Alis Build Skills",
+      description: "Browse the Alis Build skills registry on GitHub.",
+      url: "https://github.com/alis-build/skills",
     },
     {
-      title: 'Glass Mode',
-      description: 'Understand what Alis Build just did with pinned, transparent outcomes.',
-      route: '/buildkit/glass-mode',
+      title: "Glass Mode",
+      description: "Understand what Alis Build just did with pinned, transparent outcomes.",
+      route: "/buildkit/glass-mode",
     },
   ];
 
@@ -233,7 +241,10 @@ export function BuildKitPage() {
               {/* Spec header */}
               <div className="flex items-center justify-between px-[20px] py-[16px] border-b border-border">
                 <div className="flex items-center gap-[12px]">
-                  <Icon icon="solar:document-text-linear" className="text-brand text-[18px] shrink-0" />
+                  <Icon
+                    icon="solar:document-text-linear"
+                    className="text-brand text-[18px] shrink-0"
+                  />
                   <div>
                     <p className="text-[13px] font-bold text-foreground font-mono">
                       {selectedSpec.displayName || selectedSpec.name}
@@ -243,8 +254,10 @@ export function BuildKitPage() {
                     </p>
                   </div>
                 </div>
-                <span className={`text-[9px] font-bold font-mono px-[6px] py-[2px] border rounded-[2px] uppercase shrink-0 ${STATUS_COLORS[selectedSpec.status] ?? STATUS_COLORS[0]}`}>
-                  {STATUS_LABELS[selectedSpec.status] ?? 'Unknown'}
+                <span
+                  className={`text-[9px] font-bold font-mono px-[6px] py-[2px] border rounded-[2px] uppercase shrink-0 ${STATUS_COLORS[selectedSpec.status] ?? STATUS_COLORS[0]}`}
+                >
+                  {STATUS_LABELS[selectedSpec.status] ?? "Unknown"}
                 </span>
               </div>
 
@@ -274,12 +287,18 @@ export function BuildKitPage() {
                         className="flex items-center justify-between px-[12px] py-[8px] bg-muted border border-border rounded-[4px] hover:border-brand-fill/40 hover:bg-muted transition-all group text-left"
                       >
                         <div className="flex items-center gap-[8px]">
-                          <Icon icon="solar:box-linear" className="text-foreground/35 text-[13px] shrink-0" />
+                          <Icon
+                            icon="solar:box-linear"
+                            className="text-foreground/35 text-[13px] shrink-0"
+                          />
                           <span className="text-[11px] font-mono text-foreground/70 group-hover:text-foreground transition-colors">
                             {productResourceToLabel(product)}
                           </span>
                         </div>
-                        <Icon icon="solar:arrow-right-up-linear" className="text-foreground/25 text-[12px] shrink-0 group-hover:text-brand transition-colors" />
+                        <Icon
+                          icon="solar:arrow-right-up-linear"
+                          className="text-foreground/25 text-[12px] shrink-0 group-hover:text-brand transition-colors"
+                        />
                       </button>
                     ))}
                   </div>
@@ -292,9 +311,7 @@ export function BuildKitPage() {
         {/* Flows */}
         <div className="mb-[16px]">
           <div className="flex items-baseline gap-[8px] mb-[4px]">
-            <h2 className="text-[11px] font-bold text-foreground uppercase font-mono">
-              Flows
-            </h2>
+            <h2 className="text-[11px] font-bold text-foreground uppercase font-mono">Flows</h2>
           </div>
           <p className="text-[11px] text-foreground/45 mb-[12px]">
             Select a workflow to start building
@@ -338,7 +355,7 @@ export function BuildKitPage() {
           {shortcuts.map((s) => (
             <button
               key={s.title}
-              onClick={() => s.route ? navigate(s.route) : Browser.OpenURL(s.url!)}
+              onClick={() => (s.route ? navigate(s.route) : Browser.OpenURL(s.url!))}
               className="text-left p-[16px] bg-card border border-border rounded-[4px] hover:border-brand-fill/50 hover:bg-accent transition-all group"
             >
               <div className="flex items-start justify-between mb-[10px]">
@@ -346,7 +363,7 @@ export function BuildKitPage() {
                   {s.title}
                 </h3>
                 <Icon
-                  icon={s.url ? 'solar:arrow-right-up-linear' : 'solar:alt-arrow-right-linear'}
+                  icon={s.url ? "solar:arrow-right-up-linear" : "solar:alt-arrow-right-linear"}
                   className="text-foreground/35 text-sm shrink-0 ml-[8px] group-hover:text-brand transition-colors"
                 />
               </div>

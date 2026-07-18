@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
 
 // ── Paging API ─────────────────────────────────────────────────────────────────
 // The palette supports Raycast-style sub-pages. Extensions push pages onto a
@@ -43,7 +43,7 @@ interface PalettePageBase {
 }
 
 export interface PaletteListPage extends PalettePageBase {
-  kind: 'list';
+  kind: "list";
   /** Hook returning the live items for this page. Called from a component
    * keyed by page id, so it may use any React hooks / store subscriptions. */
   useItems: () => { items: PaletteListItem[]; loading?: boolean; empty?: string };
@@ -52,7 +52,7 @@ export interface PaletteListPage extends PalettePageBase {
 }
 
 export interface PaletteViewPage extends PalettePageBase {
-  kind: 'view';
+  kind: "view";
   Component: React.ComponentType;
 }
 
@@ -71,7 +71,7 @@ export interface CommandPaletteContext {
 
 export interface CommandResultAction {
   label: string;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary";
   onAction: () => void;
 }
 
@@ -89,7 +89,7 @@ export interface CommandItem {
   groupOrder?: number;
   icon?: React.ComponentType<{ className?: string }>;
   keywords?: string[];
-  badge?: { text: string; variant: 'warning' | 'error' | 'info' };
+  badge?: { text: string; variant: "warning" | "error" | "info" };
   onSelect: (ctx: CommandPaletteContext) => void;
 }
 
@@ -126,18 +126,18 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     setPages([]);
   }, []);
   const toggle = useCallback(() => {
-    setIsOpen(v => {
+    setIsOpen((v) => {
       if (v) setPages([]);
       return !v;
     });
   }, []);
 
   const registerExtension = useCallback((ext: CommandExtension) => {
-    setExtensions(prev => ({ ...prev, [ext.id]: ext }));
+    setExtensions((prev) => ({ ...prev, [ext.id]: ext }));
   }, []);
 
   const unregisterExtension = useCallback((id: string) => {
-    setExtensions(prev => {
+    setExtensions((prev) => {
       const next = { ...prev };
       delete next[id];
       return next;
@@ -145,36 +145,56 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const push = useCallback((page: PalettePage) => {
-    setPages(prev => [...prev, page]);
+    setPages((prev) => [...prev, page]);
   }, []);
 
   const replace = useCallback((page: PalettePage) => {
-    setPages(prev => (prev.length === 0 ? [page] : [...prev.slice(0, -1), page]));
+    setPages((prev) => (prev.length === 0 ? [page] : [...prev.slice(0, -1), page]));
   }, []);
 
   const pop = useCallback(() => {
-    setPages(prev => prev.slice(0, -1));
+    setPages((prev) => prev.slice(0, -1));
   }, []);
 
   const popToRoot = useCallback(() => setPages([]), []);
 
-  const value = useMemo(() => ({
-    isOpen, extensions, pages,
-    open, close, toggle,
-    registerExtension, unregisterExtension,
-    push, replace, pop, popToRoot,
-  }), [isOpen, extensions, pages, open, close, toggle, registerExtension, unregisterExtension, push, replace, pop, popToRoot]);
-
-  return (
-    <CommandPaletteContext.Provider value={value}>
-      {children}
-    </CommandPaletteContext.Provider>
+  const value = useMemo(
+    () => ({
+      isOpen,
+      extensions,
+      pages,
+      open,
+      close,
+      toggle,
+      registerExtension,
+      unregisterExtension,
+      push,
+      replace,
+      pop,
+      popToRoot,
+    }),
+    [
+      isOpen,
+      extensions,
+      pages,
+      open,
+      close,
+      toggle,
+      registerExtension,
+      unregisterExtension,
+      push,
+      replace,
+      pop,
+      popToRoot,
+    ],
   );
+
+  return <CommandPaletteContext.Provider value={value}>{children}</CommandPaletteContext.Provider>;
 }
 
 export function useCommandPalette() {
   const ctx = useContext(CommandPaletteContext);
-  if (!ctx) throw new Error('useCommandPalette must be used within CommandPaletteProvider');
+  if (!ctx) throw new Error("useCommandPalette must be used within CommandPaletteProvider");
   return ctx;
 }
 
@@ -184,12 +204,18 @@ export function useCommandPalette() {
 
 const PalettePageCtx = createContext<CommandPaletteContext | null>(null);
 
-export function PalettePageProvider({ value, children }: { value: CommandPaletteContext; children: ReactNode }) {
+export function PalettePageProvider({
+  value,
+  children,
+}: {
+  value: CommandPaletteContext;
+  children: ReactNode;
+}) {
   return <PalettePageCtx.Provider value={value}>{children}</PalettePageCtx.Provider>;
 }
 
 export function usePalettePage(): CommandPaletteContext {
   const ctx = useContext(PalettePageCtx);
-  if (!ctx) throw new Error('usePalettePage must be used within an open command palette page');
+  if (!ctx) throw new Error("usePalettePage must be used within an open command palette page");
   return ctx;
 }

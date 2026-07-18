@@ -32,10 +32,9 @@ export const module4: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <code className="text-brand text-[11px]">Alis deploy</code> is a
-            declarative operation. You describe the desired state (which image
-            version, which environment) and Alis figures out which GCP resources
-            need to be created, updated, or left alone.
+            <code className="text-brand text-[11px]">Alis deploy</code> is a declarative operation.
+            You describe the desired state (which image version, which environment) and Alis figures
+            out which GCP resources need to be created, updated, or left alone.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             A single deploy operation touches four categories of GCP resources:
@@ -67,15 +66,10 @@ export const module4: LearningModule = {
                 key={name}
                 className="px-[14px] py-[12px] bg-muted border border-border rounded-[4px]"
               >
-                <p
-                  className="text-[11px] font-bold font-mono mb-[4px]"
-                  style={{ color: colour }}
-                >
+                <p className="text-[11px] font-bold font-mono mb-[4px]" style={{ color: colour }}>
                   {name}
                 </p>
-                <p className="text-[11px] text-foreground/55 leading-[1.5]">
-                  {desc}
-                </p>
+                <p className="text-[11px] text-foreground/55 leading-[1.5]">{desc}</p>
               </div>
             ))}
           </div>
@@ -89,11 +83,10 @@ export const module4: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <strong className="text-foreground">Cloud Run</strong> is Google's
-            serverless container runtime. Your Docker image is deployed as a
-            Cloud Run service — a managed HTTPS endpoint that scales
-            automatically from zero instances (when there's no traffic) to
-            hundreds (under load).
+            <strong className="text-foreground">Cloud Run</strong> is Google's serverless container
+            runtime. Your Docker image is deployed as a Cloud Run service — a managed HTTPS endpoint
+            that scales automatically from zero instances (when there's no traffic) to hundreds
+            (under load).
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Key properties of a Cloud Run service deployed by Alis:
@@ -110,18 +103,15 @@ export const module4: LearningModule = {
               },
               {
                 label: "Scaling",
-                value:
-                  "Min 0 (dev/staging) or 1 (production), max configurable",
+                value: "Min 0 (dev/staging) or 1 (production), max configurable",
               },
               {
                 label: "Region",
-                value:
-                  "Matches the environment region — set at product creation time",
+                value: "Matches the environment region — set at product creation time",
               },
               {
                 label: "Identity",
-                value:
-                  "Runs as a dedicated service account with least-privilege IAM",
+                value: "Runs as a dedicated service account with least-privilege IAM",
               },
             ].map(({ label, value }) => (
               <div
@@ -131,9 +121,7 @@ export const module4: LearningModule = {
                 <span className="text-[10px] font-mono text-foreground/40 w-[110px] shrink-0">
                   {label}
                 </span>
-                <span className="text-[10px] font-mono text-foreground/70">
-                  {value}
-                </span>
+                <span className="text-[10px] font-mono text-foreground/70">{value}</span>
               </div>
             ))}
           </div>
@@ -147,35 +135,28 @@ export const module4: LearningModule = {
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Every Alis service sits behind{" "}
-            <strong className="text-foreground">Google Cloud Endpoints</strong>{" "}
-            (specifically the ESP — Extensible Service Proxy). The ESP is a
-            sidecar container that runs alongside your Cloud Run service and
-            intercepts every request.
+            <strong className="text-foreground">Google Cloud Endpoints</strong> (specifically the
+            ESP — Extensible Service Proxy). The ESP is a sidecar container that runs alongside your
+            Cloud Run service and intercepts every request.
           </p>
-          <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            The ESP handles:
-          </p>
+          <p className="text-[12px] text-foreground/70 leading-[1.7]">The ESP handles:</p>
           <div className="flex flex-col gap-[6px]">
             {[
               {
                 task: "Authentication",
-                detail:
-                  "Validates Google service account JWTs before requests reach your code.",
+                detail: "Validates Google service account JWTs before requests reach your code.",
               },
               {
                 task: "Transcoding",
-                detail:
-                  "Converts REST/JSON requests to gRPC and responses back to JSON.",
+                detail: "Converts REST/JSON requests to gRPC and responses back to JSON.",
               },
               {
                 task: "API metrics",
-                detail:
-                  "Reports latency, error rates, and quota usage to Cloud Monitoring.",
+                detail: "Reports latency, error rates, and quota usage to Cloud Monitoring.",
               },
               {
                 task: "Rate limiting",
-                detail:
-                  "Can enforce per-consumer quotas defined in your Endpoints config.",
+                detail: "Can enforce per-consumer quotas defined in your Endpoints config.",
               },
             ].map(({ task, detail }) => (
               <div
@@ -184,12 +165,8 @@ export const module4: LearningModule = {
               >
                 <div className="size-[6px] rounded-full bg-brand-fill mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-foreground font-mono">
-                    {task}{" "}
-                  </span>
-                  <span className="text-[11px] text-foreground/50">
-                    — {detail}
-                  </span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">{task} </span>
+                  <span className="text-[11px] text-foreground/50">— {detail}</span>
                 </div>
               </div>
             ))}
@@ -213,20 +190,16 @@ export const module4: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <strong className="text-foreground">
-              Identity and Access Management
-            </strong>{" "}
-            (IAM) is Google Cloud's permission system. Alis configures IAM so
-            that each service can only access what it needs — a principle called{" "}
+            <strong className="text-foreground">Identity and Access Management</strong> (IAM) is
+            Google Cloud's permission system. Alis configures IAM so that each service can only
+            access what it needs — a principle called{" "}
             <em className="text-foreground">least privilege</em>.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Each neuron gets its own{" "}
-            <strong className="text-foreground">service account</strong> — a
-            Google-managed identity used to authenticate service-to-service
-            calls. When service A calls service B, it presents a short-lived JWT
-            signed by its service account. Service B's Endpoints proxy validates
-            the JWT against Google's key servers.
+            Each neuron gets its own <strong className="text-foreground">service account</strong> —
+            a Google-managed identity used to authenticate service-to-service calls. When service A
+            calls service B, it presents a short-lived JWT signed by its service account. Service
+            B's Endpoints proxy validates the JWT against Google's key servers.
           </p>
           <div className="flex flex-col gap-[8px]">
             <p className="text-[11px] text-foreground/45 uppercase font-bold font-mono tracking-wide">
@@ -257,9 +230,7 @@ export const module4: LearningModule = {
                 <code className="text-[9px] font-mono text-brand shrink-0 w-[220px] leading-[1.4]">
                   {role}
                 </code>
-                <p className="text-[10px] text-foreground/50 leading-[1.4]">
-                  {desc}
-                </p>
+                <p className="text-[10px] text-foreground/50 leading-[1.4]">{desc}</p>
               </div>
             ))}
           </div>

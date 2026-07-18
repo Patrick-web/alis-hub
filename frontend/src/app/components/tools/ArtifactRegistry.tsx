@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Icon } from '@iconify/react';
-import { Loader } from '../Loader';
-import { Button } from '../Button';
-import * as GS from '../../../../bindings/alis-hub-v3/gcloudservice';
-import type { ARRepository, ARPackage, ARVersion } from '../../../../bindings/alis-hub-v3/models';
-import { useGCloud } from '../../stores/gcloud';
+import { useState, useEffect } from "react";
+import { Icon } from "@iconify/react";
+import { Loader } from "../Loader";
+import { Button } from "../Button";
+import * as GS from "../../../../bindings/alis-hub-v3/gcloudservice";
+import type { ARRepository, ARPackage, ARVersion } from "../../../../bindings/alis-hub-v3/models";
+import { useGCloud } from "../../stores/gcloud";
 
 interface Props {
   projectID: string;
@@ -12,28 +12,28 @@ interface Props {
 }
 
 const FORMAT_ICONS: Record<string, string> = {
-  GO: 'solar:code-linear',
-  NPM: 'solar:box-minimalistic-linear',
-  PYTHON: 'solar:programming-linear',
-  DOCKER: 'solar:server-square-linear',
-  MAVEN: 'solar:box-linear',
+  GO: "solar:code-linear",
+  NPM: "solar:box-minimalistic-linear",
+  PYTHON: "solar:programming-linear",
+  DOCKER: "solar:server-square-linear",
+  MAVEN: "solar:box-linear",
 };
 
 const FORMAT_LABELS: Record<string, string> = {
-  GO: 'Go',
-  NPM: 'NPM',
-  PYTHON: 'Python',
-  DOCKER: 'Docker',
-  MAVEN: 'Maven',
+  GO: "Go",
+  NPM: "NPM",
+  PYTHON: "Python",
+  DOCKER: "Docker",
+  MAVEN: "Maven",
 };
 
 function shortName(resourceName: string): string {
-  const parts = resourceName.split('/');
+  const parts = resourceName.split("/");
   return parts[parts.length - 1] ?? resourceName;
 }
 
 function formatDate(ts: string): string {
-  if (!ts) return '—';
+  if (!ts) return "—";
   return new Date(ts).toLocaleDateString();
 }
 
@@ -56,7 +56,10 @@ export function ArtifactRegistry({ projectID, region }: Props) {
     setError(null);
     GS.ListRepositories(projectID, region)
       .then(setRepos)
-      .catch((e: unknown) => { if (useGCloud.getState().handleError(e)) return; setError(String(e)); })
+      .catch((e: unknown) => {
+        if (useGCloud.getState().handleError(e)) return;
+        setError(String(e));
+      })
       .finally(() => setLoading(false));
   }, [projectID, region]);
 
@@ -111,7 +114,7 @@ export function ArtifactRegistry({ projectID, region }: Props) {
         </p>
         <Button
           variant="ghost"
-          onClick={() => GS.OpenInConsole('artifactregistry', projectID, '')}
+          onClick={() => GS.OpenInConsole("artifactregistry", projectID, "")}
           icon={<Icon icon="solar:export-linear" className="text-xs" />}
           className="text-foreground/50 hover:text-foreground"
         >
@@ -122,7 +125,9 @@ export function ArtifactRegistry({ projectID, region }: Props) {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center py-[48px]"><Loader size={32} /></div>
+          <div className="flex items-center justify-center py-[48px]">
+            <Loader size={32} />
+          </div>
         ) : error ? (
           <div className="m-[16px] p-[12px] bg-red-900/20 border border-red-800 rounded-[4px]">
             <p className="text-[10px] text-red-400 font-mono">{error}</p>
@@ -135,7 +140,7 @@ export function ArtifactRegistry({ projectID, region }: Props) {
           repos.map((repo) => {
             const repoShort = shortName(repo.name);
             const isExpanded = expandedRepo === repo.name;
-            const icon = FORMAT_ICONS[repo.format] ?? 'solar:archive-linear';
+            const icon = FORMAT_ICONS[repo.format] ?? "solar:archive-linear";
             const formatLabel = FORMAT_LABELS[repo.format] ?? repo.format;
             const repoPackages = packages[repo.name] ?? [];
             const repoLoading = packagesLoading[repo.name] ?? false;
@@ -157,7 +162,7 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                     {formatLabel}
                   </span>
                   <Icon
-                    icon={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+                    icon={isExpanded ? "solar:alt-arrow-up-linear" : "solar:alt-arrow-down-linear"}
                     className="text-xs text-foreground/30 shrink-0"
                   />
                 </button>
@@ -165,7 +170,9 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                 {isExpanded && (
                   <div className="bg-background border-t border-border">
                     {repoLoading ? (
-                      <div className="flex items-center justify-center py-[24px]"><Loader size={20} /></div>
+                      <div className="flex items-center justify-center py-[24px]">
+                        <Loader size={20} />
+                      </div>
                     ) : repoPackages.length === 0 ? (
                       <p className="text-[10px] text-foreground/20 font-mono px-[24px] py-[12px]">
                         No packages
@@ -183,7 +190,10 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                               onClick={() => togglePackage(pkg)}
                               className="w-full flex items-center gap-[10px] px-[24px] py-[8px] hover:bg-foreground/[2%] transition-colors text-left"
                             >
-                              <Icon icon="solar:box-minimalistic-linear" className="text-sm text-foreground/30 shrink-0" />
+                              <Icon
+                                icon="solar:box-minimalistic-linear"
+                                className="text-sm text-foreground/30 shrink-0"
+                              />
                               <span className="text-[10px] font-mono text-foreground/70 flex-1 truncate">
                                 {pkgDisplay}
                               </span>
@@ -191,7 +201,11 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                                 {formatDate(pkg.updateTime)}
                               </span>
                               <Icon
-                                icon={isPkgExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
+                                icon={
+                                  isPkgExpanded
+                                    ? "solar:alt-arrow-up-linear"
+                                    : "solar:alt-arrow-down-linear"
+                                }
                                 className="text-xs text-foreground/20 shrink-0"
                               />
                             </button>
@@ -199,7 +213,9 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                             {isPkgExpanded && (
                               <div className="bg-background border-t border-border">
                                 {pkgLoading ? (
-                                  <div className="flex items-center justify-center py-[16px]"><Loader size={16} /></div>
+                                  <div className="flex items-center justify-center py-[16px]">
+                                    <Loader size={16} />
+                                  </div>
                                 ) : pkgVersions.length === 0 ? (
                                   <p className="text-[9px] text-foreground/20 font-mono px-[32px] py-[8px]">
                                     No versions
@@ -210,7 +226,10 @@ export function ArtifactRegistry({ projectID, region }: Props) {
                                       key={v.name}
                                       className="flex items-center gap-[10px] px-[32px] py-[6px] border-b border-border last:border-0"
                                     >
-                                      <Icon icon="solar:tag-linear" className="text-xs text-foreground/20 shrink-0" />
+                                      <Icon
+                                        icon="solar:tag-linear"
+                                        className="text-xs text-foreground/20 shrink-0"
+                                      />
                                       <span className="text-[9px] font-mono text-foreground/60 flex-1 truncate">
                                         {shortName(v.name)}
                                       </span>

@@ -1,5 +1,5 @@
-import { Icon } from '@iconify/react';
-import { LearningModule } from './types';
+import { Icon } from "@iconify/react";
+import { LearningModule } from "./types";
 
 interface ModuleSidebarProps {
   modules: LearningModule[];
@@ -32,7 +32,7 @@ export function ModuleSidebar({
           const isActive = module.id === activeModuleId;
           const isDone = isModuleComplete(module);
           const totalSteps = module.steps.length;
-          const completedCount = module.steps.filter(s => isStepComplete(s.id)).length;
+          const completedCount = module.steps.filter((s) => isStepComplete(s.id)).length;
 
           return (
             <div key={module.id}>
@@ -40,14 +40,12 @@ export function ModuleSidebar({
               <button
                 onClick={() => onSelectModule(module.id)}
                 className={`relative w-full text-left transition-colors ${
-                  isActive
-                    ? 'bg-brand-fill/10'
-                    : 'hover:bg-foreground/[4%]'
+                  isActive ? "bg-brand-fill/10" : "hover:bg-foreground/[4%]"
                 }`}
               >
                 <div
                   className={`absolute inset-0 pointer-events-none border-t ${
-                    isActive ? 'border-brand-fill' : 'border-border'
+                    isActive ? "border-brand-fill" : "border-border"
                   }`}
                   aria-hidden="true"
                 />
@@ -58,7 +56,7 @@ export function ModuleSidebar({
                     ) : (
                       <span
                         className={`text-[11px] font-bold font-mono ${
-                          isActive ? 'text-brand' : 'text-foreground/35'
+                          isActive ? "text-brand" : "text-foreground/35"
                         }`}
                       >
                         {mIdx + 1}
@@ -68,7 +66,7 @@ export function ModuleSidebar({
                   <div className="flex-1 min-w-0">
                     <p
                       className={`text-[12px] font-bold font-mono leading-[1.2] truncate ${
-                        isActive ? 'text-brand' : isDone ? 'text-foreground/60' : 'text-foreground'
+                        isActive ? "text-brand" : isDone ? "text-foreground/60" : "text-foreground"
                       }`}
                     >
                       {module.title}
@@ -78,8 +76,8 @@ export function ModuleSidebar({
                     </p>
                   </div>
                   <Icon
-                    icon={isActive ? 'solar:alt-arrow-down-linear' : 'solar:alt-arrow-right-linear'}
-                    className={`text-[12px] shrink-0 ${isActive ? 'text-brand' : 'text-foreground/25'}`}
+                    icon={isActive ? "solar:alt-arrow-down-linear" : "solar:alt-arrow-right-linear"}
+                    className={`text-[12px] shrink-0 ${isActive ? "text-brand" : "text-foreground/25"}`}
                   />
                 </div>
               </button>
@@ -95,18 +93,19 @@ export function ModuleSidebar({
                         key={step.id}
                         onClick={() => onSelectStep(module.id, sIdx)}
                         className={`w-full text-left px-[16px] py-[8px] flex items-center gap-[10px] transition-colors ${
-                          isStepActive
-                            ? 'bg-brand-fill/8'
-                            : 'hover:bg-foreground/[3%]'
+                          isStepActive ? "bg-brand-fill/8" : "hover:bg-foreground/[3%]"
                         }`}
                       >
                         <div className="pl-[20px] shrink-0 flex items-center justify-center size-[16px]">
                           {done ? (
-                            <Icon icon="solar:check-circle-bold" className="text-success text-[14px]" />
+                            <Icon
+                              icon="solar:check-circle-bold"
+                              className="text-success text-[14px]"
+                            />
                           ) : (
                             <div
                               className={`size-[6px] rounded-full ${
-                                isStepActive ? 'bg-brand-fill' : 'bg-foreground/20'
+                                isStepActive ? "bg-brand-fill" : "bg-foreground/20"
                               }`}
                             />
                           )}
@@ -114,10 +113,10 @@ export function ModuleSidebar({
                         <p
                           className={`text-[11px] font-mono leading-[1.3] ${
                             isStepActive
-                              ? 'text-brand'
+                              ? "text-brand"
                               : done
-                              ? 'text-foreground/40'
-                              : 'text-foreground/65'
+                                ? "text-foreground/40"
+                                : "text-foreground/65"
                           }`}
                         >
                           {step.title}
@@ -137,19 +136,15 @@ export function ModuleSidebar({
         {(() => {
           const total = modules.reduce((s, m) => s + m.steps.length, 0);
           const done = modules.reduce(
-            (s, m) => s + m.steps.filter(st => isStepComplete(st.id)).length,
+            (s, m) => s + m.steps.filter((st) => isStepComplete(st.id)).length,
             0,
           );
           const pct = total === 0 ? 0 : Math.round((done / total) * 100);
           return (
             <>
               <div className="flex items-center justify-between mb-[6px]">
-                <p className="text-[10px] text-foreground/35 font-mono">
-                  Overall progress
-                </p>
-                <p className="text-[10px] font-bold text-foreground/50 font-mono">
-                  {pct}%
-                </p>
+                <p className="text-[10px] text-foreground/35 font-mono">Overall progress</p>
+                <p className="text-[10px] font-bold text-foreground/50 font-mono">{pct}%</p>
               </div>
               <div className="h-[3px] bg-border rounded-full overflow-hidden">
                 <div

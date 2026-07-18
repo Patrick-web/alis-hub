@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
-import { Icon } from '@iconify/react';
-import { Loader } from '../Loader';
-import { EmptyState } from '../EmptyState';
-import type { CloudRunService } from '../../../../bindings/alis-hub-v3/models';
+import { useState, useMemo } from "react";
+import { Icon } from "@iconify/react";
+import { Loader } from "../Loader";
+import { EmptyState } from "../EmptyState";
+import type { CloudRunService } from "../../../../bindings/alis-hub-v3/models";
 
 interface Props {
   services: CloudRunService[];
@@ -13,8 +13,15 @@ interface Props {
   onViewAll: () => void;
 }
 
-export function LogsServicesTab({ services, loading, error, selectedService, onSelectService, onViewAll }: Props) {
-  const [search, setSearch] = useState('');
+export function LogsServicesTab({
+  services,
+  loading,
+  error,
+  selectedService,
+  onSelectService,
+  onViewAll,
+}: Props) {
+  const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -51,7 +58,10 @@ export function LogsServicesTab({ services, loading, error, selectedService, onS
             <p className="text-[11px] font-mono text-foreground">View all logs</p>
             <p className="text-[9px] font-mono text-foreground/30">No service filter</p>
           </div>
-          <Icon icon="solar:alt-arrow-right-linear" className="text-xs text-foreground/20 shrink-0" />
+          <Icon
+            icon="solar:alt-arrow-right-linear"
+            className="text-xs text-foreground/20 shrink-0"
+          />
         </button>
 
         {loading && (
@@ -71,7 +81,7 @@ export function LogsServicesTab({ services, loading, error, selectedService, onS
             icon="solar:server-minimalistic-linear"
             title="No Cloud Run services found"
             description="This project has no deployed Cloud Run services"
-            action={{ label: 'View all logs', onClick: onViewAll }}
+            action={{ label: "View all logs", onClick: onViewAll }}
           />
         )}
 
@@ -81,25 +91,35 @@ export function LogsServicesTab({ services, loading, error, selectedService, onS
           </p>
         )}
 
-        {!loading && !error && filtered.map((s) => {
-          const isActive = s.serviceName === selectedService;
-          return (
-            <button
-              key={s.name || s.serviceName}
-              onClick={() => onSelectService(s.serviceName)}
-              className={`w-full flex items-center gap-[10px] px-[16px] py-[10px] border-b border-border hover:bg-foreground/[2%] transition-colors text-left ${
-                isActive ? 'bg-brand-fill/12 border-l-2 border-l-brand' : ''
-              }`}
-            >
-              <Icon icon="solar:server-minimalistic-linear" className="text-sm text-foreground/40 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-mono text-foreground truncate">{s.serviceName}</p>
-              </div>
-              <span className="text-[9px] font-mono text-foreground/40 uppercase shrink-0">{s.region}</span>
-              <Icon icon="solar:alt-arrow-right-linear" className="text-xs text-foreground/20 shrink-0" />
-            </button>
-          );
-        })}
+        {!loading &&
+          !error &&
+          filtered.map((s) => {
+            const isActive = s.serviceName === selectedService;
+            return (
+              <button
+                key={s.name || s.serviceName}
+                onClick={() => onSelectService(s.serviceName)}
+                className={`w-full flex items-center gap-[10px] px-[16px] py-[10px] border-b border-border hover:bg-foreground/[2%] transition-colors text-left ${
+                  isActive ? "bg-brand-fill/12 border-l-2 border-l-brand" : ""
+                }`}
+              >
+                <Icon
+                  icon="solar:server-minimalistic-linear"
+                  className="text-sm text-foreground/40 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-mono text-foreground truncate">{s.serviceName}</p>
+                </div>
+                <span className="text-[9px] font-mono text-foreground/40 uppercase shrink-0">
+                  {s.region}
+                </span>
+                <Icon
+                  icon="solar:alt-arrow-right-linear"
+                  className="text-xs text-foreground/20 shrink-0"
+                />
+              </button>
+            );
+          })}
       </div>
     </div>
   );

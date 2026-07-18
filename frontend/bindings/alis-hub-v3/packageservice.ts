@@ -12,6 +12,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as alisclient$0 from "./internal/alisclient/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -41,7 +45,7 @@ export function PollPackageRun(runID: string, offset: number): $CancellablePromi
  * PreparePackageScripts scans the neuron build directory for language manifests, then calls
  * VscodeService/GeneratePackageScripts to obtain the shell commands for each folder.
  */
-export function PreparePackageScripts(org: string, product: string, neuron: string, version: string, ignoreHidden: boolean, extraPatterns: string[]): $CancellablePromise<$models.PackageScript[]> {
+export function PreparePackageScripts(org: string, product: string, neuron: string, version: string, ignoreHidden: boolean, extraPatterns: string[]): $CancellablePromise<alisclient$0.PackageScript[]> {
     return $Call.ByID(972249452, org, product, neuron, version, ignoreHidden, extraPatterns).then(($result: any) => {
         return $$createType3($result);
     });
@@ -79,5 +83,5 @@ export function WritePackageInput(runID: string, data: string): $CancellableProm
 // Private type creation functions
 const $$createType0 = $models.LocalBuildChunk.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.PackageScript.createFrom;
+const $$createType2 = alisclient$0.PackageScript.createFrom;
 const $$createType3 = $Create.Array($$createType2);

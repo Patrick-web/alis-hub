@@ -68,19 +68,16 @@ export const module2: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Traditional REST APIs are informal — the "contract" is usually a
-            README or a Swagger doc that someone wrote once and never updated.
-            Every team invents its own conventions for naming, pagination, error
-            codes, and authentication.
+            Traditional REST APIs are informal — the "contract" is usually a README or a Swagger doc
+            that someone wrote once and never updated. Every team invents its own conventions for
+            naming, pagination, error codes, and authentication.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <span className="text-foreground font-bold">Protocol Buffers</span>{" "}
-            (protobuf) are a{" "}
-            <span className="text-foreground">machine-readable</span> contract.
-            You describe your service — its methods, request types, and response
-            types — in a <code className="text-brand text-[11px]">.proto</code>{" "}
-            file. That file becomes the source of truth for every consumer and
-            every implementation.
+            <span className="text-foreground font-bold">Protocol Buffers</span> (protobuf) are a{" "}
+            <span className="text-foreground">machine-readable</span> contract. You describe your
+            service — its methods, request types, and response types — in a{" "}
+            <code className="text-brand text-[11px]">.proto</code> file. That file becomes the
+            source of truth for every consumer and every implementation.
           </p>
           <div className="flex flex-col gap-[8px]">
             {[
@@ -107,12 +104,8 @@ export const module2: LearningModule = {
               >
                 <div className="size-[6px] rounded-full bg-brand-fill mt-[5px] shrink-0" />
                 <div>
-                  <span className="text-[11px] font-bold text-foreground font-mono">
-                    {label}{" "}
-                  </span>
-                  <span className="text-[11px] text-foreground/50">
-                    — {desc}
-                  </span>
+                  <span className="text-[11px] font-bold text-foreground font-mono">{label} </span>
+                  <span className="text-[11px] text-foreground/50">— {desc}</span>
                 </div>
               </div>
             ))}
@@ -126,21 +119,16 @@ export const module2: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            A proto file has three parts: the{" "}
-            <strong className="text-foreground">messages</strong> (your data
-            structures), the{" "}
-            <strong className="text-foreground">service</strong> (your API
-            methods), and{" "}
-            <strong className="text-foreground">HTTP bindings</strong> (REST
+            A proto file has three parts: the <strong className="text-foreground">messages</strong>{" "}
+            (your data structures), the <strong className="text-foreground">service</strong> (your
+            API methods), and <strong className="text-foreground">HTTP bindings</strong> (REST
             mappings via Google's api annotations).
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Alis follows{" "}
-            <span className="text-foreground">Google's API Design Guide</span> —
-            resources have a{" "}
-            <code className="text-brand text-[11px]">name</code> field, methods
-            use standard verbs (Create, Get, List, Update, Delete), and HTTP
-            bindings follow REST resource patterns.
+            Alis follows <span className="text-foreground">Google's API Design Guide</span> —
+            resources have a <code className="text-brand text-[11px]">name</code> field, methods use
+            standard verbs (Create, Get, List, Update, Delete), and HTTP bindings follow REST
+            resource patterns.
           </p>
           <p className="text-[11px] text-foreground/40 leading-[1.5]">
             Here's a real example — a PaymentsService with two methods:
@@ -167,13 +155,10 @@ export const module2: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Running{" "}
-            <code className="text-brand text-[11px]">Alis generate</code> (or
-            triggering it via the VS Code extension) compiles your{" "}
-            <code className="text-[11px] text-foreground/60">.proto</code> files
-            through{" "}
-            <code className="text-[11px] text-foreground/60">protoc</code> and
-            produces:
+            Running <code className="text-brand text-[11px]">Alis generate</code> (or triggering it
+            via the VS Code extension) compiles your{" "}
+            <code className="text-[11px] text-foreground/60">.proto</code> files through{" "}
+            <code className="text-[11px] text-foreground/60">protoc</code> and produces:
           </p>
           <div className="flex flex-col gap-[6px]">
             {[
@@ -218,9 +203,9 @@ export const module2: LearningModule = {
             </pre>
           </div>
           <p className="text-[11px] text-foreground/40 leading-[1.5]">
-            You never edit these generated files directly. They are regenerated
-            every time the proto changes. Your implementation code lives in
-            separate files that <em>import</em> the generated interfaces.
+            You never edit these generated files directly. They are regenerated every time the proto
+            changes. Your implementation code lives in separate files that <em>import</em> the
+            generated interfaces.
           </p>
         </div>
       ),
@@ -231,10 +216,9 @@ export const module2: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Once generated, your job is to implement the server interface in Go.
-            The interface is strict — if your proto adds a new method, the
-            compiler will refuse to build until your implementation handles it.
-            This is the key advantage over REST: the contract enforces
+            Once generated, your job is to implement the server interface in Go. The interface is
+            strict — if your proto adds a new method, the compiler will refuse to build until your
+            implementation handles it. This is the key advantage over REST: the contract enforces
             completeness at compile time.
           </p>
           <p className="text-[11px] text-foreground/40 leading-[1.5]">
@@ -259,9 +243,9 @@ func (s *server) CreatePayment(
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               <span className="text-brand font-bold">Key insight: </span>
-              the generated interface is the only coupling between your business
-              logic and the transport layer. Your code never touches HTTP verbs,
-              JSON parsing, or header handling — gRPC handles all of that.
+              the generated interface is the only coupling between your business logic and the
+              transport layer. Your code never touches HTTP verbs, JSON parsing, or header handling
+              — gRPC handles all of that.
             </p>
           </div>
         </div>

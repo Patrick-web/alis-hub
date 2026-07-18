@@ -1,15 +1,15 @@
-import type { useNotifications, NotificationAction } from '../stores/notifications';
-import { notify } from './notify';
-import { systemNotify } from './systemNotify';
+import type { useNotifications, NotificationAction } from "../stores/notifications";
+import { notify } from "./notify";
+import { systemNotify } from "./systemNotify";
 
-type UpdateNotification = ReturnType<typeof useNotifications>['updateNotification'];
+type UpdateNotification = ReturnType<typeof useNotifications>["updateNotification"];
 
 interface CompleteTaskOptions {
   id: string;
-  severity: 'success' | 'error';
+  severity: "success" | "error";
   title: string;
   body?: string;
-  taskStatus: 'done' | 'error';
+  taskStatus: "done" | "error";
   taskPatch?: Record<string, unknown>;
   actions?: NotificationAction[];
 }
@@ -18,7 +18,7 @@ interface CompleteTaskOptions {
 // toast + native OS notification. Call once per Run outcome, never on start.
 export function completeTaskNotification(
   updateNotification: UpdateNotification,
-  opts: CompleteTaskOptions
+  opts: CompleteTaskOptions,
 ): void {
   updateNotification(opts.id, {
     severity: opts.severity,
@@ -29,7 +29,7 @@ export function completeTaskNotification(
   });
 
   const primary = opts.actions?.[0];
-  const toastFn = opts.severity === 'success' ? notify.success : notify.error;
+  const toastFn = opts.severity === "success" ? notify.success : notify.error;
   toastFn(opts.title, {
     description: opts.body,
     action: primary ? { label: primary.label, onClick: primary.onClick } : undefined,

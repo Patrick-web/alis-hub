@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
-import { Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -10,18 +10,19 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
 
   return (
     <button
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
       className="opacity-70 hover:opacity-100 transition-opacity shrink-0"
-      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
     >
-      {isDark
-        ? <Sun size={16} className="text-foreground" />
-        : <Moon size={16} className="text-foreground" />
-      }
+      {isDark ? (
+        <Sun size={16} className="text-foreground" />
+      ) : (
+        <Moon size={16} className="text-foreground" />
+      )}
     </button>
   );
 }

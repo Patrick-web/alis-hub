@@ -25,9 +25,7 @@ export function DevelopPage() {
   const { settings: devSettings } = useDevelopSettings();
 
   const [neuronFilter, setNeuronFilter] = useState("");
-  const [selectedNeurons, setSelectedNeurons] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selectedNeurons, setSelectedNeurons] = useState<Set<string>>(new Set());
   const [commitTimes, setCommitTimes] = useState<Record<string, string>>({});
   const [commitTimesLoading, setCommitTimesLoading] = useState(false);
   const [neuronsLoading, setNeuronsLoading] = useState(
@@ -41,26 +39,17 @@ export function DevelopPage() {
     if (!state.organisation || !state.product) return;
     setNeuronsLoading(true);
     try {
-      const overview = await ProductService.GetServicesOverview(
-        state.organisation,
-        state.product,
-      );
-      if (
-        overview &&
-        Array.isArray(overview.neurons) &&
-        overview.neurons.length > 0
-      ) {
+      const overview = await ProductService.GetServicesOverview(state.organisation, state.product);
+      if (overview && Array.isArray(overview.neurons) && overview.neurons.length > 0) {
         setNeurons(
-          overview.neurons.map(
-            (n: { id: string; state: number; version: string }) => ({
-              id: n.id,
-              name: n.id,
-              type: 2,
-              state: n.state,
-              latestBuild: n.version,
-              envs: [],
-            }),
-          ),
+          overview.neurons.map((n: { id: string; state: number; version: string }) => ({
+            id: n.id,
+            name: n.id,
+            type: 2,
+            state: n.state,
+            latestBuild: n.version,
+            envs: [],
+          })),
         );
       }
     } catch {
@@ -78,9 +67,7 @@ export function DevelopPage() {
   useEffect(() => {
     if (!focusTaskId) return;
     setFocusTaskId(null);
-    const n = notifState.notifications.find(
-      (notif) => notif.id === focusTaskId,
-    );
+    const n = notifState.notifications.find((notif) => notif.id === focusTaskId);
     if (!n?.task) return;
     const existing = tabs.find((t) => t.notificationId === focusTaskId);
     if (existing) {
@@ -108,10 +95,9 @@ export function DevelopPage() {
       try {
         const branch =
           devSettings.defaultBranch === "local"
-            ? await BuildService.GetCurrentBranch(
-                state.organisation,
-                state.product,
-              ).catch(() => "master")
+            ? await BuildService.GetCurrentBranch(state.organisation, state.product).catch(
+                () => "master",
+              )
             : devSettings.defaultBranch || "master";
         commitTimesBranchRef.current = branch as string;
         const times = await BuildService.GetNeuronLastCommitTimes(
@@ -131,17 +117,10 @@ export function DevelopPage() {
         setCommitTimesLoading(false);
       }
     })();
-  }, [
-    devSettings.smartSortEnabled,
-    devSettings.defaultBranch,
-    state.organisation,
-    state.product,
-  ]);
+  }, [devSettings.smartSortEnabled, devSettings.defaultBranch, state.organisation, state.product]);
 
   const visibleNeurons = state.neurons.filter(
-    (n) =>
-      !neuronFilter ||
-      (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase()),
+    (n) => !neuronFilter || (n.name || n.id).toLowerCase().includes(neuronFilter.toLowerCase()),
   );
 
   const sortedNeurons = useMemo(() => {
@@ -177,14 +156,12 @@ export function DevelopPage() {
 
     // For defined/built/deployed: use notification timestamps as the primary signal,
     // with build-repo commit times as a reliable fallback so the sort always has data.
-    const taskType =
-      key === "defined" ? "define" : key === "built" ? "build" : "deploy";
+    const taskType = key === "defined" ? "define" : key === "built" ? "build" : "deploy";
     const notifTimestamps = new Map<string, number>();
     for (const n of notifState.notifications) {
       if (n.task?.type === taskType && n.task.startedAt) {
         const existing = notifTimestamps.get(n.task.neuronId) ?? 0;
-        if (n.task.startedAt > existing)
-          notifTimestamps.set(n.task.neuronId, n.task.startedAt);
+        if (n.task.startedAt > existing) notifTimestamps.set(n.task.neuronId, n.task.startedAt);
       }
     }
 
@@ -219,11 +196,8 @@ export function DevelopPage() {
     commitTimes,
   ]);
   const allVisibleSelected =
-    sortedNeurons.length > 0 &&
-    sortedNeurons.every((n) => selectedNeurons.has(n.name || n.id));
-  const someVisibleSelected = sortedNeurons.some((n) =>
-    selectedNeurons.has(n.name || n.id),
-  );
+    sortedNeurons.length > 0 && sortedNeurons.every((n) => selectedNeurons.has(n.name || n.id));
+  const someVisibleSelected = sortedNeurons.some((n) => selectedNeurons.has(n.name || n.id));
 
   useEffect(() => {
     setFocusIndex(-1);
@@ -249,8 +223,7 @@ export function DevelopPage() {
         return;
       }
       setFocusIndex(next);
-      const targetName =
-        sortedNeurons[next].name || sortedNeurons[next].id;
+      const targetName = sortedNeurons[next].name || sortedNeurons[next].id;
       rowRefs.current.get(targetName)?.focus();
     },
     [sortedNeurons],
@@ -284,9 +257,7 @@ export function DevelopPage() {
     <div className="flex-1 overflow-hidden flex flex-col bg-background">
       {/* Page header */}
       <div className="px-[20px] py-[6px] border-b border-border flex items-center justify-between">
-        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">
-          SERVICES
-        </p>
+        <p className="font-mono font-bold text-[10px] text-foreground/50 uppercase">SERVICES</p>
         {devSettings.smartSortEnabled && (
           <div className="flex items-center gap-[5px]">
             {commitTimesLoading && <Loader size={10} />}
@@ -340,16 +311,11 @@ export function DevelopPage() {
         {state.neurons.length === 0 && neuronsLoading ? (
           <div className="flex items-center justify-center h-full gap-[10px]">
             <Loader size={20} />
-            <span className="text-[11px] text-foreground/50">
-              Loading services...
-            </span>
+            <span className="text-[11px] text-foreground/50">Loading services...</span>
           </div>
         ) : state.neurons.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <EmptyState
-              icon="solar:server-minimalistic-linear"
-              title="No services found"
-            />
+            <EmptyState icon="solar:server-minimalistic-linear" title="No services found" />
           </div>
         ) : (
           <table className="w-full border-collapse">
@@ -367,10 +333,7 @@ export function DevelopPage() {
                     }`}
                   >
                     {allVisibleSelected && (
-                      <Icon
-                        icon="solar:check-linear"
-                        className="text-black text-[8px]"
-                      />
+                      <Icon icon="solar:check-linear" className="text-black text-[8px]" />
                     )}
                     {someVisibleSelected && !allVisibleSelected && (
                       <span className="block w-[6px] h-[2px] bg-brand-fill rounded-full" />
@@ -421,10 +384,7 @@ export function DevelopPage() {
                         }`}
                       >
                         {isSelected && (
-                          <Icon
-                            icon="solar:check-linear"
-                            className="text-black text-[8px]"
-                          />
+                          <Icon icon="solar:check-linear" className="text-black text-[8px]" />
                         )}
                       </button>
                     </td>
@@ -444,9 +404,7 @@ export function DevelopPage() {
                           {neuron.latestBuild}
                         </span>
                       ) : (
-                        <span className="text-[10px] text-foreground/20">
-                          —
-                        </span>
+                        <span className="text-[10px] text-foreground/20">—</span>
                       )}
                     </td>
                     <td className="px-[16px] py-[10px]">
@@ -454,12 +412,7 @@ export function DevelopPage() {
                         <Button
                           variant="secondary"
                           className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
-                          icon={
-                            <Icon
-                              icon="solar:document-text-linear"
-                              className="text-sm"
-                            />
-                          }
+                          icon={<Icon icon="solar:document-text-linear" className="text-sm" />}
                           onClick={() => openTab("define", name)}
                         >
                           Define
@@ -467,12 +420,7 @@ export function DevelopPage() {
                         <Button
                           variant="secondary"
                           className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
-                          icon={
-                            <Icon
-                              icon="solar:code-linear"
-                              className="text-sm"
-                            />
-                          }
+                          icon={<Icon icon="solar:code-linear" className="text-sm" />}
                           onClick={() => openTab("build", name)}
                         >
                           Build
@@ -480,12 +428,7 @@ export function DevelopPage() {
                         <Button
                           variant="secondary"
                           className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
-                          icon={
-                            <Icon
-                              icon="solar:cloud-upload-linear"
-                              className="text-sm"
-                            />
-                          }
+                          icon={<Icon icon="solar:cloud-upload-linear" className="text-sm" />}
                           onClick={() => openTab("deploy", name)}
                         >
                           Deploy
@@ -493,9 +436,7 @@ export function DevelopPage() {
                         <Button
                           variant="secondary"
                           className="px-[10px] py-[5px] h-[28px] uppercase text-[9px] font-bold"
-                          icon={
-                            <Icon icon="solar:box-linear" className="text-sm" />
-                          }
+                          icon={<Icon icon="solar:box-linear" className="text-sm" />}
                           onClick={() => openTab("packages", name)}
                         >
                           Packages

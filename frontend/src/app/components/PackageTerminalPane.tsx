@@ -26,9 +26,7 @@ interface Props {
 
 export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
   ({ sessions, onCloseSession, onClose, onInput, onResize }, ref) => {
-    const [activeID, setActiveID] = useState<string>(
-      () => sessions[0]?.runID ?? "",
-    );
+    const [activeID, setActiveID] = useState<string>(() => sessions[0]?.runID ?? "");
     const termRefs = useRef<Map<string, BuildTerminalHandle>>(new Map());
 
     const effectiveActive = sessions.find((s) => s.runID === activeID)
@@ -42,19 +40,9 @@ export const PackageTerminalPane = forwardRef<PackageTerminalPaneHandle, Props>(
 
     const statusIcon = (s: TerminalSession) => {
       if (s.error)
-        return (
-          <Icon
-            icon="solar:close-circle-bold"
-            className="text-[10px] text-red-400"
-          />
-        );
+        return <Icon icon="solar:close-circle-bold" className="text-[10px] text-red-400" />;
       if (s.done)
-        return (
-          <Icon
-            icon="solar:check-circle-bold"
-            className="text-[10px] text-green-400"
-          />
-        );
+        return <Icon icon="solar:check-circle-bold" className="text-[10px] text-green-400" />;
       return (
         <span className="inline-block w-[7px] h-[7px] rounded-full bg-brand-fill animate-pulse" />
       );

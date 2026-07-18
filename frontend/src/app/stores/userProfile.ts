@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { create } from "zustand";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
 interface UserProfile {
   email: string;

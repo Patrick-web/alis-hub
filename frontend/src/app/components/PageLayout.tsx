@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { useNavigate } from 'react-router';
-import { Icon } from '@iconify/react';
+import { ReactNode } from "react";
+import { useNavigate } from "react-router";
+import { Icon } from "@iconify/react";
 
 export interface PageLayoutProps {
   title: string;
@@ -11,7 +11,14 @@ export interface PageLayoutProps {
   onBack?: () => void;
 }
 
-export function PageLayout({ title, subtitle, children, actions, parentRoute, onBack }: PageLayoutProps) {
+export function PageLayout({
+  title,
+  subtitle,
+  children,
+  actions,
+  parentRoute,
+  onBack,
+}: PageLayoutProps) {
   const navigate = useNavigate();
 
   return (
@@ -28,14 +35,10 @@ export function PageLayout({ title, subtitle, children, actions, parentRoute, on
             <h1 className="font-mono font-bold text-[13px] text-foreground uppercase leading-[1.2]">
               {title}
             </h1>
-            {subtitle && (
-              <p className="text-[10px] text-foreground/50 leading-[1.2]">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-[10px] text-foreground/50 leading-[1.2]">{subtitle}</p>}
           </div>
         </div>
-        {actions && (
-          <div className="flex items-center gap-[10px]">{actions}</div>
-        )}
+        {actions && <div className="flex items-center gap-[10px]">{actions}</div>}
       </div>
       <div className="flex-1 overflow-auto">{children}</div>
     </div>

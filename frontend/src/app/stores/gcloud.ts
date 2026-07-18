@@ -1,6 +1,6 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
-export type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner' | 'backups';
+export type ToolTab = "buckets" | "logs" | "artifactregistry" | "secrets" | "spanner" | "backups";
 
 interface GCloudStore {
   ready: boolean;
@@ -14,16 +14,16 @@ interface GCloudStore {
 
 export const useGCloud = create<GCloudStore>((set, get) => ({
   ready: false,
-  activeTab: 'buckets',
+  activeTab: "buckets",
   setReady: (ready) => set({ ready }),
   setActiveTab: (activeTab) => set({ activeTab }),
   openTool: (activeTab) => set({ activeTab, ready: true }),
   isAuthError: (e) => {
     const s = String(e).toLowerCase();
     return (
-      s.includes('not authenticated') ||
-      s.includes('gcloud auth login') ||
-      s.includes('empty token')
+      s.includes("not authenticated") ||
+      s.includes("gcloud auth login") ||
+      s.includes("empty token")
     );
   },
   handleError: (e) => {

@@ -1,24 +1,30 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Icon } from '@iconify/react';
-import { Dialogs } from '@wailsio/runtime';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Dialog, DialogContent } from '../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { MultiSelect } from '../components/ui/multi-select';
-import { SearchableSelect } from '../components/ui/searchable-select';
-import { Switch } from '../components/ui/switch';
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '../components/ui/resizable';
-import { useWorkspace } from '../stores/workspace';
-import { useWorkflowRuns, type StepRunStatus } from '../stores/workflowRuns';
-import { useNotifications } from '../stores/notifications';
-import { useProtectedEnvironments } from '../stores/protectedEnvironments';
-import { ConfirmDialog } from '../components/ConfirmDialog';
-import { notify } from '../lib/notify';
-import * as WorkflowService from '../../../bindings/alis-hub-v3/workflowservice';
-import type { WorkflowRun } from '../../../bindings/alis-hub-v3/models';
-import * as BuildService from '../../../bindings/alis-hub-v3/buildservice';
-import * as DeployService from '../../../bindings/alis-hub-v3/deployservice';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Icon } from "@iconify/react";
+import { Dialogs } from "@wailsio/runtime";
+import { Button } from "../components/Button";
+import { Input } from "../components/Input";
+import { Dialog, DialogContent } from "../components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
+import { MultiSelect } from "../components/ui/multi-select";
+import { SearchableSelect } from "../components/ui/searchable-select";
+import { Switch } from "../components/ui/switch";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "../components/ui/resizable";
+import { useWorkspace } from "../stores/workspace";
+import { useWorkflowRuns, type StepRunStatus } from "../stores/workflowRuns";
+import { useNotifications } from "../stores/notifications";
+import { useProtectedEnvironments } from "../stores/protectedEnvironments";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { notify } from "../lib/notify";
+import * as WorkflowService from "../../../bindings/alis-hub-v3/workflowservice";
+import type { WorkflowRun } from "../../../bindings/alis-hub-v3/models";
+import * as BuildService from "../../../bindings/alis-hub-v3/buildservice";
+import * as DeployService from "../../../bindings/alis-hub-v3/deployservice";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,9 +34,9 @@ type WorkflowArg = {
 };
 
 const ARG_DEFS: WorkflowArg[] = [
-  { key: 'environment', label: 'Environment' },
-  { key: 'neuron', label: 'Neuron' },
-  { key: 'branch', label: 'Git Branch' },
+  { key: "environment", label: "Environment" },
+  { key: "neuron", label: "Neuron" },
+  { key: "branch", label: "Git Branch" },
 ];
 
 type Workflow = {
@@ -67,7 +73,19 @@ type StepType = {
 type StepField = {
   key: string;
   label: string;
-  type: 'text' | 'mono' | 'select' | 'tags' | 'neuron' | 'neuron-full' | 'neuron-multi' | 'commit' | 'build-version' | 'env-multi' | 'repo-select' | 'branch';
+  type:
+    | "text"
+    | "mono"
+    | "select"
+    | "tags"
+    | "neuron"
+    | "neuron-full"
+    | "neuron-multi"
+    | "commit"
+    | "build-version"
+    | "env-multi"
+    | "repo-select"
+    | "branch";
   placeholder?: string;
   options?: string[];
 };
@@ -75,31 +93,35 @@ type StepField = {
 // ─── Step type helpers ────────────────────────────────────────────────────────
 
 function repoLabel(val: string): string {
-  if (val === 'define-repo') return 'Define repo';
-  if (val === 'build-repo') return 'Build repo';
-  return val || 'No repo set';
+  if (val === "define-repo") return "Define repo";
+  if (val === "build-repo") return "Build repo";
+  return val || "No repo set";
 }
 
 function lastParamFrom(steps: WorkflowStep[], types: string[], key: string): string {
   for (let i = steps.length - 1; i >= 0; i--) {
     if (types.includes(steps[i].type)) {
       try {
-        const p = JSON.parse(steps[i].params || '{}');
+        const p = JSON.parse(steps[i].params || "{}");
         if (p[key]) return p[key];
-      } catch { /**/ }
+      } catch {
+        /**/
+      }
     }
   }
-  return '';
+  return "";
 }
 
 function lastNeuronsFrom(steps: WorkflowStep[], types: string[]): string[] {
   for (let i = steps.length - 1; i >= 0; i--) {
     if (types.includes(steps[i].type)) {
       try {
-        const p = JSON.parse(steps[i].params || '{}');
+        const p = JSON.parse(steps[i].params || "{}");
         if (p.neuron) return [p.neuron];
         if (Array.isArray(p.neurons) && p.neurons.length > 0) return p.neurons;
-      } catch { /**/ }
+      } catch {
+        /**/
+      }
     }
   }
   return [];
@@ -109,151 +131,194 @@ function lastNeuronsFrom(steps: WorkflowStep[], types: string[]): string[] {
 
 const STEP_TYPES: StepType[] = [
   {
-    id: 'define',
-    label: 'Define Neuron',
-    icon: 'solar:code-square-linear',
-    color: 'text-blue-400',
-    defaultParams: { neuron: '', commit: '' },
+    id: "define",
+    label: "Define Neuron",
+    icon: "solar:code-square-linear",
+    color: "text-blue-400",
+    defaultParams: { neuron: "", commit: "" },
     fields: [
-      { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
-      { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: '' },
+      {
+        key: "neuron",
+        label: "Neuron",
+        type: "neuron-full",
+        placeholder: "organisations/org/products/product/neurons/bff-v1",
+      },
+      {
+        key: "commit",
+        label: "Commit SHA (leave blank for latest)",
+        type: "commit",
+        placeholder: "",
+      },
     ],
-    summary: (p) => p.neuron ? p.neuron.split('/').slice(-1)[0] : 'No neuron set',
+    summary: (p) => (p.neuron ? p.neuron.split("/").slice(-1)[0] : "No neuron set"),
   },
   {
-    id: 'build-cloud',
-    label: 'Cloud Build',
-    icon: 'solar:cloud-upload-linear',
-    color: 'text-brand',
-    defaultParams: { neuron: '', branch: 'master', commit: '' },
+    id: "build-cloud",
+    label: "Cloud Build",
+    icon: "solar:cloud-upload-linear",
+    color: "text-brand",
+    defaultParams: { neuron: "", branch: "master", commit: "" },
     fields: [
-      { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
-      { key: 'branch', label: 'Branch', type: 'branch', placeholder: 'master' },
-      { key: 'commit', label: 'Commit SHA (leave blank for latest)', type: 'commit', placeholder: 'Latest build' },
+      {
+        key: "neuron",
+        label: "Neuron",
+        type: "neuron-full",
+        placeholder: "organisations/org/products/product/neurons/bff-v1",
+      },
+      { key: "branch", label: "Branch", type: "branch", placeholder: "master" },
+      {
+        key: "commit",
+        label: "Commit SHA (leave blank for latest)",
+        type: "commit",
+        placeholder: "Latest build",
+      },
     ],
-    summary: (p) => p.neuron ? `${p.neuron.split('/').slice(-1)[0]} @ ${p.branch || 'master'}` : 'No neuron set',
-    computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['define'], 'neuron') }),
+    summary: (p) =>
+      p.neuron ? `${p.neuron.split("/").slice(-1)[0]} @ ${p.branch || "master"}` : "No neuron set",
+    computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ["define"], "neuron") }),
   },
   {
-    id: 'deploy',
-    label: 'Deploy',
-    icon: 'solar:rocket-linear',
-    color: 'text-purple-400',
-    defaultParams: { neuron: '', version: '', environments: [] },
+    id: "deploy",
+    label: "Deploy",
+    icon: "solar:rocket-linear",
+    color: "text-purple-400",
+    defaultParams: { neuron: "", version: "", environments: [] },
     fields: [
-      { key: 'neuron', label: 'Neuron', type: 'neuron-full', placeholder: 'organisations/org/products/product/neurons/bff-v1' },
-      { key: 'version', label: 'Build version', type: 'build-version', placeholder: 'Latest build' },
-      { key: 'environments', label: 'Environments', type: 'env-multi' },
+      {
+        key: "neuron",
+        label: "Neuron",
+        type: "neuron-full",
+        placeholder: "organisations/org/products/product/neurons/bff-v1",
+      },
+      {
+        key: "version",
+        label: "Build version",
+        type: "build-version",
+        placeholder: "Latest build",
+      },
+      { key: "environments", label: "Environments", type: "env-multi" },
     ],
-    summary: (p) => p.neuron ? `${p.neuron.split('/').slice(-1)[0]} @ ${p.version || 'latest'}` : 'No neuron set',
-    computeDefaults: (priorSteps) => ({ neuron: lastParamFrom(priorSteps, ['build-cloud'], 'neuron') }),
+    summary: (p) =>
+      p.neuron ? `${p.neuron.split("/").slice(-1)[0]} @ ${p.version || "latest"}` : "No neuron set",
+    computeDefaults: (priorSteps) => ({
+      neuron: lastParamFrom(priorSteps, ["build-cloud"], "neuron"),
+    }),
   },
   {
-    id: 'upgrade-packages',
-    label: 'Upgrade Packages',
-    icon: 'solar:refresh-circle-linear',
-    color: 'text-cyan-400',
-    defaultParams: { neurons: [], action: 'upgrade_defined' },
+    id: "upgrade-packages",
+    label: "Upgrade Packages",
+    icon: "solar:refresh-circle-linear",
+    color: "text-cyan-400",
+    defaultParams: { neurons: [], action: "upgrade_defined" },
     fields: [
-      { key: 'neurons', label: 'Neurons', type: 'neuron-multi' },
-      { key: 'action', label: 'Action', type: 'select', options: ['upgrade_defined', 'upgrade', 'install', 'add'] },
+      { key: "neurons", label: "Neurons", type: "neuron-multi" },
+      {
+        key: "action",
+        label: "Action",
+        type: "select",
+        options: ["upgrade_defined", "upgrade", "install", "add"],
+      },
     ],
-    summary: (p) => Array.isArray(p.neurons) && p.neurons.length > 0 ? `${p.neurons.length} neuron(s)` : 'No neurons set',
-    computeDefaults: (priorSteps) => ({ neurons: lastNeuronsFrom(priorSteps, ['build-cloud', 'define']) }),
+    summary: (p) =>
+      Array.isArray(p.neurons) && p.neurons.length > 0
+        ? `${p.neurons.length} neuron(s)`
+        : "No neurons set",
+    computeDefaults: (priorSteps) => ({
+      neurons: lastNeuronsFrom(priorSteps, ["build-cloud", "define"]),
+    }),
   },
   {
-    id: 'git-stage-all',
-    label: 'Git: Stage All',
-    icon: 'solar:file-add-linear',
-    color: 'text-green-400',
-    defaultParams: { repoPath: 'build-repo' },
-    fields: [
-      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
-    ],
+    id: "git-stage-all",
+    label: "Git: Stage All",
+    icon: "solar:file-add-linear",
+    color: "text-green-400",
+    defaultParams: { repoPath: "build-repo" },
+    fields: [{ key: "repoPath", label: "Repository", type: "repo-select" }],
     summary: (p) => repoLabel(p.repoPath),
   },
   {
-    id: 'git-commit',
-    label: 'Git: Commit',
-    icon: 'solar:check-circle-linear',
-    color: 'text-green-400',
-    defaultParams: { repoPath: 'build-repo', message: '' },
+    id: "git-commit",
+    label: "Git: Commit",
+    icon: "solar:check-circle-linear",
+    color: "text-green-400",
+    defaultParams: { repoPath: "build-repo", message: "" },
     fields: [
-      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
-      { key: 'message', label: 'Commit message', type: 'text', placeholder: 'chore: update' },
+      { key: "repoPath", label: "Repository", type: "repo-select" },
+      { key: "message", label: "Commit message", type: "text", placeholder: "chore: update" },
     ],
-    summary: (p) => p.message || 'No message set',
+    summary: (p) => p.message || "No message set",
     computeDefaults: (priorSteps) => {
-      const hasUpgrade = priorSteps.some((s) => s.type === 'upgrade-packages');
-      return hasUpgrade ? { message: 'chore: upgrade packages' } : {};
+      const hasUpgrade = priorSteps.some((s) => s.type === "upgrade-packages");
+      return hasUpgrade ? { message: "chore: upgrade packages" } : {};
     },
   },
   {
-    id: 'git-push',
-    label: 'Git: Push',
-    icon: 'solar:upload-linear',
-    color: 'text-green-400',
-    defaultParams: { repoPath: 'build-repo' },
-    fields: [
-      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
-    ],
+    id: "git-push",
+    label: "Git: Push",
+    icon: "solar:upload-linear",
+    color: "text-green-400",
+    defaultParams: { repoPath: "build-repo" },
+    fields: [{ key: "repoPath", label: "Repository", type: "repo-select" }],
     summary: (p) => repoLabel(p.repoPath),
   },
   {
-    id: 'git-pull',
-    label: 'Git: Pull',
-    icon: 'solar:download-linear',
-    color: 'text-green-400',
-    defaultParams: { repoPath: 'build-repo' },
-    fields: [
-      { key: 'repoPath', label: 'Repository', type: 'repo-select' },
-    ],
+    id: "git-pull",
+    label: "Git: Pull",
+    icon: "solar:download-linear",
+    color: "text-green-400",
+    defaultParams: { repoPath: "build-repo" },
+    fields: [{ key: "repoPath", label: "Repository", type: "repo-select" }],
     summary: (p) => repoLabel(p.repoPath),
   },
   {
-    id: 'shell',
-    label: 'Shell Command',
-    icon: 'solar:terminal-linear',
-    color: 'text-yellow-400',
-    defaultParams: { command: '', workdir: '', timeout: '' },
+    id: "shell",
+    label: "Shell Command",
+    icon: "solar:terminal-linear",
+    color: "text-yellow-400",
+    defaultParams: { command: "", workdir: "", timeout: "" },
     fields: [
-      { key: 'command', label: 'Command', type: 'mono', placeholder: 'alis define neurons/bff-v1' },
-      { key: 'workdir', label: 'Working directory (optional)', type: 'text', placeholder: '' },
-      { key: 'timeout', label: 'Timeout in seconds (optional)', type: 'text', placeholder: 'e.g. 300' },
+      { key: "command", label: "Command", type: "mono", placeholder: "alis define neurons/bff-v1" },
+      { key: "workdir", label: "Working directory (optional)", type: "text", placeholder: "" },
+      {
+        key: "timeout",
+        label: "Timeout in seconds (optional)",
+        type: "text",
+        placeholder: "e.g. 300",
+      },
     ],
-    summary: (p) => p.command || 'No command set',
+    summary: (p) => p.command || "No command set",
   },
   {
-    id: 'wait',
-    label: 'Wait',
-    icon: 'solar:hourglass-linear',
-    color: 'text-orange-400',
-    defaultParams: { seconds: '5' },
-    fields: [
-      { key: 'seconds', label: 'Seconds', type: 'text', placeholder: '5' },
-    ],
-    summary: (p) => `Wait ${p.seconds || '5'}s`,
+    id: "wait",
+    label: "Wait",
+    icon: "solar:hourglass-linear",
+    color: "text-orange-400",
+    defaultParams: { seconds: "5" },
+    fields: [{ key: "seconds", label: "Seconds", type: "text", placeholder: "5" }],
+    summary: (p) => `Wait ${p.seconds || "5"}s`,
   },
 ];
 
 function getStepType(id: string): StepType {
-  return STEP_TYPES.find((t) => t.id === id) ?? {
-    id,
-    label: id,
-    icon: 'solar:question-circle-linear',
-    color: 'text-foreground/40',
-    defaultParams: {},
-    fields: [],
-    summary: () => id,
-  };
+  return (
+    STEP_TYPES.find((t) => t.id === id) ?? {
+      id,
+      label: id,
+      icon: "solar:question-circle-linear",
+      color: "text-foreground/40",
+      defaultParams: {},
+      fields: [],
+      summary: () => id,
+    }
+  );
 }
 
 // Sentinel values a step field is set to when it's bound to a workflow
 // argument instead of holding an explicit value. Resolved at run time via
 // the same {{key}} templating used for freeform inputs.
-const NEURON_ARG_SENTINEL = '{{neuron}}';
-const ENV_ARG_SENTINEL = ['{{environment}}'];
-const BRANCH_ARG_SENTINEL = '{{branch}}';
+const NEURON_ARG_SENTINEL = "{{neuron}}";
+const ENV_ARG_SENTINEL = ["{{environment}}"];
+const BRANCH_ARG_SENTINEL = "{{branch}}";
 
 function isNeuronBound(v: any): boolean {
   return v === NEURON_ARG_SENTINEL;
@@ -272,19 +337,23 @@ function isBranchBound(v: any): boolean {
 function clearArgBinding(steps: WorkflowStep[], argKey: string): WorkflowStep[] {
   return steps.map((s) => {
     let params: Record<string, any> = {};
-    try { params = JSON.parse(s.params || '{}'); } catch { return s; }
+    try {
+      params = JSON.parse(s.params || "{}");
+    } catch {
+      return s;
+    }
     let changed = false;
     for (const f of getStepType(s.type).fields) {
-      if (argKey === 'neuron' && f.type === 'neuron-full' && isNeuronBound(params[f.key])) {
-        params[f.key] = '';
+      if (argKey === "neuron" && f.type === "neuron-full" && isNeuronBound(params[f.key])) {
+        params[f.key] = "";
         changed = true;
       }
-      if (argKey === 'environment' && f.type === 'env-multi' && isEnvBound(params[f.key])) {
+      if (argKey === "environment" && f.type === "env-multi" && isEnvBound(params[f.key])) {
         params[f.key] = [];
         changed = true;
       }
-      if (argKey === 'branch' && f.type === 'branch' && isBranchBound(params[f.key])) {
-        params[f.key] = '';
+      if (argKey === "branch" && f.type === "branch" && isBranchBound(params[f.key])) {
+        params[f.key] = "";
         changed = true;
       }
     }
@@ -297,7 +366,7 @@ function stepSummary(step: WorkflowStep): string {
     const p = JSON.parse(step.params);
     return getStepType(step.type).summary(p);
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -306,7 +375,7 @@ function uid(): string {
 }
 
 function formatDuration(startedAt?: number, completedAt?: number): string {
-  if (!startedAt) return '';
+  if (!startedAt) return "";
   const end = completedAt ?? Math.floor(Date.now() / 1000);
   const s = end - startedAt;
   if (s < 60) return `${s}s`;
@@ -314,19 +383,19 @@ function formatDuration(startedAt?: number, completedAt?: number): string {
 }
 
 const STATUS_ICON: Record<string, string> = {
-  pending: 'solar:circle-linear',
-  running: 'solar:spinner-linear',
-  success: 'solar:check-circle-bold',
-  failed: 'solar:close-circle-bold',
-  skipped: 'solar:minus-circle-linear',
+  pending: "solar:circle-linear",
+  running: "solar:spinner-linear",
+  success: "solar:check-circle-bold",
+  failed: "solar:close-circle-bold",
+  skipped: "solar:minus-circle-linear",
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: 'text-foreground/20',
-  running: 'text-blue-400',
-  success: 'text-green-400',
-  failed: 'text-red-400',
-  skipped: 'text-foreground/20',
+  pending: "text-foreground/20",
+  running: "text-blue-400",
+  success: "text-green-400",
+  failed: "text-red-400",
+  skipped: "text-foreground/20",
 };
 
 // ─── WorkflowsPage ────────────────────────────────────────────────────────────
@@ -339,8 +408,8 @@ export function WorkflowsPage() {
   const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({});
   const [showPicker, setShowPicker] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newDesc, setNewDesc] = useState('');
+  const [newName, setNewName] = useState("");
+  const [newDesc, setNewDesc] = useState("");
   const [dragSrc, setDragSrc] = useState<number | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -363,8 +432,10 @@ export function WorkflowsPage() {
   const { isProtected } = useProtectedEnvironments();
   const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
   const [protectedConfirmLabels, setProtectedConfirmLabels] = useState<string[]>([]);
-  const pendingRunRef = useRef<{ argValues: Record<string, string>; startPosition: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<'steps' | 'run' | 'history'>('steps');
+  const pendingRunRef = useRef<{ argValues: Record<string, string>; startPosition: number } | null>(
+    null,
+  );
+  const [activeTab, setActiveTab] = useState<"steps" | "run" | "history">("steps");
   const [startError, setStartError] = useState<string | null>(null);
 
   const [runArgsOpen, setRunArgsOpen] = useState(false);
@@ -380,14 +451,16 @@ export function WorkflowsPage() {
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const list = await WorkflowService.ListWorkflows() as Workflow[];
+      const list = (await WorkflowService.ListWorkflows()) as Workflow[];
       setWorkflows(list ?? []);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (activeId) {
@@ -405,7 +478,7 @@ export function WorkflowsPage() {
   useEffect(() => {
     setStartError(null);
     const entry = activeId ? runs[activeId] : undefined;
-    setActiveTab(entry && !entry.done ? 'run' : 'steps');
+    setActiveTab(entry && !entry.done ? "run" : "steps");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeId]);
 
@@ -419,7 +492,7 @@ export function WorkflowsPage() {
     didAutoSelectRef.current = true;
     runningEntries.sort((a, b) => b[1].startedAt - a[1].startedAt);
     setActiveId(runningEntries[0][0]);
-    setActiveTab('run');
+    setActiveTab("run");
   }, [runs, activeId, workflows]);
 
   // Clicking a workflow-run chip in the status strip jumps back here.
@@ -427,10 +500,11 @@ export function WorkflowsPage() {
     if (!focusTaskId) return;
     const n = notifState.notifications.find((x) => x.id === focusTaskId);
     setFocusTaskId(null);
-    const workflowId = n?.task?.type === 'workflow' ? (n.task.meta?.workflowId as string | undefined) : undefined;
+    const workflowId =
+      n?.task?.type === "workflow" ? (n.task.meta?.workflowId as string | undefined) : undefined;
     if (workflowId) {
       setActiveId(workflowId);
-      setActiveTab('run');
+      setActiveTab("run");
     }
   }, [focusTaskId, notifState.notifications, setFocusTaskId]);
 
@@ -441,8 +515,8 @@ export function WorkflowsPage() {
         setShowPicker(false);
       }
     }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   // Auto-scroll log feed: on step transition scroll to the step's section start;
@@ -470,7 +544,7 @@ export function WorkflowsPage() {
   const startRunNow = async (argValues: Record<string, string>, startPosition: number) => {
     if (!editedWorkflow) return;
     setStartError(null);
-    setActiveTab('run');
+    setActiveTab("run");
     try {
       await storeStartRun(editedWorkflow.id, editedWorkflow.name, argValues, startPosition);
     } catch (e: any) {
@@ -485,9 +559,13 @@ export function WorkflowsPage() {
     if (!editedWorkflow) return [];
     const targetNames = new Set<string>();
     for (const step of editedWorkflow.steps.slice(startPosition)) {
-      if (step.type !== 'deploy') continue;
+      if (step.type !== "deploy") continue;
       let params: Record<string, any> = {};
-      try { params = JSON.parse(step.params || '{}'); } catch { continue; }
+      try {
+        params = JSON.parse(step.params || "{}");
+      } catch {
+        continue;
+      }
       const envParam = params.environments;
       if (isEnvBound(envParam)) {
         if (argValues.environment) targetNames.add(argValues.environment);
@@ -517,16 +595,16 @@ export function WorkflowsPage() {
       doStartRun({}, startPosition);
     } else {
       const defaults: Record<string, string> = {};
-      for (const a of args) defaults[a.key] = a.key === 'branch' ? 'master' : '';
+      for (const a of args) defaults[a.key] = a.key === "branch" ? "master" : "";
       setRunArgValues(defaults);
-      setActiveTab('run');
+      setActiveTab("run");
       setRunArgsOpen(true);
     }
   };
 
   useEffect(() => {
     if (!runArgsOpen) return;
-    if (!(editedWorkflow?.args ?? []).some((a) => a.key === 'branch')) return;
+    if (!(editedWorkflow?.args ?? []).some((a) => a.key === "branch")) return;
     if (!workspaceState.organisation || !workspaceState.product) return;
     setRunBranchesLoading(true);
     BuildService.GetBuildBranches(workspaceState.organisation, workspaceState.product)
@@ -542,8 +620,8 @@ export function WorkflowsPage() {
 
   // ── Workflow actions ─────────────────────────────────────────────────────────
 
-  const isDirty = editedWorkflow && active &&
-    JSON.stringify(editedWorkflow) !== JSON.stringify(active);
+  const isDirty =
+    editedWorkflow && active && JSON.stringify(editedWorkflow) !== JSON.stringify(active);
 
   const handleSave = async () => {
     if (!editedWorkflow || editedWorkflow.isTemplate) return;
@@ -568,13 +646,13 @@ export function WorkflowsPage() {
   };
 
   const handleClone = async (id: string) => {
-    const cloned = await WorkflowService.CloneWorkflow(id) as Workflow;
+    const cloned = (await WorkflowService.CloneWorkflow(id)) as Workflow;
     await load();
     if (cloned) setActiveId(cloned.id);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this workflow?')) return;
+    if (!confirm("Delete this workflow?")) return;
     await WorkflowService.DeleteWorkflow(id);
     await load();
     if (activeId === id) setActiveId(null);
@@ -582,14 +660,14 @@ export function WorkflowsPage() {
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
-    const created = await WorkflowService.CreateWorkflow({
+    const created = (await WorkflowService.CreateWorkflow({
       name: newName.trim(),
       description: newDesc.trim(),
       steps: [],
       args: [],
-    }) as Workflow;
-    setNewName('');
-    setNewDesc('');
+    })) as Workflow;
+    setNewName("");
+    setNewDesc("");
     setShowNewModal(false);
     await load();
     if (created) setActiveId(created.id);
@@ -597,50 +675,57 @@ export function WorkflowsPage() {
 
   const handleExport = async (workflowId: string) => {
     const wf = workflows.find((w) => w.id === workflowId);
-    const defaultName = `${(wf?.name ?? 'workflow').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.workflow.json`;
+    const defaultName = `${(wf?.name ?? "workflow").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.workflow.json`;
     try {
       // A browser blob+<a download> doesn't reliably trigger a save in the
       // Wails webview, so we ask the OS for a path and write the file from Go.
       const path = await Dialogs.SaveFile({
         Filename: defaultName,
-        Title: 'Export workflow',
-        Filters: [{ DisplayName: 'Workflow JSON', Pattern: '*.json' }],
+        Title: "Export workflow",
+        Filters: [{ DisplayName: "Workflow JSON", Pattern: "*.json" }],
       });
       if (!path) return;
       await WorkflowService.ExportWorkflow(workflowId, path);
-      notify.success('Workflow exported');
+      notify.success("Workflow exported");
     } catch (e: any) {
-      notify.error('Failed to export workflow', { description: e?.message ?? String(e) });
+      notify.error("Failed to export workflow", { description: e?.message ?? String(e) });
     }
   };
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    e.target.value = '';
+    e.target.value = "";
     setImporting(true);
     setImportError(null);
     try {
       const text = await file.text();
       let data: any;
-      try { data = JSON.parse(text); } catch { throw new Error('Invalid JSON file'); }
-      if (!data.name || !Array.isArray(data.steps)) throw new Error('Invalid workflow file: missing name or steps');
-      const created = await WorkflowService.CreateWorkflow({
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Invalid JSON file");
+      }
+      if (!data.name || !Array.isArray(data.steps))
+        throw new Error("Invalid workflow file: missing name or steps");
+      const created = (await WorkflowService.CreateWorkflow({
         name: data.name,
-        description: data.description ?? '',
-        args: Array.isArray(data.args) ? data.args.filter((a: any) => ARG_DEFS.some((d) => d.key === a.key)) : [],
+        description: data.description ?? "",
+        args: Array.isArray(data.args)
+          ? data.args.filter((a: any) => ARG_DEFS.some((d) => d.key === a.key))
+          : [],
         steps: (data.steps as any[]).map((s, i) => ({
           id: uid(),
-          type: s.type ?? '',
-          params: typeof s.params === 'string' ? s.params : JSON.stringify(s.params ?? {}),
-          onFailure: s.onFailure ?? 'stop',
+          type: s.type ?? "",
+          params: typeof s.params === "string" ? s.params : JSON.stringify(s.params ?? {}),
+          onFailure: s.onFailure ?? "stop",
           position: i,
         })),
-      }) as Workflow;
+      })) as Workflow;
       await load();
       if (created) setActiveId(created.id);
     } catch (err: any) {
-      setImportError(err?.message ?? 'Failed to import workflow');
+      setImportError(err?.message ?? "Failed to import workflow");
     } finally {
       setImporting(false);
     }
@@ -651,7 +736,7 @@ export function WorkflowsPage() {
   const updateStep = (stepId: string, patch: Partial<WorkflowStep>) => {
     setEditedWorkflow((wf) => {
       if (!wf) return wf;
-      return { ...wf, steps: wf.steps.map((s) => s.id === stepId ? { ...s, ...patch } : s) };
+      return { ...wf, steps: wf.steps.map((s) => (s.id === stepId ? { ...s, ...patch } : s)) };
     });
   };
 
@@ -662,7 +747,7 @@ export function WorkflowsPage() {
         ...wf,
         steps: wf.steps.map((s) => {
           if (s.id !== stepId) return s;
-          const p = JSON.parse(s.params || '{}');
+          const p = JSON.parse(s.params || "{}");
           p[key] = value;
           return { ...s, params: JSON.stringify(p) };
         }),
@@ -672,23 +757,28 @@ export function WorkflowsPage() {
 
   const addStep = (typeId: string) => {
     const type = getStepType(typeId);
-    const smartParams = { ...type.defaultParams, ...(type.computeDefaults?.(editedWorkflow!.steps) ?? {}) };
+    const smartParams = {
+      ...type.defaultParams,
+      ...(type.computeDefaults?.(editedWorkflow!.steps) ?? {}),
+    };
     const newStep: WorkflowStep = {
       id: uid(),
       workflowId: editedWorkflow!.id,
       position: editedWorkflow!.steps.length,
       type: typeId,
       params: JSON.stringify(smartParams),
-      onFailure: 'stop',
+      onFailure: "stop",
     };
     const newId = newStep.id;
-    setEditedWorkflow((wf) => wf ? { ...wf, steps: [...wf.steps, newStep] } : wf);
+    setEditedWorkflow((wf) => (wf ? { ...wf, steps: [...wf.steps, newStep] } : wf));
     setExpandedSteps((e) => ({ ...e, [newId]: true }));
     setShowPicker(false);
   };
 
   const removeStep = (stepId: string) => {
-    setEditedWorkflow((wf) => wf ? { ...wf, steps: wf.steps.filter((s) => s.id !== stepId) } : wf);
+    setEditedWorkflow((wf) =>
+      wf ? { ...wf, steps: wf.steps.filter((s) => s.id !== stepId) } : wf,
+    );
   };
 
   const duplicateStep = (stepId: string) => {
@@ -729,7 +819,9 @@ export function WorkflowsPage() {
       {/* Left panel */}
       <div className="w-[240px] flex-shrink-0 border-r border-border flex flex-col bg-card">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest font-mono">Workflows</span>
+          <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest font-mono">
+            Workflows
+          </span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => importFileRef.current?.click()}
@@ -748,7 +840,13 @@ export function WorkflowsPage() {
             </button>
           </div>
         </div>
-        <input ref={importFileRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
         {importError && (
           <div className="mx-3 mt-1 px-2 py-1.5 bg-red-400/10 rounded text-[10px] text-red-400 leading-snug">
             {importError}
@@ -763,7 +861,9 @@ export function WorkflowsPage() {
               {templates.length > 0 && (
                 <>
                   <div className="px-4 py-1.5">
-                    <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">Templates</span>
+                    <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">
+                      Templates
+                    </span>
                   </div>
                   {templates.map((wf) => (
                     <WorkflowListItem
@@ -776,7 +876,9 @@ export function WorkflowsPage() {
                   ))}
                   {userWorkflows.length > 0 && (
                     <div className="px-4 py-1.5 mt-1">
-                      <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">My Workflows</span>
+                      <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-widest">
+                        My Workflows
+                      </span>
                     </div>
                   )}
                 </>
@@ -806,7 +908,11 @@ export function WorkflowsPage() {
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-foreground/30">
             <Icon icon="solar:playlist-2-linear" className="text-4xl opacity-30" />
             <p className="text-sm">Select a workflow or create a new one</p>
-            <Button variant="secondary" onClick={() => setShowNewModal(true)} icon={<Icon icon="solar:add-circle-linear" className="text-base" />}>
+            <Button
+              variant="secondary"
+              onClick={() => setShowNewModal(true)}
+              icon={<Icon icon="solar:add-circle-linear" className="text-base" />}
+            >
               New Workflow
             </Button>
           </div>
@@ -817,14 +923,19 @@ export function WorkflowsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   {editedWorkflow.isTemplate && (
-                    <Icon icon="solar:lock-linear" className="text-foreground/30 text-sm flex-shrink-0" />
+                    <Icon
+                      icon="solar:lock-linear"
+                      className="text-foreground/30 text-sm flex-shrink-0"
+                    />
                   )}
                   {editedWorkflow.isTemplate ? (
                     <span className="font-semibold text-sm truncate">{editedWorkflow.name}</span>
                   ) : (
                     <input
                       value={editedWorkflow.name}
-                      onChange={(e) => setEditedWorkflow((wf) => wf ? { ...wf, name: e.target.value } : wf)}
+                      onChange={(e) =>
+                        setEditedWorkflow((wf) => (wf ? { ...wf, name: e.target.value } : wf))
+                      }
                       placeholder="Workflow name"
                       className="flex-1 min-w-0 bg-transparent font-semibold text-sm rounded px-1 -mx-1 outline-none focus:bg-accent"
                     />
@@ -832,12 +943,16 @@ export function WorkflowsPage() {
                 </div>
                 {editedWorkflow.isTemplate ? (
                   editedWorkflow.description && (
-                    <p className="text-xs text-foreground/40 mt-0.5 truncate">{editedWorkflow.description}</p>
+                    <p className="text-xs text-foreground/40 mt-0.5 truncate">
+                      {editedWorkflow.description}
+                    </p>
                   )
                 ) : (
                   <input
                     value={editedWorkflow.description}
-                    onChange={(e) => setEditedWorkflow((wf) => wf ? { ...wf, description: e.target.value } : wf)}
+                    onChange={(e) =>
+                      setEditedWorkflow((wf) => (wf ? { ...wf, description: e.target.value } : wf))
+                    }
                     placeholder="Add a description…"
                     className="w-full bg-transparent text-xs text-foreground/40 mt-0.5 rounded px-1 -mx-1 outline-none focus:bg-accent focus:text-foreground/70"
                   />
@@ -864,8 +979,12 @@ export function WorkflowsPage() {
               ) : (
                 <>
                   {isDirty && (
-                    <Button variant="secondary" onClick={handleSave} disabled={saving || !editedWorkflow.name.trim()}>
-                      {saving ? 'Saving…' : 'Save'}
+                    <Button
+                      variant="secondary"
+                      onClick={handleSave}
+                      disabled={saving || !editedWorkflow.name.trim()}
+                    >
+                      {saving ? "Saving…" : "Save"}
                     </Button>
                   )}
                   <Button
@@ -883,49 +1002,54 @@ export function WorkflowsPage() {
                 variant="primary"
                 onClick={() => handleRun()}
                 disabled={editedWorkflow.steps.length === 0 || isRunning}
-                icon={<Icon icon={isRunning ? 'solar:spinner-linear' : 'solar:play-linear'} className={`text-base ${isRunning ? 'animate-spin' : ''}`} />}
+                icon={
+                  <Icon
+                    icon={isRunning ? "solar:spinner-linear" : "solar:play-linear"}
+                    className={`text-base ${isRunning ? "animate-spin" : ""}`}
+                  />
+                }
               >
-                {isRunning ? 'Running…' : 'Run'}
+                {isRunning ? "Running…" : "Run"}
               </Button>
             </div>
 
             {/* Tab strip */}
             <div className="flex items-center border-b border-border bg-card px-5">
               <button
-                onClick={() => setActiveTab('steps')}
+                onClick={() => setActiveTab("steps")}
                 className={`h-9 px-1 mr-4 text-xs font-medium border-b-2 transition-colors ${
-                  activeTab === 'steps'
-                    ? 'border-brand-fill text-brand'
-                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                  activeTab === "steps"
+                    ? "border-brand-fill text-brand"
+                    : "border-transparent text-foreground/40 hover:text-foreground/70"
                 }`}
               >
                 Steps
               </button>
               <button
-                onClick={() => setActiveTab('run')}
+                onClick={() => setActiveTab("run")}
                 className={`h-9 px-1 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-                  activeTab === 'run'
-                    ? 'border-brand-fill text-brand'
-                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                  activeTab === "run"
+                    ? "border-brand-fill text-brand"
+                    : "border-transparent text-foreground/40 hover:text-foreground/70"
                 }`}
               >
                 Run
                 {isRunning && (
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
                 )}
-                {runEntry?.done && runEntry.finalStatus === 'success' && (
+                {runEntry?.done && runEntry.finalStatus === "success" && (
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
                 )}
-                {runEntry?.done && runEntry.finalStatus === 'failed' && (
+                {runEntry?.done && runEntry.finalStatus === "failed" && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" />
                 )}
               </button>
               <button
-                onClick={() => setActiveTab('history')}
+                onClick={() => setActiveTab("history")}
                 className={`h-9 px-1 ml-4 text-xs font-medium border-b-2 transition-colors ${
-                  activeTab === 'history'
-                    ? 'border-brand-fill text-brand'
-                    : 'border-transparent text-foreground/40 hover:text-foreground/70'
+                  activeTab === "history"
+                    ? "border-brand-fill text-brand"
+                    : "border-transparent text-foreground/40 hover:text-foreground/70"
                 }`}
               >
                 History
@@ -935,7 +1059,7 @@ export function WorkflowsPage() {
             {/* Steps tab — kept mounted to preserve scroll position */}
             <div
               className="flex-1 flex flex-col overflow-hidden"
-              style={{ display: activeTab === 'steps' ? undefined : 'none' }}
+              style={{ display: activeTab === "steps" ? undefined : "none" }}
             >
               {editedWorkflow.isTemplate && (
                 <div className="flex items-center gap-2 px-5 py-2.5 bg-blue-500/5 border-b border-blue-500/10 text-blue-400 text-xs">
@@ -949,30 +1073,39 @@ export function WorkflowsPage() {
                   {!editedWorkflow.isTemplate && (
                     <div className="mb-5 bg-card border border-border rounded-lg overflow-hidden">
                       <div className="px-3 py-2 border-b border-border">
-                        <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Inputs</span>
+                        <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+                          Inputs
+                        </span>
                       </div>
                       <div className="px-3 py-2 flex flex-col gap-2">
                         {ARG_DEFS.map((def) => {
-                          const enabled = (editedWorkflow.args ?? []).some((a) => a.key === def.key);
+                          const enabled = (editedWorkflow.args ?? []).some(
+                            (a) => a.key === def.key,
+                          );
                           return (
                             <div key={def.key} className="flex items-center justify-between gap-2">
                               <span className="text-xs">{def.label}</span>
                               <Switch
                                 checked={enabled}
-                                onCheckedChange={(checked) => setEditedWorkflow((wf) => {
-                                  if (!wf) return wf;
-                                  const args = checked
-                                    ? [...(wf.args ?? []), def]
-                                    : (wf.args ?? []).filter((a) => a.key !== def.key);
-                                  const steps = checked ? wf.steps : clearArgBinding(wf.steps, def.key);
-                                  return { ...wf, args, steps };
-                                })}
+                                onCheckedChange={(checked) =>
+                                  setEditedWorkflow((wf) => {
+                                    if (!wf) return wf;
+                                    const args = checked
+                                      ? [...(wf.args ?? []), def]
+                                      : (wf.args ?? []).filter((a) => a.key !== def.key);
+                                    const steps = checked
+                                      ? wf.steps
+                                      : clearArgBinding(wf.steps, def.key);
+                                    return { ...wf, args, steps };
+                                  })
+                                }
                               />
                             </div>
                           );
                         })}
                         <p className="text-[10px] text-foreground/30 pt-1">
-                          Prompted for at run time. Enable a step field's "Use workflow argument" toggle to bind it.
+                          Prompted for at run time. Enable a step field's "Use workflow argument"
+                          toggle to bind it.
                         </p>
                       </div>
                     </div>
@@ -980,7 +1113,10 @@ export function WorkflowsPage() {
 
                   {editedWorkflow.steps.length === 0 && (
                     <div className="text-center py-10 text-foreground/30">
-                      <Icon icon="solar:playlist-2-linear" className="text-3xl mx-auto mb-2 opacity-30" />
+                      <Icon
+                        icon="solar:playlist-2-linear"
+                        className="text-3xl mx-auto mb-2 opacity-30"
+                      />
                       <p className="text-sm">No steps yet. Add a step to get started.</p>
                     </div>
                   )}
@@ -1017,7 +1153,9 @@ export function WorkflowsPage() {
                       {showPicker && (
                         <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-xl z-50 overflow-hidden">
                           <div className="px-3 py-2 border-b border-border">
-                            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider">Choose step type</span>
+                            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-wider">
+                              Choose step type
+                            </span>
                           </div>
                           <div className="py-1 max-h-64 overflow-y-auto">
                             {STEP_TYPES.map((t) => (
@@ -1026,7 +1164,10 @@ export function WorkflowsPage() {
                                 onClick={() => addStep(t.id)}
                                 className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors"
                               >
-                                <Icon icon={t.icon} className={`text-base ${t.color} flex-shrink-0`} />
+                                <Icon
+                                  icon={t.icon}
+                                  className={`text-base ${t.color} flex-shrink-0`}
+                                />
                                 <span className="text-sm">{t.label}</span>
                               </button>
                             ))}
@@ -1042,7 +1183,7 @@ export function WorkflowsPage() {
             {/* Run tab — kept mounted to preserve log scroll position */}
             <div
               className="flex-1 flex flex-col overflow-hidden"
-              style={{ display: activeTab === 'run' ? undefined : 'none' }}
+              style={{ display: activeTab === "run" ? undefined : "none" }}
             >
               <WorkflowRunView
                 stepRuns={runEntry?.stepRuns ?? []}
@@ -1050,19 +1191,21 @@ export function WorkflowsPage() {
                 collapsedSections={runEntry?.collapsedSections ?? {}}
                 onToggleSection={(id) => activeId && toggleSection(activeId, id)}
                 done={runEntry?.done ?? false}
-                finalStatus={runEntry?.finalStatus ?? 'running'}
+                finalStatus={runEntry?.finalStatus ?? "running"}
                 error={startError}
                 runId={runEntry?.runId ?? null}
                 onStop={handleStop}
                 stopping={runEntry?.stopping ?? false}
                 logBodyRef={logBodyRef}
                 currentStepRunId={runEntry?.currentStepRunId ?? null}
-                onRetryStep={(position, mode) => handleRun(mode === 'skip' ? position + 1 : position)}
+                onRetryStep={(position, mode) =>
+                  handleRun(mode === "skip" ? position + 1 : position)
+                }
               />
             </div>
 
             {/* History tab */}
-            {activeTab === 'history' && (
+            {activeTab === "history" && (
               <div className="flex-1 flex flex-col overflow-hidden">
                 <WorkflowHistoryView
                   workflowId={editedWorkflow.id}
@@ -1084,30 +1227,34 @@ export function WorkflowsPage() {
               <p className="text-xs text-foreground/40 mt-0.5">
                 {pendingStartPosition > 0 && editedWorkflow.steps[pendingStartPosition]
                   ? `Fill in the inputs for this run — starting from "${getStepType(editedWorkflow.steps[pendingStartPosition].type).label}".`
-                  : 'Fill in the inputs for this run.'}
+                  : "Fill in the inputs for this run."}
               </p>
             </div>
             <div className="px-5 py-4 flex flex-col gap-3">
               {(editedWorkflow.args ?? []).map((arg) => (
                 <div key={arg.key}>
                   <label className="text-xs text-foreground/50 mb-1 block">{arg.label}</label>
-                  {arg.key === 'environment' ? (
+                  {arg.key === "environment" ? (
                     <Select
-                      value={runArgValues.environment ?? ''}
-                      onValueChange={(v) => setRunArgValues((vals) => ({ ...vals, environment: v }))}
+                      value={runArgValues.environment ?? ""}
+                      onValueChange={(v) =>
+                        setRunArgValues((vals) => ({ ...vals, environment: v }))
+                      }
                     >
                       <SelectTrigger size="sm" className="h-8 text-xs w-full">
                         <SelectValue placeholder="Select environment…" />
                       </SelectTrigger>
                       <SelectContent>
                         {workspaceState.loadedEnvs.map((e) => (
-                          <SelectItem key={e.name} value={e.name}>{e.displayName}</SelectItem>
+                          <SelectItem key={e.name} value={e.name}>
+                            {e.displayName}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                  ) : arg.key === 'neuron' ? (
+                  ) : arg.key === "neuron" ? (
                     <SearchableSelect
-                      value={runArgValues.neuron ?? ''}
+                      value={runArgValues.neuron ?? ""}
                       options={workspaceState.neurons.map((n) => ({
                         label: n.id,
                         value: `organisations/${workspaceState.organisation}/products/${workspaceState.product}/neurons/${n.id}`,
@@ -1115,23 +1262,28 @@ export function WorkflowsPage() {
                       onChange={(v) => setRunArgValues((vals) => ({ ...vals, neuron: v }))}
                       placeholder="Select neuron…"
                     />
-                  ) : arg.key === 'branch' ? (
+                  ) : arg.key === "branch" ? (
                     <SearchableSelect
-                      value={runArgValues.branch ?? 'master'}
+                      value={runArgValues.branch ?? "master"}
                       options={runBranches}
                       onChange={(v) => setRunArgValues((vals) => ({ ...vals, branch: v }))}
-                      placeholder={runBranchesLoading ? 'Loading branches…' : 'Select branch…'}
+                      placeholder={runBranchesLoading ? "Loading branches…" : "Select branch…"}
                     />
                   ) : null}
                 </div>
               ))}
             </div>
             <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setRunArgsOpen(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => setRunArgsOpen(false)}>
+                Cancel
+              </Button>
               <Button
                 variant="primary"
                 disabled={(editedWorkflow.args ?? []).some((a) => !runArgValues[a.key])}
-                onClick={() => { setRunArgsOpen(false); doStartRun(runArgValues, pendingStartPosition); }}
+                onClick={() => {
+                  setRunArgsOpen(false);
+                  doStartRun(runArgValues, pendingStartPosition);
+                }}
                 icon={<Icon icon="solar:play-linear" className="text-base" />}
               >
                 Run
@@ -1155,12 +1307,14 @@ export function WorkflowsPage() {
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="e.g. Define & Build API"
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                   autoFocus
                 />
               </div>
               <div>
-                <label className="text-xs text-foreground/50 mb-1 block">Description (optional)</label>
+                <label className="text-xs text-foreground/50 mb-1 block">
+                  Description (optional)
+                </label>
                 <Input
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
@@ -1169,7 +1323,14 @@ export function WorkflowsPage() {
               </div>
             </div>
             <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => { setShowNewModal(false); setNewName(''); setNewDesc(''); }}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowNewModal(false);
+                  setNewName("");
+                  setNewDesc("");
+                }}
+              >
                 Cancel
               </Button>
               <Button variant="primary" onClick={handleCreate} disabled={!newName.trim()}>
@@ -1186,12 +1347,12 @@ export function WorkflowsPage() {
         title="Protected Environment"
         description={
           <>
-            {protectedConfirmLabels.join(', ')} {protectedConfirmLabels.length > 1 ? 'are' : 'is'} protected.
-            Type the phrase below to confirm this run.
+            {protectedConfirmLabels.join(", ")} {protectedConfirmLabels.length > 1 ? "are" : "is"}{" "}
+            protected. Type the phrase below to confirm this run.
           </>
         }
         confirmLabel="Run"
-        requireText={`Deploy to ${protectedConfirmLabels.join(', ')}`}
+        requireText={`Deploy to ${protectedConfirmLabels.join(", ")}`}
         onConfirm={() => {
           setProtectedConfirmOpen(false);
           const pending = pendingRunRef.current;
@@ -1205,13 +1366,17 @@ export function WorkflowsPage() {
 
 // ─── NeuronPickerModal ────────────────────────────────────────────────────────
 
-function NeuronPickerModal({ format, onSelect, onClose }: {
-  format: 'short' | 'full';
+function NeuronPickerModal({
+  format,
+  onSelect,
+  onClose,
+}: {
+  format: "short" | "full";
   onSelect: (value: string) => void;
   onClose: () => void;
 }) {
   const { state } = useWorkspace();
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
 
   const neurons = state.neurons;
   const org = state.organisation;
@@ -1221,14 +1386,20 @@ function NeuronPickerModal({ format, onSelect, onClose }: {
   const filtered = neurons.filter((n) => n.id.toLowerCase().includes(lowerFilter));
 
   function handleSelect(neuronId: string) {
-    const value = format === 'short'
-      ? `neurons/${neuronId}`
-      : `organisations/${org}/products/${product}/neurons/${neuronId}`;
+    const value =
+      format === "short"
+        ? `neurons/${neuronId}`
+        : `organisations/${org}/products/${product}/neurons/${neuronId}`;
     onSelect(value);
   }
 
   return (
-    <Dialog open={true} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={true}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="text-foreground p-0 max-w-[360px] overflow-hidden">
         <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
           <Icon icon="solar:cpu-bolt-linear" className="text-brand text-lg" />
@@ -1239,7 +1410,7 @@ function NeuronPickerModal({ format, onSelect, onClose }: {
             autoFocus
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && onClose()}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
             placeholder="Filter neurons…"
             className="w-full bg-transparent text-[12px] font-mono text-foreground outline-none placeholder:text-foreground/30"
           />
@@ -1250,7 +1421,9 @@ function NeuronPickerModal({ format, onSelect, onClose }: {
               No neurons loaded — visit the Develop tab first.
             </p>
           ) : filtered.length === 0 ? (
-            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No neurons match</p>
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">
+              No neurons match
+            </p>
           ) : (
             filtered.map((n) => (
               <button
@@ -1273,26 +1446,31 @@ function NeuronPickerModal({ format, onSelect, onClose }: {
 type CommitEntry = { sha: string; message: string; author: string; timestamp: number };
 
 function parseNeuronId(neuron: string): { id: string; version: string } {
-  const parts = neuron.split('/');
+  const parts = neuron.split("/");
   const id = parts[parts.length - 1];
   const m = id.match(/[-.](v\d+)$/);
-  return { id, version: m ? m[1] : 'v1' };
+  return { id, version: m ? m[1] : "v1" };
 }
 
 // Replace any full neuron resource path in a step label with just its short id,
 // e.g. "Build: organisations/o/products/p/neurons/svc-v1" → "Build: svc-v1".
 function shortStepLabel(label: string): string {
-  return label.replace(/organisations\/\S*?\/neurons\/([^\s/]+)/g, '$1');
+  return label.replace(/organisations\/\S*?\/neurons\/([^\s/]+)/g, "$1");
 }
 
-function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
+function CommitPickerModal({
+  neuron,
+  branch,
+  onSelect,
+  onClose,
+}: {
   neuron: string;
   branch?: string;
   onSelect: (sha: string) => void;
   onClose: () => void;
 }) {
   const { state } = useWorkspace();
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [commits, setCommits] = useState<CommitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1303,26 +1481,38 @@ function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
     const { id: neuronId, version } = parseNeuronId(neuron);
 
     if (!org || !product || !neuronId) {
-      setError('Set the Neuron field first.');
+      setError("Set the Neuron field first.");
       setLoading(false);
       return;
     }
 
-    (BuildService.GetBuildCommits as (org: string, product: string, neuron: string, version: string, branch: string, count: number) => Promise<CommitEntry[]>)(
-      org, product, neuronId, version, branch || 'master', 30
-    )
+    (
+      BuildService.GetBuildCommits as (
+        org: string,
+        product: string,
+        neuron: string,
+        version: string,
+        branch: string,
+        count: number,
+      ) => Promise<CommitEntry[]>
+    )(org, product, neuronId, version, branch || "master", 30)
       .then((res) => setCommits(res ?? []))
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, [neuron, branch, state.organisation, state.product]);
 
   const lowerFilter = filter.toLowerCase();
-  const filtered = commits.filter((c) =>
-    c.sha.startsWith(filter) || c.message.toLowerCase().includes(lowerFilter)
+  const filtered = commits.filter(
+    (c) => c.sha.startsWith(filter) || c.message.toLowerCase().includes(lowerFilter),
   );
 
   return (
-    <Dialog open={true} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={true}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="text-foreground p-0 max-w-[440px] overflow-hidden">
         <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
           <Icon icon="solar:git-commit-linear" className="text-brand text-lg" />
@@ -1333,18 +1523,22 @@ function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
             autoFocus
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && onClose()}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
             placeholder="Filter by SHA or message…"
             className="w-full bg-transparent text-[12px] font-mono text-foreground outline-none placeholder:text-foreground/30"
           />
         </div>
         <div className="overflow-y-auto max-h-[360px] py-[6px]">
           {loading ? (
-            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">Loading commits…</p>
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">
+              Loading commits…
+            </p>
           ) : error ? (
             <p className="px-[16px] py-[12px] text-[11px] text-red-400/70 font-mono">{error}</p>
           ) : filtered.length === 0 ? (
-            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No commits found</p>
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">
+              No commits found
+            </p>
           ) : (
             filtered.map((c) => (
               <button
@@ -1356,7 +1550,7 @@ function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
                   {c.sha.slice(0, 7)}
                 </span>
                 <span className="text-[12px] text-foreground truncate leading-5">
-                  {c.message.split('\n')[0]}
+                  {c.message.split("\n")[0]}
                 </span>
               </button>
             ))
@@ -1369,21 +1563,32 @@ function CommitPickerModal({ neuron, branch, onSelect, onClose }: {
 
 // ─── VersionPickerModal ───────────────────────────────────────────────────────
 
-type VersionEntry = { name: string; version: string; createTime: number; buildCommit: string; logsUrl: string; state: number };
+type VersionEntry = {
+  name: string;
+  version: string;
+  createTime: number;
+  buildCommit: string;
+  logsUrl: string;
+  state: number;
+};
 
-function VersionPickerModal({ neuron, onSelect, onClose }: {
+function VersionPickerModal({
+  neuron,
+  onSelect,
+  onClose,
+}: {
   neuron: string;
   onSelect: (version: string) => void;
   onClose: () => void;
 }) {
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState("");
   const [versions, setVersions] = useState<VersionEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!neuron) {
-      setError('Set the Neuron field first.');
+      setError("Set the Neuron field first.");
       setLoading(false);
       return;
     }
@@ -1396,35 +1601,46 @@ function VersionPickerModal({ neuron, onSelect, onClose }: {
   const filtered = versions.filter((v) => v.version.includes(filter));
 
   return (
-    <Dialog open={true} onOpenChange={(o) => { if (!o) onClose(); }}>
+    <Dialog
+      open={true}
+      onOpenChange={(o) => {
+        if (!o) onClose();
+      }}
+    >
       <DialogContent className="text-foreground p-0 max-w-[440px] overflow-hidden">
         <div className="flex items-center gap-[10px] px-[16px] pt-[16px] pb-[12px] border-b border-border">
           <Icon icon="solar:box-linear" className="text-brand text-lg" />
-          <span className="text-[13px] font-bold text-foreground font-mono">Select Build Version</span>
+          <span className="text-[13px] font-bold text-foreground font-mono">
+            Select Build Version
+          </span>
         </div>
         <div className="px-[16px] py-[10px] border-b border-border">
           <input
             autoFocus
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && onClose()}
+            onKeyDown={(e) => e.key === "Escape" && onClose()}
             placeholder="Filter by version…"
             className="w-full bg-transparent text-[12px] font-mono text-foreground outline-none placeholder:text-foreground/30"
           />
         </div>
         <div className="overflow-y-auto max-h-[360px] py-[6px]">
           <button
-            onClick={() => onSelect('')}
+            onClick={() => onSelect("")}
             className="w-full flex items-center gap-3 px-[16px] py-[10px] transition-colors text-left hover:bg-foreground/[4%]"
           >
             <span className="text-[12px] text-brand font-mono">Latest build (default)</span>
           </button>
           {loading ? (
-            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">Loading versions…</p>
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">
+              Loading versions…
+            </p>
           ) : error ? (
             <p className="px-[16px] py-[12px] text-[11px] text-red-400/70 font-mono">{error}</p>
           ) : filtered.length === 0 ? (
-            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">No built versions found</p>
+            <p className="px-[16px] py-[12px] text-[11px] text-foreground/40 font-mono">
+              No built versions found
+            </p>
           ) : (
             filtered.map((v) => (
               <button
@@ -1444,7 +1660,12 @@ function VersionPickerModal({ neuron, onSelect, onClose }: {
 
 // ─── WorkflowListItem ─────────────────────────────────────────────────────────
 
-function WorkflowListItem({ workflow, active, onClick, onExport }: {
+function WorkflowListItem({
+  workflow,
+  active,
+  onClick,
+  onExport,
+}: {
   workflow: Workflow;
   active: boolean;
   onClick: () => void;
@@ -1453,25 +1674,31 @@ function WorkflowListItem({ workflow, active, onClick, onExport }: {
   return (
     <div
       className={`relative group flex items-stretch mx-1 rounded-lg transition-colors text-sm ${
-        active ? 'bg-brand-fill/10 text-brand' : 'text-foreground hover:bg-accent'
+        active ? "bg-brand-fill/10 text-brand" : "text-foreground hover:bg-accent"
       }`}
-      style={{ width: 'calc(100% - 8px)' }}
+      style={{ width: "calc(100% - 8px)" }}
     >
       <button onClick={onClick} className="flex-1 text-left px-3 py-2 min-w-0">
         <div className="flex items-center gap-1.5">
           {workflow.isTemplate && (
-            <Icon icon="solar:lock-linear" className="text-[10px] text-foreground/30 flex-shrink-0" />
+            <Icon
+              icon="solar:lock-linear"
+              className="text-[10px] text-foreground/30 flex-shrink-0"
+            />
           )}
           <span className="font-medium truncate text-xs">{workflow.name}</span>
         </div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <span className="text-[10px] text-foreground/30">
-            {workflow.steps.length} step{workflow.steps.length !== 1 ? 's' : ''}
+            {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
           </span>
         </div>
       </button>
       <button
-        onClick={(e) => { e.stopPropagation(); onExport(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onExport();
+        }}
         className="opacity-0 group-hover:opacity-100 w-6 flex items-center justify-center text-foreground/40 hover:text-foreground transition-opacity flex-shrink-0 pr-1"
         title="Export workflow"
       >
@@ -1483,7 +1710,22 @@ function WorkflowListItem({ workflow, active, onClick, onExport }: {
 
 // ─── StepCard ─────────────────────────────────────────────────────────────────
 
-function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, onParamChange, onFailureChange, onDuplicate, onRemove, onRunFromHere, runDisabled, onDragStart, onDrop }: {
+function StepCard({
+  step,
+  index,
+  expanded,
+  isTemplate,
+  workflowArgs,
+  onToggle,
+  onParamChange,
+  onFailureChange,
+  onDuplicate,
+  onRemove,
+  onRunFromHere,
+  runDisabled,
+  onDragStart,
+  onDrop,
+}: {
   step: WorkflowStep;
   index: number;
   expanded: boolean;
@@ -1509,9 +1751,13 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
   const type = getStepType(step.type);
   const summary = stepSummary(step);
   let params: Record<string, any> = {};
-  try { params = JSON.parse(step.params); } catch { /**/ }
+  try {
+    params = JSON.parse(step.params);
+  } catch {
+    /**/
+  }
 
-  const hasBranchField = type.fields.some((f) => f.type === 'branch');
+  const hasBranchField = type.fields.some((f) => f.type === "branch");
   useEffect(() => {
     if (!expanded || !hasBranchField || !state.organisation || !state.product) return;
     setBranchesLoading(true);
@@ -1529,7 +1775,10 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
       onDrop={onDrop}
       className="mb-2 bg-card border border-border rounded-lg overflow-hidden hover:border-border/80 transition-colors"
     >
-      <div className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none group" onClick={onToggle}>
+      <div
+        className="flex items-center gap-2 px-3 py-2.5 cursor-pointer select-none group"
+        onClick={onToggle}
+      >
         {!isTemplate && (
           <Icon
             icon="solar:list-linear"
@@ -1544,7 +1793,10 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
         {!isTemplate && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
-              onClick={(e) => { e.stopPropagation(); if (!runDisabled) onRunFromHere(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!runDisabled) onRunFromHere();
+              }}
               disabled={runDisabled}
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-brand disabled:opacity-40 disabled:hover:text-foreground/40 transition-colors"
               title="Run from this step"
@@ -1552,14 +1804,20 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
               <Icon icon="solar:play-linear" className="text-xs" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate();
+              }}
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-accent text-foreground/40 hover:text-foreground transition-colors"
               title="Duplicate"
             >
               <Icon icon="solar:copy-linear" className="text-xs" />
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
               className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-400/10 text-foreground/40 hover:text-red-400 transition-colors"
               title="Remove"
             >
@@ -1569,7 +1827,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
         )}
         <Icon
           icon="solar:alt-arrow-right-linear"
-          className={`text-foreground/30 text-xs transition-transform flex-shrink-0 ${expanded ? 'rotate-90' : ''}`}
+          className={`text-foreground/30 text-xs transition-transform flex-shrink-0 ${expanded ? "rotate-90" : ""}`}
         />
       </div>
 
@@ -1580,19 +1838,21 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
           ) : (
             type.fields.map((f) => (
               <div key={f.key} className="mt-3">
-                <label className="text-[10px] font-medium text-foreground/50 block mb-1">{f.label}</label>
-                {f.type === 'mono' ? (
+                <label className="text-[10px] font-medium text-foreground/50 block mb-1">
+                  {f.label}
+                </label>
+                {f.type === "mono" ? (
                   <textarea
                     className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-[11px] font-mono text-green-400 focus:outline-none focus:border-brand-fill resize-none"
                     rows={2}
-                    value={params[f.key] ?? ''}
+                    value={params[f.key] ?? ""}
                     placeholder={f.placeholder}
                     onChange={(e) => onParamChange(f.key, e.target.value)}
                     disabled={isTemplate}
                   />
-                ) : f.type === 'select' ? (
+                ) : f.type === "select" ? (
                   <Select
-                    value={params[f.key] ?? f.options?.[0] ?? ''}
+                    value={params[f.key] ?? f.options?.[0] ?? ""}
                     onValueChange={(v) => onParamChange(f.key, v)}
                     disabled={isTemplate}
                   >
@@ -1600,17 +1860,25 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      {f.options?.map((o) => (
+                        <SelectItem key={o} value={o}>
+                          {o}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                ) : (f.type === 'neuron' || f.type === 'neuron-full') ? (
+                ) : f.type === "neuron" || f.type === "neuron-full" ? (
                   <>
-                    {f.type === 'neuron-full' && workflowArgs.some((a) => a.key === 'neuron') && (
+                    {f.type === "neuron-full" && workflowArgs.some((a) => a.key === "neuron") && (
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <span className="text-[10px] text-foreground/40">
+                          Use workflow argument
+                        </span>
                         <Switch
                           checked={isNeuronBound(params[f.key])}
-                          onCheckedChange={(checked) => onParamChange(f.key, checked ? NEURON_ARG_SENTINEL : '')}
+                          onCheckedChange={(checked) =>
+                            onParamChange(f.key, checked ? NEURON_ARG_SENTINEL : "")
+                          }
                           disabled={isTemplate}
                         />
                       </div>
@@ -1626,41 +1894,56 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                           disabled={isTemplate}
                           className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
                         >
-                          <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
-                            {params[f.key] ? params[f.key].split('/').pop() : 'Select neuron…'}
+                          <span
+                            className={`font-mono truncate ${params[f.key] ? "text-foreground" : "text-foreground/30"}`}
+                          >
+                            {params[f.key] ? params[f.key].split("/").pop() : "Select neuron…"}
                           </span>
-                          <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
+                          <Icon
+                            icon="solar:magnifer-linear"
+                            className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors"
+                          />
                         </button>
                         {neuronPickerKey === f.key && (
                           <NeuronPickerModal
-                            format={f.type === 'neuron' ? 'short' : 'full'}
-                            onSelect={(val) => { onParamChange(f.key, val); setNeuronPickerKey(null); }}
+                            format={f.type === "neuron" ? "short" : "full"}
+                            onSelect={(val) => {
+                              onParamChange(f.key, val);
+                              setNeuronPickerKey(null);
+                            }}
                             onClose={() => setNeuronPickerKey(null)}
                           />
                         )}
                       </>
                     )}
                   </>
-                ) : f.type === 'neuron-multi' ? (
+                ) : f.type === "neuron-multi" ? (
                   <>
                     <div className="space-y-1.5 mb-2">
-                      {(Array.isArray(params[f.key]) ? params[f.key] : []).map((n: string, i: number) => (
-                        <div key={i} className="flex items-center gap-2 bg-background border border-border rounded-md px-2.5 py-1.5">
-                          <span className="flex-1 text-xs font-mono truncate text-foreground">{n.split('/').pop()}</span>
-                          {!isTemplate && (
-                            <button
-                              onClick={() => {
-                                const arr = [...params[f.key]];
-                                arr.splice(i, 1);
-                                onParamChange(f.key, arr);
-                              }}
-                              className="text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
-                            >
-                              <Icon icon="solar:close-circle-linear" className="text-sm" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                      {(Array.isArray(params[f.key]) ? params[f.key] : []).map(
+                        (n: string, i: number) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 bg-background border border-border rounded-md px-2.5 py-1.5"
+                          >
+                            <span className="flex-1 text-xs font-mono truncate text-foreground">
+                              {n.split("/").pop()}
+                            </span>
+                            {!isTemplate && (
+                              <button
+                                onClick={() => {
+                                  const arr = [...params[f.key]];
+                                  arr.splice(i, 1);
+                                  onParamChange(f.key, arr);
+                                }}
+                                className="text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
+                              >
+                                <Icon icon="solar:close-circle-linear" className="text-sm" />
+                              </button>
+                            )}
+                          </div>
+                        ),
+                      )}
                     </div>
                     {!isTemplate && (
                       <button
@@ -1683,35 +1966,49 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                       />
                     )}
                   </>
-                ) : f.type === 'commit' ? (
+                ) : f.type === "commit" ? (
                   <>
                     <button
                       onClick={() => !isTemplate && setCommitPickerOpen(true)}
                       disabled={isTemplate}
                       className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
                     >
-                      <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
-                        {params[f.key] ? params[f.key].slice(0, 12) : (f.placeholder || 'Latest commit')}
+                      <span
+                        className={`font-mono truncate ${params[f.key] ? "text-foreground" : "text-foreground/30"}`}
+                      >
+                        {params[f.key]
+                          ? params[f.key].slice(0, 12)
+                          : f.placeholder || "Latest commit"}
                       </span>
-                      <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
+                      <Icon
+                        icon="solar:magnifer-linear"
+                        className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors"
+                      />
                     </button>
                     {commitPickerOpen && (
                       <CommitPickerModal
-                        neuron={params['neuron'] ?? ''}
-                        branch={params['branch'] || 'master'}
-                        onSelect={(sha) => { onParamChange('commit', sha); setCommitPickerOpen(false); }}
+                        neuron={params["neuron"] ?? ""}
+                        branch={params["branch"] || "master"}
+                        onSelect={(sha) => {
+                          onParamChange("commit", sha);
+                          setCommitPickerOpen(false);
+                        }}
                         onClose={() => setCommitPickerOpen(false)}
                       />
                     )}
                   </>
-                ) : f.type === 'branch' ? (
+                ) : f.type === "branch" ? (
                   <>
-                    {workflowArgs.some((a) => a.key === 'branch') && (
+                    {workflowArgs.some((a) => a.key === "branch") && (
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <span className="text-[10px] text-foreground/40">
+                          Use workflow argument
+                        </span>
                         <Switch
                           checked={isBranchBound(params[f.key])}
-                          onCheckedChange={(checked) => onParamChange(f.key, checked ? BRANCH_ARG_SENTINEL : 'master')}
+                          onCheckedChange={(checked) =>
+                            onParamChange(f.key, checked ? BRANCH_ARG_SENTINEL : "master")
+                          }
                           disabled={isTemplate}
                         />
                       </div>
@@ -1722,41 +2019,51 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                       </div>
                     ) : isTemplate ? (
                       <div className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs font-mono text-foreground/40">
-                        {params[f.key] || f.placeholder || 'master'}
+                        {params[f.key] || f.placeholder || "master"}
                       </div>
                     ) : (
                       <SearchableSelect
-                        value={params[f.key] ?? 'master'}
+                        value={params[f.key] ?? "master"}
                         options={branches}
                         onChange={(v) => onParamChange(f.key, v)}
-                        placeholder={branchesLoading ? 'Loading branches…' : (f.placeholder || 'master')}
+                        placeholder={
+                          branchesLoading ? "Loading branches…" : f.placeholder || "master"
+                        }
                         className="w-full h-8"
                       />
                     )}
                   </>
-                ) : f.type === 'build-version' ? (
+                ) : f.type === "build-version" ? (
                   <>
                     <button
                       onClick={() => !isTemplate && setVersionPickerOpen(true)}
                       disabled={isTemplate}
                       className="w-full flex items-center justify-between gap-2 bg-background border border-border rounded-md px-2.5 py-2 text-xs hover:border-foreground/30 disabled:opacity-60 disabled:cursor-default transition-colors group"
                     >
-                      <span className={`font-mono truncate ${params[f.key] ? 'text-foreground' : 'text-foreground/30'}`}>
-                        {params[f.key] || (f.placeholder || 'Latest build')}
+                      <span
+                        className={`font-mono truncate ${params[f.key] ? "text-foreground" : "text-foreground/30"}`}
+                      >
+                        {params[f.key] || f.placeholder || "Latest build"}
                       </span>
-                      <Icon icon="solar:magnifer-linear" className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors" />
+                      <Icon
+                        icon="solar:magnifer-linear"
+                        className="text-foreground/30 group-hover:text-foreground/60 flex-shrink-0 transition-colors"
+                      />
                     </button>
                     {versionPickerOpen && (
                       <VersionPickerModal
-                        neuron={params['neuron'] ?? ''}
-                        onSelect={(version) => { onParamChange(f.key, version); setVersionPickerOpen(false); }}
+                        neuron={params["neuron"] ?? ""}
+                        onSelect={(version) => {
+                          onParamChange(f.key, version);
+                          setVersionPickerOpen(false);
+                        }}
                         onClose={() => setVersionPickerOpen(false)}
                       />
                     )}
                   </>
-                ) : f.type === 'repo-select' ? (
+                ) : f.type === "repo-select" ? (
                   <Select
-                    value={params[f.key] ?? 'build-repo'}
+                    value={params[f.key] ?? "build-repo"}
                     onValueChange={(v) => onParamChange(f.key, v)}
                     disabled={isTemplate}
                   >
@@ -1768,14 +2075,18 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                       <SelectItem value="define-repo">Define repo</SelectItem>
                     </SelectContent>
                   </Select>
-                ) : f.type === 'env-multi' ? (
+                ) : f.type === "env-multi" ? (
                   <>
-                    {workflowArgs.some((a) => a.key === 'environment') && (
+                    {workflowArgs.some((a) => a.key === "environment") && (
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] text-foreground/40">Use workflow argument</span>
+                        <span className="text-[10px] text-foreground/40">
+                          Use workflow argument
+                        </span>
                         <Switch
                           checked={isEnvBound(params[f.key])}
-                          onCheckedChange={(checked) => onParamChange(f.key, checked ? ENV_ARG_SENTINEL : [])}
+                          onCheckedChange={(checked) =>
+                            onParamChange(f.key, checked ? ENV_ARG_SENTINEL : [])
+                          }
                           disabled={isTemplate}
                         />
                       </div>
@@ -1786,7 +2097,10 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                       </div>
                     ) : (
                       <MultiSelect
-                        options={state.loadedEnvs.map((e) => ({ value: e.name, label: e.displayName }))}
+                        options={state.loadedEnvs.map((e) => ({
+                          value: e.name,
+                          label: e.displayName,
+                        }))}
                         value={Array.isArray(params[f.key]) ? params[f.key] : []}
                         onChange={(vals) => onParamChange(f.key, vals)}
                         placeholder="Select environments…"
@@ -1797,7 +2111,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
                 ) : (
                   <input
                     className="w-full bg-background border border-border rounded-md px-2.5 py-2 text-xs focus:outline-none focus:border-brand-fill"
-                    value={params[f.key] ?? ''}
+                    value={params[f.key] ?? ""}
                     placeholder={f.placeholder}
                     onChange={(e) => onParamChange(f.key, e.target.value)}
                     disabled={isTemplate}
@@ -1810,7 +2124,7 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
           {!isTemplate && (
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
               <span className="text-[10px] text-foreground/40 flex-shrink-0">On failure:</span>
-              <Select value={step.onFailure || 'stop'} onValueChange={onFailureChange}>
+              <Select value={step.onFailure || "stop"} onValueChange={onFailureChange}>
                 <SelectTrigger size="sm" className="h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -1832,23 +2146,23 @@ function StepCard({ step, index, expanded, isTemplate, workflowArgs, onToggle, o
 type SubTab = { id: string; label: string; text: string };
 
 function parseSubTabs(logText: string): SubTab[] | null {
-  if (!logText.includes('\x1fTAB:')) return null;
+  if (!logText.includes("\x1fTAB:")) return null;
   const tabMap = new Map<string, SubTab>();
   const tabOrder: string[] = [];
   let currentId: string | null = null;
-  for (const line of logText.split('\n')) {
-    if (line.startsWith('\x1fTAB:')) {
+  for (const line of logText.split("\n")) {
+    if (line.startsWith("\x1fTAB:")) {
       const rest = line.slice(5);
-      const sep = rest.indexOf('\x1f');
+      const sep = rest.indexOf("\x1f");
       const id = sep >= 0 ? rest.slice(0, sep) : rest;
       const label = sep >= 0 ? rest.slice(sep + 1) : rest;
       currentId = id;
       if (!tabMap.has(id)) {
-        tabMap.set(id, { id, label, text: '' });
+        tabMap.set(id, { id, label, text: "" });
         tabOrder.push(id);
       }
     } else if (currentId) {
-      tabMap.get(currentId)!.text += line + '\n';
+      tabMap.get(currentId)!.text += line + "\n";
     }
   }
   const tabs = tabOrder.map((id) => tabMap.get(id)!);
@@ -1856,36 +2170,53 @@ function parseSubTabs(logText: string): SubTab[] | null {
 }
 
 function LogLine({ text }: { text: string }) {
-  let cls = 'text-foreground/50';
-  if (text.startsWith('━━━')) cls = 'text-brand';
-  else if (text.startsWith('✓') || text.endsWith('s') && text.includes('done in')) cls = 'text-green-400';
-  else if (text.startsWith('✗') || text.includes('failed:') || text.includes('error')) cls = 'text-red-400';
-  else if (text.startsWith('#') || text.startsWith('Operation:')) cls = 'text-foreground/30';
-  else if (text.startsWith('Resolved') || text.startsWith('Starting') || text.startsWith('Build complete') || text.startsWith('Deploy complete')) cls = 'text-foreground/80';
-  return <div className={`${cls} font-mono text-[11px] leading-relaxed`}>{text || ' '}</div>;
+  let cls = "text-foreground/50";
+  if (text.startsWith("━━━")) cls = "text-brand";
+  else if (text.startsWith("✓") || (text.endsWith("s") && text.includes("done in")))
+    cls = "text-green-400";
+  else if (text.startsWith("✗") || text.includes("failed:") || text.includes("error"))
+    cls = "text-red-400";
+  else if (text.startsWith("#") || text.startsWith("Operation:")) cls = "text-foreground/30";
+  else if (
+    text.startsWith("Resolved") ||
+    text.startsWith("Starting") ||
+    text.startsWith("Build complete") ||
+    text.startsWith("Deploy complete")
+  )
+    cls = "text-foreground/80";
+  return <div className={`${cls} font-mono text-[11px] leading-relaxed`}>{text || " "}</div>;
 }
 
 // ─── WorkflowHistoryView ──────────────────────────────────────────────────────
 
 function formatRunTime(ts: number): string {
   const diff = Date.now() / 1000 - ts;
-  if (diff < 60) return 'just now';
+  if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   if (diff < 2592000) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(ts * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return new Date(ts * 1000).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 const RUN_STATUS_META: Record<string, { icon: string; color: string; label: string }> = {
-  running: { icon: 'solar:spinner-linear', color: 'text-blue-400', label: 'Running' },
-  success: { icon: 'solar:check-circle-bold', color: 'text-green-400', label: 'Success' },
-  failed: { icon: 'solar:close-circle-bold', color: 'text-red-400', label: 'Failed' },
-  stopped: { icon: 'solar:stop-circle-bold', color: 'text-orange-400', label: 'Stopped' },
+  running: { icon: "solar:spinner-linear", color: "text-blue-400", label: "Running" },
+  success: { icon: "solar:check-circle-bold", color: "text-green-400", label: "Success" },
+  failed: { icon: "solar:close-circle-bold", color: "text-red-400", label: "Failed" },
+  stopped: { icon: "solar:stop-circle-bold", color: "text-orange-400", label: "Stopped" },
 };
 
 const HISTORY_PAGE_SIZE = 25;
 
-function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
+function WorkflowHistoryView({
+  workflowId,
+  liveRunId,
+  refreshKey,
+}: {
   workflowId: string;
   liveRunId: string | null;
   refreshKey: string | null;
@@ -1914,7 +2245,9 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
     }
   }, [workflowId, limit]);
 
-  useEffect(() => { load(); }, [load, refreshKey, liveRunId]);
+  useEffect(() => {
+    load();
+  }, [load, refreshKey, liveRunId]);
 
   // Reset selection when switching workflows.
   useEffect(() => {
@@ -1931,7 +2264,8 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
       setDetail(r);
       // Collapse successful/skipped step sections by default; expand failed ones.
       const c: Record<string, boolean> = {};
-      for (const sr of r?.stepRuns ?? []) c[sr.id] = sr.status !== 'failed' && sr.status !== 'running';
+      for (const sr of r?.stepRuns ?? [])
+        c[sr.id] = sr.status !== "failed" && sr.status !== "running";
       setCollapsed(c);
     } catch {
       setDetail(null);
@@ -1944,7 +2278,10 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
     setMutating(true);
     try {
       await WorkflowService.DeleteRun(runId);
-      if (selectedId === runId) { setSelectedId(null); setDetail(null); }
+      if (selectedId === runId) {
+        setSelectedId(null);
+        setDetail(null);
+      }
       await load();
     } finally {
       setMutating(false);
@@ -1969,7 +2306,7 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
   const visibleRuns = hasMore ? runs.slice(0, limit) : runs;
 
   const logSegments: Record<string, string> = {};
-  for (const sr of detail?.stepRuns ?? []) logSegments[sr.id] = sr.log ?? '';
+  for (const sr of detail?.stepRuns ?? []) logSegments[sr.id] = sr.log ?? "";
 
   return (
     <ResizablePanelGroup direction="horizontal" className="flex-1 overflow-hidden">
@@ -1977,7 +2314,9 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
       <ResizablePanel defaultSize={26} minSize={16} maxSize={45}>
         <div className="h-full flex flex-col border-r border-border">
           <div className="flex items-center justify-between px-4 py-2.5 border-b border-border flex-shrink-0">
-            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">Run History</span>
+            <span className="text-[10px] font-bold text-foreground/40 uppercase tracking-widest">
+              Run History
+            </span>
             {runs.length > 0 && (
               <button
                 onClick={() => setClearOpen(true)}
@@ -2000,29 +2339,38 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
               <>
                 {visibleRuns.map((r) => {
                   const meta = RUN_STATUS_META[r.status] ?? RUN_STATUS_META.stopped;
-                  const isLive = r.id === liveRunId || r.status === 'running';
+                  const isLive = r.id === liveRunId || r.status === "running";
                   return (
                     <div
                       key={r.id}
                       role="button"
                       tabIndex={0}
                       onClick={() => openRun(r.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') openRun(r.id); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") openRun(r.id);
+                      }}
                       className={`group flex items-center gap-2.5 px-4 py-2.5 border-b border-border/40 cursor-pointer transition-colors ${
-                        selectedId === r.id ? 'bg-accent' : 'hover:bg-foreground/[3%]'
+                        selectedId === r.id ? "bg-accent" : "hover:bg-foreground/[3%]"
                       }`}
                     >
-                      <Icon icon={meta.icon} className={`text-sm flex-shrink-0 ${meta.color} ${isLive ? 'animate-spin' : ''}`} />
+                      <Icon
+                        icon={meta.icon}
+                        className={`text-sm flex-shrink-0 ${meta.color} ${isLive ? "animate-spin" : ""}`}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs font-medium truncate">{meta.label}</div>
                         <div className="text-[10px] text-foreground/40 font-mono mt-0.5">
                           {formatRunTime(r.startedAt)}
-                          {r.completedAt != null && ` · ${formatDuration(r.startedAt, r.completedAt)}`}
+                          {r.completedAt != null &&
+                            ` · ${formatDuration(r.startedAt, r.completedAt)}`}
                         </div>
                       </div>
                       {!isLive && (
                         <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(r.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(r.id);
+                          }}
                           title="Delete this run"
                           className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-foreground/30 hover:text-red-400 transition-colors flex-shrink-0"
                         >
@@ -2071,8 +2419,8 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
             logSegments={logSegments}
             collapsedSections={collapsed}
             onToggleSection={(id) => setCollapsed((c) => ({ ...c, [id]: !c[id] }))}
-            done={detail.status !== 'running'}
-            finalStatus={detail.status === 'success' ? 'success' : 'failed'}
+            done={detail.status !== "running"}
+            finalStatus={detail.status === "success" ? "success" : "failed"}
             error={null}
             runId={detail.id}
             onStop={() => {}}
@@ -2087,7 +2435,9 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
         title="Delete Run"
         description="This permanently removes this run and its logs from history."
         confirmLabel="Delete"
@@ -2097,7 +2447,9 @@ function WorkflowHistoryView({ workflowId, liveRunId, refreshKey }: {
       />
       <ConfirmDialog
         open={clearOpen}
-        onOpenChange={(o) => { if (!o) setClearOpen(false); }}
+        onOpenChange={(o) => {
+          if (!o) setClearOpen(false);
+        }}
         title="Clear Run History"
         description="This permanently removes all past runs and their logs for this workflow. Running executions are kept."
         confirmLabel="Clear all"
@@ -2139,7 +2491,7 @@ function WorkflowRunView({
   stopping: boolean;
   logBodyRef: React.RefObject<HTMLDivElement>;
   currentStepRunId: string | null;
-  onRetryStep: (position: number, mode: 'retry' | 'skip') => void;
+  onRetryStep: (position: number, mode: "retry" | "skip") => void;
   readOnly?: boolean;
 }) {
   const isRunning = runId !== null && !done;
@@ -2193,7 +2545,7 @@ function WorkflowRunView({
               <Icon icon="solar:spinner-linear" className="text-blue-400 text-sm animate-spin" />
               <span className="text-xs text-foreground/50">Running…</span>
             </>
-          ) : finalStatus === 'success' ? (
+          ) : finalStatus === "success" ? (
             <>
               <Icon icon="solar:check-circle-bold" className="text-green-400 text-sm" />
               <span className="text-xs text-foreground/50">Completed successfully</span>
@@ -2214,7 +2566,7 @@ function WorkflowRunView({
             className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-xs h-7 px-2"
             icon={<Icon icon="solar:stop-circle-linear" className="text-sm" />}
           >
-            {stopping ? 'Stopping…' : 'Stop'}
+            {stopping ? "Stopping…" : "Stop"}
           </Button>
         )}
       </div>
@@ -2224,56 +2576,63 @@ function WorkflowRunView({
         {/* Left: timeline spine */}
         <ResizablePanel defaultSize={22} minSize={12} maxSize={45}>
           <div className="h-full border-r border-border overflow-y-auto py-5 px-4">
-          {stepRuns.map((sr, idx) => {
-            const dotBase = 'w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 text-[9px] font-mono transition-all';
-            const dotCls = sr.status === 'running'
-              ? `${dotBase} border-blue-400 bg-blue-400/10 text-blue-400`
-              : sr.status === 'success'
-              ? `${dotBase} border-green-400/50 bg-green-400/10 text-green-400`
-              : sr.status === 'failed'
-              ? `${dotBase} border-red-400/50 bg-red-400/10 text-red-400`
-              : `${dotBase} border-border bg-card text-foreground/20`;
+            {stepRuns.map((sr, idx) => {
+              const dotBase =
+                "w-5 h-5 rounded-full border flex items-center justify-center flex-shrink-0 text-[9px] font-mono transition-all";
+              const dotCls =
+                sr.status === "running"
+                  ? `${dotBase} border-blue-400 bg-blue-400/10 text-blue-400`
+                  : sr.status === "success"
+                    ? `${dotBase} border-green-400/50 bg-green-400/10 text-green-400`
+                    : sr.status === "failed"
+                      ? `${dotBase} border-red-400/50 bg-red-400/10 text-red-400`
+                      : `${dotBase} border-border bg-card text-foreground/20`;
 
-            const lineCls = sr.status === 'success'
-              ? 'w-px min-h-[20px] flex-1 bg-green-400/20 mx-auto mt-1'
-              : sr.status === 'failed'
-              ? 'w-px min-h-[20px] flex-1 bg-red-400/20 mx-auto mt-1'
-              : 'w-px min-h-[20px] flex-1 bg-border mx-auto mt-1';
+              const lineCls =
+                sr.status === "success"
+                  ? "w-px min-h-[20px] flex-1 bg-green-400/20 mx-auto mt-1"
+                  : sr.status === "failed"
+                    ? "w-px min-h-[20px] flex-1 bg-red-400/20 mx-auto mt-1"
+                    : "w-px min-h-[20px] flex-1 bg-border mx-auto mt-1";
 
-            const duration = formatDuration(sr.startedAt, sr.completedAt);
+              const duration = formatDuration(sr.startedAt, sr.completedAt);
 
-            return (
-              <div key={sr.id} className="flex gap-2.5">
-                <div className="flex flex-col items-center" style={{ width: 20 }}>
-                  <div className={dotCls}>
-                    {sr.status === 'running' ? (
-                      <Icon icon="solar:spinner-linear" className="animate-spin text-[10px]" />
-                    ) : sr.status === 'success' ? (
-                      '✓'
-                    ) : sr.status === 'failed' ? (
-                      '✗'
-                    ) : sr.status === 'skipped' ? (
-                      '—'
-                    ) : (
-                      idx + 1
+              return (
+                <div key={sr.id} className="flex gap-2.5">
+                  <div className="flex flex-col items-center" style={{ width: 20 }}>
+                    <div className={dotCls}>
+                      {sr.status === "running" ? (
+                        <Icon icon="solar:spinner-linear" className="animate-spin text-[10px]" />
+                      ) : sr.status === "success" ? (
+                        "✓"
+                      ) : sr.status === "failed" ? (
+                        "✗"
+                      ) : sr.status === "skipped" ? (
+                        "—"
+                      ) : (
+                        idx + 1
+                      )}
+                    </div>
+                    {idx < stepRuns.length - 1 && <div className={lineCls} />}
+                  </div>
+                  <div className="flex-1 min-w-0 pb-5">
+                    <div
+                      className={`text-xs font-medium truncate ${sr.status === "running" ? "text-foreground" : sr.status === "pending" ? "text-foreground/30" : ""}`}
+                    >
+                      {shortStepLabel(sr.label)}
+                    </div>
+                    {duration && (
+                      <div className="text-[10px] text-foreground/30 font-mono mt-0.5">
+                        {duration}
+                      </div>
+                    )}
+                    {sr.status === "running" && !duration && (
+                      <div className="text-[10px] text-blue-400/50 mt-0.5">running…</div>
                     )}
                   </div>
-                  {idx < stepRuns.length - 1 && <div className={lineCls} />}
                 </div>
-                <div className="flex-1 min-w-0 pb-5">
-                  <div className={`text-xs font-medium truncate ${sr.status === 'running' ? 'text-foreground' : sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
-                    {shortStepLabel(sr.label)}
-                  </div>
-                  {duration && (
-                    <div className="text-[10px] text-foreground/30 font-mono mt-0.5">{duration}</div>
-                  )}
-                  {sr.status === 'running' && !duration && (
-                    <div className="text-[10px] text-blue-400/50 mt-0.5">running…</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
           </div>
         </ResizablePanel>
 
@@ -2281,136 +2640,159 @@ function WorkflowRunView({
 
         {/* Right: log feed */}
         <ResizablePanel defaultSize={78}>
-        <div ref={logBodyRef} className="h-full overflow-y-auto">
-          {stepRuns.map((sr) => {
-            const isOpen = !collapsedSections[sr.id];
-            // Prefer the persisted per-step log once the backend has written it (i.e. the
-            // step has finished) — the live `logSegments` reconstruction is a best-effort
-            // heuristic based on which step polling observed as "running", and can
-            // misattribute fast/non-streaming steps (e.g. git commit/push) to the wrong
-            // section or leave them empty. Fall back to the live segment while running.
-            const logText = sr.log || logSegments[sr.id] || '';
-            const tabs = parseSubTabs(logText);
-            const lines = tabs ? [] : logText.split('\n').filter(Boolean);
-            const duration = formatDuration(sr.startedAt, sr.completedAt);
-            // Active sub-tab: user selection or last tab (auto-follows newest)
-            const activeTabId = tabs
-              ? (activeSub[sr.id] ?? tabs[tabs.length - 1]?.id)
-              : null;
-            const activeTabText = tabs?.find((t) => t.id === activeTabId)?.text ?? '';
+          <div ref={logBodyRef} className="h-full overflow-y-auto">
+            {stepRuns.map((sr) => {
+              const isOpen = !collapsedSections[sr.id];
+              // Prefer the persisted per-step log once the backend has written it (i.e. the
+              // step has finished) — the live `logSegments` reconstruction is a best-effort
+              // heuristic based on which step polling observed as "running", and can
+              // misattribute fast/non-streaming steps (e.g. git commit/push) to the wrong
+              // section or leave them empty. Fall back to the live segment while running.
+              const logText = sr.log || logSegments[sr.id] || "";
+              const tabs = parseSubTabs(logText);
+              const lines = tabs ? [] : logText.split("\n").filter(Boolean);
+              const duration = formatDuration(sr.startedAt, sr.completedAt);
+              // Active sub-tab: user selection or last tab (auto-follows newest)
+              const activeTabId = tabs ? (activeSub[sr.id] ?? tabs[tabs.length - 1]?.id) : null;
+              const activeTabText = tabs?.find((t) => t.id === activeTabId)?.text ?? "";
 
-            return (
-              <div key={sr.id} data-step-run-id={sr.id} className="border-b border-border/30 last:border-0">
-                {/* Section header */}
+              return (
                 <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onToggleSection(sr.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggleSection(sr.id); }}
-                  className="group w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-foreground/[2%] transition-colors select-none cursor-pointer"
+                  key={sr.id}
+                  data-step-run-id={sr.id}
+                  className="border-b border-border/30 last:border-0"
                 >
-                  <Icon
-                    icon="solar:alt-arrow-right-linear"
-                    className={`text-foreground/25 text-[10px] flex-shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
-                  />
-                  <Icon
-                    icon={STATUS_ICON[sr.status] ?? STATUS_ICON.pending}
-                    className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ''} ${sr.status === 'running' ? 'animate-spin' : ''}`}
-                  />
-                  <span className={`text-xs font-medium flex-1 truncate ${sr.status === 'pending' ? 'text-foreground/30' : ''}`}>
-                    {shortStepLabel(sr.label)}
-                  </span>
-                  {sr.status === 'running' && (
-                    <span className="text-[10px] text-blue-400/60 flex-shrink-0">running…</span>
-                  )}
-                  {sr.status === 'skipped' && (
-                    <span className="text-[10px] text-foreground/20 flex-shrink-0">skipped</span>
-                  )}
-                  {duration && (sr.status === 'success' || sr.status === 'failed') && (
-                    <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">{duration}</span>
-                  )}
-                  {sr.status === 'failed' && done && !readOnly && (
-                    <>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onRetryStep(sr.position, 'retry'); }}
-                        title="Retry from this step"
-                        className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-blue-400/70 hover:text-blue-300 hover:bg-blue-400/10 transition-colors flex-shrink-0"
-                      >
-                        <Icon icon="solar:refresh-linear" className="text-xs" />
-                        Retry
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onRetryStep(sr.position, 'skip'); }}
-                        title="Skip this step and continue from the next"
-                        className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-foreground/40 hover:text-foreground hover:bg-foreground/10 transition-colors flex-shrink-0"
-                      >
-                        <Icon icon="solar:skip-next-linear" className="text-xs" />
-                        Skip
-                      </button>
-                    </>
-                  )}
-                  {logText && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); copyLog(sr.id, tabs ? activeTabText : logText); }}
-                      title="Copy log"
-                      className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-foreground/30 hover:text-foreground transition-colors flex-shrink-0"
+                  {/* Section header */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onToggleSection(sr.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") onToggleSection(sr.id);
+                    }}
+                    className="group w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-foreground/[2%] transition-colors select-none cursor-pointer"
+                  >
+                    <Icon
+                      icon="solar:alt-arrow-right-linear"
+                      className={`text-foreground/25 text-[10px] flex-shrink-0 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                    />
+                    <Icon
+                      icon={STATUS_ICON[sr.status] ?? STATUS_ICON.pending}
+                      className={`text-sm flex-shrink-0 ${STATUS_COLOR[sr.status] ?? ""} ${sr.status === "running" ? "animate-spin" : ""}`}
+                    />
+                    <span
+                      className={`text-xs font-medium flex-1 truncate ${sr.status === "pending" ? "text-foreground/30" : ""}`}
                     >
-                      <Icon icon={copiedId === sr.id ? 'solar:check-circle-linear' : 'solar:copy-linear'} className="text-xs" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Section body */}
-                {isOpen && (
-                  <div className="bg-background">
-                    {tabs ? (
+                      {shortStepLabel(sr.label)}
+                    </span>
+                    {sr.status === "running" && (
+                      <span className="text-[10px] text-blue-400/60 flex-shrink-0">running…</span>
+                    )}
+                    {sr.status === "skipped" && (
+                      <span className="text-[10px] text-foreground/20 flex-shrink-0">skipped</span>
+                    )}
+                    {duration && (sr.status === "success" || sr.status === "failed") && (
+                      <span className="text-[10px] text-foreground/25 font-mono flex-shrink-0">
+                        {duration}
+                      </span>
+                    )}
+                    {sr.status === "failed" && done && !readOnly && (
                       <>
-                        {/* Sub-tab bar */}
-                        <div className="flex border-b border-border/40 overflow-x-auto">
-                          {tabs.map((tab) => (
-                            <button
-                              key={tab.id}
-                              onClick={() => setActiveSub((s) => ({ ...s, [sr.id]: tab.id }))}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono shrink-0 border-r border-border/30 transition-colors ${
-                                activeTabId === tab.id
-                                  ? 'text-foreground border-b-2 border-b-brand bg-foreground/[2%]'
-                                  : 'text-foreground/40 hover:text-foreground/70'
-                              }`}
-                            >
-                              {tab.label}
-                            </button>
-                          ))}
-                        </div>
-                        {/* Active tab content */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRetryStep(sr.position, "retry");
+                          }}
+                          title="Retry from this step"
+                          className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-blue-400/70 hover:text-blue-300 hover:bg-blue-400/10 transition-colors flex-shrink-0"
+                        >
+                          <Icon icon="solar:refresh-linear" className="text-xs" />
+                          Retry
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRetryStep(sr.position, "skip");
+                          }}
+                          title="Skip this step and continue from the next"
+                          className="flex items-center gap-1 px-1.5 h-5 rounded text-[10px] text-foreground/40 hover:text-foreground hover:bg-foreground/10 transition-colors flex-shrink-0"
+                        >
+                          <Icon icon="solar:skip-next-linear" className="text-xs" />
+                          Skip
+                        </button>
+                      </>
+                    )}
+                    {logText && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyLog(sr.id, tabs ? activeTabText : logText);
+                        }}
+                        title="Copy log"
+                        className="opacity-0 group-hover:opacity-100 w-5 h-5 flex items-center justify-center rounded text-foreground/30 hover:text-foreground transition-colors flex-shrink-0"
+                      >
+                        <Icon
+                          icon={
+                            copiedId === sr.id ? "solar:check-circle-linear" : "solar:copy-linear"
+                          }
+                          className="text-xs"
+                        />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Section body */}
+                  {isOpen && (
+                    <div className="bg-background">
+                      {tabs ? (
+                        <>
+                          {/* Sub-tab bar */}
+                          <div className="flex border-b border-border/40 overflow-x-auto">
+                            {tabs.map((tab) => (
+                              <button
+                                key={tab.id}
+                                onClick={() => setActiveSub((s) => ({ ...s, [sr.id]: tab.id }))}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono shrink-0 border-r border-border/30 transition-colors ${
+                                  activeTabId === tab.id
+                                    ? "text-foreground border-b-2 border-b-brand bg-foreground/[2%]"
+                                    : "text-foreground/40 hover:text-foreground/70"
+                                }`}
+                              >
+                                {tab.label}
+                              </button>
+                            ))}
+                          </div>
+                          {/* Active tab content */}
+                          <div className="px-5 pb-3 pt-1">
+                            {activeTabText.split("\n").filter(Boolean).length > 0 ? (
+                              activeTabText
+                                .split("\n")
+                                .filter(Boolean)
+                                .map((line, i) => <LogLine key={i} text={line} />)
+                            ) : (
+                              <div className="text-[11px] text-foreground/20 font-mono py-1">
+                                {sr.status === "pending" ? "Waiting to start…" : "No output yet."}
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
                         <div className="px-5 pb-3 pt-1">
-                          {activeTabText.split('\n').filter(Boolean).length > 0 ? (
-                            activeTabText.split('\n').filter(Boolean).map((line, i) => (
-                              <LogLine key={i} text={line} />
-                            ))
+                          {lines.length > 0 ? (
+                            lines.map((line, i) => <LogLine key={i} text={line} />)
                           ) : (
                             <div className="text-[11px] text-foreground/20 font-mono py-1">
-                              {sr.status === 'pending' ? 'Waiting to start…' : 'No output yet.'}
+                              {sr.status === "pending" ? "Waiting to start…" : "No output."}
                             </div>
                           )}
                         </div>
-                      </>
-                    ) : (
-                      <div className="px-5 pb-3 pt-1">
-                        {lines.length > 0 ? (
-                          lines.map((line, i) => <LogLine key={i} text={line} />)
-                        ) : (
-                          <div className="text-[11px] text-foreground/20 font-mono py-1">
-                            {sr.status === 'pending' ? 'Waiting to start…' : 'No output.'}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

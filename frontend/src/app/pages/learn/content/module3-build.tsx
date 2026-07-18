@@ -44,11 +44,10 @@ export const module3: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            <code className="text-brand text-[11px]">Alis build</code> is the
-            command that turns your Go (or other language) implementation into a
-            runnable Docker container image stored in Google Artifact Registry.
-            You never need to run Docker locally — the build happens entirely in
-            the cloud.
+            <code className="text-brand text-[11px]">Alis build</code> is the command that turns
+            your Go (or other language) implementation into a runnable Docker container image stored
+            in Google Artifact Registry. You never need to run Docker locally — the build happens
+            entirely in the cloud.
           </p>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             Under the hood, the command:
@@ -68,9 +67,7 @@ export const module3: LearningModule = {
                 <span className="text-[10px] font-bold text-brand font-mono shrink-0 w-[16px] text-right">
                   {i + 1}
                 </span>
-                <p className="text-[11px] text-foreground/60 leading-[1.4]">
-                  {step}
-                </p>
+                <p className="text-[11px] text-foreground/60 leading-[1.4]">{step}</p>
               </div>
             ))}
           </div>
@@ -84,12 +81,10 @@ export const module3: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Each neuron has a{" "}
-            <code className="text-foreground/70 text-[11px]">Dockerfile</code>{" "}
-            at its root. For Go services, Alis scaffolds a standard multi-stage
-            build: a builder image that compiles the binary, and a minimal
-            Alpine image that ships it. This keeps the final image small
-            (typically under 20 MB).
+            Each neuron has a <code className="text-foreground/70 text-[11px]">Dockerfile</code> at
+            its root. For Go services, Alis scaffolds a standard multi-stage build: a builder image
+            that compiles the binary, and a minimal Alpine image that ships it. This keeps the final
+            image small (typically under 20 MB).
           </p>
           <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
             <div className="px-[0] pb-[8px] mb-[8px] border-b border-border">
@@ -102,10 +97,9 @@ export const module3: LearningModule = {
             </pre>
           </div>
           <p className="text-[11px] text-foreground/40 leading-[1.5]">
-            The binary listens on port{" "}
-            <code className="text-foreground/60 text-[10px]">8080</code> for
-            gRPC traffic. The HTTP/REST gateway shares the same port via
-            gRPC-gateway transcoding.
+            The binary listens on port <code className="text-foreground/60 text-[10px]">8080</code>{" "}
+            for gRPC traffic. The HTTP/REST gateway shares the same port via gRPC-gateway
+            transcoding.
           </p>
         </div>
       ),
@@ -116,13 +110,10 @@ export const module3: LearningModule = {
       body: (
         <div className="flex flex-col gap-[12px]">
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
-            Google Cloud Build is a serverless build runner. You submit a build
-            job and GCP runs it on managed infrastructure — no build servers to
-            maintain. Alis generates the{" "}
-            <code className="text-foreground/60 text-[11px]">
-              cloudbuild.yaml
-            </code>{" "}
-            that defines each build step.
+            Google Cloud Build is a serverless build runner. You submit a build job and GCP runs it
+            on managed infrastructure — no build servers to maintain. Alis generates the{" "}
+            <code className="text-foreground/60 text-[11px]">cloudbuild.yaml</code> that defines
+            each build step.
           </p>
           <div className="px-[12px] py-[10px] bg-background border border-border rounded-[4px]">
             <div className="pb-[8px] mb-[8px] border-b border-border">
@@ -136,16 +127,15 @@ export const module3: LearningModule = {
           </div>
           <p className="text-[12px] text-foreground/70 leading-[1.7]">
             The resulting image is stored in{" "}
-            <strong className="text-foreground">Artifact Registry</strong> under
-            a path that encodes the organisation, product, and neuron name.
-            Every build produces a unique image tagged with the Git short SHA,
-            so rollbacks are just a matter of deploying a previous tag.
+            <strong className="text-foreground">Artifact Registry</strong> under a path that encodes
+            the organisation, product, and neuron name. Every build produces a unique image tagged
+            with the Git short SHA, so rollbacks are just a matter of deploying a previous tag.
           </p>
           <div className="flex items-start gap-[10px] px-[14px] py-[12px] bg-brand-fill/6 border border-brand-fill/20 rounded-[4px]">
             <p className="text-[11px] text-foreground/60 leading-[1.5]">
               <span className="text-brand font-bold">In the hub: </span>
-              the Builds tab shows live Cloud Build logs so you can watch the
-              build progress in real time without leaving the app.
+              the Builds tab shows live Cloud Build logs so you can watch the build progress in real
+              time without leaving the app.
             </p>
           </div>
         </div>

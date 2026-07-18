@@ -1,0 +1,102 @@
+version: "2"
+
+linters:
+  enable:
+    - bodyclose
+    - copyloopvar
+    - durationcheck
+    - errcheck
+    - errorlint
+    - goconst
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - noctx
+    - prealloc
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - wrapcheck
+
+  settings:
+    gocyclo:
+      min-complexity: 20
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+        - name: increment-decrement
+        - name: var-naming
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+    gosec:
+      excludes:
+        - G104  # Unchecked errors (handled by errcheck)
+        - G204  # Subprocess launched with variable
+        - G304  # File path provided as taint input
+        - G306  # Expect WriteFile permissions to be 0600 or less
+
+  exclusions:
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - _test\.go$
+      - frontend/node_modules
+      - build/android/scripts
+      - build/ios/scripts
+    rules:
+      - path: _test\.go$
+        linters:
+          - bodyclose
+          - noctx
+          - funlen
+          - gosec
+          - wrapcheck
+      - path: _test\.go$
+        text: "(expect directory file to have kind|tautological condition)"
+      - linters:
+          - errcheck
+        text: "[Dd]efer.*[Cc]lose"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - alis-hub-v3

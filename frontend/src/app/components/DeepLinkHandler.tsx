@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router';
-import { Events } from '@wailsio/runtime';
-import { useNotifications } from '../stores/notifications';
-import { parseDeepLink } from '../lib/deepLink';
+import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router";
+import { Events } from "@wailsio/runtime";
+import { useNotifications } from "../stores/notifications";
+import { parseDeepLink } from "../lib/deepLink";
 
 export function DeepLinkHandler() {
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ export function DeepLinkHandler() {
   setPendingOpenRef.current = setPendingOpen;
 
   useEffect(() => {
-    const off = Events.On('deep-link', (ev) => {
+    const off = Events.On("deep-link", (ev) => {
       const url = ev.data as string;
       if (!url) return;
 
@@ -19,9 +19,9 @@ export function DeepLinkHandler() {
       if (!parsed) return;
 
       switch (parsed.route) {
-        case '/develop':
+        case "/develop":
           setPendingOpenRef.current(parsed.params);
-          navigate('/develop');
+          navigate("/develop");
           break;
       }
     });

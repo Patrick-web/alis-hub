@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import * as PopoverPrimitive from '@radix-ui/react-popover';
-import { Command as CommandPrimitive } from 'cmdk';
-import { Check, ChevronDown, Search } from 'lucide-react';
-import { cn } from './utils';
+import { useState } from "react";
+import * as PopoverPrimitive from "@radix-ui/react-popover";
+import { Command as CommandPrimitive } from "cmdk";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { cn } from "./utils";
 
 export interface MultiSelectOption {
   value: string;
@@ -19,10 +19,15 @@ interface MultiSelectProps {
 }
 
 export function MultiSelect({
-  options, value, onChange, placeholder = 'Select…', disabled, className,
+  options,
+  value,
+  onChange,
+  placeholder = "Select…",
+  disabled,
+  className,
 }: MultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const filtered = query.trim()
     ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
@@ -35,14 +40,19 @@ export function MultiSelect({
   const selectedLabels = value.map((v) => options.find((o) => o.value === v)?.label ?? v);
 
   return (
-    <PopoverPrimitive.Root open={open} onOpenChange={(o) => { if (!disabled) setOpen(o); }}>
+    <PopoverPrimitive.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!disabled) setOpen(o);
+      }}
+    >
       <PopoverPrimitive.Trigger asChild>
         <button
           type="button"
           disabled={disabled}
           className={cn(
-            'flex items-start gap-1.5 min-h-[34px] w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-left transition-colors hover:border-foreground/30 focus:outline-none focus:border-brand-fill disabled:opacity-50 disabled:cursor-not-allowed',
-            open && 'border-brand-fill',
+            "flex items-start gap-1.5 min-h-[34px] w-full bg-background border border-border rounded-md px-2.5 py-1.5 text-left transition-colors hover:border-foreground/30 focus:outline-none focus:border-brand-fill disabled:opacity-50 disabled:cursor-not-allowed",
+            open && "border-brand-fill",
             className,
           )}
         >
@@ -62,7 +72,10 @@ export function MultiSelect({
           </div>
           <ChevronDown
             size={13}
-            className={cn('shrink-0 text-foreground/30 mt-1 transition-transform', open && 'rotate-180')}
+            className={cn(
+              "shrink-0 text-foreground/30 mt-1 transition-transform",
+              open && "rotate-180",
+            )}
           />
         </button>
       </PopoverPrimitive.Trigger>
@@ -71,7 +84,7 @@ export function MultiSelect({
         <PopoverPrimitive.Content
           sideOffset={4}
           align="start"
-          style={{ width: 'var(--radix-popover-trigger-width)' }}
+          style={{ width: "var(--radix-popover-trigger-width)" }}
           className="z-50 rounded-md bg-background border border-border shadow-xl overflow-hidden"
         >
           <CommandPrimitive shouldFilter={false}>
@@ -99,10 +112,12 @@ export function MultiSelect({
                       onSelect={() => toggle(opt.value)}
                       className="flex items-center gap-2.5 px-2.5 py-2 cursor-pointer text-[12px] text-foreground hover:bg-foreground/5 aria-selected:bg-foreground/5 outline-none"
                     >
-                      <div className={cn(
-                        'size-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors',
-                        checked ? 'bg-brand-fill border-brand-fill' : 'border-border',
-                      )}>
+                      <div
+                        className={cn(
+                          "size-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-colors",
+                          checked ? "bg-brand-fill border-brand-fill" : "border-border",
+                        )}
+                      >
                         {checked && <Check size={9} className="text-white" strokeWidth={3} />}
                       </div>
                       <span className="truncate">{opt.label}</span>

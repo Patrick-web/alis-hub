@@ -1,8 +1,5 @@
 import { Loader } from "./Loader";
-import type {
-  AppNotification,
-  NotificationSeverity,
-} from "../stores/notifications";
+import type { AppNotification, NotificationSeverity } from "../stores/notifications";
 import { Icon } from "@iconify/react";
 
 const SEVERITY_COLOR: Record<NotificationSeverity, string> = {
@@ -68,9 +65,7 @@ export function NotificationItem({
         <div
           className="w-[2.5px] rounded-[2px] self-stretch shrink-0 min-h-[14px]"
           style={{
-            background: notification.read
-              ? "rgba(255,255,255,0.08)"
-              : color,
+            background: notification.read ? "rgba(255,255,255,0.08)" : color,
           }}
         />
       )}
@@ -80,9 +75,7 @@ export function NotificationItem({
         <div className="flex items-baseline gap-[6px]">
           <p
             className={`flex-1 text-[11.5px] leading-snug min-w-0 truncate tracking-[-0.1px] ${
-              notification.read
-                ? "text-foreground/40 font-normal"
-                : "text-foreground font-semibold"
+              notification.read ? "text-foreground/40 font-normal" : "text-foreground font-semibold"
             }`}
           >
             {notification.title}
@@ -129,10 +122,7 @@ export function NotificationItem({
         className="absolute top-[8px] right-[8px] opacity-0 group-hover:opacity-40 hover:!opacity-100 transition-opacity"
         title="Dismiss"
       >
-        <Icon
-          icon="solar:close-circle-linear"
-          className="text-[11px] text-foreground"
-        />
+        <Icon icon="solar:close-circle-linear" className="text-[11px] text-foreground" />
       </button>
     </div>
   );

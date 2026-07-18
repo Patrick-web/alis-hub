@@ -1,16 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Icon } from '@iconify/react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from './ui/dialog';
-import { Button } from './Button';
-import { Loader } from './Loader';
-import { DuplicateVarModal } from './DuplicateVarModal';
-import type { LoadedEnv } from '../stores/workspace';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { useEffect, useState } from "react";
+import { Icon } from "@iconify/react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Button } from "./Button";
+import { Loader } from "./Loader";
+import { DuplicateVarModal } from "./DuplicateVarModal";
+import type { LoadedEnv } from "../stores/workspace";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
 interface MissingVarsModalProps {
   open: boolean;
@@ -49,41 +44,49 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
     setError(null);
     setGaps([]);
 
-    const promises = loadedEnvs.map(env =>
+    const promises = loadedEnvs.map((env) =>
       (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(env.name)
-        .then(vars => ({ envName: env.name, vars: vars.map((v: any) => ({ label: v.label as string, value: v.value as string })) }))
-        .catch(() => ({ envName: env.name, vars: [] }))
+        .then((vars) => ({
+          envName: env.name,
+          vars: vars.map((v: any) => ({ label: v.label as string, value: v.value as string })),
+        }))
+        .catch(() => ({ envName: env.name, vars: [] })),
     );
 
-    Promise.all(promises).then(results => {
-      const map: EnvVarMap = {};
-      for (const r of results) {
-        map[r.envName] = r.vars;
-      }
-      setEnvVarMap(map);
-
-      // Build union of all labels
-      const allLabels = new Set<string>();
-      for (const vars of Object.values(map)) {
-        for (const v of vars) allLabels.add(v.label);
-      }
-
-      const foundGaps: Gap[] = [];
-      for (const label of Array.from(allLabels).sort()) {
-        const envsWith = loadedEnvs.filter(e => map[e.name]?.some(v => v.label === label));
-        const envsWithout = loadedEnvs.filter(e => !map[e.name]?.some(v => v.label === label));
-
-        if (envsWithout.length > 0 && envsWith.length > 0) {
-          const sourceEnv = envsWith[0];
-          const sourceValue = map[sourceEnv.name].find(v => v.label === label)?.value ?? '';
-          foundGaps.push({ label, sourceEnv, sourceValue, missingEnvs: envsWithout });
+    Promise.all(promises)
+      .then((results) => {
+        const map: EnvVarMap = {};
+        for (const r of results) {
+          map[r.envName] = r.vars;
         }
-      }
+        setEnvVarMap(map);
 
-      setGaps(foundGaps);
-    }).catch(err => {
-      setError(String(err));
-    }).finally(() => setLoading(false));
+        // Build union of all labels
+        const allLabels = new Set<string>();
+        for (const vars of Object.values(map)) {
+          for (const v of vars) allLabels.add(v.label);
+        }
+
+        const foundGaps: Gap[] = [];
+        for (const label of Array.from(allLabels).sort()) {
+          const envsWith = loadedEnvs.filter((e) => map[e.name]?.some((v) => v.label === label));
+          const envsWithout = loadedEnvs.filter(
+            (e) => !map[e.name]?.some((v) => v.label === label),
+          );
+
+          if (envsWithout.length > 0 && envsWith.length > 0) {
+            const sourceEnv = envsWith[0];
+            const sourceValue = map[sourceEnv.name].find((v) => v.label === label)?.value ?? "";
+            foundGaps.push({ label, sourceEnv, sourceValue, missingEnvs: envsWithout });
+          }
+        }
+
+        setGaps(foundGaps);
+      })
+      .catch((err) => {
+        setError(String(err));
+      })
+      .finally(() => setLoading(false));
   }, [open]);
 
   const handleResolveAfterDuplicate = () => {
@@ -91,29 +94,36 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
     // Re-fetch to update the gaps view
     if (!open) return;
     setLoading(true);
-    const promises = loadedEnvs.map(env =>
+    const promises = loadedEnvs.map((env) =>
       (ProductService.GetEnvironmentVariables as (envName: string) => Promise<any[]>)(env.name)
-        .then(vars => ({ envName: env.name, vars: vars.map((v: any) => ({ label: v.label as string, value: v.value as string })) }))
-        .catch(() => ({ envName: env.name, vars: [] }))
+        .then((vars) => ({
+          envName: env.name,
+          vars: vars.map((v: any) => ({ label: v.label as string, value: v.value as string })),
+        }))
+        .catch(() => ({ envName: env.name, vars: [] })),
     );
-    Promise.all(promises).then(results => {
-      const map: EnvVarMap = {};
-      for (const r of results) map[r.envName] = r.vars;
-      setEnvVarMap(map);
-      const allLabels = new Set<string>();
-      for (const vars of Object.values(map)) for (const v of vars) allLabels.add(v.label);
-      const foundGaps: Gap[] = [];
-      for (const label of Array.from(allLabels).sort()) {
-        const envsWith = loadedEnvs.filter(e => map[e.name]?.some(v => v.label === label));
-        const envsWithout = loadedEnvs.filter(e => !map[e.name]?.some(v => v.label === label));
-        if (envsWithout.length > 0 && envsWith.length > 0) {
-          const sourceEnv = envsWith[0];
-          const sourceValue = map[sourceEnv.name].find(v => v.label === label)?.value ?? '';
-          foundGaps.push({ label, sourceEnv, sourceValue, missingEnvs: envsWithout });
+    Promise.all(promises)
+      .then((results) => {
+        const map: EnvVarMap = {};
+        for (const r of results) map[r.envName] = r.vars;
+        setEnvVarMap(map);
+        const allLabels = new Set<string>();
+        for (const vars of Object.values(map)) for (const v of vars) allLabels.add(v.label);
+        const foundGaps: Gap[] = [];
+        for (const label of Array.from(allLabels).sort()) {
+          const envsWith = loadedEnvs.filter((e) => map[e.name]?.some((v) => v.label === label));
+          const envsWithout = loadedEnvs.filter(
+            (e) => !map[e.name]?.some((v) => v.label === label),
+          );
+          if (envsWithout.length > 0 && envsWith.length > 0) {
+            const sourceEnv = envsWith[0];
+            const sourceValue = map[sourceEnv.name].find((v) => v.label === label)?.value ?? "";
+            foundGaps.push({ label, sourceEnv, sourceValue, missingEnvs: envsWithout });
+          }
         }
-      }
-      setGaps(foundGaps);
-    }).finally(() => setLoading(false));
+        setGaps(foundGaps);
+      })
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -149,7 +159,7 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                 </p>
               </div>
             ) : (
-              gaps.map(gap => (
+              gaps.map((gap) => (
                 <div
                   key={gap.label}
                   className="flex items-start gap-[12px] p-[12px] rounded-[4px] border border-border bg-foreground/[2%]"
@@ -159,26 +169,21 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                       {gap.label}
                     </p>
                     <div className="flex items-center gap-[6px] mt-[4px] flex-wrap">
-                      <span className="font-mono text-[10px] text-foreground/40">
-                        Present in:
-                      </span>
+                      <span className="font-mono text-[10px] text-foreground/40">Present in:</span>
                       {loadedEnvs
-                        .filter(e => envVarMap[e.name]?.some(v => v.label === gap.label))
-                        .map(e => (
+                        .filter((e) => envVarMap[e.name]?.some((v) => v.label === gap.label))
+                        .map((e) => (
                           <span
                             key={e.name}
                             className="font-mono text-[9px] text-foreground/70 border border-border px-[5px] py-[1px] rounded-[3px]"
                           >
                             {e.displayName}
                           </span>
-                        ))
-                      }
+                        ))}
                     </div>
                     <div className="flex items-center gap-[6px] mt-[3px] flex-wrap">
-                      <span className="font-mono text-[10px] text-destructive">
-                        Missing in:
-                      </span>
-                      {gap.missingEnvs.map(e => (
+                      <span className="font-mono text-[10px] text-destructive">Missing in:</span>
+                      {gap.missingEnvs.map((e) => (
                         <span
                           key={e.name}
                           className="font-mono text-[9px] text-destructive border border-[rgba(255,80,80,0.4)] px-[5px] py-[1px] rounded-[3px]"
@@ -191,12 +196,14 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
                   <Button
                     variant="secondary"
                     className="h-[28px] px-[10px] text-[10px] font-bold uppercase shrink-0"
-                    onClick={() => setResolveTarget({
-                      label: gap.label,
-                      value: gap.sourceValue,
-                      sourceEnvName: gap.sourceEnv.name,
-                      targetEnvNames: gap.missingEnvs.map(e => e.name),
-                    })}
+                    onClick={() =>
+                      setResolveTarget({
+                        label: gap.label,
+                        value: gap.sourceValue,
+                        sourceEnvName: gap.sourceEnv.name,
+                        targetEnvNames: gap.missingEnvs.map((e) => e.name),
+                      })
+                    }
                   >
                     Resolve
                   </Button>
@@ -226,8 +233,10 @@ export function MissingVarsModal({ open, onOpenChange, loadedEnvs }: MissingVars
           varLabel={resolveTarget.label}
           varValue={resolveTarget.value}
           sourceEnvName={resolveTarget.sourceEnvName}
-          loadedEnvs={loadedEnvs.filter(e =>
-            resolveTarget.targetEnvNames.includes(e.name) || e.name === resolveTarget.sourceEnvName
+          loadedEnvs={loadedEnvs.filter(
+            (e) =>
+              resolveTarget.targetEnvNames.includes(e.name) ||
+              e.name === resolveTarget.sourceEnvName,
           )}
         />
       )}

@@ -1,16 +1,13 @@
-import { useEffect, useState } from 'react';
-import {
-  ChevronDown, GitMerge, GitPullRequest, Loader2,
-  MessageSquare, X,
-} from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ForgejoPR, PRCommit, PRComment, GitFileDiff } from './types';
-import { GitDiffViewer } from './GitDiffViewer';
-import * as GitService from '../../../../bindings/alis-hub-v3/gitservice';
-import type { CommitFile } from '../../../../bindings/alis-hub-v3/models';
+import { useEffect, useState } from "react";
+import { ChevronDown, GitMerge, GitPullRequest, Loader2, MessageSquare, X } from "lucide-react";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { ForgejoPR, PRCommit, PRComment, GitFileDiff } from "./types";
+import { GitDiffViewer } from "./GitDiffViewer";
+import * as GitService from "../../../../bindings/alis-hub-v3/gitservice";
+import type { CommitFile } from "../../../../bindings/alis-hub-v3/models";
 
-type Tab = 'overview' | 'commits' | 'files' | 'conversation';
-type MergeStyle = 'merge' | 'rebase' | 'squash';
+type Tab = "overview" | "commits" | "files" | "conversation";
+type MergeStyle = "merge" | "rebase" | "squash";
 
 interface Props {
   pr: ForgejoPR;
@@ -23,7 +20,7 @@ interface Props {
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const s = Math.floor(ms / 1000);
-  if (s < 60) return 'just now';
+  if (s < 60) return "just now";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
@@ -33,15 +30,15 @@ function relativeTime(iso: string): string {
 }
 
 function statusColor(code: string) {
-  if (code === 'A') return 'text-green-400';
-  if (code === 'D') return 'text-red-400';
-  if (code === 'R') return 'text-blue-400';
-  return 'text-yellow-400';
+  if (code === "A") return "text-green-400";
+  if (code === "D") return "text-red-400";
+  if (code === "R") return "text-blue-400";
+  return "text-yellow-400";
 }
 
 export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) {
-  const [tab, setTab] = useState<Tab>('overview');
-  const [mergeStyle, setMergeStyle] = useState<MergeStyle>('merge');
+  const [tab, setTab] = useState<Tab>("overview");
+  const [mergeStyle, setMergeStyle] = useState<MergeStyle>("merge");
 
   // Commits tab
   const [commits, setCommits] = useState<PRCommit[]>([]);
@@ -63,19 +60,19 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
   // Conversation tab
   const [comments, setComments] = useState<PRComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
+  const [newComment, setNewComment] = useState("");
   const [postingComment, setPostingComment] = useState(false);
 
   // Load data when tab changes
   useEffect(() => {
-    if (tab === 'commits' && commits.length === 0) loadCommits();
-    if (tab === 'files' && prFiles.length === 0) loadPRFiles();
-    if (tab === 'conversation' && comments.length === 0) loadComments();
+    if (tab === "commits" && commits.length === 0) loadCommits();
+    if (tab === "files" && prFiles.length === 0) loadPRFiles();
+    if (tab === "conversation" && comments.length === 0) loadComments();
   }, [tab]);
 
   // Reset per-PR state when PR changes
   useEffect(() => {
-    setTab('overview');
+    setTab("overview");
     setCommits([]);
     setSelectedCommit(null);
     setCommitFiles([]);
@@ -85,7 +82,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     setSelectedPRFile(null);
     setPRFileDiff(null);
     setComments([]);
-    setNewComment('');
+    setNewComment("");
   }, [pr.number]);
 
   async function loadCommits() {
@@ -93,7 +90,11 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     try {
       const result = await GitService.GetPRCommits(repoPath, pr.number);
       setCommits((result as any as PRCommit[]) ?? []);
-    } catch { /* ignore */ } finally { setLoadingCommits(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingCommits(false);
+    }
   }
 
   async function loadPRFiles() {
@@ -101,7 +102,11 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     try {
       const result = await GitService.GetPRFiles(repoPath, pr.number);
       setPRFiles((result as any as CommitFile[]) ?? []);
-    } catch { /* ignore */ } finally { setLoadingPRFiles(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingPRFiles(false);
+    }
   }
 
   async function loadComments() {
@@ -109,7 +114,11 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     try {
       const result = await GitService.GetPRComments(repoPath, pr.number);
       setComments((result as any as PRComment[]) ?? []);
-    } catch { /* ignore */ } finally { setLoadingComments(false); }
+    } catch {
+      /* ignore */
+    } finally {
+      setLoadingComments(false);
+    }
   }
 
   async function handleSelectCommit(commit: PRCommit) {
@@ -120,7 +129,11 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     try {
       const result = await GitService.GetCommitFiles(repoPath, commit.sha);
       setCommitFiles((result as any as CommitFile[]) ?? []);
-    } catch { setCommitFiles([]); } finally { setLoadingCommitFiles(false); }
+    } catch {
+      setCommitFiles([]);
+    } finally {
+      setLoadingCommitFiles(false);
+    }
   }
 
   async function handleSelectCommitFile(path: string) {
@@ -130,8 +143,12 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     setCommitFileDiff(null);
     try {
       const d = await GitService.GetCommitFileDiff(repoPath, selectedCommit.sha, path);
-      setCommitFileDiff(d as any as GitFileDiff ?? null);
-    } catch { setCommitFileDiff(null); } finally { setLoadingCommitDiff(false); }
+      setCommitFileDiff((d as any as GitFileDiff) ?? null);
+    } catch {
+      setCommitFileDiff(null);
+    } finally {
+      setLoadingCommitDiff(false);
+    }
   }
 
   async function handleSelectPRFile(path: string) {
@@ -140,8 +157,12 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     setPRFileDiff(null);
     try {
       const d = await GitService.GetPRFileDiff(repoPath, pr.baseBranch, pr.headBranch, path);
-      setPRFileDiff(d as any as GitFileDiff ?? null);
-    } catch { setPRFileDiff(null); } finally { setLoadingPRDiff(false); }
+      setPRFileDiff((d as any as GitFileDiff) ?? null);
+    } catch {
+      setPRFileDiff(null);
+    } finally {
+      setLoadingPRDiff(false);
+    }
   }
 
   async function handlePostComment() {
@@ -149,15 +170,19 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
     setPostingComment(true);
     try {
       const result = await GitService.AddPRComment(repoPath, pr.number, newComment.trim());
-      if (result) setComments(prev => [...prev, result as any as PRComment]);
-      setNewComment('');
-    } catch { /* ignore */ } finally { setPostingComment(false); }
+      if (result) setComments((prev) => [...prev, result as any as PRComment]);
+      setNewComment("");
+    } catch {
+      /* ignore */
+    } finally {
+      setPostingComment(false);
+    }
   }
 
   const mergeStyleLabels: Record<MergeStyle, string> = {
-    merge: 'Create a merge commit',
-    rebase: 'Rebase and merge',
-    squash: 'Squash and merge',
+    merge: "Create a merge commit",
+    rebase: "Rebase and merge",
+    squash: "Squash and merge",
   };
 
   return (
@@ -169,7 +194,9 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-xs text-foreground/30 shrink-0">#{pr.number}</span>
-              <span className="text-sm font-medium text-foreground/90 leading-snug">{pr.title}</span>
+              <span className="text-sm font-medium text-foreground/90 leading-snug">
+                {pr.title}
+              </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-green-500/40 bg-green-500/10 text-green-400 shrink-0">
                 {pr.state}
               </span>
@@ -195,19 +222,21 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
 
         {/* Tab bar */}
         <div className="flex items-center gap-0.5 mt-3">
-          {([
-            ['overview', 'Overview', null],
-            ['commits', 'Commits', commits.length > 0 ? commits.length : null],
-            ['files', 'Files Changed', prFiles.length > 0 ? prFiles.length : null],
-            ['conversation', 'Conversation', comments.length > 0 ? comments.length : null],
-          ] as [Tab, string, number | null][]).map(([id, label, count]) => (
+          {(
+            [
+              ["overview", "Overview", null],
+              ["commits", "Commits", commits.length > 0 ? commits.length : null],
+              ["files", "Files Changed", prFiles.length > 0 ? prFiles.length : null],
+              ["conversation", "Conversation", comments.length > 0 ? comments.length : null],
+            ] as [Tab, string, number | null][]
+          ).map(([id, label, count]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-t border-b-2 transition-colors ${
                 tab === id
-                  ? 'border-pink-500 text-foreground/80 bg-pink-500/5'
-                  : 'border-transparent text-foreground/35 hover:text-foreground/60 hover:bg-foreground/[0.03]'
+                  ? "border-pink-500 text-foreground/80 bg-pink-500/5"
+                  : "border-transparent text-foreground/35 hover:text-foreground/60 hover:bg-foreground/[0.03]"
               }`}
             >
               {label}
@@ -223,8 +252,8 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
 
       {/* Tab body */}
       <div className="flex-1 overflow-hidden">
-        {tab === 'overview' && <OverviewTab pr={pr} />}
-        {tab === 'commits' && (
+        {tab === "overview" && <OverviewTab pr={pr} />}
+        {tab === "commits" && (
           <CommitsTab
             commits={commits}
             loading={loadingCommits}
@@ -238,7 +267,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
             onSelectCommitFile={handleSelectCommitFile}
           />
         )}
-        {tab === 'files' && (
+        {tab === "files" && (
           <FilesTab
             files={prFiles}
             loading={loadingPRFiles}
@@ -248,7 +277,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
             onSelectFile={handleSelectPRFile}
           />
         )}
-        {tab === 'conversation' && (
+        {tab === "conversation" && (
           <ConversationTab
             comments={comments}
             loading={loadingComments}
@@ -299,7 +328,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
                 sideOffset={4}
                 align="end"
               >
-                {(['merge', 'rebase', 'squash'] as MergeStyle[]).map(style => (
+                {(["merge", "rebase", "squash"] as MergeStyle[]).map((style) => (
                   <DropdownMenu.Item
                     key={style}
                     className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-foreground/5 outline-none text-foreground/60"
@@ -348,9 +377,16 @@ interface CommitsTabProps {
 }
 
 function CommitsTab({
-  commits, loading, selectedCommit, commitFiles, loadingCommitFiles,
-  selectedCommitFile, commitFileDiff, loadingCommitDiff,
-  onSelectCommit, onSelectCommitFile,
+  commits,
+  loading,
+  selectedCommit,
+  commitFiles,
+  loadingCommitFiles,
+  selectedCommitFile,
+  commitFileDiff,
+  loadingCommitDiff,
+  onSelectCommit,
+  onSelectCommitFile,
 }: CommitsTabProps) {
   if (loading) return <LoadingPane />;
 
@@ -361,19 +397,25 @@ function CommitsTab({
         {commits.length === 0 ? (
           <EmptyPane message="No commits found" />
         ) : (
-          commits.map(c => (
+          commits.map((c) => (
             <button
               key={c.sha}
               onClick={() => onSelectCommit(c)}
               className={`w-full text-left px-3 py-2.5 border-b border-foreground/8 transition-colors ${
                 selectedCommit?.sha === c.sha
-                  ? 'bg-pink-600/10 border-l-2 border-l-pink-500'
-                  : 'hover:bg-foreground/[0.03]'
+                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  : "hover:bg-foreground/[0.03]"
               }`}
             >
-              <div className="text-[10px] font-mono text-foreground/40 mb-0.5">{c.sha.slice(0, 7)}</div>
-              <div className="text-[11px] text-foreground/80 leading-snug truncate">{c.message}</div>
-              <div className="text-[10px] text-foreground/30 mt-0.5">{c.author} · {relativeTime(c.timestamp)}</div>
+              <div className="text-[10px] font-mono text-foreground/40 mb-0.5">
+                {c.sha.slice(0, 7)}
+              </div>
+              <div className="text-[11px] text-foreground/80 leading-snug truncate">
+                {c.message}
+              </div>
+              <div className="text-[10px] text-foreground/30 mt-0.5">
+                {c.author} · {relativeTime(c.timestamp)}
+              </div>
             </button>
           ))
         )}
@@ -394,14 +436,16 @@ function CommitsTab({
               onClick={() => onSelectCommitFile(f.path)}
               className={`w-full text-left flex items-center gap-1.5 px-2.5 py-1.5 border-b border-foreground/8 transition-colors ${
                 selectedCommitFile === f.path
-                  ? 'bg-pink-600/10 border-l-2 border-l-pink-500'
-                  : 'hover:bg-foreground/[0.03]'
+                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  : "hover:bg-foreground/[0.03]"
               }`}
             >
               <span className={`text-[10px] font-mono w-3 shrink-0 ${statusColor(f.statusCode)}`}>
                 {f.statusCode}
               </span>
-              <span className="text-[10px] text-foreground/70 truncate">{f.path.split('/').pop()}</span>
+              <span className="text-[10px] text-foreground/70 truncate">
+                {f.path.split("/").pop()}
+              </span>
             </button>
           ))
         )}
@@ -433,7 +477,14 @@ interface FilesTabProps {
   onSelectFile: (path: string) => void;
 }
 
-function FilesTab({ files, loading, selectedFile, diff, loadingDiff, onSelectFile }: FilesTabProps) {
+function FilesTab({
+  files,
+  loading,
+  selectedFile,
+  diff,
+  loadingDiff,
+  onSelectFile,
+}: FilesTabProps) {
   if (loading) return <LoadingPane />;
 
   return (
@@ -449,15 +500,17 @@ function FilesTab({ files, loading, selectedFile, diff, loadingDiff, onSelectFil
               onClick={() => onSelectFile(f.path)}
               className={`w-full text-left flex items-center gap-1.5 px-2.5 py-2 border-b border-foreground/8 transition-colors ${
                 selectedFile === f.path
-                  ? 'bg-pink-600/10 border-l-2 border-l-pink-500'
-                  : 'hover:bg-foreground/[0.03]'
+                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  : "hover:bg-foreground/[0.03]"
               }`}
             >
               <span className={`text-[10px] font-mono w-3 shrink-0 ${statusColor(f.statusCode)}`}>
                 {f.statusCode}
               </span>
               <div className="min-w-0">
-                <div className="text-[11px] text-foreground/75 truncate">{f.path.split('/').pop()}</div>
+                <div className="text-[11px] text-foreground/75 truncate">
+                  {f.path.split("/").pop()}
+                </div>
                 <div className="text-[9px] text-foreground/30 truncate">{f.path}</div>
               </div>
             </button>
@@ -470,11 +523,7 @@ function FilesTab({ files, loading, selectedFile, diff, loadingDiff, onSelectFil
         {loadingDiff ? (
           <LoadingPane />
         ) : (
-          <GitDiffViewer
-            diff={diff}
-            filePath={selectedFile}
-            staged={false}
-          />
+          <GitDiffViewer diff={diff} filePath={selectedFile} staged={false} />
         )}
       </div>
     </div>
@@ -490,7 +539,14 @@ interface ConversationTabProps {
   onPost: () => void;
 }
 
-function ConversationTab({ comments, loading, newComment, posting, onChangeComment, onPost }: ConversationTabProps) {
+function ConversationTab({
+  comments,
+  loading,
+  newComment,
+  posting,
+  onChangeComment,
+  onPost,
+}: ConversationTabProps) {
   if (loading) return <LoadingPane />;
 
   return (
@@ -502,7 +558,7 @@ function ConversationTab({ comments, loading, newComment, posting, onChangeComme
             <p className="text-[11px] text-foreground/30">No comments yet</p>
           </div>
         )}
-        {comments.map(c => (
+        {comments.map((c) => (
           <div key={c.id} className="flex gap-2.5">
             <div className="w-6 h-6 rounded-full bg-pink-600/20 border border-pink-500/20 flex items-center justify-center shrink-0 text-[10px] text-pink-400 font-semibold">
               {c.author.charAt(0).toUpperCase()}
@@ -527,9 +583,9 @@ function ConversationTab({ comments, loading, newComment, posting, onChangeComme
           placeholder="Leave a comment…"
           rows={3}
           value={newComment}
-          onChange={e => onChangeComment(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) onPost();
+          onChange={(e) => onChangeComment(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) onPost();
           }}
         />
         <div className="flex justify-end">

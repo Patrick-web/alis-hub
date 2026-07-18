@@ -7,22 +7,15 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from 'react';
-import * as settingsClient from '../lib/settingsClient';
+} from "react";
+import * as settingsClient from "../lib/settingsClient";
 
-export type NotificationSeverity = 'info' | 'success' | 'warning' | 'error';
+export type NotificationSeverity = "info" | "success" | "warning" | "error";
 export type NotificationSource =
-  | 'system'
-  | 'build'
-  | 'deploy'
-  | 'define'
-  | 'packages'
-  | 'git'
-  | 'update'
-  | 'general';
+  "system" | "build" | "deploy" | "define" | "packages" | "git" | "update" | "general";
 
-export type TaskType = 'define' | 'build' | 'deploy' | 'packages' | 'workflow';
-export type TaskStatus = 'running' | 'done' | 'error';
+export type TaskType = "define" | "build" | "deploy" | "packages" | "workflow";
+export type TaskStatus = "running" | "done" | "error";
 
 export interface TaskProgress {
   type: TaskType;
@@ -36,7 +29,7 @@ export interface TaskProgress {
 
 export interface NotificationAction {
   label: string;
-  variant: 'primary' | 'destructive' | 'ghost';
+  variant: "primary" | "destructive" | "ghost";
   onClick: () => void;
 }
 
@@ -63,7 +56,7 @@ export interface WailsNotificationPayload {
   deeplink?: string;
   actions?: {
     label: string;
-    variant: 'primary' | 'destructive' | 'ghost';
+    variant: "primary" | "destructive" | "ghost";
     event?: string;
   }[];
 }
@@ -72,27 +65,30 @@ interface NotificationState {
   notifications: AppNotification[];
 }
 
-type NotificationPatch = Partial<Omit<AppNotification, 'id' | 'task'>> & {
+type NotificationPatch = Partial<Omit<AppNotification, "id" | "task">> & {
   task?: Partial<TaskProgress>;
 };
 
 type StoreAction =
-  | { type: 'ADD'; payload: AppNotification }
-  | { type: 'UPDATE'; payload: { id: string; patch: NotificationPatch } }
-  | { type: 'MARK_READ'; payload: string }
-  | { type: 'MARK_ALL_READ' }
-  | { type: 'DISMISS'; payload: string }
-  | { type: 'CLEAR_ALL' };
+  | { type: "ADD"; payload: AppNotification }
+  | { type: "UPDATE"; payload: { id: string; patch: NotificationPatch } }
+  | { type: "MARK_READ"; payload: string }
+  | { type: "MARK_ALL_READ" }
+  | { type: "DISMISS"; payload: string }
+  | { type: "CLEAR_ALL" };
 
 export interface PendingPaneOpen {
-  type: 'deploy' | 'build' | 'define' | 'packages';
+  type: "deploy" | "build" | "define" | "packages";
   neuron: string;
 }
 
 interface NotificationContextValue {
   state: NotificationState;
-  addNotification: (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => string;
-  updateNotification: (id: string, patch: Partial<Omit<AppNotification, 'id' | 'task'>> & { task?: Partial<TaskProgress> }) => void;
+  addNotification: (n: Omit<AppNotification, "id" | "timestamp" | "read">) => string;
+  updateNotification: (
+    id: string,
+    patch: Partial<Omit<AppNotification, "id" | "task">> & { task?: Partial<TaskProgress> },
+  ) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
   dismiss: (id: string) => void;
@@ -104,7 +100,7 @@ interface NotificationContextValue {
   setPendingOpen: (action: PendingPaneOpen | null) => void;
 }
 
-const STORAGE_KEY = 'alis:notifications';
+const STORAGE_KEY = "alis:notifications";
 
 function loadFromStorage(): AppNotification[] {
   try {
@@ -119,7 +115,7 @@ function loadFromStorage(): AppNotification[] {
 
 function saveToStorage(notifications: AppNotification[]) {
   const serialisable = notifications
-    .filter(n => n.persistent && n.task?.status !== 'running')
+    .filter((n) => n.persistent && n.task?.status !== "running")
     .map(({ actions: _actions, task, ...n }) => ({
       ...n,
       ...(task ? { task: { ...task, logBuffer: [] } } : {}),
@@ -129,31 +125,31 @@ function saveToStorage(notifications: AppNotification[]) {
 
 function reducer(state: NotificationState, action: StoreAction): NotificationState {
   switch (action.type) {
-    case 'ADD':
+    case "ADD":
       return { notifications: [action.payload, ...state.notifications] };
-    case 'UPDATE':
+    case "UPDATE":
       return {
-        notifications: state.notifications.map(n => {
+        notifications: state.notifications.map((n) => {
           if (n.id !== action.payload.id) return n;
           const { task: taskPatch, ...rest } = action.payload.patch;
           return {
             ...n,
             ...rest,
-            task: taskPatch ? { ...(n.task ?? {} as TaskProgress), ...taskPatch } : n.task,
+            task: taskPatch ? { ...(n.task ?? ({} as TaskProgress)), ...taskPatch } : n.task,
           };
         }),
       };
-    case 'MARK_READ':
+    case "MARK_READ":
       return {
-        notifications: state.notifications.map(n =>
-          n.id === action.payload ? { ...n, read: true } : n
+        notifications: state.notifications.map((n) =>
+          n.id === action.payload ? { ...n, read: true } : n,
         ),
       };
-    case 'MARK_ALL_READ':
-      return { notifications: state.notifications.map(n => ({ ...n, read: true })) };
-    case 'DISMISS':
-      return { notifications: state.notifications.filter(n => n.id !== action.payload) };
-    case 'CLEAR_ALL':
+    case "MARK_ALL_READ":
+      return { notifications: state.notifications.map((n) => ({ ...n, read: true })) };
+    case "DISMISS":
+      return { notifications: state.notifications.filter((n) => n.id !== action.payload) };
+    case "CLEAR_ALL":
       return { notifications: [] };
     default:
       return state;
@@ -174,38 +170,29 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [state.notifications]);
 
   const addNotification = useCallback(
-    (n: Omit<AppNotification, 'id' | 'timestamp' | 'read'>): string => {
+    (n: Omit<AppNotification, "id" | "timestamp" | "read">): string => {
       const id = crypto.randomUUID();
       dispatch({
-        type: 'ADD',
+        type: "ADD",
         payload: { ...n, id, timestamp: Date.now(), read: false },
       });
       return id;
     },
-    []
+    [],
   );
 
-  const updateNotification = useCallback(
-    (id: string, patch: NotificationPatch) => {
-      dispatch({ type: 'UPDATE', payload: { id, patch } });
-    },
-    []
-  );
+  const updateNotification = useCallback((id: string, patch: NotificationPatch) => {
+    dispatch({ type: "UPDATE", payload: { id, patch } });
+  }, []);
 
-  const markRead = useCallback(
-    (id: string) => dispatch({ type: 'MARK_READ', payload: id }),
-    []
-  );
-  const markAllRead = useCallback(() => dispatch({ type: 'MARK_ALL_READ' }), []);
-  const dismiss = useCallback(
-    (id: string) => dispatch({ type: 'DISMISS', payload: id }),
-    []
-  );
-  const clearAll = useCallback(() => dispatch({ type: 'CLEAR_ALL' }), []);
+  const markRead = useCallback((id: string) => dispatch({ type: "MARK_READ", payload: id }), []);
+  const markAllRead = useCallback(() => dispatch({ type: "MARK_ALL_READ" }), []);
+  const dismiss = useCallback((id: string) => dispatch({ type: "DISMISS", payload: id }), []);
+  const clearAll = useCallback(() => dispatch({ type: "CLEAR_ALL" }), []);
 
   const unreadCount = useMemo(
-    () => state.notifications.filter(n => !n.read).length,
-    [state.notifications]
+    () => state.notifications.filter((n) => !n.read).length,
+    [state.notifications],
   );
 
   return (
@@ -232,6 +219,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
 export function useNotifications() {
   const ctx = useContext(NotificationContext);
-  if (!ctx) throw new Error('useNotifications must be used within NotificationProvider');
+  if (!ctx) throw new Error("useNotifications must be used within NotificationProvider");
   return ctx;
 }

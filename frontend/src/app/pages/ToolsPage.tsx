@@ -1,21 +1,21 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Icon } from '@iconify/react';
-import { PageLayout } from '../components/PageLayout';
-import { EmptyState } from '../components/EmptyState';
-import { Loader } from '../components/Loader';
-import { useWorkspace } from '../stores/workspace';
-import { getToolDefault } from '../stores/toolsSettings';
-import { BucketsExplorer } from '../components/tools/BucketsExplorer';
-import { LogsExplorer } from '../components/tools/LogsExplorer';
-import { ArtifactRegistry } from '../components/tools/ArtifactRegistry';
-import { SecretManager } from '../components/tools/SecretManager';
-import { SpannerExplorer } from '../components/tools/SpannerExplorer';
-import { SpannerBackupsExplorer } from '../components/tools/SpannerBackupsExplorer';
-import { GCloudSetup } from '../components/tools/GCloudSetup';
-import { useGCloud } from '../stores/gcloud';
-import * as PS from '../../../bindings/alis-hub-v3/productservice';
+import { useState, useEffect, useCallback } from "react";
+import { Icon } from "@iconify/react";
+import { PageLayout } from "../components/PageLayout";
+import { EmptyState } from "../components/EmptyState";
+import { Loader } from "../components/Loader";
+import { useWorkspace } from "../stores/workspace";
+import { getToolDefault } from "../stores/toolsSettings";
+import { BucketsExplorer } from "../components/tools/BucketsExplorer";
+import { LogsExplorer } from "../components/tools/LogsExplorer";
+import { ArtifactRegistry } from "../components/tools/ArtifactRegistry";
+import { SecretManager } from "../components/tools/SecretManager";
+import { SpannerExplorer } from "../components/tools/SpannerExplorer";
+import { SpannerBackupsExplorer } from "../components/tools/SpannerBackupsExplorer";
+import { GCloudSetup } from "../components/tools/GCloudSetup";
+import { useGCloud } from "../stores/gcloud";
+import * as PS from "../../../bindings/alis-hub-v3/productservice";
 
-type ToolTab = 'buckets' | 'logs' | 'artifactregistry' | 'secrets' | 'spanner' | 'backups';
+type ToolTab = "buckets" | "logs" | "artifactregistry" | "secrets" | "spanner" | "backups";
 
 type ProjectContext = {
   id: string;
@@ -25,22 +25,37 @@ type ProjectContext = {
 };
 
 const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = [
-  { id: 'buckets', label: 'Buckets', subtitle: 'Cloud Storage', icon: 'solar:cloud-storage-bold' },
-  { id: 'logs', label: 'Logs', subtitle: 'Cloud Logging', icon: 'solar:document-text-bold' },
-  { id: 'artifactregistry', label: 'Artifact Registry', subtitle: 'Packages', icon: 'solar:archive-bold' },
-  { id: 'secrets', label: 'Secret Manager', subtitle: 'Secrets', icon: 'solar:lock-keyhole-bold' },
-  { id: 'spanner', label: 'Spanner', subtitle: 'Cloud Spanner', icon: 'solar:database-bold' },
-  { id: 'backups', label: 'Backups', subtitle: 'Spanner Backups', icon: 'solar:history-bold' },
+  { id: "buckets", label: "Buckets", subtitle: "Cloud Storage", icon: "solar:cloud-storage-bold" },
+  { id: "logs", label: "Logs", subtitle: "Cloud Logging", icon: "solar:document-text-bold" },
+  {
+    id: "artifactregistry",
+    label: "Artifact Registry",
+    subtitle: "Packages",
+    icon: "solar:archive-bold",
+  },
+  { id: "secrets", label: "Secret Manager", subtitle: "Secrets", icon: "solar:lock-keyhole-bold" },
+  { id: "spanner", label: "Spanner", subtitle: "Cloud Spanner", icon: "solar:database-bold" },
+  { id: "backups", label: "Backups", subtitle: "Spanner Backups", icon: "solar:history-bold" },
 ];
 
 function isAuthError(e: unknown): boolean {
   const s = String(e);
-  return s.includes('invalid_grant') || s.includes('refresh token has expired') || s.includes('console token expired');
+  return (
+    s.includes("invalid_grant") ||
+    s.includes("refresh token has expired") ||
+    s.includes("console token expired")
+  );
 }
 
 export function ToolsPanel() {
   const { state, setPhase } = useWorkspace();
-  const { ready: gcloudReady, setReady: setGcloudReady, activeTab, setActiveTab, handleError: handleGCloudError } = useGCloud();
+  const {
+    ready: gcloudReady,
+    setReady: setGcloudReady,
+    activeTab,
+    setActiveTab,
+    handleError: handleGCloudError,
+  } = useGCloud();
 
   const [contexts, setContexts] = useState<ProjectContext[]>([]);
   const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
@@ -61,27 +76,27 @@ export function ToolsPanel() {
         const list: ProjectContext[] = [];
         if (orgProject?.id) {
           list.push({
-            id: 'org',
-            label: 'Org',
+            id: "org",
+            label: "Org",
             projectID: orgProject.id,
-            region: orgProject.region ?? '',
+            region: orgProject.region ?? "",
           });
         }
         if (overview?.googleProject?.id) {
           list.push({
-            id: 'product',
-            label: 'Product',
+            id: "product",
+            label: "Product",
             projectID: overview.googleProject.id,
-            region: overview.googleProject.region ?? '',
+            region: overview.googleProject.region ?? "",
           });
         }
         for (const env of envs ?? []) {
           if (env.gcpProject?.id) {
             list.push({
               id: env.name,
-              label: env.displayName || env.name?.split('/').pop() || env.name,
+              label: env.displayName || env.name?.split("/").pop() || env.name,
               projectID: env.gcpProject.id,
-              region: env.gcpProject.region ?? '',
+              region: env.gcpProject.region ?? "",
             });
           }
         }
@@ -89,7 +104,10 @@ export function ToolsPanel() {
       })
       .catch((e: unknown) => {
         if (handleGCloudError(e)) return;
-        if (isAuthError(e)) { setPhase('login'); return; }
+        if (isAuthError(e)) {
+          setPhase("login");
+          return;
+        }
         setContextsError(String(e));
       })
       .finally(() => setContextsLoading(false));
@@ -103,14 +121,15 @@ export function ToolsPanel() {
   useEffect(() => {
     if (contexts.length === 0) return;
     const defaultId = getToolDefault(state.organisation, state.product, activeTab);
-    const match = defaultId === 'env'
-      ? contexts.find(c => c.id === state.activeEnvName)
-      : contexts.find(c => c.id === defaultId);
+    const match =
+      defaultId === "env"
+        ? contexts.find((c) => c.id === state.activeEnvName)
+        : contexts.find((c) => c.id === defaultId);
     if (match) setSelectedCtx(match);
   }, [activeTab, contexts, state.organisation, state.product, state.activeEnvName]);
 
-  const projectID = selectedCtx?.projectID ?? '';
-  const region = selectedCtx?.region ?? '';
+  const projectID = selectedCtx?.projectID ?? "";
+  const region = selectedCtx?.region ?? "";
 
   return (
     <PageLayout
@@ -124,7 +143,9 @@ export function ToolsPanel() {
           <div className="w-[200px] border-r border-border shrink-0 flex flex-col">
             {/* Project context selector */}
             <div className="px-[12px] py-[10px] border-b border-border">
-              <p className="text-[8px] font-bold uppercase text-foreground/30 font-mono mb-[6px]">Project</p>
+              <p className="text-[8px] font-bold uppercase text-foreground/30 font-mono mb-[6px]">
+                Project
+              </p>
               {contextsLoading ? (
                 <div className="flex items-center gap-[6px]">
                   <Loader size={12} />
@@ -138,26 +159,29 @@ export function ToolsPanel() {
                 <div className="flex flex-col gap-[2px]">
                   {contexts.map((ctx) => {
                     const isActive = selectedCtx?.id === ctx.id;
-                    const icon = ctx.id === 'org'
-                      ? 'solar:buildings-linear'
-                      : ctx.id === 'product'
-                        ? 'solar:box-linear'
-                        : 'solar:server-minimalistic-linear';
+                    const icon =
+                      ctx.id === "org"
+                        ? "solar:buildings-linear"
+                        : ctx.id === "product"
+                          ? "solar:box-linear"
+                          : "solar:server-minimalistic-linear";
                     return (
                       <button
                         key={ctx.id}
                         onClick={() => setSelectedCtx(ctx)}
                         className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[3px] text-left transition-all ${
                           isActive
-                            ? 'bg-brand-fill/12 border border-brand-fill'
-                            : 'hover:bg-foreground/[4%] border border-transparent'
+                            ? "bg-brand-fill/12 border border-brand-fill"
+                            : "hover:bg-foreground/[4%] border border-transparent"
                         }`}
                       >
                         <Icon
                           icon={icon}
-                          className={`text-xs shrink-0 ${isActive ? 'text-brand' : 'text-foreground/30'}`}
+                          className={`text-xs shrink-0 ${isActive ? "text-brand" : "text-foreground/30"}`}
                         />
-                        <span className={`text-[10px] font-mono truncate ${isActive ? 'text-foreground' : 'text-foreground/50'}`}>
+                        <span
+                          className={`text-[10px] font-mono truncate ${isActive ? "text-foreground" : "text-foreground/50"}`}
+                        >
                           {ctx.label}
                         </span>
                       </button>
@@ -177,16 +201,18 @@ export function ToolsPanel() {
                     onClick={() => setActiveTab(tool.id)}
                     className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
                       isActive
-                        ? 'bg-brand-fill/10 border border-brand-fill'
-                        : 'hover:bg-foreground/[3%] border border-transparent'
+                        ? "bg-brand-fill/10 border border-brand-fill"
+                        : "hover:bg-foreground/[3%] border border-transparent"
                     }`}
                   >
                     <Icon
                       icon={tool.icon}
-                      className={`text-lg shrink-0 ${isActive ? 'text-brand' : 'text-foreground opacity-50'}`}
+                      className={`text-lg shrink-0 ${isActive ? "text-brand" : "text-foreground opacity-50"}`}
                     />
                     <div className="flex flex-col min-w-0">
-                      <p className={`text-[10px] font-bold uppercase font-mono truncate ${isActive ? 'text-foreground' : 'text-foreground/50'}`}>
+                      <p
+                        className={`text-[10px] font-bold uppercase font-mono truncate ${isActive ? "text-foreground" : "text-foreground/50"}`}
+                      >
                         {tool.label}
                       </p>
                       <p className="text-[8px] text-foreground/30 uppercase">{tool.subtitle}</p>
@@ -220,7 +246,10 @@ export function ToolsPanel() {
           ) : contextsError ? (
             <div className="flex-1 flex items-center justify-center p-[24px]">
               <div className="text-center max-w-[320px]">
-                <Icon icon="solar:cloud-cross-linear" className="text-4xl text-foreground/10 mb-[8px]" />
+                <Icon
+                  icon="solar:cloud-cross-linear"
+                  className="text-4xl text-foreground/10 mb-[8px]"
+                />
                 <p className="text-[11px] text-foreground/50 font-mono">{contextsError}</p>
               </div>
             </div>
@@ -234,12 +263,20 @@ export function ToolsPanel() {
             </div>
           ) : (
             <>
-              {activeTab === 'buckets' && <BucketsExplorer key={projectID} projectID={projectID} />}
-              {activeTab === 'logs' && <LogsExplorer key={projectID} projectID={projectID} />}
-              {activeTab === 'artifactregistry' && <ArtifactRegistry key={`${projectID}:${region}`} projectID={projectID} region={region} />}
-              {activeTab === 'secrets' && <SecretManager key={projectID} projectID={projectID} />}
-              {activeTab === 'spanner' && <SpannerExplorer key={projectID} projectID={projectID} />}
-              {activeTab === 'backups' && <SpannerBackupsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "buckets" && <BucketsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "logs" && <LogsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "artifactregistry" && (
+                <ArtifactRegistry
+                  key={`${projectID}:${region}`}
+                  projectID={projectID}
+                  region={region}
+                />
+              )}
+              {activeTab === "secrets" && <SecretManager key={projectID} projectID={projectID} />}
+              {activeTab === "spanner" && <SpannerExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "backups" && (
+                <SpannerBackupsExplorer key={projectID} projectID={projectID} />
+              )}
             </>
           )}
         </div>
@@ -252,4 +289,6 @@ export function ToolsPanel() {
   }
 }
 
-export function ToolsPage() { return null; }
+export function ToolsPage() {
+  return null;
+}

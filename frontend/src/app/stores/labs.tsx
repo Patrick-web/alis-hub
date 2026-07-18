@@ -5,16 +5,16 @@ import {
   useReducer,
   useEffect,
   type ReactNode,
-} from 'react';
-import * as settingsClient from '../lib/settingsClient';
+} from "react";
+import * as settingsClient from "../lib/settingsClient";
 
 export type SuggestionCategory =
-  | 'Build & Deploy'
-  | 'Define'
-  | 'Environment Hygiene'
-  | 'Release Readiness'
-  | 'AI Insights'
-  | 'Tools';
+  | "Build & Deploy"
+  | "Define"
+  | "Environment Hygiene"
+  | "Release Readiness"
+  | "AI Insights"
+  | "Tools";
 
 export interface SuggestionDefinition {
   id: string;
@@ -26,77 +26,82 @@ export interface SuggestionDefinition {
 
 export const SUGGESTION_REGISTRY: SuggestionDefinition[] = [
   {
-    id: 'build-success-deploy',
-    category: 'Build & Deploy',
-    title: 'Suggest deploy after build',
-    description: 'When a build completes successfully, suggest deploying to dev.',
+    id: "build-success-deploy",
+    category: "Build & Deploy",
+    title: "Suggest deploy after build",
+    description: "When a build completes successfully, suggest deploying to dev.",
     enabled: true,
   },
   {
-    id: 'build-failure-verbose',
-    category: 'Build & Deploy',
-    title: 'Suggest verbose re-run on failure',
-    description: 'When a build fails, offer to re-run with verbose output.',
+    id: "build-failure-verbose",
+    category: "Build & Deploy",
+    title: "Suggest verbose re-run on failure",
+    description: "When a build fails, offer to re-run with verbose output.",
     enabled: true,
   },
   {
-    id: 'packages-installed-commit',
-    category: 'Build & Deploy',
-    title: 'Suggest commit after package install',
-    description: 'After packages install successfully, suggest committing the updated files.',
+    id: "packages-installed-commit",
+    category: "Build & Deploy",
+    title: "Suggest commit after package install",
+    description: "After packages install successfully, suggest committing the updated files.",
     enabled: true,
   },
   {
-    id: 'git-pull-define-upgrade',
-    category: 'Define',
-    title: 'Suggest package install after define repo pull',
-    description: 'When new commits are pulled on the define repo, suggest installing packages.',
+    id: "git-pull-define-upgrade",
+    category: "Define",
+    title: "Suggest package install after define repo pull",
+    description: "When new commits are pulled on the define repo, suggest installing packages.",
     enabled: true,
   },
   {
-    id: 'git-pull-build-upgrade',
-    category: 'Build & Deploy',
-    title: 'Suggest package install after build repo pull with dependency changes',
-    description: 'When a build repo pull includes dependency files (go.mod, package.json, etc.), suggest installing packages.',
+    id: "git-pull-build-upgrade",
+    category: "Build & Deploy",
+    title: "Suggest package install after build repo pull with dependency changes",
+    description:
+      "When a build repo pull includes dependency files (go.mod, package.json, etc.), suggest installing packages.",
     enabled: true,
   },
   {
-    id: 'push-define-run-service',
-    category: 'Define',
-    title: 'Suggest running Define after proto push',
-    description: "When you push the define repo, detect which service's protos changed and suggest running Define for it.",
+    id: "push-define-run-service",
+    category: "Define",
+    title: "Suggest running Define after proto push",
+    description:
+      "When you push the define repo, detect which service's protos changed and suggest running Define for it.",
     enabled: true,
   },
   {
-    id: 'ai-contextual-insight',
-    category: 'AI Insights',
-    title: 'AI contextual suggestions',
-    description: 'Generate context-aware next-step suggestions using your local Gemma model after key events.',
+    id: "ai-contextual-insight",
+    category: "AI Insights",
+    title: "AI contextual suggestions",
+    description:
+      "Generate context-aware next-step suggestions using your local Gemma model after key events.",
     enabled: true,
   },
   {
-    id: 'spanner-rw-transaction',
-    category: 'Tools',
-    title: 'Spanner read-write transaction mode',
-    description: 'Execute DML in a read-write transaction that holds changes open until you choose to commit or rollback.',
+    id: "spanner-rw-transaction",
+    category: "Tools",
+    title: "Spanner read-write transaction mode",
+    description:
+      "Execute DML in a read-write transaction that holds changes open until you choose to commit or rollback.",
     enabled: true,
   },
   {
-    id: 'spanner-proto-decode',
-    category: 'Tools',
-    title: 'Decode Spanner BYTES as proto JSON',
-    description: "Adds a \"Decode as proto\" action to BYTES columns, using message types compiled from the org's cloned define repo.",
+    id: "spanner-proto-decode",
+    category: "Tools",
+    title: "Decode Spanner BYTES as proto JSON",
+    description:
+      'Adds a "Decode as proto" action to BYTES columns, using message types compiled from the org\'s cloned define repo.',
     enabled: true,
   },
 ];
 
 export const SUGGESTION_CATEGORY_ORDER: SuggestionCategory[] = [
-  'Build & Deploy',
-  'Define',
-  'Environment Hygiene',
-  'Release Readiness',
-  'AI Insights',
-  'Tools',
+  "Build & Deploy",
+  "Define",
+  "Environment Hygiene",
+  "Release Readiness",
+  "AI Insights",
+  "Tools",
 ];
 
 interface LabsState {
@@ -106,9 +111,9 @@ interface LabsState {
 }
 
 type LabsAction =
-  | { type: 'SET_MASTER'; payload: boolean }
-  | { type: 'SET_SUGGESTION'; payload: { id: string; enabled: boolean } }
-  | { type: 'SET_WORKFLOWS'; payload: boolean };
+  | { type: "SET_MASTER"; payload: boolean }
+  | { type: "SET_SUGGESTION"; payload: { id: string; enabled: boolean } }
+  | { type: "SET_WORKFLOWS"; payload: boolean };
 
 interface LabsContextValue {
   state: LabsState;
@@ -118,7 +123,7 @@ interface LabsContextValue {
   setWorkflowsEnabled: (enabled: boolean) => void;
 }
 
-const STORAGE_KEY = 'alis:labs';
+const STORAGE_KEY = "alis:labs";
 
 const DEFAULT_STATE: LabsState = { masterEnabled: true, enabledMap: {}, workflowsEnabled: false };
 
@@ -138,14 +143,14 @@ function saveToStorage(state: LabsState) {
 
 function reducer(state: LabsState, action: LabsAction): LabsState {
   switch (action.type) {
-    case 'SET_MASTER':
+    case "SET_MASTER":
       return { ...state, masterEnabled: action.payload };
-    case 'SET_SUGGESTION':
+    case "SET_SUGGESTION":
       return {
         ...state,
         enabledMap: { ...state.enabledMap, [action.payload.id]: action.payload.enabled },
       };
-    case 'SET_WORKFLOWS':
+    case "SET_WORKFLOWS":
       return { ...state, workflowsEnabled: action.payload };
     default:
       return state;
@@ -166,25 +171,33 @@ export function LabsProvider({ children }: { children: ReactNode }) {
       if (!state.masterEnabled) return false;
       const override = state.enabledMap[id];
       if (override !== undefined) return override;
-      return SUGGESTION_REGISTRY.find(d => d.id === id)?.enabled ?? false;
+      return SUGGESTION_REGISTRY.find((d) => d.id === id)?.enabled ?? false;
     },
     [state],
   );
 
   const setSuggestionEnabled = useCallback((id: string, enabled: boolean) => {
-    dispatch({ type: 'SET_SUGGESTION', payload: { id, enabled } });
+    dispatch({ type: "SET_SUGGESTION", payload: { id, enabled } });
   }, []);
 
   const setMasterEnabled = useCallback((enabled: boolean) => {
-    dispatch({ type: 'SET_MASTER', payload: enabled });
+    dispatch({ type: "SET_MASTER", payload: enabled });
   }, []);
 
   const setWorkflowsEnabled = useCallback((enabled: boolean) => {
-    dispatch({ type: 'SET_WORKFLOWS', payload: enabled });
+    dispatch({ type: "SET_WORKFLOWS", payload: enabled });
   }, []);
 
   return (
-    <LabsContext.Provider value={{ state, isSuggestionEnabled, setSuggestionEnabled, setMasterEnabled, setWorkflowsEnabled }}>
+    <LabsContext.Provider
+      value={{
+        state,
+        isSuggestionEnabled,
+        setSuggestionEnabled,
+        setMasterEnabled,
+        setWorkflowsEnabled,
+      }}
+    >
       {children}
     </LabsContext.Provider>
   );
@@ -192,6 +205,6 @@ export function LabsProvider({ children }: { children: ReactNode }) {
 
 export function useLabs() {
   const ctx = useContext(LabsContext);
-  if (!ctx) throw new Error('useLabs must be used within LabsProvider');
+  if (!ctx) throw new Error("useLabs must be used within LabsProvider");
   return ctx;
 }

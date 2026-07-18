@@ -1,5 +1,5 @@
-import { Icon } from '@iconify/react';
-import { LearningModule, LearningStep } from './types';
+import { Icon } from "@iconify/react";
+import { LearningModule, LearningStep } from "./types";
 
 interface StepViewProps {
   module: LearningModule;
@@ -11,7 +11,15 @@ interface StepViewProps {
   isLastModule: boolean;
 }
 
-export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, isLastModule }: StepViewProps) {
+export function StepView({
+  module,
+  step,
+  stepIndex,
+  onNext,
+  onPrev,
+  isLastStep,
+  isLastModule,
+}: StepViewProps) {
   const totalSteps = module.steps.length;
 
   return (
@@ -36,9 +44,7 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
       <div className="flex-1 overflow-y-auto">
         <div className="px-[28px] py-[24px] max-w-[760px] mx-auto">
           {/* Body text / content */}
-          <div className="mb-[24px]">
-            {step.body}
-          </div>
+          <div className="mb-[24px]">{step.body}</div>
 
           {/* Diagram (if any) */}
           {step.diagram && (
@@ -67,10 +73,10 @@ export function StepView({ module, step, stepIndex, onNext, onPrev, isLastStep, 
               key={i}
               className={`rounded-full transition-all ${
                 i === stepIndex
-                  ? 'size-[8px] bg-brand-fill'
+                  ? "size-[8px] bg-brand-fill"
                   : i < stepIndex
-                  ? 'size-[6px] bg-brand-fill/40'
-                  : 'size-[6px] bg-border'
+                    ? "size-[6px] bg-brand-fill/40"
+                    : "size-[6px] bg-border"
               }`}
             />
           ))}

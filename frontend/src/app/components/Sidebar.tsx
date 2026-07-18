@@ -60,8 +60,7 @@ const codeblockNavItems = [
 export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } =
-    useWorkspace();
+  const { state, setActiveEnv, setLoadedEnvs, setActiveNeurons } = useWorkspace();
   const [activeBuildItem] = useState("");
   const [neuronFilter, setNeuronFilter] = useState("");
 
@@ -78,18 +77,12 @@ export function Sidebar() {
   const isCodeblocks = location.pathname.includes("/codeblocks");
 
   const currentPath = location.pathname;
-  const activeDevelopId =
-    developNavItems.find((i) => i.route === currentPath)?.id ?? "about";
+  const activeDevelopId = developNavItems.find((i) => i.route === currentPath)?.id ?? "about";
 
   const dynamicEnvItems = state.loadedEnvs.map((env) => ({
     id: env.name,
     label: env.displayName,
-    icon: (
-      <Icon
-        icon="solar:server-square-cloud-linear"
-        className="text-brand text-xl"
-      />
-    ),
+    icon: <Icon icon="solar:server-square-cloud-linear" className="text-brand text-xl" />,
   }));
 
   let items: {
@@ -100,18 +93,14 @@ export function Sidebar() {
   }[] = developNavItems;
   let header = "DEVELOP";
   let bottomButtonLabel = "";
-  let bottomButtonIcon = (
-    <Icon icon="solar:keyboard-linear" className="text-xl" />
-  );
+  let bottomButtonIcon = <Icon icon="solar:keyboard-linear" className="text-xl" />;
   let onBottomButtonClick: (() => void) | undefined;
 
   if (isEnvironments) {
     items = dynamicEnvItems.length > 0 ? dynamicEnvItems : envNavItems;
     header = "ENVIRONMENTS";
     bottomButtonLabel = "New Environment";
-    bottomButtonIcon = (
-      <Icon icon="solar:add-circle-linear" className="text-xl" />
-    );
+    bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
     onBottomButtonClick = () => {
       setSheetMode("create");
       setEditTarget(null);
@@ -122,43 +111,35 @@ export function Sidebar() {
     items = state.neurons
       .filter((n) => !q || n.name.toLowerCase().includes(q))
       .map((n) => ({
-      id: n.name,
-      label: n.name,
-      icon: (
-        <Icon
-          icon="solar:sledgehammer-line-duotone"
-          className="text-xl"
-          style={{
-            color: state.activeNeuronIds[0] === n.name ? "#F881A9" : "white",
-          }}
-        />
-      ),
-    }));
+        id: n.name,
+        label: n.name,
+        icon: (
+          <Icon
+            icon="solar:sledgehammer-line-duotone"
+            className="text-xl"
+            style={{
+              color: state.activeNeuronIds[0] === n.name ? "#F881A9" : "white",
+            }}
+          />
+        ),
+      }));
     header = "BUILDS";
     bottomButtonLabel = "New Service";
-    bottomButtonIcon = (
-      <Icon icon="solar:add-circle-linear" className="text-xl" />
-    );
+    bottomButtonIcon = <Icon icon="solar:add-circle-linear" className="text-xl" />;
   } else if (isCodeblocks) {
     items = codeblockNavItems;
     header = "CODEBLOCKS";
     bottomButtonLabel = "Create Block";
-    bottomButtonIcon = (
-      <Icon icon="solar:add-square-linear" className="text-xl" />
-    );
+    bottomButtonIcon = <Icon icon="solar:add-square-linear" className="text-xl" />;
     onBottomButtonClick = () => navigate("/codeblocks/create");
   }
 
   const getActiveItem = () => {
     if (isEnvironments) {
-      if (dynamicEnvItems.length > 0)
-        return state.activeEnvName || dynamicEnvItems[0]?.id;
+      if (dynamicEnvItems.length > 0) return state.activeEnvName || dynamicEnvItems[0]?.id;
       return envNavItems[0]?.id;
     }
-    if (isBuilds)
-      return (
-        state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem
-      );
+    if (isBuilds) return state.activeNeuronIds[0] || state.neurons[0]?.id || activeBuildItem;
     if (isCodeblocks)
       return (
         codeblockNavItems.find((i) => i.route && currentPath === i.route)?.id ??
@@ -170,11 +151,16 @@ export function Sidebar() {
   const handleItemClick = (item: (typeof items)[0]) => {
     if (isEnvironments && dynamicEnvItems.length > 0) {
       setActiveEnv(item.id);
-      const env = state.loadedEnvs.find(e => e.name === item.id);
+      const env = state.loadedEnvs.find((e) => e.name === item.id);
       if (env) {
-        Call.ByName('main.ProductService.SwitchEnvironment',
-          state.organisation, state.product, env.name,
-          env.gcpProjectId ?? '', env.gcpProjectNumber ?? '', env.gcpRegion ?? ''
+        Call.ByName(
+          "main.ProductService.SwitchEnvironment",
+          state.organisation,
+          state.product,
+          env.name,
+          env.gcpProjectId ?? "",
+          env.gcpProjectNumber ?? "",
+          env.gcpRegion ?? "",
         ).catch(console.error);
       }
     } else if (isBuilds) {
@@ -195,21 +181,21 @@ export function Sidebar() {
 
   const handleItemKeyDown = useCallback(
     (e: React.KeyboardEvent, idx: number) => {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         e.preventDefault();
         const next = Math.min(idx + 1, items.length - 1);
         setFocusIndex(next);
         itemRefs.current.get(items[next].id)?.focus();
-      } else if (e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
         const next = Math.max(idx - 1, 0);
         setFocusIndex(next);
         itemRefs.current.get(items[next].id)?.focus();
-      } else if (e.key === 'Home') {
+      } else if (e.key === "Home") {
         e.preventDefault();
         setFocusIndex(0);
         itemRefs.current.get(items[0].id)?.focus();
-      } else if (e.key === 'End') {
+      } else if (e.key === "End") {
         e.preventDefault();
         const last = items.length - 1;
         setFocusIndex(last);
@@ -221,11 +207,7 @@ export function Sidebar() {
 
   const activeId = getActiveItem();
 
-  const handleCreateEnv = async (
-    displayName: string,
-    envType: number,
-    region: string,
-  ) => {
+  const handleCreateEnv = async (displayName: string, envType: number, region: string) => {
     const result = await (
       ProductService.CreateEnvironment as (
         org: string,
@@ -249,15 +231,10 @@ export function Sidebar() {
   const handleEditEnv = async (displayName: string) => {
     if (!editTarget) return;
     const result = await (
-      ProductService.UpdateEnvironment as (
-        envName: string,
-        displayName: string,
-      ) => Promise<any>
+      ProductService.UpdateEnvironment as (envName: string, displayName: string) => Promise<any>
     )(editTarget.name, displayName);
     const updated = state.loadedEnvs.map((e) =>
-      e.name === editTarget.name
-        ? { ...e, displayName: result?.displayName ?? displayName }
-        : e,
+      e.name === editTarget.name ? { ...e, displayName: result?.displayName ?? displayName } : e,
     );
     setLoadedEnvs(updated);
   };
@@ -266,12 +243,10 @@ export function Sidebar() {
     if (!deleteTarget) return;
     setDeleteLoading(true);
     try {
-      await (
-        ProductService.DeleteEnvironment as (envName: string) => Promise<void>
-      )(deleteTarget.name);
-      const updated = state.loadedEnvs.filter(
-        (e) => e.name !== deleteTarget.name,
+      await (ProductService.DeleteEnvironment as (envName: string) => Promise<void>)(
+        deleteTarget.name,
       );
+      const updated = state.loadedEnvs.filter((e) => e.name !== deleteTarget.name);
       setLoadedEnvs(updated);
       if (state.activeEnvName === deleteTarget.name) {
         setActiveEnv(updated[0]?.name ?? "");
@@ -298,7 +273,9 @@ export function Sidebar() {
                   placeholder="Filter services..."
                   value={neuronFilter}
                   onChange={(e) => setNeuronFilter(e.target.value)}
-                  icon={<Icon icon="solar:magnifer-linear" className="text-foreground/30 text-sm" />}
+                  icon={
+                    <Icon icon="solar:magnifer-linear" className="text-foreground/30 text-sm" />
+                  }
                   className="w-full"
                 />
               </div>
@@ -314,18 +291,14 @@ export function Sidebar() {
                 icon={item.icon}
                 active={activeId === item.id}
                 tabIndex={
-                  focusIndex >= 0
-                    ? focusIndex === i ? 0 : -1
-                    : activeId === item.id ? 0 : -1
+                  focusIndex >= 0 ? (focusIndex === i ? 0 : -1) : activeId === item.id ? 0 : -1
                 }
                 onKeyDown={(e) => handleItemKeyDown(e, i)}
                 onClick={() => handleItemClick(item)}
                 onEdit={
                   isEnvironments && dynamicEnvItems.length > 0
                     ? () => {
-                        const env = state.loadedEnvs.find(
-                          (e) => e.name === item.id,
-                        );
+                        const env = state.loadedEnvs.find((e) => e.name === item.id);
                         if (env) {
                           setEditTarget(env);
                           setSheetMode("edit");
@@ -337,9 +310,7 @@ export function Sidebar() {
                 onDelete={
                   isEnvironments && dynamicEnvItems.length > 0
                     ? () => {
-                        const env = state.loadedEnvs.find(
-                          (e) => e.name === item.id,
-                        );
+                        const env = state.loadedEnvs.find((e) => e.name === item.id);
                         if (env) setDeleteTarget(env);
                       }
                     : undefined
@@ -353,12 +324,7 @@ export function Sidebar() {
               {isEnvironments && (
                 <Button
                   variant="secondary"
-                  icon={
-                    <Icon
-                      icon="solar:danger-triangle-linear"
-                      className="text-xl"
-                    />
-                  }
+                  icon={<Icon icon="solar:danger-triangle-linear" className="text-xl" />}
                   className="w-full h-[34px] text-[10px] font-bold uppercase"
                   onClick={() => setMissingVarsOpen(true)}
                 >
@@ -389,9 +355,7 @@ export function Sidebar() {
         open={sheetOpen}
         onOpenChange={setSheetOpen}
         mode={sheetMode}
-        initialDisplayName={
-          sheetMode === "edit" ? (editTarget?.displayName ?? "") : ""
-        }
+        initialDisplayName={sheetMode === "edit" ? (editTarget?.displayName ?? "") : ""}
         onSubmit={
           sheetMode === "create"
             ? handleCreateEnv
@@ -408,9 +372,8 @@ export function Sidebar() {
         title="Delete Environment"
         description={
           <>
-            Delete{" "}
-            <span className="text-foreground">{deleteTarget?.displayName}</span>?
-            This cannot be undone.
+            Delete <span className="text-foreground">{deleteTarget?.displayName}</span>? This cannot
+            be undone.
           </>
         }
         confirmLabel="Delete"

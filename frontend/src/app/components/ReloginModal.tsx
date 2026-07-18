@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Icon } from '@iconify/react';
-import { Loader } from './Loader';
-import * as ProductService from '../../../bindings/alis-hub-v3/productservice';
+import { useState } from "react";
+import { Icon } from "@iconify/react";
+import { Loader } from "./Loader";
+import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 
 interface Props {
   onSuccess: () => void;
@@ -34,14 +34,19 @@ export function ReloginModal({ onSuccess }: Props) {
           <div>
             <p className="text-[15px] font-semibold text-foreground">Session expired</p>
             <p className="text-[12px] text-foreground/50 mt-[4px] leading-relaxed">
-              Your session has expired.<br />Sign in again to continue.
+              Your session has expired.
+              <br />
+              Sign in again to continue.
             </p>
           </div>
         </div>
 
         {error && (
           <div className="flex items-start gap-[8px] p-[10px] bg-[rgba(255,92,95,0.1)] border border-[rgba(255,92,95,0.3)] rounded-[6px]">
-            <Icon icon="solar:close-circle-linear" className="text-destructive text-sm shrink-0 mt-[1px]" />
+            <Icon
+              icon="solar:close-circle-linear"
+              className="text-destructive text-sm shrink-0 mt-[1px]"
+            />
             <p className="text-[11px] text-foreground/70 leading-relaxed">{error}</p>
           </div>
         )}
