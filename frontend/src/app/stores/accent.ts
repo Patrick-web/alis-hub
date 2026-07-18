@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { useTheme } from "next-themes";
+import { create } from "zustand";
 import * as settingsClient from "../lib/settingsClient";
+import { onSettingsReady } from "./lib/persistSqlite";
 import {
   getAccessibleForeground,
   getAccessibleTextColor,
@@ -23,9 +23,12 @@ export const ACCENT_COLORS: AccentColor[] = [
   { id: "teal", label: "Teal", brand: "#5ac8fa" },
 ];
 
+// Persisted as raw strings (not JSON) for compatibility with the values the
+// hook-based store wrote, so persistSqlite's JSON envelope is not used here.
 const STORAGE_KEY = "alis-hub-accent";
 const CUSTOM_COLOR_KEY = "alis-hub-accent-custom";
 const DEFAULT_ID = "pink";
+const DEFAULT_CUSTOM_HEX = "#f881a9";
 
 function currentPageBackground(): string {
   const bg = getComputedStyle(document.documentElement).getPropertyValue("--background").trim();
@@ -44,10 +47,12 @@ function applyAccent(brand: string) {
   document.documentElement.style.setProperty("--ring", brand);
 }
 
+/** Re-applies the persisted accent against the current theme background.
+ * Called on boot and whenever the resolved theme changes (RootLayout). */
 export function initAccentColor() {
   const id = settingsClient.getCached(STORAGE_KEY) ?? DEFAULT_ID;
   if (id === "custom") {
-    const hex = settingsClient.getCached(CUSTOM_COLOR_KEY) ?? "#f881a9";
+    const hex = settingsClient.getCached(CUSTOM_COLOR_KEY) ?? DEFAULT_CUSTOM_HEX;
     applyAccent(hex);
   } else {
     const color = ACCENT_COLORS.find((c) => c.id === id) ?? ACCENT_COLORS[0];
@@ -55,33 +60,33 @@ export function initAccentColor() {
   }
 }
 
-export function useAccentColor() {
-  const { resolvedTheme } = useTheme();
-  const [accentId, setAccentId] = useState<string>(
-    () => settingsClient.getCached(STORAGE_KEY) ?? DEFAULT_ID,
-  );
-  const [customHex, setCustomHex] = useState<string>(
-    () => settingsClient.getCached(CUSTOM_COLOR_KEY) ?? "#f881a9",
-  );
+interface AccentStore {
+  accentId: string;
+  customHex: string;
+  setAccent: (id: string) => void;
+  setCustomAccent: (hex: string) => void;
+}
 
-  useEffect(() => {
-    initAccentColor();
-  }, [resolvedTheme]);
-
-  function setAccent(id: string) {
+export const useAccentColor = create<AccentStore>((set) => ({
+  accentId: DEFAULT_ID,
+  customHex: DEFAULT_CUSTOM_HEX,
+  setAccent: (id) => {
     const color = ACCENT_COLORS.find((c) => c.id === id) ?? ACCENT_COLORS[0];
     settingsClient.set(STORAGE_KEY, id);
     applyAccent(color.brand);
-    setAccentId(id);
-  }
-
-  function setCustomAccent(hex: string) {
+    set({ accentId: id });
+  },
+  setCustomAccent: (hex) => {
     settingsClient.set(CUSTOM_COLOR_KEY, hex);
     settingsClient.set(STORAGE_KEY, "custom");
     applyAccent(hex);
-    setCustomHex(hex);
-    setAccentId("custom");
-  }
+    set({ customHex: hex, accentId: "custom" });
+  },
+}));
 
-  return { accentId, setAccent, customHex, setCustomAccent };
-}
+onSettingsReady(() => {
+  useAccentColor.setState({
+    accentId: settingsClient.getCached(STORAGE_KEY) ?? DEFAULT_ID,
+    customHex: settingsClient.getCached(CUSTOM_COLOR_KEY) ?? DEFAULT_CUSTOM_HEX,
+  });
+});
