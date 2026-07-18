@@ -42,7 +42,8 @@ const GCLOUD_TOOLS: {
 const GCLOUD_TTL = 5 * 60 * 1000;
 
 export function GCloudCommandsExtension() {
-  const { registerExtension, unregisterExtension } = useCommandPalette();
+  const registerExtension = useCommandPalette((s) => s.registerExtension);
+  const unregisterExtension = useCommandPalette((s) => s.unregisterExtension);
   const navigate = useNavigate();
   const [gcloudStatus, setGcloudStatus] = useState<GCloudStatus | null>(null);
   const lastCheckRef = { current: 0 };

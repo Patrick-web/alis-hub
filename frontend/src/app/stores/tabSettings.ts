@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from "react";
-import * as settingsClient from "../lib/settingsClient";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { hydrateWhenReady, persistSqlite } from "./lib/persistSqlite";
 
 export interface TabDefinition {
   id: string;
@@ -22,14 +23,14 @@ export const TAB_REGISTRY: TabDefinition[] = [
 const REGISTRY_IDS = TAB_REGISTRY.map((t) => t.id);
 const DEFAULT_TAB = "about";
 
-export const STORAGE_KEY = "alis:tab-settings";
-
-interface TabSettings {
+interface TabSettingsState {
   order: string[];
   defaultTab: string;
+  setTabOrder: (order: string[]) => void;
+  setDefaultTab: (id: string) => void;
 }
 
-interface StoredTabSettings {
+interface PersistedTabSettings {
   order?: string[];
   defaultTab?: string;
 }
@@ -42,90 +43,51 @@ function reconcileOrder(saved: string[] | undefined): string[] {
   return [...known, ...missing];
 }
 
-function load(): TabSettings {
-  let parsed: StoredTabSettings = {};
-  try {
-    const raw = settingsClient.getCached(STORAGE_KEY);
-    if (raw) parsed = JSON.parse(raw) as StoredTabSettings;
-  } catch {
-    parsed = {};
-  }
-  const order = reconcileOrder(parsed.order);
-  const defaultTab =
-    parsed.defaultTab && REGISTRY_IDS.includes(parsed.defaultTab) ? parsed.defaultTab : DEFAULT_TAB;
-  return { order, defaultTab };
-}
+export const useTabSettings = create<TabSettingsState>()(
+  persist(
+    (set) => ({
+      order: [...REGISTRY_IDS],
+      defaultTab: DEFAULT_TAB,
+      setTabOrder: (order) => set({ order: reconcileOrder(order) }),
+      setDefaultTab: (id) => {
+        if (REGISTRY_IDS.includes(id)) set({ defaultTab: id });
+      },
+    }),
+    persistSqlite<TabSettingsState, PersistedTabSettings>({
+      key: "alis:tab-settings",
+      partialize: (state) => ({ order: state.order, defaultTab: state.defaultTab }),
+      merge: (persisted, current) => {
+        const stored = (persisted ?? {}) as PersistedTabSettings;
+        return {
+          ...current,
+          order: reconcileOrder(stored.order),
+          defaultTab:
+            stored.defaultTab && REGISTRY_IDS.includes(stored.defaultTab)
+              ? stored.defaultTab
+              : current.defaultTab,
+        };
+      },
+    }),
+  ),
+);
 
-// Not initialized eagerly at module scope: this module is pulled in by the
-// static import graph (App -> ... -> TopNav) and evaluated before
-// settingsClient.init() has loaded SQLite into its cache, so calling load()
-// here would always see an empty cache and silently fall back to defaults —
-// with nothing ever reloading it afterward. Deferring to first real access
-// (which happens once React actually renders, after init() has resolved)
-// avoids that race.
-let state: TabSettings | null = null;
-const listeners = new Set<() => void>();
-
-function ensureLoaded(): TabSettings {
-  if (state === null) state = load();
-  return state;
-}
-
-function emit() {
-  for (const listener of listeners) listener();
-}
-
-function persist() {
-  settingsClient.set(STORAGE_KEY, JSON.stringify(ensureLoaded()));
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function getSnapshot(): TabSettings {
-  return ensureLoaded();
-}
-
-export function getTabOrder(): string[] {
-  return ensureLoaded().order;
-}
-
-export function setTabOrder(order: string[]): void {
-  state = { ...ensureLoaded(), order: reconcileOrder(order) };
-  persist();
-  emit();
-}
-
-export function getDefaultTab(): string {
-  return ensureLoaded().defaultTab;
-}
-
-export function setDefaultTab(id: string): void {
-  if (!REGISTRY_IDS.includes(id)) return;
-  state = { ...ensureLoaded(), defaultTab: id };
-  persist();
-  emit();
-}
+hydrateWhenReady(useTabSettings);
 
 /** Route to open when entering a landing zone. Falls back to About when the
- * default tab is Workflows but the Workflows feature is disabled. */
+ * default tab is Workflows but the Workflows feature is disabled. Reads the
+ * store imperatively so navigation callbacks don't need a subscription. */
 export function getDefaultRoute(workflowsEnabled: boolean): string {
-  const s = ensureLoaded();
-  const tab = TAB_REGISTRY.find((t) => t.id === s.defaultTab);
+  const { defaultTab } = useTabSettings.getState();
+  const tab = TAB_REGISTRY.find((t) => t.id === defaultTab);
   if (tab?.requiresWorkflows && !workflowsEnabled) return `/${DEFAULT_TAB}`;
-  return `/${s.defaultTab}`;
+  return `/${defaultTab}`;
 }
 
-/** Ordered, feature-filtered tab definitions for rendering the nav. */
-export function getVisibleTabs(workflowsEnabled: boolean): TabDefinition[] {
-  return ensureLoaded()
-    .order.map((id) => TAB_REGISTRY.find((t) => t.id === id))
+/** Ordered, feature-filtered tab definitions for rendering the nav. Pure so
+ * callers subscribe to `order` via selector and derive during render. */
+export function visibleTabsFor(order: string[], workflowsEnabled: boolean): TabDefinition[] {
+  return order
+    .map((id) => TAB_REGISTRY.find((t) => t.id === id))
     .filter((t): t is TabDefinition => !!t)
     .filter((t) => (t.requiresWorkflows ? workflowsEnabled : true));
-}
-
-export function useTabSettings(): TabSettings {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

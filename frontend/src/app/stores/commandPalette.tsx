@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+import { create } from "zustand";
 
 // ── Paging API ─────────────────────────────────────────────────────────────────
 // The palette supports Raycast-style sub-pages. Extensions push pages onto a
@@ -113,94 +114,31 @@ interface CommandPaletteState {
   popToRoot: () => void;
 }
 
-const CommandPaletteContext = createContext<CommandPaletteState | null>(null);
-
-export function CommandPaletteProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [extensions, setExtensions] = useState<Record<string, CommandExtension>>({});
-  const [pages, setPages] = useState<PalettePage[]>([]);
-
-  const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => {
-    setIsOpen(false);
-    setPages([]);
-  }, []);
-  const toggle = useCallback(() => {
-    setIsOpen((v) => {
-      if (v) setPages([]);
-      return !v;
-    });
-  }, []);
-
-  const registerExtension = useCallback((ext: CommandExtension) => {
-    setExtensions((prev) => ({ ...prev, [ext.id]: ext }));
-  }, []);
-
-  const unregisterExtension = useCallback((id: string) => {
-    setExtensions((prev) => {
-      const next = { ...prev };
+export const useCommandPalette = create<CommandPaletteState>((set) => ({
+  isOpen: false,
+  extensions: {},
+  pages: [],
+  open: () => set({ isOpen: true }),
+  close: () => set({ isOpen: false, pages: [] }),
+  toggle: () => set((s) => ({ isOpen: !s.isOpen, pages: [] })),
+  registerExtension: (ext) => set((s) => ({ extensions: { ...s.extensions, [ext.id]: ext } })),
+  unregisterExtension: (id) =>
+    set((s) => {
+      const next = { ...s.extensions };
       delete next[id];
-      return next;
-    });
-  }, []);
-
-  const push = useCallback((page: PalettePage) => {
-    setPages((prev) => [...prev, page]);
-  }, []);
-
-  const replace = useCallback((page: PalettePage) => {
-    setPages((prev) => (prev.length === 0 ? [page] : [...prev.slice(0, -1), page]));
-  }, []);
-
-  const pop = useCallback(() => {
-    setPages((prev) => prev.slice(0, -1));
-  }, []);
-
-  const popToRoot = useCallback(() => setPages([]), []);
-
-  const value = useMemo(
-    () => ({
-      isOpen,
-      extensions,
-      pages,
-      open,
-      close,
-      toggle,
-      registerExtension,
-      unregisterExtension,
-      push,
-      replace,
-      pop,
-      popToRoot,
+      return { extensions: next };
     }),
-    [
-      isOpen,
-      extensions,
-      pages,
-      open,
-      close,
-      toggle,
-      registerExtension,
-      unregisterExtension,
-      push,
-      replace,
-      pop,
-      popToRoot,
-    ],
-  );
-
-  return <CommandPaletteContext.Provider value={value}>{children}</CommandPaletteContext.Provider>;
-}
-
-export function useCommandPalette() {
-  const ctx = useContext(CommandPaletteContext);
-  if (!ctx) throw new Error("useCommandPalette must be used within CommandPaletteProvider");
-  return ctx;
-}
+  push: (page) => set((s) => ({ pages: [...s.pages, page] })),
+  replace: (page) =>
+    set((s) => ({ pages: s.pages.length === 0 ? [page] : [...s.pages.slice(0, -1), page] })),
+  pop: () => set((s) => ({ pages: s.pages.slice(0, -1) })),
+  popToRoot: () => set({ pages: [] }),
+}));
 
 // ── Page-level context ─────────────────────────────────────────────────────────
 // Pages (list `useItems` hooks, `Header` and view `Component`s) render without
 // props from the palette; this context gives them access to palette navigation.
+// Stays a React context: it is render-tree-scoped composition, not global state.
 
 const PalettePageCtx = createContext<CommandPaletteContext | null>(null);
 

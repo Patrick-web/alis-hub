@@ -12,7 +12,7 @@ import { notify } from "../lib/notify";
 import { useUserProfile } from "../stores/userProfile";
 import { usePlatform } from "../stores/platform";
 import { useLabs } from "../stores/labs";
-import { useTabSettings, getVisibleTabs } from "../stores/tabSettings";
+import { useTabSettings, visibleTabsFor } from "../stores/tabSettings";
 import { MacWindowControls, WindowsWindowControls, LinuxWindowControls } from "./WindowControls";
 import { handleTitleBarDoubleClick } from "../lib/titlebar";
 
@@ -33,8 +33,8 @@ export function TopNav() {
   const { profile } = useUserProfile();
   const avatarUrl = profile?.picture ?? "";
   const { state: labsState } = useLabs();
-  useTabSettings();
-  const visibleTabs = getVisibleTabs(labsState.workflowsEnabled);
+  const tabOrder = useTabSettings((s) => s.order);
+  const visibleTabs = visibleTabsFor(tabOrder, labsState.workflowsEnabled);
   const avatarName = profile?.name ?? "";
 
   const [envsLoading, setEnvsLoading] = useState(false);
@@ -98,7 +98,7 @@ export function TopNav() {
       });
   }, [state.organisation, state.product, state.neurons.length]);
 
-  const { open: openPalette } = useCommandPalette();
+  const openPalette = useCommandPalette((s) => s.open);
 
   const activeEnvDisplay =
     state.loadedEnvs.find((e) => e.name === state.activeEnvName)?.displayName ?? "Environment";

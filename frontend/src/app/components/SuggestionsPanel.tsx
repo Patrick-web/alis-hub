@@ -128,16 +128,19 @@ function SuggestionCard({
 }
 
 export function SuggestionsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { state, dismiss, dismissAll, count } = useSuggestions();
+  const suggestions = useSuggestions((s) => s.suggestions);
+  const dismiss = useSuggestions((s) => s.dismiss);
+  const dismissAll = useSuggestions((s) => s.dismissAll);
+  const count = suggestions.length;
   const navigate = useNavigate();
 
   const grouped = useMemo(() => {
     const map: Partial<Record<SuggestionCategory, Suggestion[]>> = {};
-    for (const s of state.suggestions) {
+    for (const s of suggestions) {
       (map[s.category] ??= []).push(s);
     }
     return map;
-  }, [state.suggestions]);
+  }, [suggestions]);
 
   const orderedCategories = SUGGESTION_CATEGORY_ORDER.filter((c) => (grouped[c]?.length ?? 0) > 0);
 
