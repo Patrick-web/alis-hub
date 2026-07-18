@@ -18,7 +18,7 @@ import { handleTitleBarDoubleClick } from "../lib/titlebar";
 export function HubPage() {
   const navigate = useNavigate();
   const { state, setPhase, setProduct } = useWorkspace();
-  const { state: labsState } = useLabs();
+  const labsState = useLabs((s) => s.state);
   const { effective } = usePlatform();
   const isWindows = effective === "windows";
   const isLinux = effective === "linux";

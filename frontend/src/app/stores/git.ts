@@ -186,12 +186,8 @@ function labelOf(repoPath: string): string {
   return repoPath === useGitStore.getState().definePath ? "Define" : "Build";
 }
 
-const watched = new Set<string>();
-
 function ensureWatched(repoPath: string) {
-  if (watched.has(repoPath)) return;
-  watched.add(repoPath);
-  GitService.WatchRepo(repoPath);
+  wireOnce(`git:watch:${repoPath}`, () => GitService.WatchRepo(repoPath));
 }
 
 // ─── Actions ────────────────────────────────────────────────────────────────

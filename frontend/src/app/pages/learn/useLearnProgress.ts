@@ -1,39 +1,50 @@
 import { useCallback } from "react";
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { LearningModule } from "./types";
-import * as settingsClient from "../../lib/settingsClient";
-import { onSettingsReady } from "../../stores/lib/persistSqlite";
-
-const STORAGE_KEY = "alis-learn-progress";
+import { hydrateWhenReady, persistSqlite } from "../../stores/lib/persistSqlite";
 
 interface LearnProgressStore {
   completedSteps: Set<string>;
   markComplete: (stepId: string) => void;
 }
 
-export const useLearnProgressStore = create<LearnProgressStore>((set) => ({
-  completedSteps: new Set<string>(),
-  markComplete: (stepId) =>
-    set((prev) => {
-      if (prev.completedSteps.has(stepId)) return prev;
-      const next = new Set(prev.completedSteps);
-      next.add(stepId);
-      settingsClient.set(STORAGE_KEY, JSON.stringify({ completedSteps: [...next] }));
-      return { completedSteps: next };
-    }),
-}));
+/** Legacy on-disk shape (predates the zustand persist envelope). */
+interface PersistedLearnProgress {
+  completedSteps: string[];
+}
 
-onSettingsReady(() => {
-  try {
-    const raw = settingsClient.getCached(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as { completedSteps: string[] };
-      useLearnProgressStore.setState({ completedSteps: new Set(parsed.completedSteps) });
-    }
-  } catch {
-    // keep empty progress on malformed payloads
-  }
-});
+export const useLearnProgressStore = create<LearnProgressStore>()(
+  persist(
+    (set) => ({
+      completedSteps: new Set<string>(),
+      markComplete: (stepId) =>
+        set((prev) => {
+          if (prev.completedSteps.has(stepId)) return prev;
+          const next = new Set(prev.completedSteps);
+          next.add(stepId);
+          return { completedSteps: next };
+        }),
+    }),
+    persistSqlite<LearnProgressStore, PersistedLearnProgress>({
+      key: "alis-learn-progress",
+      partialize: (s) => ({ completedSteps: [...s.completedSteps] }),
+      merge: (persisted, current) => {
+        const persistedSteps =
+          persisted &&
+          typeof persisted === "object" &&
+          Array.isArray((persisted as PersistedLearnProgress).completedSteps)
+            ? (persisted as PersistedLearnProgress).completedSteps
+            : [];
+        // Union rather than replace: completion is monotonic, so any step
+        // marked complete before hydration finishes stays complete.
+        return { ...current, completedSteps: new Set([...current.completedSteps, ...persistedSteps]) };
+      },
+    }),
+  ),
+);
+
+hydrateWhenReady(useLearnProgressStore);
 
 export function useLearnProgress() {
   const completedSteps = useLearnProgressStore((s) => s.completedSteps);

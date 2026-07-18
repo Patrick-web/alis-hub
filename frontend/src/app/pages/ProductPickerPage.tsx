@@ -44,7 +44,7 @@ function StateIndicator({ state }: { state: number }) {
 
 export function ProductPickerPage() {
   const { state, setProduct, setPhase } = useWorkspace();
-  const { state: labsState } = useLabs();
+  const labsState = useLabs((s) => s.state);
   const navigate = useNavigate();
   const org = state.selectedOrg!;
   const orgId = org.name.replace("organisations/", "");
