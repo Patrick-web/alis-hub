@@ -271,7 +271,7 @@ func (s *ConsoleTokenSource) refresh(refreshToken string) (*consoleCredentials, 
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != 200 {
-		log.Printf("[auth] identity server rejected refresh: status=%d body=%s", resp.StatusCode, strings.TrimSpace(string(body)))
+		log.Printf("[auth] identity server rejected refresh: status=%d", resp.StatusCode)
 		// A 4xx with an OAuth error (invalid_grant / expired refresh token) is a
 		// definitive rejection: the refresh token is no longer usable, so the
 		// user must re-login. 5xx and other statuses are treated as transient by
