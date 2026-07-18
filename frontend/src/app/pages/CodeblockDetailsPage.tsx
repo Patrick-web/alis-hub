@@ -16,7 +16,8 @@ import { EmptyState } from "../components/EmptyState";
 import { Button } from "../components/Button";
 import { FilterSelect } from "../components/FilterSelect";
 import { SearchableSelect } from "../components/ui/searchable-select";
-import { FileViewerModal } from "../components/CodeFileViewerModal";
+import { FileViewerContent } from "../components/CodeFileViewerModal";
+import { RightPane } from "../components/RightPane";
 
 const LEVEL_LABEL: Record<number, string> = {
   1: "Experimental",
@@ -1569,9 +1570,17 @@ function VersionsTab({
             )}
           </div>
         )}
+        {openFile && (
+          <RightPane
+            label="File"
+            title={openFile.name.split("/").pop() ?? openFile.name}
+            onClose={() => setOpenFile(null)}
+            width="w-[480px]"
+          >
+            <FileViewerContent file={openFile} />
+          </RightPane>
+        )}
       </div>
-
-      {openFile && <FileViewerModal file={openFile} onClose={() => setOpenFile(null)} />}
     </div>
   );
 }

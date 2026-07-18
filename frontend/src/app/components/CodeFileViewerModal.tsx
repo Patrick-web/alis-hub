@@ -34,6 +34,67 @@ export function extToLang(filename: string): string {
   return map[ext] ?? "text";
 }
 
+export function FileViewerContent({
+  file,
+}: {
+  file: { name: string; content: string };
+}) {
+  const [html, setHtml] = useState<string>("");
+  const [hlLoading, setHlLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const lang = extToLang(file.name);
+    codeToHtml(file.content || " ", { lang, theme: "github-dark" })
+      .then((result) => {
+        if (!cancelled) {
+          setHtml(result);
+          setHlLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          codeToHtml(file.content || " ", {
+            lang: "text",
+            theme: "github-dark",
+          })
+            .then((r) => {
+              if (!cancelled) {
+                setHtml(r);
+                setHlLoading(false);
+              }
+            })
+            .catch(() => {
+              if (!cancelled) setHlLoading(false);
+            });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [file.name, file.content]);
+
+  return (
+    <div className="flex-1 overflow-auto min-w-0 p-[16px]">
+      {hlLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <Loader />
+        </div>
+      ) : html ? (
+        <div
+          className="[&_pre]:whitespace-pre-wrap [&_pre]:break-words shiki-container text-[12px] leading-[1.6] font-mono"
+          dangerouslySetInnerHTML={{ __html: html }}
+          style={{ "--shiki-dark-bg": "#1a1a1a" } as React.CSSProperties}
+        />
+      ) : (
+        <pre className="text-[12px] text-foreground/70 font-mono whitespace-pre-wrap break-words leading-[1.6]">
+          {file.content}
+        </pre>
+      )}
+    </div>
+  );
+}
+
 export function FileViewerModal({
   file,
   onClose,
@@ -116,19 +177,19 @@ export function FileViewerModal({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto min-w-0 p-[16px] [&_pre]:!p-[16px]">
         {hlLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader />
           </div>
         ) : html ? (
           <div
-            className="shiki-container p-[24px] text-[12px] leading-[1.6] font-mono min-h-full"
+            className="[&_pre]:whitespace-pre-wrap [&_pre]:break-words shiki-container text-[12px] leading-[1.6] font-mono"
             dangerouslySetInnerHTML={{ __html: html }}
             style={{ "--shiki-dark-bg": "#1a1a1a" } as React.CSSProperties}
           />
         ) : (
-          <pre className="p-[24px] text-[12px] text-foreground/70 font-mono whitespace-pre-wrap leading-[1.6]">
+          <pre className="text-[12px] text-foreground/70 font-mono whitespace-pre-wrap break-words leading-[1.6]">
             {file.content}
           </pre>
         )}
