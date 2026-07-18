@@ -9,14 +9,14 @@ export function GcpProvisioningDiagram() {
         height="44"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="75"
         y="127"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -269,7 +269,7 @@ export function GcpProvisioningDiagram() {
         height="60"
         rx="4"
         fill="transparent"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1"
         opacity="0.4"
       />

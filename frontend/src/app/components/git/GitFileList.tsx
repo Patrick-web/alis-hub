@@ -143,7 +143,7 @@ function FileRow({
     <div
       className={`group flex items-center gap-1.5 py-[3px] pr-3 cursor-pointer text-xs transition-colors ${
         selected
-          ? "bg-pink-500/15 text-foreground"
+          ? "bg-brand/15 text-foreground"
           : "text-foreground/60 hover:bg-foreground/5 hover:text-foreground/80"
       }`}
       style={{ paddingLeft: `${indent ?? 12}px` }}
@@ -403,7 +403,7 @@ export function GitFileList({
       {/* Commit box — at top like VSCode */}
       <div className="shrink-0 border-b border-foreground/10 p-3 flex flex-col gap-2">
         <textarea
-          className="w-full bg-foreground/5 border border-foreground/10 rounded text-xs text-foreground/80 placeholder-white/25 p-2 resize-none outline-none focus:border-pink-500/40 transition-colors"
+          className="w-full bg-foreground/5 border border-foreground/10 rounded text-xs text-foreground/80 placeholder-white/25 p-2 resize-none outline-none focus:border-brand/40 transition-colors"
           rows={3}
           placeholder="Commit message…"
           value={commitMessage}
@@ -440,7 +440,7 @@ export function GitFileList({
           <button
             onClick={onCommit}
             disabled={!canCommit}
-            className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-pink-600 hover:bg-pink-500 text-foreground"
+            className="w-full py-1.5 rounded text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-brand-fill hover:bg-brand-fill-hover text-foreground"
           >
             {committing
               ? "Committing…"

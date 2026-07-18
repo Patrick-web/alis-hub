@@ -31,7 +31,7 @@ export function GitPRList({ prs, selectedPR, loading, onSelect, onNewPR, onRefre
         <span className="text-xs text-foreground/60 flex-1">
           PRs
           {prs.length > 0 && (
-            <span className="ml-1.5 text-[10px] bg-pink-600/30 text-pink-400 border border-pink-500/30 rounded px-1 py-0.5">
+            <span className="ml-1.5 text-[10px] bg-brand/30 text-brand border border-brand/30 rounded px-1 py-0.5">
               {prs.length}
             </span>
           )}
@@ -73,7 +73,7 @@ export function GitPRList({ prs, selectedPR, loading, onSelect, onNewPR, onRefre
                 onClick={() => onSelect(pr)}
                 className={`w-full text-left flex items-start gap-2 px-3 py-2 border-b border-foreground/8 transition-colors ${
                   isSelected
-                    ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                    ? "bg-brand/10 border-l-2 border-l-brand"
                     : "hover:bg-foreground/[0.03]"
                 }`}
               >

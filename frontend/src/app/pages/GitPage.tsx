@@ -317,7 +317,7 @@ export function GitPage() {
             onClick={() => gitActions.setActiveTab(id)}
             className={`px-3 py-2 text-xs border-b-2 transition-colors ${
               activeTab === id
-                ? "border-pink-500 text-foreground/80"
+                ? "border-brand text-foreground/80"
                 : "border-transparent text-foreground/40 hover:text-foreground/60"
             }`}
           >
@@ -375,7 +375,7 @@ export function GitPage() {
                         title="Show only local commits"
                         className={`p-1 rounded transition-colors ${
                           localOnly
-                            ? "bg-pink-600/30 text-pink-400"
+                            ? "bg-brand/30 text-brand"
                             : "text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5"
                         }`}
                       >
@@ -396,7 +396,7 @@ export function GitPage() {
                           onClick={() => useGitStore.setState({ activeGraphRepoPath: buildPath })}
                           className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                             activeGraphRepoPath !== definePath
-                              ? "bg-pink-600/30 text-pink-400"
+                              ? "bg-brand/30 text-brand"
                               : "text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5"
                           }`}
                         >
@@ -407,7 +407,7 @@ export function GitPage() {
                           onClick={() => useGitStore.setState({ activeGraphRepoPath: definePath })}
                           className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                             activeGraphRepoPath === definePath
-                              ? "bg-pink-600/30 text-pink-400"
+                              ? "bg-brand/30 text-brand"
                               : "text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5"
                           }`}
                         >
@@ -458,7 +458,7 @@ export function GitPage() {
                 onClick={() => gitActions.setPrRepo("build")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   prRepo === "build"
-                    ? "bg-pink-600/30 text-pink-400"
+                    ? "bg-brand/30 text-brand"
                     : "text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5"
                 }`}
               >
@@ -469,7 +469,7 @@ export function GitPage() {
                 onClick={() => gitActions.setPrRepo("define")}
                 className={`px-2 py-0.5 text-[10px] font-medium transition-colors ${
                   prRepo === "define"
-                    ? "bg-pink-600/30 text-pink-400"
+                    ? "bg-brand/30 text-brand"
                     : "text-foreground/40 hover:text-foreground/60 hover:bg-foreground/5"
                 }`}
               >

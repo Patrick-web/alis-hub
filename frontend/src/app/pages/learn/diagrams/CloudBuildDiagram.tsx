@@ -46,14 +46,14 @@ export function CloudBuildDiagram() {
         height="72"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="231"
         y="74"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"

@@ -43,7 +43,7 @@ export const module4: LearningModule = {
             {[
               {
                 name: "Cloud Run",
-                colour: "#f881a9",
+                colour: "var(--brand-fill)",
                 desc: "Creates or updates the Cloud Run service that runs your container. Configures CPU, memory limits, concurrency, and min/max instances.",
               },
               {

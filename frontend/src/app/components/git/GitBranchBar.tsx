@@ -177,7 +177,7 @@ export function GitBranchBar({
               }
             }}
           />
-          <button onClick={submitCreate} className="text-[10px] text-pink-400 hover:text-pink-300">
+          <button onClick={submitCreate} className="text-[10px] text-brand hover:text-brand">
             Create
           </button>
         </div>

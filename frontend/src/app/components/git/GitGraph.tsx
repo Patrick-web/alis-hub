@@ -251,7 +251,7 @@ export function GitGraph({
                 }}
                 className={`flex items-center gap-1.5 pl-6 pr-3 cursor-pointer transition-colors text-xs ${
                   isFileSelected
-                    ? "bg-pink-500/15 text-foreground"
+                    ? "bg-brand/15 text-foreground"
                     : "text-foreground/50 hover:bg-foreground/5 hover:text-foreground/80"
                 }`}
                 onClick={() => onSelectCommitFile?.(item.commitHash, item.file.path)}
@@ -289,7 +289,7 @@ export function GitGraph({
                 <div
                   style={{ position: "absolute", top: vItem.start, height: ROW_H, width: "100%" }}
                   className={`flex items-center gap-2 cursor-pointer transition-colors ${
-                    isSelected ? "bg-pink-500/10" : "hover:bg-foreground/5"
+                    isSelected ? "bg-brand/10" : "hover:bg-foreground/5"
                   }`}
                   onClick={() => handleCommitClick(commit.hash)}
                 >
@@ -377,7 +377,7 @@ export function GitGraph({
                               return (
                                 <Tooltip key={ref}>
                                   <TooltipTrigger asChild>
-                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 cursor-default">
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand/20 text-brand border border-brand/30 cursor-default">
                                       {ref.replace(/^HEAD -> /, "").replace(/^origin\//, "")}
                                     </span>
                                   </TooltipTrigger>

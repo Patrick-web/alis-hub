@@ -91,7 +91,7 @@ export function GitPRCreate({
           </label>
           <input
             autoFocus
-            className="text-xs bg-foreground/5 border border-foreground/15 rounded px-2 py-1.5 text-foreground/80 outline-none focus:border-pink-500/40 w-full"
+            className="text-xs bg-foreground/5 border border-foreground/15 rounded px-2 py-1.5 text-foreground/80 outline-none focus:border-brand/40 w-full"
             placeholder="Pull request title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -104,7 +104,7 @@ export function GitPRCreate({
             Description
           </label>
           <textarea
-            className="text-xs bg-foreground/5 border border-foreground/15 rounded px-2 py-1.5 text-foreground/80 outline-none focus:border-pink-500/40 w-full resize-none"
+            className="text-xs bg-foreground/5 border border-foreground/15 rounded px-2 py-1.5 text-foreground/80 outline-none focus:border-brand/40 w-full resize-none"
             placeholder="Description (optional)"
             rows={5}
             value={body}
@@ -161,7 +161,7 @@ export function GitPRCreate({
         <button
           onClick={handleCreate}
           disabled={!title.trim() || sameBranch || creating}
-          className="text-[11px] bg-pink-600/30 text-pink-400 border border-pink-500/30 hover:bg-pink-600/40 disabled:opacity-40 px-2.5 py-1 rounded transition-colors flex items-center gap-1"
+          className="text-[11px] bg-brand/30 text-brand border border-brand/30 hover:bg-brand/40 disabled:opacity-40 px-2.5 py-1 rounded transition-colors flex items-center gap-1"
         >
           {creating && <Loader2 size={10} className="animate-spin" />}
           Create PR

@@ -202,7 +202,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
               </span>
             </div>
             <div className="mt-1 flex items-center gap-2 text-[11px] text-foreground/35 flex-wrap">
-              <span className="font-mono text-pink-400/70">{pr.headBranch}</span>
+              <span className="font-mono text-brand/70">{pr.headBranch}</span>
               <span>→</span>
               <span className="font-mono text-foreground/50">{pr.baseBranch}</span>
               <span>·</span>
@@ -235,7 +235,7 @@ export function GitPRDetail({ pr, repoPath, merging, onMerge, onClose }: Props) 
               onClick={() => setTab(id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] rounded-t border-b-2 transition-colors ${
                 tab === id
-                  ? "border-pink-500 text-foreground/80 bg-pink-500/5"
+                  ? "border-brand text-foreground/80 bg-brand/5"
                   : "border-transparent text-foreground/35 hover:text-foreground/60 hover:bg-foreground/[0.03]"
               }`}
             >
@@ -403,7 +403,7 @@ function CommitsTab({
               onClick={() => onSelectCommit(c)}
               className={`w-full text-left px-3 py-2.5 border-b border-foreground/8 transition-colors ${
                 selectedCommit?.sha === c.sha
-                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  ? "bg-brand/10 border-l-2 border-l-brand"
                   : "hover:bg-foreground/[0.03]"
               }`}
             >
@@ -436,7 +436,7 @@ function CommitsTab({
               onClick={() => onSelectCommitFile(f.path)}
               className={`w-full text-left flex items-center gap-1.5 px-2.5 py-1.5 border-b border-foreground/8 transition-colors ${
                 selectedCommitFile === f.path
-                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  ? "bg-brand/10 border-l-2 border-l-brand"
                   : "hover:bg-foreground/[0.03]"
               }`}
             >
@@ -500,7 +500,7 @@ function FilesTab({
               onClick={() => onSelectFile(f.path)}
               className={`w-full text-left flex items-center gap-1.5 px-2.5 py-2 border-b border-foreground/8 transition-colors ${
                 selectedFile === f.path
-                  ? "bg-pink-600/10 border-l-2 border-l-pink-500"
+                  ? "bg-brand/10 border-l-2 border-l-brand"
                   : "hover:bg-foreground/[0.03]"
               }`}
             >
@@ -560,7 +560,7 @@ function ConversationTab({
         )}
         {comments.map((c) => (
           <div key={c.id} className="flex gap-2.5">
-            <div className="w-6 h-6 rounded-full bg-pink-600/20 border border-pink-500/20 flex items-center justify-center shrink-0 text-[10px] text-pink-400 font-semibold">
+            <div className="w-6 h-6 rounded-full bg-brand/20 border border-brand/20 flex items-center justify-center shrink-0 text-[10px] text-brand font-semibold">
               {c.author.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
@@ -579,7 +579,7 @@ function ConversationTab({
       {/* Comment input */}
       <div className="shrink-0 border-t border-foreground/8 px-4 py-3 flex flex-col gap-2">
         <textarea
-          className="text-xs bg-foreground/5 border border-foreground/15 rounded px-3 py-2 text-foreground/80 outline-none focus:border-pink-500/40 w-full resize-none"
+          className="text-xs bg-foreground/5 border border-foreground/15 rounded px-3 py-2 text-foreground/80 outline-none focus:border-brand/40 w-full resize-none"
           placeholder="Leave a comment…"
           rows={3}
           value={newComment}
@@ -592,7 +592,7 @@ function ConversationTab({
           <button
             onClick={onPost}
             disabled={!newComment.trim() || posting}
-            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 bg-pink-600/25 text-pink-400 border border-pink-500/30 hover:bg-pink-600/35 disabled:opacity-40 transition-colors rounded"
+            className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 bg-brand/25 text-brand border border-brand/30 hover:bg-brand/35 disabled:opacity-40 transition-colors rounded"
           >
             {posting && <Loader2 size={10} className="animate-spin" />}
             Comment

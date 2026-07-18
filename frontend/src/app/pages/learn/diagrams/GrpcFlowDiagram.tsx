@@ -9,14 +9,14 @@ export function GrpcFlowDiagram() {
         height="44"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="80"
         y="97"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -208,14 +208,14 @@ export function GrpcFlowDiagram() {
         height="40"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="553"
         y="149"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -239,14 +239,16 @@ export function GrpcFlowDiagram() {
         y1="86"
         x2="553"
         y2="132"
-        stroke="rgba(248,129,169,0.4)"
+        stroke="var(--brand-fill)"
+        stroke-opacity="0.4"
         strokeWidth="1"
         strokeDasharray="4,3"
       />
       <text
         x="558"
         y="113"
-        fill="rgba(248,129,169,0.6)"
+        fill="var(--brand-fill)"
+        fill-opacity="0.6"
         fontSize="7"
         fontFamily="JetBrains Mono, monospace"
       >

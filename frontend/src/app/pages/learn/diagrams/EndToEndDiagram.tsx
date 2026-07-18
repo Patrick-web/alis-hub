@@ -57,14 +57,14 @@ export function EndToEndDiagram() {
         height="50"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="60"
         y="120"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -210,14 +210,14 @@ export function EndToEndDiagram() {
         height="50"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="378"
         y="80"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -367,14 +367,14 @@ export function EndToEndDiagram() {
         height="50"
         rx="4"
         fill="#2c2c2c"
-        stroke="#f881a9"
+        stroke="var(--brand-fill)"
         strokeWidth="1.5"
       />
       <text
         x="568"
         y="140"
         textAnchor="middle"
-        fill="#f881a9"
+        fill="var(--brand-fill)"
         fontSize="9"
         fontFamily="JetBrains Mono, monospace"
         fontWeight="bold"
@@ -408,11 +408,12 @@ export function EndToEndDiagram() {
         y1="100"
         x2="568"
         y2="120"
-        stroke="rgba(248,129,169,0.5)"
+        stroke="var(--brand-fill)"
+        stroke-opacity="0.5"
         strokeWidth="1.5"
         strokeDasharray="4,3"
       />
-      <polygon points="568,123 564,116 572,116" fill="rgba(248,129,169,0.5)" />
+      <polygon points="568,123 564,116 572,116" fill="var(--brand-fill)" fill-opacity="0.5" />
 
       {/* Bottom note */}
       <text

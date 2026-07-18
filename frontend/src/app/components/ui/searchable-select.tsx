@@ -114,7 +114,7 @@ export function SearchableSelect({
                     <Check
                       size={10}
                       className={cn(
-                        "shrink-0 text-pink-400",
+                        "shrink-0 text-brand",
                         entry.value === value ? "opacity-100" : "opacity-0",
                       )}
                     />
