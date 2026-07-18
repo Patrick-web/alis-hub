@@ -95,7 +95,6 @@ func (c *AlisClient) FetchURL(ctx context.Context, url string, byteOffset int64)
 	return body, byteOffset + int64(len(body)), nil
 }
 
-// doGRPC sends a gRPC request and handles the response including trailers.
 // DoGRPC sends a gRPC request over HTTP/2 to the gRPC endpoint.
 func (c *AlisClient) DoGRPC(ctx context.Context, method string, protoBytes []byte) ([]byte, int, string, error) {
 	token, err := c.tokens.Token()
@@ -159,9 +158,8 @@ func (c *AlisClient) DoGRPC(ctx context.Context, method string, protoBytes []byt
 	return body, grpcStatus, grpcMessage, nil
 }
 
-// doGRPCWeb sends a gRPC-web-text (base64) request and parses the framed response.
+// DoGRPCWeb sends a gRPC-web-text (base64) request and parses the framed response.
 // console.alisx.com uses application/grpc-web-text (the same encoding as the browser).
-// DoGRPC sends a gRPC request over HTTP/2 to the gRPC endpoint.
 func (c *AlisClient) DoGRPCWeb(ctx context.Context, host, method string, protoBytes []byte) ([]byte, int, string, error) {
 	token, err := c.tokens.Token()
 	if err != nil {
@@ -227,7 +225,6 @@ func (c *AlisClient) DoGRPCWeb(ctx context.Context, host, method string, protoBy
 
 // DecodeGRPCWebTextFrames decodes a grpc-web-text body. The wire format is
 // base64-encoded frames with a 5-byte prefix (flags + big-endian length).
-// DecodeGRPCWebTextFrames decodes a grpc-web-text body.
 func DecodeGRPCWebTextFrames(rawBody []byte) (dataFrame []byte, grpcStatus int, grpcMsg string, err error) {
 	clean := strings.Map(func(r rune) rune {
 		switch r {

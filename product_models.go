@@ -255,13 +255,19 @@ type ProductService struct {
 	editorURL    string
 }
 
+func NewProductService() *ProductService {
+	return &ProductService{}
+}
+
+func (s *ProductService) SetApp(app *application.App) {
+	s.mu.Lock()
+	s.app = app
+	s.mu.Unlock()
+}
+
 // authProxy holds a local reverse-proxy server for one upstream host.
 type authProxy struct {
 	server *http.Server
 	port   int
 	base   string
 }
-
-// newAuthProxyHandler returns an http.Handler that reverse-proxies to base,
-// injecting a fresh Bearer token on every outbound request (including
-// WebSocket upgrades) and stripping headers that would prevent the WebView
