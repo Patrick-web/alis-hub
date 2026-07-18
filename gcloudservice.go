@@ -125,7 +125,7 @@ func (g *GCloudService) StartSetupSession(runID, command string) error {
 
 		go func() {
 			<-ctx.Done()
-			ptmx.Close()
+			_ = ptmx.Close()
 			if cmd.Process != nil {
 				cmd.Process.Kill()
 			}
@@ -141,7 +141,7 @@ func (g *GCloudService) StartSetupSession(runID, command string) error {
 		exitErrCh := make(chan error, 1)
 		go func() {
 			exitErrCh <- cmd.Wait()
-			ptmx.Close()
+			_ = ptmx.Close()
 		}()
 
 		buf := make([]byte, 4096)

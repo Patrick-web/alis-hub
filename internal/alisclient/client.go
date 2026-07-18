@@ -78,7 +78,7 @@ func (c *AlisClient) FetchURL(ctx context.Context, url string, byteOffset int64)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// 416 = no new bytes yet (Range past end-of-file)
 	if resp.StatusCode == http.StatusRequestedRangeNotSatisfiable {
@@ -132,7 +132,7 @@ func (c *AlisClient) DoGRPC(ctx context.Context, method string, protoBytes []byt
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("http post: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -194,7 +194,7 @@ func (c *AlisClient) DoGRPCWeb(ctx context.Context, host, method string, protoBy
 	if err != nil {
 		return nil, 0, "", fmt.Errorf("http post: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
