@@ -145,10 +145,20 @@ export const useNotificationsStore = create<NotificationsStore>()(
             ...n,
             ...(task ? { task: { ...task, logBuffer: [] } } : {}),
           })),
-      merge: (persisted, current) => ({
-        ...current,
-        state: { notifications: Array.isArray(persisted) ? (persisted as AppNotification[]) : [] },
-      }),
+      merge: (persisted, current) => {
+        const persistedList = Array.isArray(persisted) ? (persisted as AppNotification[]) : [];
+        // Keep any notification added between module load and hydration completing
+        // (e.g. a backend event wired via wireOnce at import time) instead of
+        // wholesale replacing with only the persisted set.
+        const persistedIds = new Set(persistedList.map((n) => n.id));
+        const pending = current.state.notifications.filter((n) => !persistedIds.has(n.id));
+        return {
+          ...current,
+          state: {
+            notifications: [...pending, ...persistedList].sort((a, b) => b.timestamp - a.timestamp),
+          },
+        };
+      },
     }),
   ),
 );

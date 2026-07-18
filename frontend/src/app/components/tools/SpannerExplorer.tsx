@@ -94,7 +94,7 @@ function queryTabLabel(id: string): string {
 }
 
 export function SpannerExplorer({ projectID }: Props) {
-  const { isSuggestionEnabled } = useLabs();
+  const isSuggestionEnabled = useLabs((s) => s.isSuggestionEnabled);
   const rwTxnLabsEnabled = isSuggestionEnabled("spanner-rw-transaction");
   const protoDecodeEnabled = isSuggestionEnabled("spanner-proto-decode");
   const { state: workspaceState } = useWorkspace();

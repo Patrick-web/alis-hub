@@ -32,7 +32,7 @@ export function TopNav() {
 
   const { profile } = useUserProfile();
   const avatarUrl = profile?.picture ?? "";
-  const { state: labsState } = useLabs();
+  const labsState = useLabs((s) => s.state);
   const tabOrder = useTabSettings((s) => s.order);
   const visibleTabs = visibleTabsFor(tabOrder, labsState.workflowsEnabled);
   const avatarName = profile?.name ?? "";
