@@ -37,15 +37,9 @@ interface DiffEntry {
   newContent: string;
 }
 
-const CATEGORY_LABEL: Record<Category, string> = { build: "Build", infra: "Infra", proto: "Proto" };
+import { PUBLISH_RELEASE_LEVELS } from "../lib/releaseLevels";
 
-const RELEASE_LEVELS = [
-  { label: "EXPERIMENTAL", value: 3 },
-  { label: "ALPHA", value: 6 },
-  { label: "BETA", value: 9 },
-  { label: "RC", value: 12 },
-  { label: "GA", value: 99 },
-];
+const CATEGORY_LABEL: Record<Category, string> = { build: "Build", infra: "Infra", proto: "Proto" };
 
 const STATUS_LABEL: Record<FileStatus, string> = {
   added: "Added",
@@ -351,7 +345,7 @@ export function CodeblockUpdatePage() {
               <p className={labelClass}>Release Level</p>
               <SearchableSelect
                 value={String(releaseLevel)}
-                options={RELEASE_LEVELS.map((l) => ({ label: l.label, value: String(l.value) }))}
+                options={PUBLISH_RELEASE_LEVELS.map((l) => ({ label: l.label, value: String(l.value) }))}
                 onChange={(v) => setReleaseLevel(Number(v))}
                 className="w-full"
               />

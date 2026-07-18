@@ -18,22 +18,12 @@ import { FilterSelect } from "../components/FilterSelect";
 import { SearchableSelect } from "../components/ui/searchable-select";
 import { FileViewerContent } from "../components/CodeFileViewerModal";
 import { RightPane } from "../components/RightPane";
-
-const LEVEL_LABEL: Record<number, string> = {
-  1: "Experimental",
-  2: "Alpha",
-  3: "Beta",
-  4: "Release Candidate",
-  5: "Stable",
-};
-
-const LEVEL_COLOR: Record<number, string> = {
-  1: "text-red-400 border-red-400/30 bg-red-400/10",
-  2: "text-orange-400 border-orange-400/30 bg-orange-400/10",
-  3: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
-  4: "text-blue-400 border-blue-400/30 bg-blue-400/10",
-  5: "text-green-400 border-green-400/30 bg-green-400/10",
-};
+import {
+  RELEASE_LEVEL_LABEL,
+  RELEASE_LEVEL_COLOR,
+  VERSION_RELEASE_LABEL,
+  VERSION_RELEASE_COLOR,
+} from "../lib/releaseLevels";
 
 const STATE_LABEL: Record<number, string> = {
   1: "Pending",
@@ -324,9 +314,9 @@ export function CodeblockDetailsPage() {
                 </h1>
                 {block.releaseLevel > 0 && (
                   <span
-                    className={`text-[9px] font-bold uppercase border rounded px-[6px] py-[2px] ${LEVEL_COLOR[block.releaseLevel] ?? "text-foreground/50 border-foreground/10 bg-foreground/5"}`}
+                    className={`text-[9px] font-bold uppercase border rounded px-[6px] py-[2px] ${RELEASE_LEVEL_COLOR[block.releaseLevel] ?? "text-foreground/50 border-foreground/10 bg-foreground/5"}`}
                   >
-                    {LEVEL_LABEL[block.releaseLevel] ?? "Unknown"}
+                    {RELEASE_LEVEL_LABEL[block.releaseLevel] ?? "Unknown"}
                   </span>
                 )}
               </div>
@@ -1316,11 +1306,11 @@ function DocumentationTab({
 // ── Versions Tab ──────────────────────────────────────────────────────────────
 
 const VERSION_FILTERS = [
-  { label: "Stable", level: 5 },
-  { label: "RC", level: 4 },
-  { label: "Beta", level: 3 },
-  { label: "Alpha", level: 2 },
-  { label: "Experimental", level: 1 },
+  { label: "Stable", level: 99 },
+  { label: "RC", level: 12 },
+  { label: "Beta", level: 9 },
+  { label: "Alpha", level: 6 },
+  { label: "Experimental", level: 3 },
 ] as const;
 
 function VersionsTab({
@@ -1346,6 +1336,7 @@ function VersionsTab({
   useEffect(() => {
     if (!selected) return;
     setDetail(null);
+    setOpenFile(null);
     setExpandedFolders(new Set());
     setDetailLoading(true);
     (ProductService.GetCodeblockVersion as (name: string) => Promise<CodeblockVersion>)(
@@ -1398,7 +1389,7 @@ function VersionsTab({
             onClick={() => setFilter(filter === f.level ? null : f.level)}
             className={`text-[10px] font-bold uppercase border rounded-full px-[10px] py-[3px] transition-colors ${
               filter === f.level
-                ? LEVEL_COLOR[f.level]
+                ? VERSION_RELEASE_COLOR[f.level]
                 : "text-foreground/40 border-foreground/20 hover:border-foreground/40"
             }`}
           >
@@ -1436,12 +1427,12 @@ function VersionsTab({
                 <span
                   className={`text-[8px] font-bold uppercase border rounded px-[5px] py-[1px] ${
                     v.releaseLevel > 0
-                      ? (LEVEL_COLOR[v.releaseLevel] ??
+                      ? (VERSION_RELEASE_COLOR[v.releaseLevel] ??
                         "text-foreground/50 border-foreground/10 bg-foreground/5")
                       : "text-foreground/30 border-foreground/10 bg-foreground/5"
                   }`}
                 >
-                  {v.releaseLevel > 0 ? (LEVEL_LABEL[v.releaseLevel] ?? "") : "Not Specified"}
+                  {v.releaseLevel > 0 ? (VERSION_RELEASE_LABEL[v.releaseLevel] ?? "") : "Not Specified"}
                 </span>
               </div>
               {v.createTime && (
@@ -1472,13 +1463,13 @@ function VersionsTab({
                       <span
                         className={`text-[9px] font-bold uppercase border rounded px-[5px] py-[1px] ${
                           displayDetail.releaseLevel > 0
-                            ? (LEVEL_COLOR[displayDetail.releaseLevel] ??
+                            ? (VERSION_RELEASE_COLOR[displayDetail.releaseLevel] ??
                               "text-foreground/50 border-foreground/10 bg-foreground/5")
                             : "text-foreground/30 border-foreground/10 bg-foreground/5"
                         }`}
                       >
                         {displayDetail.releaseLevel > 0
-                          ? LEVEL_LABEL[displayDetail.releaseLevel]
+                          ? VERSION_RELEASE_LABEL[displayDetail.releaseLevel]
                           : "Not Specified"}
                       </span>
                     </div>

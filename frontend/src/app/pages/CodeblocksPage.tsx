@@ -6,32 +6,14 @@ import { Toolbar } from "../components/Toolbar";
 import { EmptyState } from "../components/EmptyState";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import { Loader } from "../components/Loader";
+import {
+  RELEASE_LEVELS,
+  RELEASE_LEVEL_LABEL,
+  RELEASE_LEVEL_COLOR,
+  RELEASE_FILTER_LABELS,
+} from "../lib/releaseLevels";
 
-const RELEASE_LEVELS = [
-  "All",
-  "Stable",
-  "Release Candidate",
-  "Beta",
-  "Alpha",
-  "Experimental",
-] as const;
-type ReleaseFilter = (typeof RELEASE_LEVELS)[number];
-
-const LEVEL_LABEL: Record<number, string> = {
-  1: "Experimental",
-  2: "Alpha",
-  3: "Beta",
-  4: "Release Candidate",
-  5: "Stable",
-};
-
-const LEVEL_COLOR: Record<number, string> = {
-  1: "text-red-400 border-red-400/30 bg-red-400/10",
-  2: "text-orange-400 border-orange-400/30 bg-orange-400/10",
-  3: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",
-  4: "text-blue-400 border-blue-400/30 bg-blue-400/10",
-  5: "text-green-400 border-green-400/30 bg-green-400/10",
-};
+type ReleaseFilter = (typeof RELEASE_FILTER_LABELS)[number];
 
 const DEFAULT_BANNER =
   "https://static.vecteezy.com/system/resources/previews/020/398/136/non_2x/abstract-background-banner-with-dark-red-and-black-gradations-vector.jpg";
@@ -75,8 +57,8 @@ export function CodeblocksPage({ view = "all" }: { view?: "all" | "mine" }) {
 
   const filtered = blocks.filter((cb) => {
     if (activeFilter !== "All") {
-      const level = Object.entries(LEVEL_LABEL).find(([, v]) => v === activeFilter)?.[0];
-      if (level && cb.releaseLevel !== Number(level)) return false;
+      const filterLevel = RELEASE_LEVELS.find((l) => l.label === activeFilter)?.value;
+      if (filterLevel !== undefined && cb.releaseLevel !== filterLevel) return false;
     }
     if (filterText) {
       const q = filterText.toLowerCase();
@@ -103,7 +85,7 @@ export function CodeblocksPage({ view = "all" }: { view?: "all" | "mine" }) {
 
       {/* Filter tabs */}
       <div className="border-b border-border flex items-center px-[20px] gap-[4px]">
-        {RELEASE_LEVELS.map((level) => (
+        {RELEASE_FILTER_LABELS.map((level) => (
           <button
             key={level}
             onClick={() => setActiveFilter(level)}
@@ -169,9 +151,9 @@ export function CodeblocksPage({ view = "all" }: { view?: "all" | "mine" }) {
                     </h3>
                     {cb.releaseLevel > 0 && (
                       <span
-                        className={`text-[8px] font-bold uppercase border rounded px-[6px] py-[2px] shrink-0 ${LEVEL_COLOR[cb.releaseLevel] ?? "text-foreground/50 border-foreground/10 bg-foreground/5"}`}
+                        className={`text-[8px] font-bold uppercase border rounded px-[6px] py-[2px] shrink-0 ${RELEASE_LEVEL_COLOR[cb.releaseLevel] ?? "text-foreground/50 border-foreground/10 bg-foreground/5"}`}
                       >
-                        {LEVEL_LABEL[cb.releaseLevel] ?? "Unknown"}
+                        {RELEASE_LEVEL_LABEL[cb.releaseLevel] ?? "Unknown"}
                       </span>
                     )}
                   </div>
