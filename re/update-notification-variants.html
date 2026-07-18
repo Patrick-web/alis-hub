@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Update Notification Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #141414;
+    --surface: #1e1e1e;
+    --surface2: #2a2a2a;
+    --border: #333;
+    --border2: #464646;
+    --red: #e8192c;
+    --red-dim: rgba(232,25,44,0.12);
+    --red-glow: rgba(232,25,44,0.25);
+    --text: #f0f0f0;
+    --text-dim: rgba(255,255,255,0.45);
+    --text-mid: rgba(255,255,255,0.7);
+    --font: 'JetBrains Mono', monospace;
+    --green: #3dd68c;
+  }
+  body {
+    background: var(--bg);
+    font-family: var(--font);
+    color: var(--text);
+    padding: 48px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 80px;
+  }
+
+  /* ─── Section headers ─── */
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .variant-num {
+    color: var(--red);
+    font-size: 10px;
+  }
+  .states {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .state-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .state-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  /* ════════════════════════════════════════
+     VARIANT 1 — Slim bottom bar
+  ════════════════════════════════════════ */
+  .v1-bar {
+    width: 680px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .v1-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    flex-shrink: 0;
+    box-shadow: 0 0 6px var(--red-glow);
+  }
+  .v1-text {
+    flex: 1;
+  }
+  .v1-text strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    display: block;
+  }
+  .v1-text span {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .v1-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .btn-sm-primary {
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  .btn-sm-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+    padding: 6px 12px;
+    font-family: var(--font);
+    font-size: 11px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .v1-progress-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .v1-progress-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .v1-progress-row strong { font-size: 12px; font-weight: 600; }
+  .v1-progress-row span { font-size: 10px; color: var(--text-dim); }
+  .progress-track {
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--red);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* ════════════════════════════════════════
+     VARIANT 2 — Floating card (top-right toast)
+  ════════════════════════════════════════ */
+  .v2-card {
+    width: 320px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .v2-accent-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--red), transparent);
+  }
+  .v2-body {
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .v2-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .v2-icon svg { width: 20px; height: 20px; }
+  .v2-content { flex: 1; }
+  .v2-tag {
+    display: inline-block;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--red);
+    background: var(--red-dim);
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+  }
+  .v2-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .v2-sub { font-size: 10px; color: var(--text-dim); line-height: 1.5; }
+  .v2-footer {
+    padding: 10px 16px 14px;
+    display: flex;
+    gap: 8px;
+  }
+  .v2-footer .btn-sm-primary { flex: 1; text-align: center; border-radius: 7px; padding: 8px; }
+  .v2-footer .btn-sm-ghost { border-radius: 7px; padding: 8px 12px; }
+
+  .v2-progress-body {
+    padding: 14px 16px 16px;
+  }
+  .v2-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .v2-progress-header .v2-title { margin-bottom: 2px; }
+  .v2-pct {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--red);
+    line-height: 1;
+  }
+  .v2-progress-track {
+    height: 4px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .v2-progress-fill {
+    height: 100%;
+    width: 62%;
+    background: linear-gradient(90deg, var(--red), #ff6b7a);
+    border-radius: 3px;
+  }
+  .v2-progress-meta {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* ════════════════════════════════════════
+     VARIANT 3 — Modal / spotlight style
+  ════════════════════════════════════════ */
+  .v3-backdrop {
+    width: 600px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 16px;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .v3-modal {
+    width: 520px;
+    background: #1c1c1c;
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+  }
+  .v3-hero {
+    position: relative;
+    height: 160px;
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a0a0d 50%, #110008 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .v3-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(232,25,44,0.15) 0%, transparent 60%);
+  }
+  .v3-version-badge {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    font-size: 10px;
+    color: var(--text-dim);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .v3-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .v3-big-version {
+    font-size: 52px;
+    font-weight: 700;
+    color: transparent;
+    background: linear-gradient(135deg, #fff 30%, rgba(232,25,44,0.6) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    letter-spacing: -3px;
+    position: relative;
+    z-index: 1;
+  }
+  .v3-content {
+    padding: 20px 24px 24px;
+  }
+  .v3-headline {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .v3-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .v3-bullets {
+    list-style: none;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .v3-bullets li {
+    font-size: 11px;
+    color: var(--text-mid);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .v3-bullets li::before {
+    content: '→';
+    color: var(--red);
+    flex-shrink: 0;
+    margin-top: 0px;
+  }
+  .v3-actions {
+    display: flex;
+    gap: 10px;
+  }
+  .v3-btn-primary {
+    flex: 1;
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 11px;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    text-align: center;
+  }
+  .v3-btn-ghost {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border2);
+    padding: 11px 16px;
+    font-family: var(--font);
+    font-size: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .v3-progress-hero {
+    height: 160px;
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a0a0d 50%, #110008 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .v3-progress-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 80%, rgba(232,25,44,0.2) 0%, transparent 60%);
+  }
+  .v3-ring {
+    width: 72px;
+    height: 72px;
+    position: relative;
+    z-index: 1;
+  }
+  .v3-ring svg { transform: rotate(-90deg); }
+  .v3-ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    transform: rotate(0deg);
+  }
+  .v3-progress-content {
+    padding: 20px 24px 24px;
+    text-align: center;
+  }
+  .v3-progress-content .v3-headline { margin-bottom: 4px; }
+  .v3-progress-content .v3-sub { margin-bottom: 0; }
+
+  /* ════════════════════════════════════════
+     VARIANT 4 — Inline sidebar strip
+  ════════════════════════════════════════ */
+  .v4-sidebar {
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    height: 420px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .v4-nav-items {
+    flex: 1;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .v4-nav-item {
+    padding: 8px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .v4-nav-item.active {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .v4-nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border2);
+    flex-shrink: 0;
+  }
+  .v4-nav-item.active .v4-nav-dot { background: #fff; }
+  .v4-update-strip {
+    margin: 8px;
+    background: linear-gradient(135deg, rgba(232,25,44,0.08), rgba(232,25,44,0.04));
+    border: 1px solid rgba(232,25,44,0.2);
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+  .v4-update-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .v4-update-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--red);
+    font-weight: 600;
+  }
+  .v4-update-version {
+    font-size: 9px;
+    color: var(--text-dim);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .v4-update-title {
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .v4-update-btn {
+    width: 100%;
+    background: var(--red);
+    color: white;
+    border: none;
+    padding: 6px;
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .v4-progress-strip {
+    margin: 8px;
+    background: linear-gradient(135deg, rgba(232,25,44,0.08), rgba(232,25,44,0.04));
+    border: 1px solid rgba(232,25,44,0.2);
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+  .v4-progress-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--red);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .v4-progress-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .v4-progress-row strong { color: var(--text); }
+  .v4-track {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .v4-fill {
+    height: 100%;
+    width: 62%;
+    background: var(--red);
+    border-radius: 2px;
+  }
+
+  /* ════════════════════════════════════════
+     VARIANT 5 — macOS Notification Center style
+  ════════════════════════════════════════ */
+  .v5-notif {
+    width: 340px;
+    background: rgba(38, 38, 40, 0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    backdrop-filter: blur(20px);
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+  }
+  .v5-header {
+    padding: 11px 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .v5-app-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    background: #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .v5-app-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .v5-time {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+  }
+  .v5-body {
+    padding: 6px 14px 0;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .v5-text { flex: 1; }
+  .v5-notif-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: var(--text);
+  }
+  .v5-notif-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.4;
+  }
+  .v5-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    background: #111;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .v5-actions {
+    padding: 10px 10px 12px;
+    display: flex;
+    gap: 6px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    margin-top: 10px;
+  }
+  .v5-action-btn {
+    flex: 1;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    padding: 8px;
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--text);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+  }
+  .v5-action-btn.primary {
+    background: var(--red);
+    font-weight: 600;
+  }
+
+  .v5-progress-body {
+    padding: 8px 14px 0;
+  }
+  .v5-progress-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .v5-progress-sub {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 10px;
+  }
+  .v5-prog-track {
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+  }
+  .v5-prog-fill {
+    height: 100%;
+    width: 62%;
+    background: linear-gradient(90deg, var(--red), #ff5566);
+    border-radius: 3px;
+  }
+  .v5-prog-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 4px;
+  }
+
+  /* Dot pattern SVG for icon */
+  .dot-pattern { display: block; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     VARIANT 1 — Slim persistent bar
+══════════════════════════════════════════════════ -->
+<div>
+  <div class="section-label"><span class="variant-num">01</span> Slim bottom bar — minimal, stays out of the way</div>
+  <div class="states">
+    <div class="state-group">
+      <div class="state-label">Update available</div>
+      <div class="v1-bar">
+        <div class="v1-dot"></div>
+        <div class="v1-text">
+          <strong>AlisHub v0.3.1 is available</strong>
+          <span>You're on v0.3.0 · New SQL Editor, Source Control improvements</span>
+        </div>
+        <div class="v1-actions">
+          <button class="btn-sm-ghost">Notes</button>
+          <button class="btn-sm-primary">Download</button>
+        </div>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-label">Downloading</div>
+      <div class="v1-bar">
+        <div class="v1-dot" style="background:var(--red);animation:pulse 1s infinite;"></div>
+        <div class="v1-progress-wrap">
+          <div class="v1-progress-row">
+            <strong>Downloading v0.3.1…</strong>
+            <span>18.4 MB / 29.7 MB · 62%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:62%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VARIANT 2 — Floating toast card
+══════════════════════════════════════════════════ -->
+<div>
+  <div class="section-label"><span class="variant-num">02</span> Floating card — rich toast, top-right corner</div>
+  <div class="states">
+    <div class="state-group">
+      <div class="state-label">Update available</div>
+      <div class="v2-card">
+        <div class="v2-accent-bar"></div>
+        <div class="v2-body">
+          <div class="v2-icon">
+            <svg viewBox="0 0 20 20" fill="#e8192c" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="11.5" cy="2.5" r="2"/>
+              <circle cx="15.5" cy="2.5" r="2"/>
+              <circle cx="11.5" cy="7" r="2"/>
+              <circle cx="15.5" cy="7" r="2"/>
+              <circle cx="4.5" cy="11" r="2"/>
+              <circle cx="8.5" cy="11" r="2"/>
+              <circle cx="12.5" cy="11" r="2"/>
+              <circle cx="4.5" cy="15.5" r="2"/>
+              <circle cx="8.5" cy="15.5" r="2"/>
+            </svg>
+          </div>
+          <div class="v2-content">
+            <div class="v2-tag">Update available</div>
+            <div class="v2-title">AlisHub v0.3.1</div>
+            <div class="v2-sub">SQL Editor, Source Control · Bug fixes</div>
+          </div>
+        </div>
+        <div class="v2-footer">
+          <button class="btn-sm-primary">Download now</button>
+          <button class="btn-sm-ghost">Notes</button>
+        </div>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-label">Downloading</div>
+      <div class="v2-card">
+        <div class="v2-accent-bar"></div>
+        <div class="v2-progress-body">
+          <div class="v2-progress-header">
+            <div>
+              <div class="v2-title">Downloading v0.3.1</div>
+              <div class="v2-sub">18.4 MB of 29.7 MB</div>
+            </div>
+            <div class="v2-pct">62%</div>
+          </div>
+          <div class="v2-progress-track">
+            <div class="v2-progress-fill"></div>
+          </div>
+          <div class="v2-progress-meta">Will restart automatically when ready</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VARIANT 3 — Modal / spotlight
+══════════════════════════════════════════════════ -->
+<div>
+  <div class="section-label"><span class="variant-num">03</span> Centered modal — full release moment, high impact</div>
+  <div class="states">
+    <div class="state-group">
+      <div class="state-label">Update available</div>
+      <div class="v3-backdrop">
+        <div class="v3-modal">
+          <div class="v3-hero">
+            <div class="v3-version-badge">v0.3.0 → v0.3.1</div>
+            <div class="v3-close">✕</div>
+            <div class="v3-big-version">v0.3.1</div>
+          </div>
+          <div class="v3-content">
+            <div class="v3-headline">What's new in AlisHub</div>
+            <div class="v3-sub">A new update is ready to install. It will restart the app automatically.</div>
+            <ul class="v3-bullets">
+              <li>New SQL Editor with multi-tab, syntax highlighting and resizing</li>
+              <li>Source Control now shows unified and split diff views</li>
+              <li>Release note images now render in the update modal</li>
+            </ul>
+            <div class="v3-actions">
+              <button class="v3-btn-primary">Install & Restart</button>
+              <button class="v3-btn-ghost">Later</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-label">Downloading</div>
+      <div class="v3-backdrop">
+        <div class="v3-modal">
+          <div class="v3-progress-hero">
+            <div class="v3-ring">
+              <svg viewBox="0 0 72 72" width="72" height="72">
+                <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="5"/>
+                <circle cx="36" cy="36" r="30" fill="none" stroke="#e8192c" stroke-width="5"
+                  stroke-dasharray="188.5" stroke-dashoffset="71.6" stroke-linecap="round"/>
+              </svg>
+              <div class="v3-ring-label">62%</div>
+            </div>
+          </div>
+          <div class="v3-progress-content">
+            <div class="v3-headline">Downloading AlisHub v0.3.1</div>
+            <div class="v3-sub">18.4 MB of 29.7 MB · Will restart when complete</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VARIANT 4 — Embedded sidebar strip
+══════════════════════════════════════════════════ -->
+<div>
+  <div class="section-label"><span class="variant-num">04</span> Sidebar strip — lives inside the existing sidebar, zero distraction</div>
+  <div class="states">
+    <div class="state-group">
+      <div class="state-label">Update available</div>
+      <div class="v4-sidebar">
+        <div class="v4-nav-items">
+          <div class="v4-nav-item active"><div class="v4-nav-dot"></div>Hub</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Develop</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Builds</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Deployments</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Environments</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Tools</div>
+        </div>
+        <div class="v4-update-strip">
+          <div class="v4-update-top">
+            <div class="v4-update-label">Update</div>
+            <div class="v4-update-version">v0.3.1</div>
+          </div>
+          <div class="v4-update-title">New version available</div>
+          <button class="v4-update-btn">Download & Install</button>
+        </div>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-label">Downloading</div>
+      <div class="v4-sidebar">
+        <div class="v4-nav-items">
+          <div class="v4-nav-item active"><div class="v4-nav-dot"></div>Hub</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Develop</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Builds</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Deployments</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Environments</div>
+          <div class="v4-nav-item"><div class="v4-nav-dot"></div>Tools</div>
+        </div>
+        <div class="v4-progress-strip">
+          <div class="v4-progress-label">Downloading v0.3.1</div>
+          <div class="v4-progress-row">
+            <span>18.4 / 29.7 MB</span>
+            <strong>62%</strong>
+          </div>
+          <div class="v4-track"><div class="v4-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VARIANT 5 — macOS notification style
+══════════════════════════════════════════════════ -->
+<div>
+  <div class="section-label"><span class="variant-num">05</span> macOS notification style — familiar, non-intrusive, top-right</div>
+  <div class="states">
+    <div class="state-group">
+      <div class="state-label">Update available</div>
+      <div class="v5-notif">
+        <div class="v5-header">
+          <div class="v5-app-icon">
+            <svg viewBox="0 0 14 14" fill="#e8192c" width="12" height="12" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="1.5" r="1.5"/>
+              <circle cx="12" cy="1.5" r="1.5"/>
+              <circle cx="8" cy="5.5" r="1.5"/>
+              <circle cx="12" cy="5.5" r="1.5"/>
+              <circle cx="2" cy="9" r="1.5"/>
+              <circle cx="6" cy="9" r="1.5"/>
+              <circle cx="10" cy="9" r="1.5"/>
+              <circle cx="2" cy="13" r="1.5"/>
+              <circle cx="6" cy="13" r="1.5"/>
+            </svg>
+          </div>
+          <div class="v5-app-name">AlisHub</div>
+          <div class="v5-time">now</div>
+        </div>
+        <div class="v5-body">
+          <div class="v5-text">
+            <div class="v5-notif-title">v0.3.1 is available</div>
+            <div class="v5-notif-sub">New SQL Editor, Source Control improvements and bug fixes.</div>
+          </div>
+          <div class="v5-thumb">
+            <svg viewBox="0 0 32 32" fill="#e8192c" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="19" cy="4" r="3"/>
+              <circle cx="28" cy="4" r="3"/>
+              <circle cx="19" cy="13" r="3"/>
+              <circle cx="28" cy="13" r="3"/>
+              <circle cx="4" cy="20" r="3"/>
+              <circle cx="13" cy="20" r="3"/>
+              <circle cx="22" cy="20" r="3"/>
+              <circle cx="4" cy="29" r="3"/>
+              <circle cx="13" cy="29" r="3"/>
+            </svg>
+          </div>
+        </div>
+        <div class="v5-actions">
+          <button class="v5-action-btn">Later</button>
+          <button class="v5-action-btn">Release Notes</button>
+          <button class="v5-action-btn primary">Download</button>
+        </div>
+      </div>
+    </div>
+    <div class="state-group">
+      <div class="state-label">Downloading</div>
+      <div class="v5-notif">
+        <div class="v5-header">
+          <div class="v5-app-icon">
+            <svg viewBox="0 0 14 14" fill="#e8192c" width="12" height="12" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="8" cy="1.5" r="1.5"/>
+              <circle cx="12" cy="1.5" r="1.5"/>
+              <circle cx="8" cy="5.5" r="1.5"/>
+              <circle cx="12" cy="5.5" r="1.5"/>
+              <circle cx="2" cy="9" r="1.5"/>
+              <circle cx="6" cy="9" r="1.5"/>
+              <circle cx="10" cy="9" r="1.5"/>
+              <circle cx="2" cy="13" r="1.5"/>
+              <circle cx="6" cy="13" r="1.5"/>
+            </svg>
+          </div>
+          <div class="v5-app-name">AlisHub</div>
+          <div class="v5-time">now</div>
+        </div>
+        <div class="v5-progress-body">
+          <div class="v5-progress-title">Downloading v0.3.1…</div>
+          <div class="v5-progress-sub">18.4 MB of 29.7 MB</div>
+          <div class="v5-prog-track">
+            <div class="v5-prog-fill"></div>
+          </div>
+          <div class="v5-prog-meta">
+            <span>62% complete</span>
+            <span>~8s remaining</span>
+          </div>
+        </div>
+        <div class="v5-actions" style="border-top:1px solid rgba(255,255,255,0.07);margin-top:10px;">
+          <button class="v5-action-btn" style="color:rgba(255,255,255,0.4);cursor:default;">Downloading…</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

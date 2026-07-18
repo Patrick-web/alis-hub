@@ -1,0 +1,2183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings Modal — macOS Redesign Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --surface2: #222222;
+  --surface3: #2c2c2c;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f0f0f0;
+  --text-mid: rgba(240,240,240,0.65);
+  --text-dim: rgba(240,240,240,0.35);
+  --text-faint: rgba(240,240,240,0.18);
+  --brand: #f881a9;
+  --brand-dim: rgba(248,129,169,0.12);
+  --brand-dim2: rgba(248,129,169,0.22);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --green: #34c759;
+  --green-dim: rgba(52,199,89,0.15);
+  --yellow: #fac800;
+  --yellow-dim: rgba(250,200,0,0.15);
+  --red: #ff3b30;
+  --red-dim: rgba(255,59,48,0.12);
+  --purple: #bf5af2;
+  --purple-dim: rgba(191,90,242,0.14);
+  --orange: #ff9f0a;
+  --orange-dim: rgba(255,159,10,0.14);
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Inter', -apple-system, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  padding: 56px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 120px;
+  min-height: 100vh;
+}
+
+/* ── Page scaffold ── */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.variant-num { color: var(--brand); }
+.variant-title { color: var(--text-mid); }
+.panels-row {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.panel-caption {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+/* ── Shared toggle ── */
+.toggle {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--surface3);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle.on { background: var(--green); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  transition: left 0.2s;
+}
+.toggle.on::after { left: 16px; }
+
+/* ── Shared close button ── */
+.close-btn {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--red);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: rgba(0,0,0,0.6);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.traffic-lights {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tl { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.tl-red { background: #ff5f57; }
+.tl-yellow { background: #febc2e; }
+.tl-green { background: #28c840; }
+
+/* ── Avatar ── */
+.avatar {
+  border-radius: 50%;
+  background: var(--brand-dim2);
+  border: 1.5px solid rgba(248,129,169,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--brand);
+  flex-shrink: 0;
+}
+.avatar-sm { width: 28px; height: 28px; font-size: 10px; }
+.avatar-md { width: 36px; height: 36px; font-size: 13px; }
+.avatar-lg { width: 52px; height: 52px; font-size: 18px; }
+.avatar-xl { width: 64px; height: 64px; font-size: 22px; }
+
+/* ── Icon chip ── */
+.icon-chip {
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+.ic-sm { width: 26px; height: 26px; border-radius: 7px; font-size: 12px; }
+.ic-md { width: 32px; height: 32px; font-size: 16px; }
+.ic-lg { width: 40px; height: 40px; border-radius: 10px; font-size: 20px; }
+.ic-xl { width: 52px; height: 52px; border-radius: 14px; font-size: 26px; }
+.ic-blue  { background: var(--blue-dim); }
+.ic-green { background: var(--green-dim); }
+.ic-brand { background: var(--brand-dim2); }
+.ic-purple { background: var(--purple-dim); }
+.ic-orange { background: var(--orange-dim); }
+.ic-red { background: var(--red-dim); }
+.ic-surface { background: var(--surface3); }
+
+
+/* ════════════════════════════════════════════════════════
+   VARIANT 1 — macOS Sonoma Two-Pane
+   Wider modal, generous sidebar, section sub-headers
+════════════════════════════════════════════════════════ */
+.v1-modal {
+  width: 640px;
+  background: rgba(26,26,30,0.96);
+  backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.06) inset,
+    0 32px 64px rgba(0,0,0,0.6),
+    0 4px 16px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+}
+.v1-titlebar {
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  -webkit-app-region: drag;
+}
+.v1-titlebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  letter-spacing: -0.2px;
+  flex: 1;
+  text-align: center;
+}
+.v1-body {
+  display: flex;
+  min-height: 440px;
+}
+.v1-sidebar {
+  width: 170px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.v1-sidebar-group-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-faint);
+  padding: 10px 14px 4px;
+}
+.v1-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  margin: 0 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.v1-sidebar-item:hover { background: rgba(255,255,255,0.05); }
+.v1-sidebar-item.active { background: rgba(248,129,169,0.12); }
+.v1-sidebar-item-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.v1-sidebar-item-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-mid);
+}
+.v1-sidebar-item.active .v1-sidebar-item-label { color: var(--brand); font-weight: 600; }
+.v1-sidebar-spacer { flex: 1; }
+.v1-sidebar-signout {
+  margin: 0 6px 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.v1-sidebar-signout:hover { background: rgba(255,59,48,0.08); }
+.v1-signout-label { font-size: 12px; color: rgba(255,80,70,0.75); font-weight: 500; }
+
+.v1-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.v1-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  padding: 0 2px;
+}
+.v1-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.v1-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.v1-row:last-child { border-bottom: none; }
+.v1-row-left { display: flex; align-items: center; gap: 10px; }
+.v1-row-label {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 450;
+}
+.v1-row-sub {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-top: 1px;
+}
+.v1-row-value {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+}
+.v1-theme-seg {
+  display: flex;
+  background: rgba(255,255,255,0.06);
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
+}
+.v1-theme-opt {
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.v1-theme-opt.sel {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.v1-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+}
+.v1-profile-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.v1-profile-email {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  margin-top: 2px;
+}
+.v1-link-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+  cursor: pointer;
+  padding: 2px 2px;
+  border-radius: 4px;
+}
+.v1-link-row:hover { color: var(--text-dim); }
+
+
+/* ════════════════════════════════════════════════════════
+   VARIANT 2 — Icon Grid Header (System Preferences Classic)
+   Categories displayed as icon buttons in toolbar,
+   content shifts below
+════════════════════════════════════════════════════════ */
+.v2-modal {
+  width: 560px;
+  background: rgba(26,26,30,0.97);
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.06) inset,
+    0 28px 56px rgba(0,0,0,0.6),
+    0 4px 12px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+}
+.v2-titlebar {
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.v2-titlebar-title {
+  flex: 1;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-mid);
+  letter-spacing: -0.2px;
+}
+.v2-icon-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-wrap: wrap;
+}
+.v2-cat-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.1s;
+  min-width: 72px;
+}
+.v2-cat-btn:hover { background: rgba(255,255,255,0.05); }
+.v2-cat-btn.active { background: rgba(248,129,169,0.1); }
+.v2-cat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.v2-cat-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+.v2-cat-btn.active .v2-cat-label { color: var(--brand); }
+
+.v2-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.06); margin: 0 4px; }
+
+.v2-content {
+  padding: 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 280px;
+}
+.v2-content-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+.v2-content-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.4px;
+}
+.v2-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.v2-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.v2-row:last-child { border-bottom: none; }
+.v2-row-left { display: flex; flex-direction: column; gap: 2px; }
+.v2-row-label { font-size: 13px; color: var(--text); font-weight: 450; }
+.v2-row-desc { font-size: 11px; color: var(--text-dim); }
+.v2-profile-card {
+  background: linear-gradient(135deg, rgba(248,129,169,0.08) 0%, rgba(191,90,242,0.06) 100%);
+  border: 1px solid rgba(248,129,169,0.15);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.v2-profile-text-name { font-size: 16px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+.v2-profile-text-email { font-size: 11.5px; color: var(--text-dim); font-family: var(--mono); margin-top: 3px; }
+.v2-profile-text-role {
+  font-size: 9.5px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--brand);
+  margin-top: 4px;
+}
+.v2-edit-btn {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.v2-edit-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+
+
+/* ════════════════════════════════════════════════════════
+   VARIANT 3 — Continuous Scroll (Linear / Notion style)
+   No sidebar, single scrollable column, sticky section headers
+════════════════════════════════════════════════════════ */
+.v3-modal {
+  width: 500px;
+  background: rgba(24,24,28,0.98);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.05) inset,
+    0 24px 56px rgba(0,0,0,0.65),
+    0 3px 12px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+  max-height: 580px;
+}
+.v3-header {
+  padding: 14px 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.v3-header-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+.v3-header-actions { display: flex; gap: 6px; align-items: center; }
+.v3-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.v3-search-icon { font-size: 12px; color: var(--text-faint); }
+.v3-search-input-fake {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  flex: 1;
+}
+.v3-body {
+  overflow-y: auto;
+  flex: 1;
+}
+.v3-section-sticky {
+  position: sticky;
+  top: 0;
+  background: rgba(24,24,28,0.92);
+  backdrop-filter: blur(8px);
+  padding: 10px 16px 6px;
+  z-index: 1;
+}
+.v3-section-header {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-faint);
+}
+.v3-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  cursor: default;
+  transition: background 0.1s;
+}
+.v3-row:hover { background: rgba(255,255,255,0.025); }
+.v3-row-left { display: flex; align-items: center; gap: 11px; }
+.v3-row-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.v3-row-text { display: flex; flex-direction: column; gap: 1px; }
+.v3-row-label { font-size: 12.5px; color: var(--text); font-weight: 450; }
+.v3-row-sub { font-size: 10.5px; color: var(--text-dim); }
+.v3-row-right { display: flex; align-items: center; gap: 8px; }
+.v3-row-value { font-size: 11px; color: var(--text-dim); font-family: var(--mono); }
+.v3-row-chevron { font-size: 9px; color: var(--text-faint); }
+.v3-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.v3-profile-name { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; }
+.v3-profile-email { font-size: 11px; color: var(--text-dim); font-family: var(--mono); margin-top: 2px; }
+.v3-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 20px;
+  background: var(--green-dim);
+  color: var(--green);
+}
+.v3-footer {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+.v3-signout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255,80,70,0.75);
+  cursor: pointer;
+  border: 1px solid rgba(255,59,48,0.15);
+}
+.v3-signout-btn:hover { background: var(--red-dim); color: var(--red); border-color: rgba(255,59,48,0.3); }
+
+
+/* ════════════════════════════════════════════════════════
+   VARIANT 4 — Command Palette / Quick Settings
+   Compact popover from avatar, most-used first,
+   expandable to full settings
+════════════════════════════════════════════════════════ */
+.v4-outer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+.v4-trigger-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 5px 12px 5px 6px;
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.v4-trigger-name { font-size: 11px; font-weight: 500; color: var(--text-mid); }
+.v4-trigger-status {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  margin-left: 2px;
+}
+.v4-connector {
+  width: 1px;
+  height: 10px;
+  background: rgba(255,255,255,0.12);
+  margin: 0 auto 0 auto;
+  margin-right: 24px;
+}
+.v4-panel {
+  width: 320px;
+  background: rgba(26,26,30,0.97);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.06) inset,
+    0 20px 40px rgba(0,0,0,0.6),
+    0 4px 12px rgba(0,0,0,0.4);
+}
+.v4-profile-section {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.v4-profile-meta { flex: 1; min-width: 0; }
+.v4-profile-name { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v4-profile-email { font-size: 10px; color: var(--text-dim); font-family: var(--mono); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v4-edit-link { font-size: 9.5px; color: var(--text-faint); font-family: var(--mono); cursor: pointer; white-space: nowrap; }
+.v4-edit-link:hover { color: var(--text-dim); }
+.v4-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.v4-quick-tile {
+  background: rgba(26,26,30,0.97);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.v4-quick-tile:hover { background: rgba(255,255,255,0.03); }
+.v4-tile-label { font-size: 10px; color: var(--text-dim); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+.v4-tile-control { display: flex; align-items: center; justify-content: space-between; }
+.v4-tile-value { font-size: 12px; color: var(--text); font-weight: 500; }
+.v4-theme-mini {
+  display: flex;
+  background: rgba(255,255,255,0.06);
+  border-radius: 5px;
+  padding: 1px;
+}
+.v4-theme-opt {
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.v4-theme-opt.sel {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.v4-menu-items { padding: 6px 0; }
+.v4-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.v4-menu-item:hover { background: rgba(255,255,255,0.04); }
+.v4-menu-item-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.v4-menu-item-label { font-size: 12px; color: var(--text-mid); font-weight: 450; flex: 1; }
+.v4-menu-item-arrow { font-size: 9px; color: var(--text-faint); }
+.v4-menu-item-value { font-size: 10.5px; color: var(--text-dim); font-family: var(--mono); }
+.v4-divider { height: 1px; background: rgba(255,255,255,0.05); margin: 4px 0; }
+.v4-signout {
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.1s;
+}
+.v4-signout:hover { background: var(--red-dim); }
+.v4-signout-label { font-size: 12px; color: rgba(255,80,70,0.75); font-weight: 450; }
+.v4-signout:hover .v4-signout-label { color: var(--red); }
+
+
+/* ════════════════════════════════════════════════════════
+   VARIANT 5 — iPad Settings / Three-Pane
+   Slim icon-only nav (far left) + category list (middle) + detail (right)
+════════════════════════════════════════════════════════ */
+.v5-modal {
+  width: 720px;
+  background: rgba(24,24,28,0.98);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(255,255,255,0.05) inset,
+    0 32px 64px rgba(0,0,0,0.65),
+    0 4px 16px rgba(0,0,0,0.4);
+  display: flex;
+  flex-direction: column;
+}
+.v5-titlebar {
+  padding: 12px 16px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+.v5-titlebar-title { font-size: 13px; font-weight: 600; color: var(--text-mid); letter-spacing: -0.2px; flex: 1; text-align: center; }
+.v5-body { display: flex; min-height: 460px; }
+
+/* icon-only far-left rail */
+.v5-rail {
+  width: 54px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 0;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.v5-rail-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.1s;
+  color: var(--text-dim);
+  position: relative;
+}
+.v5-rail-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+.v5-rail-btn.active { background: var(--brand-dim2); color: var(--brand); }
+.v5-rail-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.v5-rail-spacer { flex: 1; }
+.v5-rail-signout {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  color: rgba(255,80,70,0.6);
+}
+.v5-rail-signout:hover { background: var(--red-dim); color: var(--red); }
+
+/* middle category list */
+.v5-mid {
+  width: 200px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.v5-mid-header {
+  padding: 14px 14px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  flex-shrink: 0;
+}
+.v5-mid-search {
+  margin: 0 8px 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 7px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.v5-mid-search-text { font-size: 10.5px; font-family: var(--mono); color: var(--text-faint); flex: 1; }
+.v5-mid-section-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-faint);
+  padding: 8px 12px 4px;
+}
+.v5-mid-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  margin: 1px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.v5-mid-item:hover { background: rgba(255,255,255,0.04); }
+.v5-mid-item.active { background: rgba(248,129,169,0.1); }
+.v5-mid-item-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.v5-mid-item-label { font-size: 12px; font-weight: 450; color: var(--text-mid); flex: 1; }
+.v5-mid-item.active .v5-mid-item-label { color: var(--brand); font-weight: 600; }
+.v5-mid-item-badge {
+  font-size: 9px;
+  font-family: var(--mono);
+  padding: 1px 5px;
+  border-radius: 20px;
+  background: var(--green-dim);
+  color: var(--green);
+}
+.v5-mid-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  flex-shrink: 0;
+}
+
+/* right detail pane */
+.v5-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.v5-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.4px;
+}
+.v5-detail-subtitle {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+.v5-card {
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.v5-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.v5-row:last-child { border-bottom: none; }
+.v5-row-left { display: flex; align-items: center; gap: 10px; }
+.v5-row-text { display: flex; flex-direction: column; gap: 2px; }
+.v5-row-label { font-size: 12.5px; color: var(--text); font-weight: 450; }
+.v5-row-desc { font-size: 10.5px; color: var(--text-dim); }
+.v5-row-value { font-size: 11.5px; color: var(--text-dim); font-family: var(--mono); }
+.v5-labs-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  gap: 12px;
+}
+.v5-labs-row:last-child { border-bottom: none; }
+.v5-labs-row-text { flex: 1; }
+.v5-labs-title { font-size: 12.5px; color: var(--text); font-weight: 450; }
+.v5-labs-desc { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; line-height: 1.4; }
+.v5-labs-tag {
+  font-size: 8.5px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--purple);
+  background: var(--purple-dim);
+  padding: 2px 5px;
+  border-radius: 4px;
+  margin-top: 5px;
+  display: inline-block;
+}
+
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     PAGE HEADER
+══════════════════════════════════════ -->
+<div style="display:flex; flex-direction:column; gap:10px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.06);">
+  <div style="font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:2.5px; color:var(--text-faint);">alis hub v3 · settings modal</div>
+  <div style="font-size:28px; font-weight:700; color:var(--text); letter-spacing:-0.8px; line-height:1.1;">Settings Modal<br><span style="color:var(--brand);">Redesign Variants</span></div>
+  <div style="font-size:12px; color:var(--text-dim); max-width:580px; line-height:1.6;">
+    Five macOS-native approaches to rethinking the settings modal. New category structure: <strong style="color:var(--text-mid)">Account → Appearance → Notifications → Labs → Updates & About</strong>.
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+    <span style="font-size:10px; font-family:var(--mono); color:var(--text-faint); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:4px;">V1 — Sonoma Two-Pane</span>
+    <span style="font-size:10px; font-family:var(--mono); color:var(--text-faint); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:4px;">V2 — Icon Grid Header</span>
+    <span style="font-size:10px; font-family:var(--mono); color:var(--text-faint); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:4px;">V3 — Continuous Scroll</span>
+    <span style="font-size:10px; font-family:var(--mono); color:var(--text-faint); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:4px;">V4 — Quick Popover</span>
+    <span style="font-size:10px; font-family:var(--mono); color:var(--text-faint); background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:3px 8px; border-radius:4px;">V5 — iPad Three-Pane</span>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     VARIANT 1 — SONOMA TWO-PANE
+══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">V1</span>
+    <span class="variant-title">Sonoma Two-Pane — wider, more breathing room, grouped sidebar</span>
+  </div>
+  <div class="panels-row">
+
+    <!-- showing: Account tab -->
+    <div>
+      <div class="panel-caption">Account</div>
+      <div class="v1-modal">
+        <div class="v1-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v1-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v1-body">
+          <div class="v1-sidebar">
+            <div class="v1-sidebar-group-label">Personal</div>
+            <div class="v1-sidebar-item active">
+              <div class="v1-sidebar-item-icon ic-brand">👤</div>
+              <span class="v1-sidebar-item-label">Account</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-surface">🎨</div>
+              <span class="v1-sidebar-item-label">Appearance</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-surface">🔔</div>
+              <span class="v1-sidebar-item-label">Notifications</span>
+            </div>
+
+            <div class="v1-sidebar-group-label">Advanced</div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-purple">⚗️</div>
+              <span class="v1-sidebar-item-label">Labs</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-blue">🔄</div>
+              <span class="v1-sidebar-item-label">Updates</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-surface">ℹ️</div>
+              <span class="v1-sidebar-item-label">About</span>
+            </div>
+
+            <div class="v1-sidebar-spacer"></div>
+            <div class="v1-sidebar-signout">
+              <span style="font-size:13px; color:rgba(255,80,70,0.6);">⎋</span>
+              <span class="v1-signout-label">Sign out</span>
+            </div>
+          </div>
+          <div class="v1-content">
+            <div class="v1-profile-hero">
+              <div class="avatar avatar-lg">JP</div>
+              <div>
+                <div class="v1-profile-name">Patrick Njoku</div>
+                <div class="v1-profile-email">pntxall100@gmail.com</div>
+              </div>
+            </div>
+            <div>
+              <div class="v1-section-title">Profile</div>
+            </div>
+            <div class="v1-card">
+              <div class="v1-row">
+                <div class="v1-row-left">
+                  <span class="v1-row-label">Name</span>
+                </div>
+                <span class="v1-row-value">Patrick Njoku</span>
+              </div>
+              <div class="v1-row">
+                <div class="v1-row-left">
+                  <span class="v1-row-label">Email</span>
+                </div>
+                <span class="v1-row-value">pntxall100@gmail.com</span>
+              </div>
+              <div class="v1-row">
+                <div class="v1-row-left">
+                  <span class="v1-row-label">Organisation</span>
+                </div>
+                <span class="v1-row-value">techbridge</span>
+              </div>
+            </div>
+            <div class="v1-link-row">
+              <span style="font-size:10px;">↗</span>
+              Edit profile on console.alisx.com
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- showing: Appearance tab -->
+    <div>
+      <div class="panel-caption">Appearance</div>
+      <div class="v1-modal">
+        <div class="v1-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v1-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v1-body">
+          <div class="v1-sidebar">
+            <div class="v1-sidebar-group-label">Personal</div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-brand">👤</div>
+              <span class="v1-sidebar-item-label">Account</span>
+            </div>
+            <div class="v1-sidebar-item active">
+              <div class="v1-sidebar-item-icon ic-surface">🎨</div>
+              <span class="v1-sidebar-item-label">Appearance</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-surface">🔔</div>
+              <span class="v1-sidebar-item-label">Notifications</span>
+            </div>
+            <div class="v1-sidebar-group-label">Advanced</div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-purple">⚗️</div>
+              <span class="v1-sidebar-item-label">Labs</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-blue">🔄</div>
+              <span class="v1-sidebar-item-label">Updates</span>
+            </div>
+            <div class="v1-sidebar-item">
+              <div class="v1-sidebar-item-icon ic-surface">ℹ️</div>
+              <span class="v1-sidebar-item-label">About</span>
+            </div>
+            <div class="v1-sidebar-spacer"></div>
+            <div class="v1-sidebar-signout">
+              <span style="font-size:13px; color:rgba(255,80,70,0.6);">⎋</span>
+              <span class="v1-signout-label">Sign out</span>
+            </div>
+          </div>
+          <div class="v1-content">
+            <div>
+              <div class="v1-section-title">Theme</div>
+            </div>
+            <div class="v1-card">
+              <div class="v1-row">
+                <span class="v1-row-label">Mode</span>
+                <div class="v1-theme-seg">
+                  <div class="v1-theme-opt">☀ Light</div>
+                  <div class="v1-theme-opt sel">🌑 Dark</div>
+                  <div class="v1-theme-opt">⚙ System</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:4px;">
+              <div class="v1-section-title">Accent</div>
+            </div>
+            <div class="v1-card">
+              <div class="v1-row">
+                <span class="v1-row-label">Color</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 2px rgba(248,129,169,0.4);cursor:pointer;"></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--blue);cursor:pointer; opacity:0.5;"></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--purple);cursor:pointer; opacity:0.5;"></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--green);cursor:pointer; opacity:0.5;"></div>
+                  <div style="width:18px;height:18px;border-radius:50%;background:var(--orange);cursor:pointer; opacity:0.5;"></div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:4px;">
+              <div class="v1-section-title">Layout</div>
+            </div>
+            <div class="v1-card">
+              <div class="v1-row">
+                <div>
+                  <div class="v1-row-label">Compact sidebar</div>
+                  <div class="v1-row-sub">Reduces sidebar item padding</div>
+                </div>
+                <div class="toggle"></div>
+              </div>
+              <div class="v1-row">
+                <div>
+                  <div class="v1-row-label">Show status strip</div>
+                  <div class="v1-row-sub">Background task progress bar</div>
+                </div>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     VARIANT 2 — ICON GRID HEADER
+══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">V2</span>
+    <span class="variant-title">Icon Grid Header — classic System Preferences, categories as visual tiles</span>
+  </div>
+  <div class="panels-row">
+
+    <!-- showing: Account -->
+    <div>
+      <div class="panel-caption">Account selected</div>
+      <div class="v2-modal">
+        <div class="v2-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v2-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v2-icon-bar">
+          <div class="v2-cat-btn active">
+            <div class="v2-cat-icon ic-brand">👤</div>
+            <div class="v2-cat-label">Account</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">🎨</div>
+            <div class="v2-cat-label">Appearance</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">🔔</div>
+            <div class="v2-cat-label">Notifications</div>
+          </div>
+          <div class="v2-divider"></div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-purple">⚗️</div>
+            <div class="v2-cat-label">Labs</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-blue">🔄</div>
+            <div class="v2-cat-label">Updates</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">ℹ️</div>
+            <div class="v2-cat-label">About</div>
+          </div>
+        </div>
+        <div class="v2-content">
+          <div class="v2-content-header">
+            <div class="v2-cat-icon ic-brand">👤</div>
+            <div class="v2-content-title">Account</div>
+          </div>
+          <div class="v2-profile-card">
+            <div class="avatar avatar-xl">JP</div>
+            <div>
+              <div class="v2-profile-text-name">Patrick Njoku</div>
+              <div class="v2-profile-text-email">pntxall100@gmail.com</div>
+              <div class="v2-profile-text-role">Contributor · techbridge</div>
+            </div>
+            <div class="v2-edit-btn">Edit profile ↗</div>
+          </div>
+          <div class="v2-card">
+            <div class="v2-row">
+              <div class="v2-row-left">
+                <div class="v2-row-label">Name</div>
+                <div class="v2-row-desc">Your display name across alis products</div>
+              </div>
+              <span style="font-size:12px;color:var(--text-dim);font-family:var(--mono);">Patrick Njoku</span>
+            </div>
+            <div class="v2-row">
+              <div class="v2-row-left">
+                <div class="v2-row-label">Email</div>
+                <div class="v2-row-desc">Tied to your Google account</div>
+              </div>
+              <span style="font-size:12px;color:var(--text-dim);font-family:var(--mono);">pntxall100@gmail.com</span>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;">
+            <div style="font-size:11px;color:rgba(255,80,70,0.65);font-family:var(--mono);cursor:pointer;border:1px solid rgba(255,59,48,0.2);padding:6px 14px;border-radius:7px;">Sign out of AlisHub</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- showing: Labs -->
+    <div>
+      <div class="panel-caption">Labs selected</div>
+      <div class="v2-modal">
+        <div class="v2-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v2-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v2-icon-bar">
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-brand">👤</div>
+            <div class="v2-cat-label">Account</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">🎨</div>
+            <div class="v2-cat-label">Appearance</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">🔔</div>
+            <div class="v2-cat-label">Notifications</div>
+          </div>
+          <div class="v2-divider"></div>
+          <div class="v2-cat-btn active">
+            <div class="v2-cat-icon ic-purple">⚗️</div>
+            <div class="v2-cat-label">Labs</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-blue">🔄</div>
+            <div class="v2-cat-label">Updates</div>
+          </div>
+          <div class="v2-cat-btn">
+            <div class="v2-cat-icon ic-surface">ℹ️</div>
+            <div class="v2-cat-label">About</div>
+          </div>
+        </div>
+        <div class="v2-content">
+          <div class="v2-content-header">
+            <div class="v2-cat-icon ic-purple">⚗️</div>
+            <div class="v2-content-title">Labs</div>
+          </div>
+          <div class="v2-card">
+            <div class="v2-row">
+              <div class="v2-row-left">
+                <div class="v2-row-label">Smart Suggestions</div>
+                <div class="v2-row-desc">Master toggle for all AI suggestions</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+          </div>
+          <div class="v2-card">
+            <div style="padding:8px 16px 4px; border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span style="font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);">Deployment</span>
+            </div>
+            <div class="v2-row">
+              <div class="v2-row-left">
+                <div class="v2-row-label">Pre-deploy checks</div>
+                <div class="v2-row-desc">Warn before deploying to prod</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="v2-row">
+              <div class="v2-row-left">
+                <div class="v2-row-label">Build suggestions</div>
+                <div class="v2-row-desc">Suggest fixes when builds fail</div>
+              </div>
+              <div class="toggle"></div>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-faint);font-family:var(--mono);line-height:1.6;padding:0 2px;">
+            Labs features are experimental and may change or be removed without notice.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     VARIANT 3 — CONTINUOUS SCROLL
+══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">V3</span>
+    <span class="variant-title">Continuous Scroll — no tabs, all settings in one scannable column</span>
+  </div>
+  <div class="panels-row">
+
+    <div>
+      <div class="panel-caption">Full view (scrolled to top)</div>
+      <div class="v3-modal">
+        <div class="v3-header">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v3-header-title">Settings</div>
+          <div class="v3-header-actions">
+            <span style="font-size:11px;color:var(--text-faint);font-family:var(--mono);">⌘,</span>
+          </div>
+        </div>
+        <div class="v3-search">
+          <span class="v3-search-icon">⌕</span>
+          <span class="v3-search-input-fake">Search settings…</span>
+          <span style="font-size:9px;font-family:var(--mono);color:var(--text-faint);border:1px solid rgba(255,255,255,0.08);padding:2px 5px;border-radius:3px;">⌘F</span>
+        </div>
+        <div class="v3-body">
+          <!-- Account section -->
+          <div class="v3-profile-row">
+            <div class="avatar avatar-md">JP</div>
+            <div>
+              <div class="v3-profile-name">Patrick Njoku</div>
+              <div class="v3-profile-email">pntxall100@gmail.com</div>
+            </div>
+            <div class="v3-badge" style="margin-left:auto;">Online</div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Account</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-brand">👤</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Profile</div>
+                <div class="v3-row-sub">Name, photo, linked accounts</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <span class="v3-row-value">Patrick Njoku</span>
+              <span class="v3-row-chevron">›</span>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">🔒</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Session</div>
+                <div class="v3-row-sub">Active since 3 days ago</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <span class="v3-row-value" style="color:var(--green);">Active</span>
+              <span class="v3-row-chevron">›</span>
+            </div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Appearance</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">🎨</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Theme</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div class="v1-theme-seg">
+                <div class="v1-theme-opt">☀ Light</div>
+                <div class="v1-theme-opt sel">🌑 Dark</div>
+                <div class="v1-theme-opt">⚙ Auto</div>
+              </div>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface" style="background:var(--brand-dim);">🎀</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Accent color</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div style="display:flex;gap:5px;align-items:center;">
+                <div style="width:14px;height:14px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 2px rgba(248,129,169,0.4);"></div>
+                <div style="width:14px;height:14px;border-radius:50%;background:var(--blue);opacity:0.4;"></div>
+                <div style="width:14px;height:14px;border-radius:50%;background:var(--purple);opacity:0.4;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">📏</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Compact mode</div>
+                <div class="v3-row-sub">Reduce spacing in sidebar & lists</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div class="toggle"></div>
+            </div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Notifications</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">🔔</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">System notifications</div>
+                <div class="v3-row-sub">macOS notification banners</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div class="toggle on"></div>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">📬</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Build alerts</div>
+                <div class="v3-row-sub">Notify on build success / failure</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div class="toggle on"></div>
+            </div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Labs</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-purple">🧠</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Smart Suggestions</div>
+                <div class="v3-row-sub">AI-powered hints &amp; actions</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <div class="toggle on"></div>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-purple">🔧</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">All Labs features</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <span class="v3-row-value">5 enabled</span>
+              <span class="v3-row-chevron">›</span>
+            </div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Updates & About</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-green">✓</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">AlisHub</div>
+                <div class="v3-row-sub">Up to date</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <span class="v3-row-value">v0.4.2</span>
+              <span class="v3-row-chevron">›</span>
+            </div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-surface">📋</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Changelog</div>
+              </div>
+            </div>
+            <div class="v3-row-right">
+              <span class="v3-row-chevron">›</span>
+            </div>
+          </div>
+        </div>
+        <div class="v3-footer">
+          <div class="v3-signout-btn">
+            <span style="font-size:13px;">⎋</span> Sign out
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- sub-page drill-in example -->
+    <div>
+      <div class="panel-caption">Labs drill-in</div>
+      <div class="v3-modal">
+        <div class="v3-header">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--brand);cursor:pointer;">← Settings</span>
+          </div>
+          <div class="v3-header-title">Labs</div>
+          <div style="width:80px;"></div>
+        </div>
+        <div class="v3-body">
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Smart Suggestions</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-purple">🧠</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Smart Suggestions</div>
+                <div class="v3-row-sub">Master toggle</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle on"></div></div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Deployment</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-blue">🚀</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Pre-deploy checks</div>
+                <div class="v3-row-sub">Warn before deploying to prod</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle on"></div></div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-blue">🔨</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Build suggestions</div>
+                <div class="v3-row-sub">Suggest fixes on build failure</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle"></div></div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Codeblock</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-orange">📝</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Code insights</div>
+                <div class="v3-row-sub">Inline hints in codeblock editor</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle on"></div></div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-orange">🔍</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Dependency audit</div>
+                <div class="v3-row-sub">Flag outdated dependencies</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle on"></div></div>
+          </div>
+
+          <div class="v3-section-sticky">
+            <div class="v3-section-header">Network</div>
+          </div>
+          <div class="v3-row">
+            <div class="v3-row-left">
+              <div class="v3-row-icon ic-green">🌐</div>
+              <div class="v3-row-text">
+                <div class="v3-row-label">Latency hints</div>
+                <div class="v3-row-sub">Suggest regions with lower latency</div>
+              </div>
+            </div>
+            <div class="v3-row-right"><div class="toggle"></div></div>
+          </div>
+
+          <div style="padding:16px;border-top:1px solid rgba(255,255,255,0.04);">
+            <div style="font-size:10px;color:var(--text-faint);font-family:var(--mono);line-height:1.7;">
+              Labs features are experimental and may change or be removed without notice.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     VARIANT 4 — QUICK POPOVER
+══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">V4</span>
+    <span class="variant-title">Quick Popover — dropdown from avatar, instant access, no modal chrome</span>
+  </div>
+  <div class="panels-row">
+
+    <div>
+      <div class="panel-caption">Collapsed (default)</div>
+      <div class="v4-outer">
+        <div class="v4-trigger-bar">
+          <div class="avatar avatar-sm">JP</div>
+          <span class="v4-trigger-name">Patrick Njoku</span>
+          <div class="v4-trigger-status"></div>
+        </div>
+        <div class="v4-connector"></div>
+        <div class="v4-panel">
+          <div class="v4-profile-section">
+            <div class="avatar avatar-md">JP</div>
+            <div class="v4-profile-meta">
+              <div class="v4-profile-name">Patrick Njoku</div>
+              <div class="v4-profile-email">pntxall100@gmail.com</div>
+            </div>
+            <div class="v4-edit-link">Edit ↗</div>
+          </div>
+          <!-- quick tiles 2x2 -->
+          <div class="v4-quick-grid">
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">Theme</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value">🌑 Dark</span>
+                <div class="v4-theme-mini">
+                  <div class="v4-theme-opt">☀</div>
+                  <div class="v4-theme-opt sel">🌑</div>
+                </div>
+              </div>
+            </div>
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">System notifs</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value" style="color:var(--green);">On</span>
+                <div class="toggle on" style="width:28px;height:16px;"></div>
+              </div>
+            </div>
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">Smart Suggestions</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value" style="color:var(--green);">On</span>
+                <div class="toggle on" style="width:28px;height:16px;"></div>
+              </div>
+            </div>
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">Version</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value">v0.4.2</span>
+                <span style="font-size:9px;color:var(--green);font-family:var(--mono);">✓ up to date</span>
+              </div>
+            </div>
+          </div>
+          <div class="v4-menu-items">
+            <div class="v4-menu-item">
+              <div class="v4-menu-item-icon ic-purple">⚗️</div>
+              <span class="v4-menu-item-label">Labs</span>
+              <span class="v4-menu-item-value">5 enabled</span>
+              <span class="v4-menu-item-arrow">›</span>
+            </div>
+            <div class="v4-menu-item">
+              <div class="v4-menu-item-icon ic-surface">📋</div>
+              <span class="v4-menu-item-label">Changelog</span>
+              <span class="v4-menu-item-arrow">›</span>
+            </div>
+            <div class="v4-menu-item">
+              <div class="v4-menu-item-icon ic-surface">ℹ️</div>
+              <span class="v4-menu-item-label">About AlisHub</span>
+              <span class="v4-menu-item-value" style="font-size:10px;">v0.4.2</span>
+              <span class="v4-menu-item-arrow">›</span>
+            </div>
+          </div>
+          <div class="v4-signout">
+            <span style="font-size:13px;color:rgba(255,80,70,0.6);">⎋</span>
+            <span class="v4-signout-label">Sign out</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Update available state -->
+    <div>
+      <div class="panel-caption">Update available state</div>
+      <div class="v4-outer">
+        <div class="v4-trigger-bar">
+          <div class="avatar avatar-sm">JP</div>
+          <span class="v4-trigger-name">Patrick Njoku</span>
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--brand);margin-left:2px;"></div>
+        </div>
+        <div class="v4-connector"></div>
+        <div class="v4-panel">
+          <div class="v4-profile-section">
+            <div class="avatar avatar-md">JP</div>
+            <div class="v4-profile-meta">
+              <div class="v4-profile-name">Patrick Njoku</div>
+              <div class="v4-profile-email">pntxall100@gmail.com</div>
+            </div>
+            <div class="v4-edit-link">Edit ↗</div>
+          </div>
+          <div class="v4-quick-grid">
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">Theme</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value">🌑 Dark</span>
+                <div class="v4-theme-mini">
+                  <div class="v4-theme-opt">☀</div>
+                  <div class="v4-theme-opt sel">🌑</div>
+                </div>
+              </div>
+            </div>
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">System notifs</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value" style="color:var(--green);">On</span>
+                <div class="toggle on" style="width:28px;height:16px;"></div>
+              </div>
+            </div>
+            <div class="v4-quick-tile">
+              <div class="v4-tile-label">Smart Suggestions</div>
+              <div class="v4-tile-control">
+                <span class="v4-tile-value" style="color:var(--green);">On</span>
+                <div class="toggle on" style="width:28px;height:16px;"></div>
+              </div>
+            </div>
+            <div class="v4-quick-tile" style="background:rgba(248,129,169,0.06);border-left:2px solid rgba(248,129,169,0.3);">
+              <div class="v4-tile-label" style="color:var(--brand);">Update</div>
+              <div style="margin-top:2px;">
+                <div style="font-size:11px;color:var(--text);font-weight:500;">v0.5.0 ready</div>
+                <div style="font-size:9.5px;color:var(--brand);font-family:var(--mono);margin-top:3px;cursor:pointer;">Download ↓</div>
+              </div>
+            </div>
+          </div>
+          <div class="v4-menu-items">
+            <div class="v4-menu-item">
+              <div class="v4-menu-item-icon ic-purple">⚗️</div>
+              <span class="v4-menu-item-label">Labs</span>
+              <span class="v4-menu-item-value">5 enabled</span>
+              <span class="v4-menu-item-arrow">›</span>
+            </div>
+            <div class="v4-menu-item">
+              <div class="v4-menu-item-icon ic-surface">📋</div>
+              <span class="v4-menu-item-label">Changelog</span>
+              <span class="v4-menu-item-arrow">›</span>
+            </div>
+          </div>
+          <div class="v4-signout">
+            <span style="font-size:13px;color:rgba(255,80,70,0.6);">⎋</span>
+            <span class="v4-signout-label">Sign out</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════
+     VARIANT 5 — THREE-PANE (iPad Settings)
+══════════════════════════════════════════════════════ -->
+<div class="section">
+  <div class="section-label">
+    <span class="variant-num">V5</span>
+    <span class="variant-title">Three-Pane — icon rail + category list + detail, most content visible at once</span>
+  </div>
+  <div class="panels-row">
+
+    <!-- showing: Account > Profile detail -->
+    <div>
+      <div class="panel-caption">Account — Profile detail</div>
+      <div class="v5-modal">
+        <div class="v5-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v5-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v5-body">
+          <!-- left icon rail -->
+          <div class="v5-rail">
+            <div class="v5-rail-btn active" title="Account">👤<div class="v5-rail-dot"></div></div>
+            <div class="v5-rail-btn" title="Appearance">🎨</div>
+            <div class="v5-rail-btn" title="Notifications">🔔</div>
+            <div class="v5-rail-btn" title="Labs">⚗️</div>
+            <div class="v5-rail-btn" title="Updates">🔄</div>
+            <div class="v5-rail-btn" title="About">ℹ️</div>
+            <div class="v5-rail-spacer"></div>
+            <div class="v5-rail-signout" title="Sign out">⎋</div>
+          </div>
+          <!-- middle list -->
+          <div class="v5-mid">
+            <div class="v5-mid-header">Account</div>
+            <div class="v5-mid-search">
+              <span style="font-size:11px;color:var(--text-faint);">⌕</span>
+              <span class="v5-mid-search-text">Search…</span>
+            </div>
+            <div class="v5-mid-item active">
+              <div class="v5-mid-item-icon ic-brand">👤</div>
+              <span class="v5-mid-item-label">Profile</span>
+              <div class="v5-mid-item-dot"></div>
+            </div>
+            <div class="v5-mid-item">
+              <div class="v5-mid-item-icon ic-surface">🔐</div>
+              <span class="v5-mid-item-label">Sign-in & security</span>
+            </div>
+            <div class="v5-mid-item">
+              <div class="v5-mid-item-icon ic-blue">🏢</div>
+              <span class="v5-mid-item-label">Organisation</span>
+            </div>
+          </div>
+          <!-- right detail -->
+          <div class="v5-detail">
+            <div>
+              <div class="v5-detail-title">Profile</div>
+              <div class="v5-detail-subtitle">Your identity across alis products.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:16px;padding:16px;background:rgba(248,129,169,0.06);border:1px solid rgba(248,129,169,0.14);border-radius:12px;">
+              <div class="avatar avatar-xl">JP</div>
+              <div>
+                <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.4px;">Patrick Njoku</div>
+                <div style="font-size:11px;color:var(--text-dim);font-family:var(--mono);margin-top:3px;">pntxall100@gmail.com</div>
+                <div style="font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;color:var(--brand);margin-top:5px;">Contributor · techbridge</div>
+              </div>
+            </div>
+            <div class="v5-card">
+              <div class="v5-row">
+                <div class="v5-row-text">
+                  <div class="v5-row-label">Display name</div>
+                </div>
+                <span class="v5-row-value">Patrick Njoku</span>
+              </div>
+              <div class="v5-row">
+                <div class="v5-row-text">
+                  <div class="v5-row-label">Email</div>
+                </div>
+                <span class="v5-row-value">pntxall100@gmail.com</span>
+              </div>
+              <div class="v5-row">
+                <div class="v5-row-text">
+                  <div class="v5-row-label">Timezone</div>
+                </div>
+                <span class="v5-row-value">UTC+1 · Lagos</span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text-faint);font-family:var(--mono);cursor:pointer;display:flex;align-items:center;gap:5px;">
+              <span>↗</span> Edit profile on console.alisx.com
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- second row: Labs detail -->
+  <div class="panels-row" style="margin-top:24px;">
+    <div>
+      <div class="panel-caption">Labs — Smart Suggestions detail</div>
+      <div class="v5-modal">
+        <div class="v5-titlebar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="v5-titlebar-title">Settings</div>
+          <div style="width:52px;"></div>
+        </div>
+        <div class="v5-body">
+          <div class="v5-rail">
+            <div class="v5-rail-btn" title="Account">👤</div>
+            <div class="v5-rail-btn" title="Appearance">🎨</div>
+            <div class="v5-rail-btn" title="Notifications">🔔</div>
+            <div class="v5-rail-btn active" title="Labs">⚗️</div>
+            <div class="v5-rail-btn" title="Updates">🔄</div>
+            <div class="v5-rail-btn" title="About">ℹ️</div>
+            <div class="v5-rail-spacer"></div>
+            <div class="v5-rail-signout" title="Sign out">⎋</div>
+          </div>
+          <div class="v5-mid">
+            <div class="v5-mid-header">Labs</div>
+            <div class="v5-mid-item active">
+              <div class="v5-mid-item-icon ic-purple">🧠</div>
+              <span class="v5-mid-item-label">Smart Suggestions</span>
+              <div class="v5-mid-item-badge">5</div>
+            </div>
+            <div class="v5-mid-item">
+              <div class="v5-mid-item-icon ic-orange">🧪</div>
+              <span class="v5-mid-item-label">Experimental UI</span>
+            </div>
+            <div class="v5-mid-item">
+              <div class="v5-mid-item-icon ic-surface">⚡</div>
+              <span class="v5-mid-item-label">Performance</span>
+            </div>
+          </div>
+          <div class="v5-detail">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;">
+              <div>
+                <div class="v5-detail-title">Smart Suggestions</div>
+                <div class="v5-detail-subtitle">AI-powered hints appear contextually<br>as you work. Experimental.</div>
+              </div>
+              <div class="toggle on"></div>
+            </div>
+            <div class="v5-card">
+              <div style="padding:8px 14px 5px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span style="font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);">Deployment</span>
+              </div>
+              <div class="v5-labs-row">
+                <div class="v5-labs-row-text">
+                  <div class="v5-labs-title">Pre-deploy checks</div>
+                  <div class="v5-labs-desc">Surfaces potential issues before you deploy to production environments.</div>
+                  <div class="v5-labs-tag">Stable</div>
+                </div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="v5-labs-row">
+                <div class="v5-labs-row-text">
+                  <div class="v5-labs-title">Build failure suggestions</div>
+                  <div class="v5-labs-desc">Suggests fixes when a build or deploy step fails.</div>
+                  <div class="v5-labs-tag">Beta</div>
+                </div>
+                <div class="toggle"></div>
+              </div>
+            </div>
+            <div class="v5-card">
+              <div style="padding:8px 14px 5px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span style="font-size:9px;font-family:var(--mono);text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);">Codeblock</span>
+              </div>
+              <div class="v5-labs-row">
+                <div class="v5-labs-row-text">
+                  <div class="v5-labs-title">Code insights</div>
+                  <div class="v5-labs-desc">Inline annotations in the codeblock editor for potential improvements.</div>
+                  <div class="v5-labs-tag">Stable</div>
+                </div>
+                <div class="toggle on"></div>
+              </div>
+              <div class="v5-labs-row">
+                <div class="v5-labs-row-text">
+                  <div class="v5-labs-title">Dependency audit</div>
+                  <div class="v5-labs-desc">Flags outdated or vulnerable package versions.</div>
+                  <div class="v5-labs-tag">Beta</div>
+                </div>
+                <div class="toggle on"></div>
+              </div>
+            </div>
+            <div style="font-size:10px;color:var(--text-faint);font-family:var(--mono);line-height:1.7;">
+              Labs features may be removed or change behaviour without notice.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     CATEGORY RETHINK NOTES
+══════════════════════════════════════ -->
+<div class="section" style="padding-bottom:80px;">
+  <div class="section-label">
+    <span class="variant-num">📐</span>
+    <span class="variant-title">Category rethink — current vs proposed</span>
+  </div>
+  <div style="display:flex;gap:48px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-faint);margin-bottom:12px;">Current</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:220px;">
+          <span style="font-size:14px;">👤</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);">Profile</div>
+            <div style="font-size:10px;color:var(--text-dim);">Avatar, name, appearance, sys notifs</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:220px;">
+          <span style="font-size:14px;">🔄</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);">Updates</div>
+            <div style="font-size:10px;color:var(--text-dim);">Version check, download</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:220px;">
+          <span style="font-size:14px;">ℹ️</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);">About</div>
+            <div style="font-size:10px;color:var(--text-dim);">App info, links</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:220px;">
+          <span style="font-size:14px;">📋</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);">Changelog</div>
+            <div style="font-size:10px;color:var(--text-dim);">Standalone tab</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:220px;">
+          <span style="font-size:14px;">⚗️</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);">Labs</div>
+            <div style="font-size:10px;color:var(--text-dim);">Smart suggestions</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;font-size:20px;color:var(--text-dim);padding-top:60px;">→</div>
+
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--brand);margin-bottom:12px;">Proposed</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(248,129,169,0.07);border-radius:8px;border:1px solid rgba(248,129,169,0.15);width:240px;">
+          <span style="font-size:14px;">👤</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">Account</div>
+            <div style="font-size:10px;color:var(--text-dim);">Profile, org, sign-in &amp; security</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(248,129,169,0.07);border-radius:8px;border:1px solid rgba(248,129,169,0.15);width:240px;">
+          <span style="font-size:14px;">🎨</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">Appearance</div>
+            <div style="font-size:10px;color:var(--text-dim);">Theme, accent color, layout density</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(248,129,169,0.07);border-radius:8px;border:1px solid rgba(248,129,169,0.15);width:240px;">
+          <span style="font-size:14px;">🔔</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">Notifications</div>
+            <div style="font-size:10px;color:var(--text-dim);">System alerts, build alerts, types</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(248,129,169,0.07);border-radius:8px;border:1px solid rgba(248,129,169,0.15);width:240px;">
+          <span style="font-size:14px;">⚗️</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">Labs</div>
+            <div style="font-size:10px;color:var(--text-dim);">Smart suggestions + future features</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:rgba(248,129,169,0.07);border-radius:8px;border:1px solid rgba(248,129,169,0.15);width:240px;">
+          <span style="font-size:14px;">🔄</span>
+          <div>
+            <div style="font-size:12px;color:var(--text);font-weight:600;">Updates & About</div>
+            <div style="font-size:10px;color:var(--text-dim);">Version, changelog, app info, links</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.06);max-width:300px;">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text-faint);line-height:1.7;">
+          <span style="color:var(--text-mid);font-weight:600;">Key changes</span><br>
+          · Appearance split from Profile<br>
+          · Notifications get their own home<br>
+          · About + Updates + Changelog → merged<br>
+          · Labs stays, gains sub-pages
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
