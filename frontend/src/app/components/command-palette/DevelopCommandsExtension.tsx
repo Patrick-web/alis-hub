@@ -52,7 +52,8 @@ function sessionStepLabel(tabId: string): string | undefined {
 
 export function DevelopCommandsExtension() {
   const { tabs } = useDevelopTabs();
-  const { registerExtension, unregisterExtension } = useCommandPalette();
+  const registerExtension = useCommandPalette((s) => s.registerExtension);
+  const unregisterExtension = useCommandPalette((s) => s.unregisterExtension);
   const navigate = useNavigate();
 
   // Re-register when any flow moves to a different step so the resume

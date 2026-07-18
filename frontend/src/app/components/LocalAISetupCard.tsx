@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { useLocalAI, type LocalAIModel } from "../stores/localai";
+import { useLocalAI, type LocalAIModel, type LocalAIState } from "../stores/localai";
 
 const MODELS: { id: LocalAIModel; label: string; size: string }[] = [
   { id: "gemma4:e2b", label: "e2b · fast", size: "~1.5 GB" },
@@ -35,7 +35,7 @@ function ProgressBar({ pct, indeterminate }: { pct: number; indeterminate?: bool
   );
 }
 
-function StatusBadge({ state }: { state: ReturnType<typeof useLocalAI>["state"] }) {
+function StatusBadge({ state }: { state: LocalAIState }) {
   if (state.binaryDownloading)
     return <span className="text-[10px] text-purple-300/80 font-mono">Downloading Ollama…</span>;
   if (state.ollamaStarting)

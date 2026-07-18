@@ -1,12 +1,6 @@
-import {
-  createContext,
-  useContext,
-  useCallback,
-  useReducer,
-  useEffect,
-  type ReactNode,
-} from "react";
-import * as settingsClient from "../lib/settingsClient";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { hydrateWhenReady, persistSqlite } from "./lib/persistSqlite";
 
 export type SuggestionCategory =
   | "Build & Deploy"
@@ -110,12 +104,7 @@ interface LabsState {
   workflowsEnabled: boolean;
 }
 
-type LabsAction =
-  | { type: "SET_MASTER"; payload: boolean }
-  | { type: "SET_SUGGESTION"; payload: { id: string; enabled: boolean } }
-  | { type: "SET_WORKFLOWS"; payload: boolean };
-
-interface LabsContextValue {
+interface LabsStore {
   state: LabsState;
   isSuggestionEnabled: (id: string) => boolean;
   setSuggestionEnabled: (id: string, enabled: boolean) => void;
@@ -123,88 +112,37 @@ interface LabsContextValue {
   setWorkflowsEnabled: (enabled: boolean) => void;
 }
 
-const STORAGE_KEY = "alis:labs";
-
 const DEFAULT_STATE: LabsState = { masterEnabled: true, enabledMap: {}, workflowsEnabled: false };
 
-function loadFromStorage(): LabsState {
-  try {
-    const raw = settingsClient.getCached(STORAGE_KEY);
-    if (!raw) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
-  } catch {
-    return DEFAULT_STATE;
-  }
-}
+export const useLabs = create<LabsStore>()(
+  persist(
+    (set, get) => ({
+      state: DEFAULT_STATE,
+      isSuggestionEnabled: (id) => {
+        const { masterEnabled, enabledMap } = get().state;
+        if (!masterEnabled) return false;
+        const override = enabledMap[id];
+        if (override !== undefined) return override;
+        return SUGGESTION_REGISTRY.find((d) => d.id === id)?.enabled ?? false;
+      },
+      setSuggestionEnabled: (id, enabled) =>
+        set((s) => ({
+          state: { ...s.state, enabledMap: { ...s.state.enabledMap, [id]: enabled } },
+        })),
+      setMasterEnabled: (enabled) =>
+        set((s) => ({ state: { ...s.state, masterEnabled: enabled } })),
+      setWorkflowsEnabled: (enabled) =>
+        set((s) => ({ state: { ...s.state, workflowsEnabled: enabled } })),
+    }),
+    persistSqlite<LabsStore, LabsState>({
+      key: "alis:labs",
+      partialize: (s) => s.state,
+      merge: (persisted, current) => ({
+        ...current,
+        state: { ...DEFAULT_STATE, ...(persisted as Partial<LabsState> | null) },
+      }),
+    }),
+  ),
+);
 
-function saveToStorage(state: LabsState) {
-  settingsClient.set(STORAGE_KEY, JSON.stringify(state));
-}
-
-function reducer(state: LabsState, action: LabsAction): LabsState {
-  switch (action.type) {
-    case "SET_MASTER":
-      return { ...state, masterEnabled: action.payload };
-    case "SET_SUGGESTION":
-      return {
-        ...state,
-        enabledMap: { ...state.enabledMap, [action.payload.id]: action.payload.enabled },
-      };
-    case "SET_WORKFLOWS":
-      return { ...state, workflowsEnabled: action.payload };
-    default:
-      return state;
-  }
-}
-
-const LabsContext = createContext<LabsContextValue | null>(null);
-
-export function LabsProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, loadFromStorage);
-
-  useEffect(() => {
-    saveToStorage(state);
-  }, [state]);
-
-  const isSuggestionEnabled = useCallback(
-    (id: string) => {
-      if (!state.masterEnabled) return false;
-      const override = state.enabledMap[id];
-      if (override !== undefined) return override;
-      return SUGGESTION_REGISTRY.find((d) => d.id === id)?.enabled ?? false;
-    },
-    [state],
-  );
-
-  const setSuggestionEnabled = useCallback((id: string, enabled: boolean) => {
-    dispatch({ type: "SET_SUGGESTION", payload: { id, enabled } });
-  }, []);
-
-  const setMasterEnabled = useCallback((enabled: boolean) => {
-    dispatch({ type: "SET_MASTER", payload: enabled });
-  }, []);
-
-  const setWorkflowsEnabled = useCallback((enabled: boolean) => {
-    dispatch({ type: "SET_WORKFLOWS", payload: enabled });
-  }, []);
-
-  return (
-    <LabsContext.Provider
-      value={{
-        state,
-        isSuggestionEnabled,
-        setSuggestionEnabled,
-        setMasterEnabled,
-        setWorkflowsEnabled,
-      }}
-    >
-      {children}
-    </LabsContext.Provider>
-  );
-}
-
-export function useLabs() {
-  const ctx = useContext(LabsContext);
-  if (!ctx) throw new Error("useLabs must be used within LabsProvider");
-  return ctx;
-}
+hydrateWhenReady(useLabs);

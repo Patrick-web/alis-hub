@@ -28,13 +28,7 @@ import { useDevelopSettings, type SmartSortKey } from "../stores/developSettings
 import { useProtectedEnvironments } from "../stores/protectedEnvironments";
 import { getToolDefault, setToolDefault } from "../stores/toolsSettings";
 import { useAccentColor, ACCENT_COLORS } from "../stores/accent";
-import {
-  TAB_REGISTRY,
-  getVisibleTabs,
-  setTabOrder,
-  setDefaultTab,
-  useTabSettings,
-} from "../stores/tabSettings";
+import { TAB_REGISTRY, useTabSettings, visibleTabsFor } from "../stores/tabSettings";
 import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { getAccessibleForeground } from "../lib/colorContrast";
@@ -542,13 +536,16 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
   } = useDevelopSettings();
   const { isProtected, toggleProtected } = useProtectedEnvironments();
   const [activeTab, setActiveTab] = useState<Tab>("account");
-  const tabSettings = useTabSettings();
-  const visibleTabDefs = getVisibleTabs(labsState.workflowsEnabled);
+  const tabOrder = useTabSettings((s) => s.order);
+  const defaultTab = useTabSettings((s) => s.defaultTab);
+  const setTabOrder = useTabSettings((s) => s.setTabOrder);
+  const setDefaultTab = useTabSettings((s) => s.setDefaultTab);
+  const visibleTabDefs = visibleTabsFor(tabOrder, labsState.workflowsEnabled);
   const [tabOrderDraft, setTabOrderDraft] = useState<string[]>(visibleTabDefs.map((t) => t.id));
 
   useEffect(() => {
-    setTabOrderDraft(getVisibleTabs(labsState.workflowsEnabled).map((t) => t.id));
-  }, [tabSettings.order, labsState.workflowsEnabled]);
+    setTabOrderDraft(visibleTabsFor(tabOrder, labsState.workflowsEnabled).map((t) => t.id));
+  }, [tabOrder, labsState.workflowsEnabled]);
 
   const moveTabDraft = (from: number, to: number) => {
     setTabOrderDraft((prev) => {
@@ -1056,7 +1053,7 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
                           <SettingsCard>
                             <SettingRow label="Open landing zones in">
                               <SearchableSelect
-                                value={tabSettings.defaultTab}
+                                value={defaultTab}
                                 options={visibleTabDefs.map((t) => ({
                                   label: t.label,
                                   value: t.id,
@@ -1088,7 +1085,7 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
                                     label={def.label}
                                     icon={def.icon}
                                     index={index}
-                                    isDefault={tabSettings.defaultTab === id}
+                                    isDefault={defaultTab === id}
                                     onMove={moveTabDraft}
                                     onDrop={commitTabOrder}
                                   />

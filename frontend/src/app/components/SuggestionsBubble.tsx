@@ -4,7 +4,7 @@ import { useSuggestions } from "../stores/suggestions";
 import { SuggestionsPanel } from "./SuggestionsPanel";
 
 export function SuggestionsBubble() {
-  const { count } = useSuggestions();
+  const count = useSuggestions((s) => s.suggestions.length);
   const [panelOpen, setPanelOpen] = useState(false);
 
   if (count === 0) return null;

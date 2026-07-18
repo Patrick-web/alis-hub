@@ -49,10 +49,12 @@ export function RootLayout() {
   const isOnDevelop = location.pathname === "/develop";
   const isOnTools = location.pathname === "/tools";
   const [sessionExpired, setSessionExpired] = useState(false);
-  const { toggle } = useCommandPalette();
-  const { toggle: toggleDevSettings, open: openDevSettings } = useDevSettingsModal();
-  const { open: openProfile, close: closeProfile } = useProfileModal();
-  const { state: scState } = useSourceControl();
+  const toggle = useCommandPalette((s) => s.toggle);
+  const toggleDevSettings = useDevSettingsModal((s) => s.toggle);
+  const openDevSettings = useDevSettingsModal((s) => s.open);
+  const openProfile = useProfileModal((s) => s.open);
+  const closeProfile = useProfileModal((s) => s.close);
+  const fetchIntervalMinutes = useSourceControl((s) => s.state.fetchIntervalMinutes);
   const authPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fetchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [repoPaths, setRepoPaths] = useState<{ buildDir: string; defineDir: string } | null>(null);
@@ -238,7 +240,7 @@ export function RootLayout() {
   useEffect(() => {
     const unauthPhases: AppPhase[] = ["init", "login"];
     if (unauthPhases.includes(state.phase)) return;
-    if (!repoPaths || scState.fetchIntervalMinutes <= 0) return;
+    if (!repoPaths || fetchIntervalMinutes <= 0) return;
 
     async function fetchAll() {
       if (!repoPaths) return;
@@ -248,11 +250,11 @@ export function RootLayout() {
       ]);
     }
 
-    fetchPollRef.current = setInterval(fetchAll, scState.fetchIntervalMinutes * 60 * 1000);
+    fetchPollRef.current = setInterval(fetchAll, fetchIntervalMinutes * 60 * 1000);
     return () => {
       if (fetchPollRef.current) clearInterval(fetchPollRef.current);
     };
-  }, [state.phase, repoPaths, scState.fetchIntervalMinutes]);
+  }, [state.phase, repoPaths, fetchIntervalMinutes]);
 
   // Pre-workspace phases render fullscreen without nav chrome
   if (state.phase === "init") {
