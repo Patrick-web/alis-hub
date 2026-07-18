@@ -496,17 +496,6 @@ func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 	return string(out), cerr
 }
 
-func gitCmdEnv(dir string, env []string, args ...string) (string, error) {
-	if len(args) == 0 || args[0] != "git" {
-		return "", fmt.Errorf("gitCmdEnv: first arg must be 'git'")
-	}
-	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), append(env, "GIT_TERMINAL_PROMPT=0")...)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
-}
-
 // ProductRepoPaths holds the local filesystem paths for a product's git repos.
 type ProductRepoPaths struct {
 	BuildDir  string `json:"buildDir"`

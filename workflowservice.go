@@ -120,11 +120,6 @@ func (r *activeRun) slice(offset int) []byte {
 	return out
 }
 
-func (r *activeRun) len() int {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.buf.Len()
-}
 
 func (r *activeRun) setPTY(p terminal.PTY) {
 	r.mu.Lock()

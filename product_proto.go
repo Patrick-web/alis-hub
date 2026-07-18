@@ -1217,47 +1217,6 @@ func parseVersionAllFolders(data []byte) (build, infra, proto CodeblockFolder) {
 	return build, infra, proto
 }
 
-// parseCodeblockVersionFolder parses a file-tree folder sub-message within a BlockVersion.
-// The folder name is inferred from the field number (10=Proto, 11=Infra, 12=Build).
-func parseCodeblockVersionFolder(data []byte, fieldNum protowire.Number) CodeblockFolder {
-	folderNames := map[protowire.Number]string{
-		10: "Proto",
-		11: "Infra",
-		12: "Build",
-	}
-	folder := CodeblockFolder{Name: folderNames[fieldNum]}
-	if folder.Name == "" {
-		folder.Name = fmt.Sprintf("Field%d", fieldNum)
-	}
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		// Each file entry: f1=filename, f2=content (or nested file message).
-		entry := parseCodeblockFileEntry(b)
-		if entry.Name != "" {
-			folder.Files = append(folder.Files, entry)
-		}
-	}
-	return folder
-}
-
-// parseCodeblockFileEntry parses one file entry (name + content).
 func parseCodeblockFileEntry(data []byte) CodeblockFileItem {
 	var item CodeblockFileItem
 	for len(data) > 0 {
