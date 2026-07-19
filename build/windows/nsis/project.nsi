@@ -82,6 +82,10 @@ FunctionEnd
 Section
     !insertmacro wails.setShellContext
 
+    # Close any running instance so the exe isn't locked during install/upgrade.
+    nsExec::Exec 'taskkill /F /IM "${PRODUCT_EXECUTABLE}"'
+    Sleep 500
+
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
