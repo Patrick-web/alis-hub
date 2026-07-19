@@ -16,22 +16,12 @@ const INSTALL_URL = "https://cloud.google.com/sdk/docs/install";
 
 const UNIX_INSTALL_COMMAND = "curl https://sdk.cloud.google.com | bash && exec -l $SHELL";
 
-// The setup terminal on Windows is PowerShell (see platformShell in
-// platform.go), so the Unix curl|bash one-liner can't run there. Google
-// doesn't publish a piped installer for Windows; the documented silent
-// install is the NSIS installer run with /S (see
-// https://cloud.google.com/sdk/docs/downloads-interactive). It installs to
-// %LOCALAPPDATA%\Google\Cloud SDK by default, which gcloudBin() already
-// probes. The installer prints nothing when silent, so we echo a line that
-// matches INSTALL_SUCCESS below to trigger the status recheck. The
-// SecurityProtocol line forces TLS 1.2 since WebClient defaults to an older
-// protocol on some Windows/PowerShell versions, which dl.google.com rejects.
-const WINDOWS_INSTALL_COMMAND =
-  "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " +
-  '$installer = "$env:Temp\\GoogleCloudSDKInstaller.exe"; ' +
-  '(New-Object Net.WebClient).DownloadFile("https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe", $installer); ' +
-  "Start-Process -FilePath $installer -ArgumentList '/S','/noreporting' -Wait; " +
-  'Write-Host "Installation complete"';
+// The silent NSIS install (`/S`) on Windows fails silently partway through
+// component installation (its own bundled installer hits network errors
+// that aren't surfaced by the /S flag), leaving no gcloud binary anywhere
+// gcloudBin() probes. Rather than fight that installer's silent-mode
+// failure modes, send Windows users to the official interactive installer
+// where real errors are visible.
 
 const SESSION_ID = "gcloud-setup";
 
@@ -80,7 +70,8 @@ function StepCard({
 
 export function GCloudSetup({ onReady }: Props) {
   const { effective } = usePlatform();
-  const INSTALL_COMMAND = effective === "windows" ? WINDOWS_INSTALL_COMMAND : UNIX_INSTALL_COMMAND;
+  const isWindows = effective === "windows";
+  const INSTALL_COMMAND = UNIX_INSTALL_COMMAND;
 
   const [status, setStatus] = useState<GCloudStatus | null>(null);
   const [checking, setChecking] = useState(true);
@@ -235,6 +226,26 @@ export function GCloudSetup({ onReady }: Props) {
                     Found at {status?.gcloudPath}
                   </p>
                 </div>
+              ) : isWindows ? (
+                <>
+                  <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
+                    The Google Cloud SDK provides the{" "}
+                    <code className="text-brand font-mono">gcloud</code> CLI used to authenticate
+                    and call GCP APIs. Run the official interactive installer from Google's docs —
+                    it surfaces errors the silent install hides — then come back and click
+                    Re-check.
+                  </p>
+
+                  <div className="flex gap-[8px]">
+                    <Button
+                      variant="primary"
+                      onClick={() => Browser.OpenURL(INSTALL_URL)}
+                      icon={<Icon icon="solar:export-linear" className="text-xs" />}
+                    >
+                      Open Install Docs
+                    </Button>
+                  </div>
+                </>
               ) : (
                 <>
                   <p className="text-[11px] text-foreground/60 leading-[1.6] mb-[12px]">
