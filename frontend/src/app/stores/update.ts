@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Events, Browser } from "@wailsio/runtime";
+import { Events } from "@wailsio/runtime";
 import * as UpdaterService from "../../../bindings/alis-hub-v3/internal/updater/service";
 import { notify } from "../lib/notify";
 import { useNotificationsStore } from "./notifications";
@@ -60,11 +60,6 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
   startDownload: async (info) => {
     const target = info ?? get().updateInfo;
     if (!target || downloading) return;
-
-    if (navigator.userAgent.includes("Windows")) {
-      Browser.OpenURL(target.releaseUrl);
-      return;
-    }
 
     downloading = true;
     set({ installError: null, downloadProgress: { downloaded: 0, total: 0, done: false } });

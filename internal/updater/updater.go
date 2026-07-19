@@ -181,53 +181,55 @@ func (s *Service) DownloadUpdate() (string, error) {
 		return "", fmt.Errorf("mkdir temp: %w", err)
 	}
 
-	archiveName := key + "-" + trimV(rel.Version) + map[string]string{"macos": ".zip", "linux": ".tar.gz", "windows": ".zip"}[key]
-	archivePath := filepath.Join(tmpDir, archiveName)
-	if err := s.downloadFile(downloadURL, archivePath, 0); err != nil {
-		_ = os.RemoveAll(tmpDir)
-		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-		return "", err
-	}
-
-	extractDir := filepath.Join(tmpDir, "extracted")
-	if err := os.MkdirAll(extractDir, 0o755); err != nil {
-		return "", err
-	}
-	// TODO(security): verify checksum of downloaded archive before extraction.
+	// TODO(security): verify checksum of downloaded artifact before use.
 	// The worker should return a SHA-256 hash alongside the download URL so the
-	// client can verify integrity before unzipping.
+	// client can verify integrity before extracting/running it.
 	var newPath string
-	switch runtime.GOOS {
-	case "darwin":
-		if err := unzip(archivePath, extractDir); err != nil {
+	if runtime.GOOS == "windows" {
+		// The Windows release asset is a raw NSIS installer .exe (see
+		// build/windows/nsis/project.nsi), not an archive — download it
+		// directly and hand it to applyWindows, which runs the installer
+		// (it self-elevates via its manifest) rather than swapping files.
+		installerPath := filepath.Join(tmpDir, key+"-"+trimV(rel.Version)+"-installer.exe")
+		if err := s.downloadFile(downloadURL, installerPath, 0); err != nil {
 			_ = os.RemoveAll(tmpDir)
 			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-			return "", fmt.Errorf("unzip: %w", err)
+			return "", err
 		}
-		newPath, err = findAppBundle(extractDir)
-		if err != nil {
+		newPath = installerPath
+	} else {
+		archiveName := key + "-" + trimV(rel.Version) + map[string]string{"macos": ".zip", "linux": ".tar.gz"}[key]
+		archivePath := filepath.Join(tmpDir, archiveName)
+		if err := s.downloadFile(downloadURL, archivePath, 0); err != nil {
 			_ = os.RemoveAll(tmpDir)
 			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 			return "", err
 		}
-	case "linux":
-		if err := untarGz(archivePath, extractDir); err != nil {
-			_ = os.RemoveAll(tmpDir)
-			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-			return "", fmt.Errorf("untar: %w", err)
-		}
-		newPath = extractDir
-	case "windows":
-		if err := unzip(archivePath, extractDir); err != nil {
-			_ = os.RemoveAll(tmpDir)
-			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-			return "", fmt.Errorf("unzip: %w", err)
-		}
-		newPath, err = findWindowsExe(extractDir)
-		if err != nil {
-			_ = os.RemoveAll(tmpDir)
-			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+
+		extractDir := filepath.Join(tmpDir, "extracted")
+		if err := os.MkdirAll(extractDir, 0o755); err != nil {
 			return "", err
+		}
+		switch runtime.GOOS {
+		case "darwin":
+			if err := unzip(archivePath, extractDir); err != nil {
+				_ = os.RemoveAll(tmpDir)
+				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+				return "", fmt.Errorf("unzip: %w", err)
+			}
+			newPath, err = findAppBundle(extractDir)
+			if err != nil {
+				_ = os.RemoveAll(tmpDir)
+				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+				return "", err
+			}
+		case "linux":
+			if err := untarGz(archivePath, extractDir); err != nil {
+				_ = os.RemoveAll(tmpDir)
+				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+				return "", fmt.Errorf("untar: %w", err)
+			}
+			newPath = extractDir
 		}
 	}
 
@@ -372,7 +374,7 @@ open "$OLD"
 	return nil
 }
 
-func (s *Service) applyWindows(newExePath string) error {
+func (s *Service) applyWindows(installerPath string) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -383,22 +385,25 @@ func (s *Service) applyWindows(newExePath string) error {
 
 	// Escape single quotes so the paths are safe inside PS single-quoted strings.
 	escapedOld := strings.ReplaceAll(exe, "'", "''")
-	escapedNew := strings.ReplaceAll(newExePath, "'", "''")
+	escapedInstaller := strings.ReplaceAll(installerPath, "'", "''")
 
-	scriptPath := filepath.Join(filepath.Dir(newExePath), "alishub-relaunch.ps1")
+	scriptPath := filepath.Join(filepath.Dir(installerPath), "alishub-relaunch.ps1")
+	// The NSIS installer requests admin execution level (see
+	// build/windows/nsis/project.nsi), so Start-Process here triggers a UAC
+	// prompt the same way running it manually would. It upgrades in place
+	// at the existing install path, so $oldExe is still correct afterward.
 	script := fmt.Sprintf(`
 $pidToWait = %d
 $oldExe = '%s'
-$newExe = '%s'
+$installer = '%s'
 for ($i = 0; $i -lt 100; $i++) {
     if (-not (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue)) { break }
     Start-Sleep -Milliseconds 200
 }
 Start-Sleep -Milliseconds 500
-Remove-Item -Force $oldExe -ErrorAction SilentlyContinue
-Move-Item -Force $newExe $oldExe
+Start-Process -FilePath $installer -ArgumentList '/S' -Wait
 Start-Process $oldExe
-`, pid, escapedOld, escapedNew)
+`, pid, escapedOld, escapedInstaller)
 
 	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
 		return fmt.Errorf("write relaunch script: %w", err)
@@ -539,23 +544,6 @@ func untarGz(archive, dst string) error {
 		return fmt.Errorf("tar: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
-}
-
-func findWindowsExe(dir string) (string, error) {
-	var found string
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() || found != "" {
-			return nil
-		}
-		if strings.HasSuffix(strings.ToLower(info.Name()), ".exe") {
-			found = path
-		}
-		return nil
-	})
-	if found == "" {
-		return "", fmt.Errorf("no .exe found in extracted archive")
-	}
-	return found, nil
 }
 
 func findAppBundle(dir string) (string, error) {
