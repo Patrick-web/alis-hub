@@ -4,9 +4,11 @@ import { Icon } from "@iconify/react";
 import { Input } from "../components/Input";
 import { Button } from "../components/Button";
 import { Loader } from "../components/Loader";
+import { EmptyState } from "../components/EmptyState";
 import { FilterSelect } from "../components/FilterSelect";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import * as models from "../../../bindings/alis-hub-v3/models";
+import { useBlockPermission } from "../lib/useBlockPermission";
 
 interface Feature {
   title: string;
@@ -60,6 +62,7 @@ export function CodeblockCreatePage() {
   const navigate = useNavigate();
   const { id: editId } = useParams<{ id?: string }>();
   const isEditing = Boolean(editId);
+  const permission = useBlockPermission(isEditing ? (editId ?? "") : "");
 
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [initLoading, setInitLoading] = useState(isEditing);
@@ -329,6 +332,19 @@ export function CodeblockCreatePage() {
     : isEditing
       ? "solar:pen-linear"
       : "solar:upload-square-linear";
+
+  if (isEditing && !permission.loading && !permission.isContributor) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <EmptyState
+          icon="solar:lock-keyhole-linear"
+          title="You don't have access to edit this block"
+          description="Only contributors and admins can edit a block's metadata."
+          action={{ label: "Back to Block", onClick: () => navigate(`/codeblocks/${editId}`) }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-background">

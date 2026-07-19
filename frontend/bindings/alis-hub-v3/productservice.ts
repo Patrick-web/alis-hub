@@ -177,6 +177,15 @@ export function GetMyPrimaryAccountID(): $CancellablePromise<string> {
 }
 
 /**
+ * GetMyUserID returns the caller's own user resource name (e.g. "users/abc123"),
+ * used to match against block IAM policy members ("user:abc123") to determine
+ * the current viewer's own role on a block.
+ */
+export function GetMyUserID(): $CancellablePromise<string> {
+    return $Call.ByID(4031989046);
+}
+
+/**
  * GetOrganisationProject returns the GCP project associated with an organisation.
  */
 export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {

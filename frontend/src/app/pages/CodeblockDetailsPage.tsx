@@ -24,6 +24,11 @@ import {
   VERSION_RELEASE_LABEL,
   VERSION_RELEASE_COLOR,
 } from "../lib/releaseLevels";
+import {
+  useBlockPermission,
+  type BlockAccessMember,
+  type BlockAccessData,
+} from "../lib/useBlockPermission";
 
 const STATE_LABEL: Record<number, string> = {
   1: "Pending",
@@ -79,19 +84,6 @@ interface CodeblockMember {
   name: string;
   displayName: string;
   photoUrl: string;
-}
-
-interface BlockAccessMember {
-  member: string;
-  displayName: string;
-  email: string;
-  photoUrl: string;
-  role: string;
-  roleLabel: string;
-}
-
-interface BlockAccessData {
-  members: BlockAccessMember[];
 }
 
 // ── Install wizard types ──────────────────────────────────────────────────────
@@ -151,7 +143,6 @@ export function CodeblockDetailsPage() {
   const [block, setBlock] = useState<Codeblock | null>(null);
   const [members, setMembers] = useState<CodeblockMember[]>([]);
   const [blockLoading, setBlockLoading] = useState(true);
-  const [myAccountID, setMyAccountID] = useState("");
 
   const [versions, setVersions] = useState<CodeblockVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -170,18 +161,15 @@ export function CodeblockDetailsPage() {
   const [plans, setPlans] = useState<BlockPlan[]>([]);
   const [plansLoading, setPlansLoading] = useState(false);
 
-  const [accessData, setAccessData] = useState<BlockAccessData | null>(null);
-  const [accessLoading, setAccessLoading] = useState(false);
-  const [accessError, setAccessError] = useState<string | null>(null);
-
   const blockId = id ?? "";
+  const permission = useBlockPermission(blockId);
 
   // Install Block wizard state
   const [installOpen, setInstallOpen] = useState(false);
 
   const go = useCallback((t: Tab) => navigate(`/codeblocks/${blockId}/${t}`), [blockId, navigate]);
 
-  // Load block metadata + members + caller account on mount
+  // Load block metadata + members on mount
   useEffect(() => {
     if (!blockId) return;
     setBlockLoading(true);
@@ -190,12 +178,10 @@ export function CodeblockDetailsPage() {
       (ProductService.GetCodeblockMembers as (id: string) => Promise<CodeblockMember[]>)(
         blockId,
       ).catch(() => [] as CodeblockMember[]),
-      (ProductService.GetMyPrimaryAccountID as () => Promise<string>)().catch(() => ""),
     ])
-      .then(([b, m, accountID]) => {
+      .then(([b, m]) => {
         setBlock(b);
         setMembers(m ?? []);
-        setMyAccountID(accountID ?? "");
       })
       .catch(console.error)
       .finally(() => setBlockLoading(false));
@@ -270,22 +256,9 @@ export function CodeblockDetailsPage() {
       .finally(() => setPlansLoading(false));
   }, [activeTab, blockId, plans.length]);
 
-  // Lazy load access data for access tab
-  useEffect(() => {
-    if (activeTab !== "access" || accessData !== null) return;
-    setAccessLoading(true);
-    setAccessError(null);
-    (ProductService.GetBlockAccessData as (id: string) => Promise<BlockAccessData>)(blockId)
-      .then((d) => setAccessData(d ?? { members: [] }))
-      .catch((e) => setAccessError(String(e)))
-      .finally(() => setAccessLoading(false));
-  }, [activeTab, blockId, accessData]);
-
   const publisherLabel = block?.publisher
     ? block.publisher.replace("accounts/", "")
     : "Alis Exchange";
-
-  const isOwner = Boolean(myAccountID && block?.publisher === myAccountID);
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-background">
@@ -377,7 +350,7 @@ export function CodeblockDetailsPage() {
 
         {/* CTA */}
         <div className="p-[10px] border-t border-border flex flex-col gap-[8px]">
-          {isOwner ? (
+          {permission.isContributor ? (
             <>
               <Button
                 variant="secondary"
@@ -499,17 +472,18 @@ export function CodeblockDetailsPage() {
               instances={instances}
               plans={plans}
               plansLoading={plansLoading}
+              isAdmin={permission.isAdmin}
               onNavigate={go}
             />
           )}
           {activeTab === "access" && (
             <AccessTab
               blockId={blockId}
-              data={accessData}
-              loading={accessLoading || (accessData === null && !accessError)}
-              error={accessError}
-              isOwner={isOwner}
-              onRefresh={() => setAccessData(null)}
+              data={permission.accessData}
+              loading={permission.loading || (permission.accessData === null && !permission.accessError)}
+              error={permission.accessError}
+              isAdmin={permission.isAdmin}
+              onRefresh={permission.reloadAccessData}
             />
           )}
         </div>
@@ -2000,6 +1974,7 @@ function SettingsTab({
   instances,
   plans,
   plansLoading,
+  isAdmin,
   onNavigate,
 }: {
   blockId: string;
@@ -2008,6 +1983,7 @@ function SettingsTab({
   instances: CodeblockInstance[];
   plans: BlockPlan[];
   plansLoading: boolean;
+  isAdmin: boolean;
   onNavigate: (tab: Tab) => void;
 }) {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -2088,27 +2064,29 @@ function SettingsTab({
       </section>
 
       {/* Manage */}
-      <section>
-        <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground/40 mb-[16px]">
-          Manage
-        </h2>
-        <div className="bg-card border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
-          <div>
-            <p className="text-[12px] font-bold text-red-400 mb-[2px]">Delete Block</p>
-            <p className="text-[11px] text-foreground/30">
-              Permanently delete this block and all associated data. This action cannot be undone.
-            </p>
+      {isAdmin && (
+        <section>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-foreground/40 mb-[16px]">
+            Manage
+          </h2>
+          <div className="bg-card border border-red-500/20 rounded-[8px] p-[20px] flex items-center justify-between">
+            <div>
+              <p className="text-[12px] font-bold text-red-400 mb-[2px]">Delete Block</p>
+              <p className="text-[11px] text-foreground/30">
+                Permanently delete this block and all associated data. This action cannot be undone.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={() => setDeleteOpen(true)}
+              className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 shrink-0 ml-[24px]"
+              icon={<Icon icon="solar:trash-bin-minimalistic-linear" className="mr-[6px]" />}
+            >
+              Delete Block
+            </Button>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => setDeleteOpen(true)}
-            className="border-red-500/40 text-red-400 hover:bg-red-500/10 hover:border-red-500/60 shrink-0 ml-[24px]"
-            icon={<Icon icon="solar:trash-bin-minimalistic-linear" className="mr-[6px]" />}
-          >
-            Delete Block
-          </Button>
-        </div>
-      </section>
+        </section>
+      )}
 
       {deleteOpen && (
         <DeleteBlockModal
@@ -2295,14 +2273,14 @@ function AccessTab({
   data,
   loading,
   error,
-  isOwner,
+  isAdmin,
   onRefresh,
 }: {
   blockId: string;
   data: BlockAccessData | null;
   loading: boolean;
   error: string | null;
-  isOwner: boolean;
+  isAdmin: boolean;
   onRefresh: () => void;
 }) {
   const [removingMember, setRemovingMember] = useState<string | null>(null);
@@ -2483,7 +2461,7 @@ function AccessTab({
             {members.length} {members.length === 1 ? "member" : "members"}
           </span>
         </div>
-        {isOwner && (
+        {isAdmin && (
           <Button
             variant="primary"
             onClick={openAddModal}
@@ -2526,7 +2504,7 @@ function AccessTab({
                     <p className="text-[10px] font-mono text-foreground/30 truncate">{m.member}</p>
                   )}
                 </div>
-                {isOwner ? (
+                {isAdmin ? (
                   <button
                     onClick={() => openChangeRoleModal(m)}
                     className="opacity-60 group-hover:opacity-100 transition-opacity hover:scale-105"
@@ -2537,7 +2515,7 @@ function AccessTab({
                 ) : (
                   <AccessRoleBadge roleLabel={m.roleLabel} />
                 )}
-                {isOwner && (
+                {isAdmin && (
                   <button
                     onClick={() => removeMember(m)}
                     disabled={removingMember === m.member}

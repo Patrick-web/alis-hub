@@ -3,9 +3,11 @@ import { useNavigate, useParams } from "react-router";
 import { Icon } from "@iconify/react";
 import { Button } from "../components/Button";
 import { Loader } from "../components/Loader";
+import { EmptyState } from "../components/EmptyState";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import type { CodeblockInstance, BlockCommit } from "../../../bindings/alis-hub-v3/models";
 import { SearchableSelect } from "../components/ui/searchable-select";
+import { useBlockPermission } from "../lib/useBlockPermission";
 
 type Step = "instance" | "edit" | "version";
 
@@ -45,6 +47,7 @@ function relativeDate(iso: string): string {
 export function CodeblockContributePage() {
   const navigate = useNavigate();
   const { id: blockId } = useParams<{ id: string }>();
+  const permission = useBlockPermission(blockId ?? "");
 
   const [step, setStep] = useState<Step>("instance");
 
@@ -160,6 +163,19 @@ export function CodeblockContributePage() {
   }
 
   const canPublish = !!selectedDefineCommit && !!selectedBuildCommit && !publishing;
+
+  if (!permission.loading && !permission.isContributor) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <EmptyState
+          icon="solar:lock-keyhole-linear"
+          title="You don't have access to contribute to this block"
+          description="Only contributors and admins can publish new versions."
+          action={{ label: "Back to Block", onClick: () => navigate(`/codeblocks/${blockId}`) }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-hidden flex flex-row bg-background">

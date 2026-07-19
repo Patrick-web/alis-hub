@@ -182,6 +182,48 @@ type UserProfile struct {
 	Picture string `json:"picture"`
 }
 
+// readIDTokenClaims decodes the email and sub claims from the stored ID token
+// (or access token as fallback) without verifying the signature — verification
+// isn't needed since we're only reading claims from a token we already trust
+// (stored locally after a successful login).
+func readIDTokenClaims() (email, sub string, err error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", err
+	}
+	data, err := os.ReadFile(filepath.Join(home, alisConsoleCredentialsPath))
+	if err != nil {
+		return "", "", fmt.Errorf("not logged in")
+	}
+	var creds consoleCredentials
+	if err := json.Unmarshal(data, &creds); err != nil {
+		return "", "", fmt.Errorf("bad credentials: %w", err)
+	}
+	tok := creds.IDToken
+	if tok == "" {
+		tok = creds.AccessToken
+	}
+	if tok == "" {
+		return "", "", fmt.Errorf("no token found")
+	}
+	parts := strings.Split(tok, ".")
+	if len(parts) < 2 {
+		return "", "", fmt.Errorf("invalid token format")
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return "", "", fmt.Errorf("decode token claims: %w", err)
+	}
+	var claims struct {
+		Email string `json:"email"`
+		Sub   string `json:"sub"`
+	}
+	if err := json.Unmarshal(decoded, &claims); err != nil {
+		return "", "", fmt.Errorf("parse claims: %w", err)
+	}
+	return claims.Email, claims.Sub, nil
+}
+
 // GetUserProfile fetches name and photo for the logged-in user via
 // BatchRetrieveMaskedUsers, using the sub from the stored token as the user ID.
 func (s *ProductService) GetUserProfile() (*UserProfile, error) {
@@ -189,52 +231,21 @@ func (s *ProductService) GetUserProfile() (*UserProfile, error) {
 		return nil, err
 	}
 
-	// Decode sub and email from the stored token (no verification needed).
-	home, err := os.UserHomeDir()
+	email, sub, err := readIDTokenClaims()
 	if err != nil {
 		return nil, err
 	}
-	data, err := os.ReadFile(filepath.Join(home, alisConsoleCredentialsPath))
-	if err != nil {
-		return nil, fmt.Errorf("not logged in")
-	}
-	var creds consoleCredentials
-	if err := json.Unmarshal(data, &creds); err != nil {
-		return nil, fmt.Errorf("bad credentials: %w", err)
-	}
-	tok := creds.IDToken
-	if tok == "" {
-		tok = creds.AccessToken
-	}
-	if tok == "" {
-		return nil, fmt.Errorf("no token found")
-	}
-	parts := strings.Split(tok, ".")
-	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid token format")
-	}
-	decoded, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("decode token claims: %w", err)
-	}
-	var claims struct {
-		Email string `json:"email"`
-		Sub   string `json:"sub"`
-	}
-	if err := json.Unmarshal(decoded, &claims); err != nil {
-		return nil, fmt.Errorf("parse claims: %w", err)
-	}
 
-	profile := &UserProfile{Email: claims.Email}
+	profile := &UserProfile{Email: email}
 
 	// Fetch first/last name and photo from BatchRetrieveMaskedUsers.
-	if claims.Sub != "" {
+	if sub != "" {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		var buf []byte
 		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-		buf = protowire.AppendString(buf, "users/"+claims.Sub)
+		buf = protowire.AppendString(buf, "users/"+sub)
 
 		resp, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx,
 			"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
@@ -250,6 +261,23 @@ func (s *ProductService) GetUserProfile() (*UserProfile, error) {
 	}
 
 	return profile, nil
+}
+
+// GetMyUserID returns the caller's own user resource name (e.g. "users/abc123"),
+// used to match against block IAM policy members ("user:abc123") to determine
+// the current viewer's own role on a block.
+func (s *ProductService) GetMyUserID() (string, error) {
+	if err := s.initTokens(); err != nil {
+		return "", err
+	}
+	_, sub, err := readIDTokenClaims()
+	if err != nil {
+		return "", err
+	}
+	if sub == "" {
+		return "", fmt.Errorf("no sub claim in token")
+	}
+	return "users/" + sub, nil
 }
 
 // Logout removes the stored console credentials, signing the user out.
