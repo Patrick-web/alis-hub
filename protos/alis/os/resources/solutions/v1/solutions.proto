@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.resources.solutions.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/resources/solutions/v1;solutionsv1pb";
+
 import "google/iam/v1/iam_policy.proto";
 import "google/iam/v1/policy.proto";
 import "google/longrunning/operations.proto";

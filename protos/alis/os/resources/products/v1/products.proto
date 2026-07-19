@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.resources.products.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/resources/products/v1;productsv1pb";
+
 import "alis/open/iam/v1/iam.proto";
 import "alis/open/pubsub/v1/pubsub.proto";
 import "alis/os/resources/solutions/v1/solutions.proto";

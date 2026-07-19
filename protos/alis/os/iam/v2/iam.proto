@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.iam.v2;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/iam/v2;iamv2pb";
+
 import "alis/bl/blocks/v1/blocks.proto";
 import "alis/open/iam/v1/iam.proto";
 import "google/iam/v1/iam_policy.proto";

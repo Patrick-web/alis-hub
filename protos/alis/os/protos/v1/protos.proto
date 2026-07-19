@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.protos.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/protos/v1;protosv1pb";
+
 import "google/longrunning/operations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/field_mask.proto";

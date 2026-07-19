@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 package alis.open.options.v1;
+
+option go_package = "alis-hub-v3/gen/go/alis/open/options/v1;optionsv1pb";
 message FileOptions {
   message JsonSchema {
     bool generate = 1;

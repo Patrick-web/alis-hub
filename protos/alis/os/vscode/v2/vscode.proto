@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.vscode.v2;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/vscode/v2;vscodev2pb";
+
 import "alis/os/workstations/v1/workstations.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";

@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 package alis.open.validation.v1;
+
+option go_package = "alis-hub-v3/gen/go/alis/open/validation/v1;validationv1pb";
 message RetrieveRulesRequest {
   string msg_type = 1;
 }

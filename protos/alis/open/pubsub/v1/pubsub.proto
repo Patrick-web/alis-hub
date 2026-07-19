@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.open.pubsub.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/open/pubsub/v1;pubsubv1pb";
+
 import "google/protobuf/timestamp.proto";
 
 message PubSubMessage {

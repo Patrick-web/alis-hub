@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.bl.agents.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/bl/agents/v1;agentsv1pb";
+
 import "alis/os/ideas/v1/ideas.proto";
 import "google/longrunning/operations.proto";
 

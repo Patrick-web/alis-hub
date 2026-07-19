@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.services.dbd.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/services/dbd/v1;dbdv1pb";
+
 import "alis/os/resources/products/v1/products.proto";
 message RunDefineRequest {
   message ProtoFile {

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.console.v2;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/console/v2;consolev2pb";
+
 import "alis/os/accounts/v1/accounts.proto";
 import "alis/os/iam/v1/iam.proto";
 import "alis/os/ideas/v1/ideas.proto";

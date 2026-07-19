@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.os.resources.builders.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/os/resources/builders/v1;buildersv1pb";
+
 import "alis/os/resources/products/v1/products.proto";
 import "alis/os/services/dbd/v1/dbd.proto";
 import "google/protobuf/empty.proto";
