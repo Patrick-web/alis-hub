@@ -23,8 +23,11 @@ const UNIX_INSTALL_COMMAND = "curl https://sdk.cloud.google.com | bash && exec -
 // https://cloud.google.com/sdk/docs/downloads-interactive). It installs to
 // %LOCALAPPDATA%\Google\Cloud SDK by default, which gcloudBin() already
 // probes. The installer prints nothing when silent, so we echo a line that
-// matches INSTALL_SUCCESS below to trigger the status recheck.
+// matches INSTALL_SUCCESS below to trigger the status recheck. The
+// SecurityProtocol line forces TLS 1.2 since WebClient defaults to an older
+// protocol on some Windows/PowerShell versions, which dl.google.com rejects.
 const WINDOWS_INSTALL_COMMAND =
+  "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " +
   '$installer = "$env:Temp\\GoogleCloudSDKInstaller.exe"; ' +
   '(New-Object Net.WebClient).DownloadFile("https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe", $installer); ' +
   "Start-Process -FilePath $installer -ArgumentList '/S','/noreporting' -Wait; " +
