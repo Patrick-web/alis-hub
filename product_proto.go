@@ -150,23 +150,31 @@ func systemCredentialHelper() string {
 	}
 }
 
+// gitHostAuthArgs returns the "-c" flag pairs to authenticate git commands
+// against remoteURL: the system credential helper for GitHub (which won't
+// accept an Alis Bearer token as a git credential), or an Authorization
+// header carrying token for every other host (e.g. Forgejo). The leading
+// empty http.extraHeader= clears any value inherited from an include.path
+// set by the VS Code extension, preventing duplicate headers. Returns nil
+// (no auth args) when the host isn't GitHub and no token is available.
+func gitHostAuthArgs(remoteURL, token string) []string {
+	if strings.Contains(remoteURL, "github.com") {
+		return []string{"-c", "credential.helper=" + systemCredentialHelper()}
+	}
+	if token == "" {
+		return nil
+	}
+	return []string{
+		"-c", "http.extraHeader=",
+		"-c", "http.extraHeader=Authorization: Bearer " + token,
+	}
+}
+
 func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error) {
 	gitEnv := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	ew := &emitWriter{emit: emit}
 
-	// GitHub uses the system credential helper; all other hosts (Forgejo, etc.)
-	// get the alis Bearer token injected as an HTTP header.
-	// The leading empty http.extraHeader= clears any value inherited from an
-	// include.path set by the VS Code extension, preventing duplicate headers.
-	var baseArgs []string
-	if strings.Contains(remoteURL, "github.com") {
-		baseArgs = []string{"-c", "credential.helper=" + systemCredentialHelper()}
-	} else if token != "" {
-		baseArgs = []string{
-			"-c", "http.extraHeader=",
-			"-c", "http.extraHeader=Authorization: Bearer " + token,
-		}
-	}
+	baseArgs := gitHostAuthArgs(remoteURL, token)
 
 	runGit := func(subcmd ...string) error {
 		args := append(baseArgs, subcmd...)
