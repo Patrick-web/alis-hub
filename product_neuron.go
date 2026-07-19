@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // neuronVersionRoot derives ~/alis.build/{org}/build/{product}/{neuron}/{version} from a package string.
@@ -179,69 +181,31 @@ func readSelectedNeuronFiles(pkg string, files []ScannedNeuronFile) (build, infr
 	return build, infra, proto, nil
 }
 
-func marshalBootstrapBlockRequest(p BootstrapBlockParams, accountName string) ([]byte, error) {
+func buildBootstrapBlockRequest(p BootstrapBlockParams, accountName string) (*blocksv1pb.BootstrapBlockRequest, error) {
 	build, infra, proto, err := readSelectedNeuronFiles(p.Package, p.Files)
 	if err != nil {
 		return nil, err
 	}
 
-	marshalFile := func(f CodeblockFileItem) []byte {
-		var b []byte
-		b = protowire.AppendTag(b, 1, protowire.BytesType)
-		b = protowire.AppendString(b, f.Name)
-		b = protowire.AppendTag(b, 2, protowire.BytesType)
-		b = protowire.AppendBytes(b, []byte(f.Content))
-		return b
+	block := &blocksv1pb.Block{
+		DisplayName: p.DisplayName,
+		Tagline:     p.Tagline,
 	}
-
-	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
-	var content []byte
-	for _, f := range build {
-		content = protowire.AppendTag(content, 1, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-	for _, f := range infra {
-		content = protowire.AppendTag(content, 2, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-	for _, f := range proto {
-		content = protowire.AppendTag(content, 3, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-
-	// Publisher sub-message: f1=account
-	var publisher []byte
 	if accountName != "" {
-		publisher = protowire.AppendTag(publisher, 1, protowire.BytesType)
-		publisher = protowire.AppendString(publisher, accountName)
+		block.Publisher = &blocksv1pb.Block_Publisher{Account: accountName}
 	}
 
-	// Block sub-message: f2=display_name, f13=tagline, f30=publisher
-	var block []byte
-	if p.DisplayName != "" {
-		block = protowire.AppendTag(block, 2, protowire.BytesType)
-		block = protowire.AppendString(block, p.DisplayName)
+	req := &blocksv1pb.BootstrapBlockRequest{
+		Block:   block,
+		BlockId: p.BlockID,
+		Package: p.Package,
 	}
-	if p.Tagline != "" {
-		block = protowire.AppendTag(block, 13, protowire.BytesType)
-		block = protowire.AppendString(block, p.Tagline)
-	}
-	if len(publisher) > 0 {
-		block = protowire.AppendTag(block, 30, protowire.BytesType)
-		block = protowire.AppendBytes(block, publisher)
-	}
-
-	// BootstrapBlockRequest: f2=block, f3=block_id, f4=package, f5=contributed_content
-	var req []byte
-	req = protowire.AppendTag(req, 2, protowire.BytesType)
-	req = protowire.AppendBytes(req, block)
-	req = protowire.AppendTag(req, 3, protowire.BytesType)
-	req = protowire.AppendString(req, p.BlockID)
-	req = protowire.AppendTag(req, 4, protowire.BytesType)
-	req = protowire.AppendString(req, p.Package)
-	if len(content) > 0 {
-		req = protowire.AppendTag(req, 5, protowire.BytesType)
-		req = protowire.AppendBytes(req, content)
+	if len(build) > 0 || len(infra) > 0 || len(proto) > 0 {
+		req.ContributedContent = &blocksv1pb.BlockVersion_Content{
+			BuildFiles: buildFileList(build),
+			InfraFiles: buildFileList(infra),
+			ProtoFiles: buildFileList(proto),
+		}
 	}
 	return req, nil
 }
@@ -251,9 +215,13 @@ func (s *ProductService) BootstrapBlock(params BootstrapBlockParams) (string, er
 		return "", err
 	}
 	accountName := s.myPrimaryAccountID()
-	protoBytes, err := marshalBootstrapBlockRequest(params, accountName)
+	req, err := buildBootstrapBlockRequest(params, accountName)
 	if err != nil {
 		return "", err
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("BootstrapBlock: marshal request: %w", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
@@ -267,8 +235,11 @@ func (s *ProductService) BootstrapBlock(params BootstrapBlockParams) (string, er
 	if len(body) < 5 {
 		return "", fmt.Errorf("BootstrapBlock: response too short (%d bytes)", len(body))
 	}
-	// Response: BootstrapBlockResponse { f1: Block { f1: name (string) } }
-	blockName := parseStringField1([]byte(parseStringFieldN(body[5:], 1)))
+	resp := &blocksv1pb.BootstrapBlockResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return "", fmt.Errorf("BootstrapBlock: unmarshal response: %w", err)
+	}
+	blockName := resp.GetBlock().GetName()
 	if blockName == "" {
 		return "", fmt.Errorf("BootstrapBlock: response contained no block name")
 	}

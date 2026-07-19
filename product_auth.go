@@ -15,7 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	iamv2pb "alis-hub-v3/gen/go/alis/os/iam/v2"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // newAuthProxyHandler returns an http.Handler that reverse-proxies to base,
@@ -232,19 +234,18 @@ func (s *ProductService) GetUserProfile() (*UserProfile, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		var buf []byte
-		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-		buf = protowire.AppendString(buf, "users/"+claims.Sub)
-
-		resp, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx,
-			"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
-		if err == nil && grpcStatus == 0 && len(resp) >= 5 {
-			users := parseBatchUsersResponse(resp[5:])
-			if len(users) > 0 {
-				u := users[0]
-				name := strings.TrimSpace(u.FirstName + " " + u.LastName)
-				profile.Name = name
-				profile.Picture = u.PhotoURL
+		req := &iamv2pb.BatchRetrieveMaskedUsersRequest{Users: []string{"users/" + claims.Sub}}
+		if buf, mErr := proto.Marshal(req); mErr == nil {
+			resp, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx,
+				"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
+			if err == nil && grpcStatus == 0 && len(resp) >= 5 {
+				usersResp := &iamv2pb.BatchRetrieveMaskedUsersResponse{}
+				if proto.Unmarshal(resp[5:], usersResp) == nil && len(usersResp.GetMaskedUsers()) > 0 {
+					u := iamUserFromV2Masked(usersResp.GetMaskedUsers()[0])
+					name := strings.TrimSpace(u.FirstName + " " + u.LastName)
+					profile.Name = name
+					profile.Picture = u.PhotoURL
+				}
 			}
 		}
 	}

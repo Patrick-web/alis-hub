@@ -15,7 +15,10 @@ import (
 	"testing"
 	"time"
 
+	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
+
 	"google.golang.org/protobuf/encoding/protowire"
+	"google.golang.org/protobuf/proto"
 )
 
 // TestProbeRaw makes a raw HTTP request to console.alisx.com and prints the full
@@ -1105,8 +1108,9 @@ func TestProbeGetBlockVersion(t *testing.T) {
 				break
 			}
 			inner = inner[fm:]
-			entry := parseCodeblockFileEntry(fb)
-			counts[fn] = append(counts[fn], entry.Name)
+			entry := &blocksv1pb.File{}
+			_ = proto.Unmarshal(fb, entry)
+			counts[fn] = append(counts[fn], entry.GetFilename())
 		}
 		t.Logf("field %d (%d bytes): sub-field distribution:", num, len(b))
 		for sfn, names := range counts {

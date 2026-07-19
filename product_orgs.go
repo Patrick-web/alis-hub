@@ -8,7 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	iamv2pb "alis-hub-v3/gen/go/alis/os/iam/v2"
+	productsv1pb "alis-hub-v3/gen/go/alis/os/products/v1"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
@@ -17,7 +21,13 @@ func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
 	}
 
 	myAccounts := s.myAccountIDs()
-	protoBytes := marshalListOrganisationsRequest([]string{"name", "display_name", "account", "description", "logo"})
+	req := &productsv1pb.ListOrganisationsRequest{
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name", "account", "description", "logo"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListOrganisations: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -33,13 +43,21 @@ func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
 		return nil, fmt.Errorf("ListOrganisations: response too short (%d bytes)", len(body))
 	}
 
-	orgs, err := parseListOrganisationsResponse(body[5:])
-	if err != nil {
-		return nil, err
+	resp := &productsv1pb.ListOrganisationsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListOrganisations: unmarshal response: %w", err)
 	}
 
 	result := &LandingZonesData{Own: []Organisation{}, Shared: []Organisation{}}
-	for _, org := range orgs {
+	for _, o := range resp.GetOrganisations() {
+		org := Organisation{
+			Name:          o.GetName(),
+			DisplayName:   o.GetDisplayName(),
+			Description:   o.GetDescription(),
+			Logo:          o.GetLogo(),
+			Account:       o.GetAccount(),
+			GoogleProject: convertGoogleProject(o.GetGoogleProject()),
+		}
 		if myAccounts[org.Account] {
 			result.Own = append(result.Own, org)
 		} else {
@@ -54,8 +72,14 @@ func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
 		return nil, err
 	}
 
-	parent := fmt.Sprintf("organisations/%s", org)
-	protoBytes := marshalListProductsRequest(parent, []string{"name", "display_name", "state"})
+	req := &productsv1pb.ListProductsRequest{
+		Parent:   fmt.Sprintf("organisations/%s", org),
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name", "state"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListProducts: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -70,7 +94,21 @@ func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListProducts: response too short (%d bytes)", len(body))
 	}
-	return parseListProductsResponse(body[5:])
+
+	resp := &productsv1pb.ListProductsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListProducts: unmarshal response: %w", err)
+	}
+
+	products := make([]ProductSummary, 0, len(resp.GetProducts()))
+	for _, p := range resp.GetProducts() {
+		products = append(products, ProductSummary{
+			Name:        p.GetName(),
+			DisplayName: p.GetDisplayName(),
+			State:       int32(p.GetState()),
+		})
+	}
+	return products, nil
 }
 
 // myAccountIDs fetches the current user's account resource names via RetrieveMyUser,
@@ -83,81 +121,35 @@ func (s *ProductService) myAccountIDs() map[string]bool {
 	if err != nil || grpcStatus != 0 || len(body) < 5 {
 		return nil
 	}
-	return parseUserAccountIDs(body[5:])
-}
-
-// parseUserAccountIDs extracts the account resource names from a User proto response.
-// User.accounts is map<string, Account> at field 99; proto encodes each entry as a
-// bytes-type sub-message with field 1 = key (account name) and field 2 = value.
-func parseUserAccountIDs(data []byte) map[string]bool {
-	result := make(map[string]bool)
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
+	user := &iamv2pb.User{}
+	if err := proto.Unmarshal(body[5:], user); err != nil {
+		return nil
+	}
+	result := make(map[string]bool, len(user.GetAccounts()))
+	for key := range user.GetAccounts() {
+		if !strings.HasPrefix(key, "accounts/") {
+			key = "accounts/" + key
 		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num == 99 {
-			key := parseMapEntryKey(b)
-			if key != "" {
-				if !strings.HasPrefix(key, "accounts/") {
-					key = "accounts/" + key
-				}
-				result[key] = true
-			}
-		}
+		result[key] = true
 	}
 	return result
-}
-
-// parseMapEntryKey extracts the string key (field 1) from a proto map entry sub-message.
-func parseMapEntryKey(data []byte) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num == 1 {
-			return string(b)
-		}
-	}
-	return ""
 }
 
 func (s *ProductService) GetProductOverview(org, product string) (*ProductOverview, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	name := fmt.Sprintf("organisations/%s/products/%s", org, product)
-	fields := []string{"name", "display_name", "state", "google_project", "git_repo", "internal_package_registries", "docker_registries"}
-	protoBytes := marshalGetProductRequest(name, fields)
+	req := &productsv1pb.GetProductRequest{
+		Name: fmt.Sprintf("organisations/%s/products/%s", org, product),
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{
+			"name", "display_name", "state", "google_project", "git_repo",
+			"internal_package_registries", "docker_registries",
+		}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetProduct: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -172,16 +164,78 @@ func (s *ProductService) GetProductOverview(org, product string) (*ProductOvervi
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetProduct: response too short (%d bytes)", len(body))
 	}
-	return parseProduct(body[5:])
+
+	p := &productsv1pb.Product{}
+	if err := proto.Unmarshal(body[5:], p); err != nil {
+		return nil, fmt.Errorf("GetProduct: unmarshal response: %w", err)
+	}
+	return &ProductOverview{
+		Name:              p.GetName(),
+		DisplayName:       p.GetDisplayName(),
+		State:             int32(p.GetState()),
+		GoogleProject:     convertGoogleProject(p.GetGoogleProject()),
+		GitRepo:           convertGitRepo(p.GetGitRepo()),
+		PackageRegistries: convertPackageRegistries(p.GetInternalPackageRegistries()),
+		DockerRegistry:    p.GetDockerRegistries().GetInternalUri(),
+	}, nil
+}
+
+// convertGoogleProject maps the generated GoogleProject message onto the app's
+// GCPProject JSON-facing struct.
+func convertGoogleProject(gp *productsv1pb.GoogleProject) *GCPProject {
+	if gp == nil {
+		return nil
+	}
+	return &GCPProject{
+		FolderID:              gp.GetFolderId(),
+		ID:                    gp.GetId(),
+		Number:                gp.GetNumber(),
+		Region:                gp.GetRegion(),
+		BillingAccountID:      gp.GetBillingAccountId(),
+		ManagedBillingAccount: gp.GetManagedBillingAccount(),
+		CloudURI:              gp.GetCloudUri(),
+	}
+}
+
+// convertGitRepo maps the generated GitRepo message onto the app's GitRepoInfo
+// JSON-facing struct.
+func convertGitRepo(gr *productsv1pb.GitRepo) *GitRepoInfo {
+	if gr == nil {
+		return nil
+	}
+	return &GitRepoInfo{
+		RemoteURI:   gr.GetRemoteUri(),
+		CloudRunURI: gr.GetCloudrun().GetConsoleUri(),
+		VMURI:       gr.GetVm().GetConsoleUri(),
+		BucketURI:   gr.GetBucket().GetConsoleUri(),
+	}
+}
+
+// convertPackageRegistries maps the generated PackageRegistries message onto
+// the app's PkgRegistries JSON-facing struct.
+func convertPackageRegistries(pr *productsv1pb.PackageRegistries) *PkgRegistries {
+	if pr == nil {
+		return nil
+	}
+	return &PkgRegistries{
+		Go:         pr.GetGoRegistryUri(),
+		JavaScript: pr.GetJavascriptRegistryUri(),
+		Python:     pr.GetPythonRegistryUri(),
+	}
 }
 
 func (s *ProductService) ListEnvironments(org, product string) ([]EnvInfo, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
-	fields := []string{"name", "display_name", "google_project", "state", "type"}
-	protoBytes := marshalListEnvironmentsRequest(parent, fields)
+	req := &productsv1pb.ListEnvironmentsRequest{
+		Parent:   fmt.Sprintf("organisations/%s/products/%s", org, product),
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name", "google_project", "state", "type"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListEnvironments: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -196,12 +250,26 @@ func (s *ProductService) ListEnvironments(org, product string) ([]EnvInfo, error
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListEnvironments: response too short (%d bytes)", len(body))
 	}
-	return parseListEnvironmentsResponse(body[5:])
+	resp := &productsv1pb.ListEnvironmentsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListEnvironments: unmarshal response: %w", err)
+	}
+	envs := make([]EnvInfo, 0, len(resp.GetEnvironments()))
+	for _, e := range resp.GetEnvironments() {
+		envs = append(envs, *environmentToEnvInfo(e))
+	}
+	return envs, nil
 }
 
 func (s *ProductService) getOrganisationGitRepo(org string) (string, error) {
-	name := fmt.Sprintf("organisations/%s", org)
-	protoBytes := marshalGetOrganisationRequest(name, []string{"git_repo"})
+	req := &productsv1pb.GetOrganisationRequest{
+		Name:     fmt.Sprintf("organisations/%s", org),
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"git_repo"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("GetOrganisation: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -216,7 +284,11 @@ func (s *ProductService) getOrganisationGitRepo(org string) (string, error) {
 	if len(body) < 5 {
 		return "", fmt.Errorf("GetOrganisation: response too short (%d bytes)", len(body))
 	}
-	return parseOrganisationGitRepo(body[5:])
+	org2 := &productsv1pb.Organisation{}
+	if err := proto.Unmarshal(body[5:], org2); err != nil {
+		return "", fmt.Errorf("GetOrganisation: unmarshal response: %w", err)
+	}
+	return org2.GetGitRepo().GetRemoteUri(), nil
 }
 
 // GetOrganisationProject returns the GCP project associated with an organisation.
@@ -224,8 +296,14 @@ func (s *ProductService) GetOrganisationProject(org string) (*GCPProject, error)
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	name := fmt.Sprintf("organisations/%s", org)
-	protoBytes := marshalGetOrganisationRequest(name, []string{"google_project"})
+	req := &productsv1pb.GetOrganisationRequest{
+		Name:     fmt.Sprintf("organisations/%s", org),
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"google_project"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetOrganisation: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -240,11 +318,11 @@ func (s *ProductService) GetOrganisationProject(org string) (*GCPProject, error)
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetOrganisation: response too short (%d bytes)", len(body))
 	}
-	org2, err := parseOrganisation(body[5:])
-	if err != nil || org2 == nil {
-		return nil, err
+	org2 := &productsv1pb.Organisation{}
+	if err := proto.Unmarshal(body[5:], org2); err != nil {
+		return nil, fmt.Errorf("GetOrganisation: unmarshal response: %w", err)
 	}
-	return org2.GoogleProject, nil
+	return convertGoogleProject(org2.GetGoogleProject()), nil
 }
 
 func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error) {

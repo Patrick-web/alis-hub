@@ -6,7 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	accountsv1pb "alis-hub-v3/gen/go/alis/os/accounts/v1"
+	iamv2pb "alis-hub-v3/gen/go/alis/os/iam/v2"
+
+	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
+
+	iampb "cloud.google.com/go/iam/apiv1/iampb"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // ListCodeblocks fetches all available codeblocks from alis.bl.blocks.v1.BlocksService.
@@ -15,11 +22,15 @@ func (s *ProductService) ListCodeblocks() ([]Codeblock, error) {
 		return nil, err
 	}
 
-	fields := []string{"name", "display_name", "release_level", "publisher", "releases", "overview_details"}
-	fm := marshalFieldMask(fields)
-	var buf []byte
-	buf = protowire.AppendTag(buf, 3, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
+	req := &blocksv1pb.RetrieveBlockDetailsRequest{
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{
+			"name", "display_name", "release_level", "publisher", "releases", "overview_details",
+		}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblocks: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -34,9 +45,24 @@ func (s *ProductService) ListCodeblocks() ([]Codeblock, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListCodeblocks: response too short (%d bytes)", len(body))
 	}
-	blocks, err := parseCodeblocksResponse(body[5:])
-	if err != nil {
-		return nil, err
+
+	resp := &blocksv1pb.RetrieveBlockDetailsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListCodeblocks: unmarshal response: %w", err)
+	}
+
+	var blocks []Codeblock
+	for _, bd := range resp.GetInstalledBlocks() {
+		cb := blockDetailToCodeblock(bd)
+		if cb.Name != "" {
+			blocks = append(blocks, cb)
+		}
+	}
+	for _, bd := range resp.GetAvailableBlocks() {
+		cb := blockDetailToCodeblock(bd)
+		if cb.Name != "" {
+			blocks = append(blocks, cb)
+		}
 	}
 
 	s.resolvePublisherDisplayNames(ctx, blocks)
@@ -49,8 +75,16 @@ func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	buf := marshalGetProductRequest("blocks/"+blockId,
-		[]string{"name", "display_name", "release_level", "publisher", "releases", "tagline", "overview_details"})
+	req := &blocksv1pb.GetBlockRequest{
+		Name: "blocks/" + blockId,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{
+			"name", "display_name", "release_level", "publisher", "releases", "tagline", "overview_details",
+		}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblock: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetBlock", buf)
@@ -63,8 +97,11 @@ func (s *ProductService) GetCodeblock(blockId string) (*Codeblock, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetCodeblock: response too short (%d bytes)", len(body))
 	}
-	var cb Codeblock
-	parseBlockInto(body[5:], &cb)
+	block := &blocksv1pb.Block{}
+	if err := proto.Unmarshal(body[5:], block); err != nil {
+		return nil, fmt.Errorf("GetCodeblock: unmarshal response: %w", err)
+	}
+	cb := blockToCodeblock(block)
 	if cb.Publisher != "" {
 		blocks := []Codeblock{cb}
 		s.resolvePublisherDisplayNames(ctx, blocks)
@@ -78,9 +115,11 @@ func (s *ProductService) DeleteCodeblock(blockId string) error {
 	if err := s.initTokens(); err != nil {
 		return err
 	}
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
+	req := &blocksv1pb.DeleteBlockRequest{Name: "blocks/" + blockId}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("DeleteCodeblock: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
@@ -99,11 +138,11 @@ func (s *ProductService) ListCodeblockVersions(blockId string) ([]CodeblockVersi
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 2, protowire.VarintType)
-	buf = protowire.AppendVarint(buf, 100)
+	req := &blocksv1pb.ListBlockVersionsRequest{Parent: "blocks/" + blockId, PageSize: 100}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblockVersions: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/ListBlockVersions", buf)
@@ -116,7 +155,18 @@ func (s *ProductService) ListCodeblockVersions(blockId string) ([]CodeblockVersi
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListCodeblockVersions: response too short (%d bytes)", len(body))
 	}
-	return parseCodeblockVersionsResponse(body[5:]), nil
+	resp := &blocksv1pb.ListBlockVersionsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListCodeblockVersions: unmarshal response: %w", err)
+	}
+	versions := make([]CodeblockVersion, 0, len(resp.GetBlockVersions()))
+	for _, bv := range resp.GetBlockVersions() {
+		v := blockVersionToCodeblockVersion(bv)
+		if v.Name != "" {
+			versions = append(versions, v)
+		}
+	}
+	return versions, nil
 }
 
 // GetCodeblockDoc returns documentation markdown for a specific block version.
@@ -125,12 +175,14 @@ func (s *ProductService) GetCodeblockDoc(versionName, audience string) (string, 
 	if err := s.initTokens(); err != nil {
 		return "", err
 	}
-	fm := marshalFieldMask([]string{"name", "documentation"})
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, versionName)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
+	req := &blocksv1pb.GetBlockVersionRequest{
+		Name:     versionName,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "documentation"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("GetCodeblockDoc: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
@@ -143,11 +195,15 @@ func (s *ProductService) GetCodeblockDoc(versionName, audience string) (string, 
 	if len(body) < 5 {
 		return "", fmt.Errorf("GetCodeblockDoc: response too short (%d bytes)", len(body))
 	}
-	userContent, agentContent := parseCodeblockDoc(body[5:])
-	if audience == "agent" {
-		return agentContent, nil
+	bv := &blocksv1pb.BlockVersion{}
+	if err := proto.Unmarshal(body[5:], bv); err != nil {
+		return "", fmt.Errorf("GetCodeblockDoc: unmarshal response: %w", err)
 	}
-	return userContent, nil
+	doc := bv.GetDocumentation()
+	if audience == "agent" {
+		return doc.GetAgentContent().GetContent(), nil
+	}
+	return doc.GetUserContent().GetContent(), nil
 }
 
 // GetCodeblockVersion returns full details for a block version including files.
@@ -156,9 +212,11 @@ func (s *ProductService) GetCodeblockVersion(versionName string) (*CodeblockVers
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, versionName)
+	req := &blocksv1pb.GetBlockVersionRequest{Name: versionName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockVersion: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
@@ -171,7 +229,11 @@ func (s *ProductService) GetCodeblockVersion(versionName string) (*CodeblockVers
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetCodeblockVersion: response too short (%d bytes)", len(body))
 	}
-	v := parseCodeblockVersion(body[5:])
+	bv := &blocksv1pb.BlockVersion{}
+	if err := proto.Unmarshal(body[5:], bv); err != nil {
+		return nil, fmt.Errorf("GetCodeblockVersion: unmarshal response: %w", err)
+	}
+	v := blockVersionToCodeblockVersion(bv)
 	return &v, nil
 }
 
@@ -180,15 +242,17 @@ func (s *ProductService) ListCodeblockInstances(blockId string) ([]CodeblockInst
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	fm := marshalFieldMask([]string{
-		"name", "package", "state", "block", "block_version",
-		"create_time", "update_time", "entitlement",
-	})
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 4, protowire.BytesType) // field 4, not 2
-	buf = protowire.AppendBytes(buf, fm)
+	req := &blocksv1pb.ListInstancesRequest{
+		Parent: "blocks/" + blockId,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{
+			"name", "package", "state", "block", "block_version",
+			"create_time", "update_time", "entitlement",
+		}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListCodeblockInstances: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/ListInstances", buf)
@@ -201,7 +265,18 @@ func (s *ProductService) ListCodeblockInstances(blockId string) ([]CodeblockInst
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListCodeblockInstances: response too short (%d bytes)", len(body))
 	}
-	return parseCodeblockInstancesResponse(body[5:]), nil
+	resp := &blocksv1pb.ListInstancesResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListCodeblockInstances: unmarshal response: %w", err)
+	}
+	instances := make([]CodeblockInstance, 0, len(resp.GetInstances()))
+	for _, inst := range resp.GetInstances() {
+		ci := instanceToCodeblockInstance(inst)
+		if ci.Name != "" || ci.Package != "" {
+			instances = append(instances, ci)
+		}
+	}
+	return instances, nil
 }
 
 // GetCodeblockMembers fetches the IAM members for a block and resolves their avatar URLs.
@@ -211,12 +286,14 @@ func (s *ProductService) GetCodeblockMembers(blockId string) ([]CodeblockMember,
 		return nil, err
 	}
 	// Step 1: GetIamPolicy to collect member IDs.
-	var req1 []byte
-	req1 = protowire.AppendTag(req1, 1, protowire.BytesType)
-	req1 = protowire.AppendString(req1, "blocks/"+blockId)
+	req1 := &iampb.GetIamPolicyRequest{Resource: "blocks/" + blockId}
+	reqBytes1, err := proto.Marshal(req1)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers: marshal request: %w", err)
+	}
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel1()
-	body1, status1, msg1, err := s.doConsoleGRPCWeb(ctx1, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", req1)
+	body1, status1, msg1, err := s.doConsoleGRPCWeb(ctx1, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", reqBytes1)
 	if err != nil {
 		return nil, fmt.Errorf("GetCodeblockMembers/GetIamPolicy: %w", err)
 	}
@@ -226,20 +303,37 @@ func (s *ProductService) GetCodeblockMembers(blockId string) ([]CodeblockMember,
 	if len(body1) < 5 {
 		return nil, nil
 	}
-	members := parseIamPolicyMembers(body1[5:])
+	policy := &iampb.Policy{}
+	if err := proto.Unmarshal(body1[5:], policy); err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers: unmarshal policy: %w", err)
+	}
+
+	seen := map[string]bool{}
+	var members []string
+	for _, b := range policy.GetBindings() {
+		for _, m := range b.GetMembers() {
+			if strings.HasPrefix(m, "user:") {
+				uid := "users/" + strings.TrimPrefix(m, "user:")
+				if !seen[uid] {
+					seen[uid] = true
+					members = append(members, uid)
+				}
+			}
+		}
+	}
 	if len(members) == 0 {
 		return nil, nil
 	}
 
 	// Step 2: BatchRetrieveMaskedUsers for avatar URLs.
-	var req2 []byte
-	for _, m := range members {
-		req2 = protowire.AppendTag(req2, 1, protowire.BytesType)
-		req2 = protowire.AppendString(req2, m)
+	req2 := &iamv2pb.BatchRetrieveMaskedUsersRequest{Users: members}
+	reqBytes2, err := proto.Marshal(req2)
+	if err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers: marshal BatchRetrieveMaskedUsers request: %w", err)
 	}
 	ctx2, cancel2 := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel2()
-	body2, status2, msg2, err := s.doConsoleGRPCWeb(ctx2, "alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", req2)
+	body2, status2, msg2, err := s.doConsoleGRPCWeb(ctx2, "alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", reqBytes2)
 	if err != nil {
 		return nil, fmt.Errorf("GetCodeblockMembers/BatchRetrieveMaskedUsers: %w", err)
 	}
@@ -249,7 +343,18 @@ func (s *ProductService) GetCodeblockMembers(blockId string) ([]CodeblockMember,
 	if len(body2) < 5 {
 		return nil, nil
 	}
-	return parseCodeblockMembers(body2[5:]), nil
+	usersResp := &iamv2pb.BatchRetrieveMaskedUsersResponse{}
+	if err := proto.Unmarshal(body2[5:], usersResp); err != nil {
+		return nil, fmt.Errorf("GetCodeblockMembers: unmarshal users response: %w", err)
+	}
+	result := make([]CodeblockMember, 0, len(usersResp.GetMaskedUsers()))
+	for _, mu := range usersResp.GetMaskedUsers() {
+		cm := codeblockMemberFromV2Masked(mu)
+		if cm.Name != "" || cm.DisplayName != "" {
+			result = append(result, cm)
+		}
+	}
+	return result, nil
 }
 
 // ListMyCodeblocks returns only the blocks published by the current user's account.
@@ -282,10 +387,13 @@ func (s *ProductService) resolvePublisherDisplayNames(ctx context.Context, block
 		return
 	}
 
-	var buf []byte
+	req := &accountsv1pb.RetrieveMaskedAccountsRequest{}
 	for id := range ids {
-		buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-		buf = protowire.AppendString(buf, "accounts/"+id)
+		req.Accounts = append(req.Accounts, "accounts/"+id)
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return
 	}
 
 	fetchCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -296,10 +404,15 @@ func (s *ProductService) resolvePublisherDisplayNames(ctx context.Context, block
 		return
 	}
 
+	maResp := &accountsv1pb.RetrieveMaskedAccountsResponse{}
+	if err := proto.Unmarshal(resp[5:], maResp); err != nil {
+		return
+	}
+
 	displayNames := make(map[string]string)
-	for _, acc := range parseMaskedAccountsResponse(resp[5:]) {
-		if acc.DisplayName != "" {
-			displayNames[acc.Name] = acc.DisplayName
+	for key, ma := range maResp.GetMaskedAccounts() {
+		if ma.GetDisplayName() != "" {
+			displayNames[key] = ma.GetDisplayName()
 		}
 	}
 
@@ -307,5 +420,139 @@ func (s *ProductService) resolvePublisherDisplayNames(ctx context.Context, block
 		if name, ok := displayNames[cb.Publisher]; ok {
 			blocks[i].PublisherDisplayName = name
 		}
+	}
+}
+
+// ── Block ↔ Codeblock conversion helpers ────────────────────────────────────
+
+// blockDetailToCodeblock maps one RetrieveBlockDetailsResponse.BlockDetail onto
+// a Codeblock, carrying over its total_installs count.
+func blockDetailToCodeblock(bd *blocksv1pb.RetrieveBlockDetailsResponse_BlockDetail) Codeblock {
+	var cb Codeblock
+	if b := bd.GetBlock(); b != nil {
+		cb = blockToCodeblock(b)
+	}
+	cb.InstallCount = bd.GetTotalInstalls()
+	return cb
+}
+
+// blockToCodeblock maps a Block message onto the app's Codeblock JSON-facing struct.
+func blockToCodeblock(b *blocksv1pb.Block) Codeblock {
+	cb := Codeblock{
+		Name:         b.GetName(),
+		DisplayName:  b.GetDisplayName(),
+		ReleaseLevel: int32(b.GetReleaseLevel()),
+		Tagline:      b.GetTagline(),
+		Publisher:    b.GetPublisher().GetAccount(),
+	}
+	if rel := b.GetReleases(); rel != nil {
+		if rel.GetBeta() != "" {
+			cb.LatestVersion = rel.GetBeta()
+		} else {
+			cb.LatestVersion = rel.GetGa()
+		}
+	}
+	if ov := b.GetOverviewDetails(); ov != nil {
+		cb.BannerURL = ov.GetBannerUri()
+		cb.Headline = ov.GetHeroStatement()
+		cb.Description = ov.GetDescription()
+		cb.Highlights = ov.GetHighlights()
+		for _, kf := range ov.GetKeyFeatures() {
+			cb.KeyFeatures = append(cb.KeyFeatures, CodeblockFeature{Title: kf.GetTitle(), Description: kf.GetDescription()})
+		}
+		for _, layer := range ov.GetCodeArchitecture() {
+			cb.CodeArchitecture = append(cb.CodeArchitecture, CodeblockLayer{Title: layer.GetTitle(), Description: layer.GetDescription()})
+		}
+		if cb.Headline == "" {
+			cb.Headline = ov.GetTagline()
+		}
+	}
+	return cb
+}
+
+// blockVersionToCodeblockVersion maps a BlockVersion message onto the app's
+// CodeblockVersion JSON-facing struct.
+func blockVersionToCodeblockVersion(bv *blocksv1pb.BlockVersion) CodeblockVersion {
+	v := CodeblockVersion{
+		Name:         bv.GetName(),
+		ReleaseLevel: int32(bv.GetReleaseLevel()),
+		ReleaseNotes: bv.GetReleaseNotes(),
+	}
+	if i := strings.LastIndex(v.Name, "/"); i >= 0 {
+		v.VersionTag = v.Name[i+1:]
+	} else {
+		v.VersionTag = v.Name
+	}
+	if v.VersionTag == "" {
+		v.VersionTag = bv.GetVersion()
+	}
+	if ct := bv.GetCreateTime(); ct != nil {
+		v.CreateTime = ct.AsTime().UTC().Format(time.RFC3339)
+	}
+	if ut := bv.GetUpdateTime(); ut != nil {
+		v.UpdateTime = ut.AsTime().UTC().Format(time.RFC3339)
+	}
+
+	// ContributedContent and SampleContent carry identical file layouts on the wire;
+	// prefer ContributedContent, falling back to SampleContent if unset.
+	content := bv.GetContributedContent()
+	if content == nil {
+		content = bv.GetSampleContent()
+	}
+	if content != nil {
+		protoFolder := CodeblockFolder{Name: "Proto"}
+		infraFolder := CodeblockFolder{Name: "Infra"}
+		buildFolder := CodeblockFolder{Name: "Build"}
+		for _, f := range content.GetProtoFiles() {
+			protoFolder.Files = append(protoFolder.Files, CodeblockFileItem{Name: f.GetFilename(), Content: string(f.GetContent())})
+		}
+		for _, f := range content.GetInfraFiles() {
+			infraFolder.Files = append(infraFolder.Files, CodeblockFileItem{Name: f.GetFilename(), Content: string(f.GetContent())})
+		}
+		for _, f := range content.GetBuildFiles() {
+			buildFolder.Files = append(buildFolder.Files, CodeblockFileItem{Name: f.GetFilename(), Content: string(f.GetContent())})
+		}
+		if len(protoFolder.Files) > 0 {
+			v.Files = append(v.Files, protoFolder)
+		}
+		if len(infraFolder.Files) > 0 {
+			v.Files = append(v.Files, infraFolder)
+		}
+		if len(buildFolder.Files) > 0 {
+			v.Files = append(v.Files, buildFolder)
+		}
+	}
+	return v
+}
+
+// instanceToCodeblockInstance maps an Instance message onto the app's
+// CodeblockInstance JSON-facing struct.
+func instanceToCodeblockInstance(inst *blocksv1pb.Instance) CodeblockInstance {
+	ci := CodeblockInstance{
+		Name:         inst.GetName(),
+		Package:      inst.GetPackage(),
+		Block:        inst.GetBlock(),
+		BlockVersion: inst.GetBlockVersion(),
+		State:        int32(inst.GetState()),
+		Entitlement:  inst.GetEntitlement(),
+	}
+	if i := strings.LastIndex(ci.Name, "/"); i >= 0 {
+		ci.ShortID = ci.Name[i+1:]
+	}
+	if ct := inst.GetCreateTime(); ct != nil {
+		ci.CreateTime = ct.AsTime().UTC().Format(time.RFC3339)
+	}
+	if ut := inst.GetUpdateTime(); ut != nil {
+		ci.UpdateTime = ut.AsTime().UTC().Format(time.RFC3339)
+	}
+	return ci
+}
+
+// codeblockMemberFromV2Masked maps alis.os.iam.v2.MaskedUser onto CodeblockMember.
+func codeblockMemberFromV2Masked(m *iamv2pb.MaskedUser) CodeblockMember {
+	return CodeblockMember{
+		Name:        m.GetName(),
+		DisplayName: strings.TrimSpace(m.GetGivenName() + " " + m.GetFamilyName()),
+		PhotoURL:    m.GetPicture(),
 	}
 }

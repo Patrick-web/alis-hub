@@ -6,7 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	accountsv1pb "alis-hub-v3/gen/go/alis/os/accounts/v1"
+	iamv2pb "alis-hub-v3/gen/go/alis/os/iam/v2"
+
+	iampb "cloud.google.com/go/iam/apiv1/iampb"
+	"google.golang.org/protobuf/proto"
 )
 
 // ── Account users (for IAM pickers) ──────────────────────────────────────────
@@ -32,11 +36,13 @@ func (s *ProductService) ListAccountUsers() ([]AccountUser, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendString(req, accountID)
+	req := &accountsv1pb.RetrieveMaskedUsersRequest{Account: accountID}
+	reqBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListAccountUsers: marshal request: %w", err)
+	}
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.accounts.v1.AccountsService/RetrieveMaskedUsers", req)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.accounts.v1.AccountsService/RetrieveMaskedUsers", reqBytes)
 	if err != nil {
 		return nil, fmt.Errorf("ListAccountUsers: %w", err)
 	}
@@ -47,9 +53,14 @@ func (s *ProductService) ListAccountUsers() ([]AccountUser, error) {
 		return nil, fmt.Errorf("ListAccountUsers: response too short")
 	}
 
-	raw := parseBatchUsersResponse(body[5:])
-	result := make([]AccountUser, 0, len(raw))
-	for _, u := range raw {
+	resp := &accountsv1pb.RetrieveMaskedUsersResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListAccountUsers: unmarshal response: %w", err)
+	}
+
+	result := make([]AccountUser, 0, len(resp.GetMaskedUsers()))
+	for _, m := range resp.GetMaskedUsers() {
+		u := iamUserFromAccountsMasked(m)
 		displayName := strings.TrimSpace(u.FirstName + " " + u.LastName)
 		if displayName == "" {
 			displayName = u.Email
@@ -106,11 +117,13 @@ func (s *ProductService) GetBlockAccessData(blockId string) (*BlockAccessData, e
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendString(req, "blocks/"+blockId)
+	getReq := &iampb.GetIamPolicyRequest{Resource: "blocks/" + blockId}
+	getReqBytes, err := proto.Marshal(getReq)
+	if err != nil {
+		return nil, fmt.Errorf("GetBlockAccessData: marshal request: %w", err)
+	}
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", req)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", getReqBytes)
 	if err != nil {
 		return nil, fmt.Errorf("GetBlockAccessData: %w", err)
 	}
@@ -121,7 +134,11 @@ func (s *ProductService) GetBlockAccessData(blockId string) (*BlockAccessData, e
 		return nil, fmt.Errorf("GetBlockAccessData: response too short")
 	}
 
-	bindings := parseIamPolicy(body[5:])
+	policy := &iampb.Policy{}
+	if err := proto.Unmarshal(body[5:], policy); err != nil {
+		return nil, fmt.Errorf("GetBlockAccessData: unmarshal response: %w", err)
+	}
+	bindings := policyBindingsToIamBindings(policy)
 
 	userIDs := map[string]struct{}{}
 	for _, b := range bindings {
@@ -134,15 +151,20 @@ func (s *ProductService) GetBlockAccessData(blockId string) (*BlockAccessData, e
 
 	userMap := map[string]iamUser{}
 	if len(userIDs) > 0 {
-		var buf []byte
+		usersReq := &iamv2pb.BatchRetrieveMaskedUsersRequest{}
 		for id := range userIDs {
-			buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-			buf = protowire.AppendString(buf, "users/"+id)
+			usersReq.Users = append(usersReq.Users, "users/"+id)
 		}
-		resp, st, _, batchErr := s.doConsoleGRPCWeb(ctx, "alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
-		if batchErr == nil && st == 0 && len(resp) >= 5 {
-			for _, u := range parseBatchUsersResponse(resp[5:]) {
-				userMap[strings.TrimPrefix(u.Name, "users/")] = u
+		if usersReqBytes, mErr := proto.Marshal(usersReq); mErr == nil {
+			resp, st, _, batchErr := s.doConsoleGRPCWeb(ctx, "alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", usersReqBytes)
+			if batchErr == nil && st == 0 && len(resp) >= 5 {
+				usersResp := &iamv2pb.BatchRetrieveMaskedUsersResponse{}
+				if proto.Unmarshal(resp[5:], usersResp) == nil {
+					for _, m := range usersResp.GetMaskedUsers() {
+						u := iamUserFromV2Masked(m)
+						userMap[strings.TrimPrefix(u.Name, "users/")] = u
+					}
+				}
 			}
 		}
 	}
@@ -182,11 +204,13 @@ func (s *ProductService) UpdateBlockAccess(blockId, role, member string, grant b
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	var getReq []byte
-	getReq = protowire.AppendTag(getReq, 1, protowire.BytesType)
-	getReq = protowire.AppendString(getReq, "blocks/"+blockId)
+	getReq := &iampb.GetIamPolicyRequest{Resource: "blocks/" + blockId}
+	getReqBytes, err := proto.Marshal(getReq)
+	if err != nil {
+		return fmt.Errorf("UpdateBlockAccess: marshal GetIamPolicy request: %w", err)
+	}
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", getReq)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/GetIamPolicy", getReqBytes)
 	if err != nil {
 		return fmt.Errorf("UpdateBlockAccess/GetIamPolicy: %w", err)
 	}
@@ -194,11 +218,13 @@ func (s *ProductService) UpdateBlockAccess(blockId, role, member string, grant b
 		return fmt.Errorf("UpdateBlockAccess/GetIamPolicy: grpc %d: %s", grpcStatus, grpcMsg)
 	}
 
-	var bindings []iamBinding
-	var etag []byte
+	policy := &iampb.Policy{}
 	if len(body) >= 5 {
-		bindings, etag = parseIamPolicyFull(body[5:])
+		if err := proto.Unmarshal(body[5:], policy); err != nil {
+			return fmt.Errorf("UpdateBlockAccess: unmarshal policy: %w", err)
+		}
 	}
+	bindings := policyBindingsToIamBindings(policy)
 
 	if grant {
 		bindings = blockAddMember(bindings, role, member)
@@ -206,14 +232,19 @@ func (s *ProductService) UpdateBlockAccess(blockId, role, member string, grant b
 		bindings = blockRemoveMember(bindings, role, member)
 	}
 
-	policyBytes := marshalBlockIamPolicy(bindings, etag)
-	var setReq []byte
-	setReq = protowire.AppendTag(setReq, 1, protowire.BytesType)
-	setReq = protowire.AppendString(setReq, "blocks/"+blockId)
-	setReq = protowire.AppendTag(setReq, 2, protowire.BytesType)
-	setReq = protowire.AppendBytes(setReq, policyBytes)
+	setReq := &iampb.SetIamPolicyRequest{
+		Resource: "blocks/" + blockId,
+		Policy: &iampb.Policy{
+			Etag:     policy.GetEtag(),
+			Bindings: iamBindingsToPolicyBindings(bindings),
+		},
+	}
+	setReqBytes, err := proto.Marshal(setReq)
+	if err != nil {
+		return fmt.Errorf("UpdateBlockAccess: marshal SetIamPolicy request: %w", err)
+	}
 
-	_, grpcStatus, grpcMsg, err = s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/SetIamPolicy", setReq)
+	_, grpcStatus, grpcMsg, err = s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/SetIamPolicy", setReqBytes)
 	if err != nil {
 		return fmt.Errorf("UpdateBlockAccess/SetIamPolicy: %w", err)
 	}
@@ -239,59 +270,6 @@ func blockRoleLabel(role string) string {
 		}
 		return strings.ToUpper(r[:1]) + r[1:]
 	}
-}
-
-// parseIamPolicyFull extracts both bindings (field 4) and etag (field 3) from a Policy proto.
-func parseIamPolicyFull(data []byte) ([]iamBinding, []byte) {
-	var bindings []iamBinding
-	var etag []byte
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			switch num {
-			case 3:
-				etag = append([]byte(nil), b...)
-			case 4:
-				bindings = append(bindings, parseIamBinding(b))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return bindings, etag
-}
-
-func marshalBlockIamPolicy(bindings []iamBinding, etag []byte) []byte {
-	var buf []byte
-	if len(etag) > 0 {
-		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
-		buf = protowire.AppendBytes(buf, etag)
-	}
-	for _, b := range bindings {
-		var bindBuf []byte
-		bindBuf = protowire.AppendTag(bindBuf, 1, protowire.BytesType)
-		bindBuf = protowire.AppendString(bindBuf, b.Role)
-		for _, m := range b.Members {
-			bindBuf = protowire.AppendTag(bindBuf, 2, protowire.BytesType)
-			bindBuf = protowire.AppendString(bindBuf, m)
-		}
-		buf = protowire.AppendTag(buf, 4, protowire.BytesType)
-		buf = protowire.AppendBytes(buf, bindBuf)
-	}
-	return buf
 }
 
 func blockAddMember(bindings []iamBinding, role, member string) []iamBinding {

@@ -9,7 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	neuronsv1pb "alis-hub-v3/gen/go/alis/os/neurons/v1"
+	productsv1pb "alis-hub-v3/gen/go/alis/os/products/v1"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // GetEnvironmentVariables fetches the variables for a single environment.
@@ -19,9 +23,11 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 		return nil, err
 	}
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, envName)
+	req := &productsv1pb.GetEnvironmentRequest{Name: envName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetEnvironmentVariables: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -36,7 +42,17 @@ func (s *ProductService) GetEnvironmentVariables(envName string) ([]EnvVariable,
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetEnvironmentVariables: response too short (%d bytes)", len(body))
 	}
-	return parseEnvVariablesFromGetEnvironment(body[5:])
+	env := &productsv1pb.Environment{}
+	if err := proto.Unmarshal(body[5:], env); err != nil {
+		return nil, fmt.Errorf("GetEnvironmentVariables: unmarshal response: %w", err)
+	}
+	vars := make([]EnvVariable, 0, len(env.GetEnvs()))
+	for _, e := range env.GetEnvs() {
+		if e.GetName() != "" {
+			vars = append(vars, EnvVariable{Label: e.GetName(), Value: e.GetValue()})
+		}
+	}
+	return vars, nil
 }
 
 // retrieveDeploymentEnvs calls DeploymentsService/RetrieveDeploymentEnvs with
@@ -46,11 +62,11 @@ func (s *ProductService) retrieveDeploymentEnvs(envName string) ([]DeploymentEnv
 		return nil, err
 	}
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, envName)
-	buf = protowire.AppendTag(buf, 3, protowire.VarintType)
-	buf = protowire.AppendVarint(buf, 1) // migrated = true
+	req := &neuronsv1pb.RetrieveDeploymentEnvsRequest{Environment: envName, Migrated: true}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("retrieveDeploymentEnvs: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -65,100 +81,38 @@ func (s *ProductService) retrieveDeploymentEnvs(envName string) ([]DeploymentEnv
 	if len(body) < 5 {
 		return nil, fmt.Errorf("retrieveDeploymentEnvs: response too short (%d bytes)", len(body))
 	}
-
-	// Parse top-level field 2 (repeated Env) from the response payload.
-	data := body[5:]
-	var vars []DeploymentEnvVar
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if typ != protowire.BytesType || num != 2 {
-			continue
-		}
-		// Parse Env sub-message: field 1=name, field 2=value, field 3=managed
-		var v DeploymentEnvVar
-		sub := b
-		for len(sub) > 0 {
-			fn, ft, fn2 := protowire.ConsumeTag(sub)
-			if fn2 < 0 {
-				break
-			}
-			sub = sub[fn2:]
-			switch ft {
-			case protowire.BytesType:
-				sb, sm := protowire.ConsumeBytes(sub)
-				if sm < 0 {
-					sub = nil
-					break
-				}
-				sub = sub[sm:]
-				switch fn {
-				case 1:
-					v.Name = string(sb)
-				case 2:
-					v.Value = string(sb)
-				}
-			case protowire.VarintType:
-				sv, sm := protowire.ConsumeVarint(sub)
-				if sm < 0 {
-					sub = nil
-					break
-				}
-				sub = sub[sm:]
-				if fn == 3 {
-					v.Managed = sv != 0
-				}
-			default:
-				sm := protowire.ConsumeFieldValue(fn, ft, sub)
-				if sm < 0 {
-					sub = nil
-					break
-				}
-				sub = sub[sm:]
-			}
-		}
-		if v.Name != "" {
-			vars = append(vars, v)
+	resp := &neuronsv1pb.RetrieveDeploymentEnvsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("retrieveDeploymentEnvs: unmarshal response: %w", err)
+	}
+	vars := make([]DeploymentEnvVar, 0, len(resp.GetEnvs()))
+	for _, e := range resp.GetEnvs() {
+		if e.GetName() != "" {
+			vars = append(vars, DeploymentEnvVar{Name: e.GetName(), Value: e.GetValue(), Managed: e.GetManaged()})
 		}
 	}
 	return vars, nil
 }
 
 // SetEnvironmentVariables replaces all variables on an environment by calling
-// UpdateEnvironment with an update_mask of "envs". Variables are field 8
-// (repeated Environment.Env sub-messages: field 1=name/label, field 2=value).
+// UpdateEnvironment with an update_mask of "envs".
 func (s *ProductService) SetEnvironmentVariables(envName string, vars []EnvVariable) error {
 	if err := s.initTokens(); err != nil {
 		return err
 	}
 
-	// Build environment sub-message with name + all variables
-	var envBuf []byte
-	envBuf = protowire.AppendTag(envBuf, 1, protowire.BytesType)
-	envBuf = protowire.AppendString(envBuf, envName)
+	env := &productsv1pb.Environment{Name: envName}
 	for _, v := range vars {
-		var varBuf []byte
-		varBuf = protowire.AppendTag(varBuf, 1, protowire.BytesType)
-		varBuf = protowire.AppendString(varBuf, v.Label)
-		varBuf = protowire.AppendTag(varBuf, 2, protowire.BytesType)
-		varBuf = protowire.AppendString(varBuf, v.Value)
-		envBuf = protowire.AppendTag(envBuf, 8, protowire.BytesType)
-		envBuf = protowire.AppendBytes(envBuf, varBuf)
+		env.Envs = append(env.Envs, &productsv1pb.Environment_Env{Name: v.Label, Value: v.Value})
 	}
-
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, envBuf)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, marshalFieldMask([]string{"envs"}))
+	req := &productsv1pb.UpdateEnvironmentRequest{
+		Environment: env,
+		UpdateMask:  &fieldmaskpb.FieldMask{Paths: []string{"envs"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("SetEnvironmentVariables: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -173,36 +127,35 @@ func (s *ProductService) SetEnvironmentVariables(envName string, vars []EnvVaria
 	return nil
 }
 
+// environmentToEnvInfo maps a products.v1.Environment onto the app's EnvInfo JSON-facing struct.
+func environmentToEnvInfo(env *productsv1pb.Environment) *EnvInfo {
+	return &EnvInfo{
+		Name:        env.GetName(),
+		DisplayName: env.GetDisplayName(),
+		State:       int32(env.GetState()),
+		EnvType:     int32(env.GetType()),
+		GCPProject:  convertGoogleProject(env.GetGoogleProject()),
+	}
+}
+
 // CreateEnvironment creates a new environment under the given org/product.
 // envType: 1=DEV, 2=STAGING, 3=PROD. region must be a valid GCP region.
 func (s *ProductService) CreateEnvironment(org, product, displayName, region string, envType int32) (*EnvInfo, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
-
-	// Build google_project sub-message (Environment field 5): field 4=region
-	var gcpBuf []byte
-	gcpBuf = protowire.AppendTag(gcpBuf, 4, protowire.BytesType)
-	gcpBuf = protowire.AppendString(gcpBuf, region)
-
-	// Build environment sub-message: field 2=displayName, field 5=googleProject, field 7=type
-	var envBuf []byte
-	envBuf = protowire.AppendTag(envBuf, 2, protowire.BytesType)
-	envBuf = protowire.AppendString(envBuf, displayName)
-	envBuf = protowire.AppendTag(envBuf, 5, protowire.BytesType)
-	envBuf = protowire.AppendBytes(envBuf, gcpBuf)
-	if envType != 0 {
-		envBuf = protowire.AppendTag(envBuf, 7, protowire.VarintType)
-		envBuf = protowire.AppendVarint(envBuf, uint64(envType))
+	req := &productsv1pb.CreateEnvironmentRequest{
+		Parent: fmt.Sprintf("organisations/%s/products/%s", org, product),
+		Environment: &productsv1pb.Environment{
+			DisplayName:   displayName,
+			GoogleProject: &productsv1pb.GoogleProject{Region: region},
+			Type:          productsv1pb.Environment_Type(envType),
+		},
 	}
-
-	// CreateEnvironmentRequest: field 1=parent, field 2=environment
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, parent)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, envBuf)
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("CreateEnvironment: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -217,7 +170,11 @@ func (s *ProductService) CreateEnvironment(org, product, displayName, region str
 	if len(body) < 5 {
 		return nil, fmt.Errorf("CreateEnvironment: response too short (%d bytes)", len(body))
 	}
-	return parseEnvInfoFromEnvironment(body[5:])
+	env := &productsv1pb.Environment{}
+	if err := proto.Unmarshal(body[5:], env); err != nil {
+		return nil, fmt.Errorf("CreateEnvironment: unmarshal response: %w", err)
+	}
+	return environmentToEnvInfo(env), nil
 }
 
 // UpdateEnvironment updates the displayName of an existing environment.
@@ -227,19 +184,14 @@ func (s *ProductService) UpdateEnvironment(envName, displayName string) (*EnvInf
 		return nil, err
 	}
 
-	// Build environment sub-message: field 1=name, field 2=displayName
-	var envBuf []byte
-	envBuf = protowire.AppendTag(envBuf, 1, protowire.BytesType)
-	envBuf = protowire.AppendString(envBuf, envName)
-	envBuf = protowire.AppendTag(envBuf, 2, protowire.BytesType)
-	envBuf = protowire.AppendString(envBuf, displayName)
-
-	// UpdateEnvironmentRequest: field 1=environment, field 2=update_mask
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, envBuf)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, marshalFieldMask([]string{"display_name"}))
+	req := &productsv1pb.UpdateEnvironmentRequest{
+		Environment: &productsv1pb.Environment{Name: envName, DisplayName: displayName},
+		UpdateMask:  &fieldmaskpb.FieldMask{Paths: []string{"display_name"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateEnvironment: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -254,7 +206,11 @@ func (s *ProductService) UpdateEnvironment(envName, displayName string) (*EnvInf
 	if len(body) < 5 {
 		return nil, fmt.Errorf("UpdateEnvironment: response too short (%d bytes)", len(body))
 	}
-	return parseEnvInfoFromEnvironment(body[5:])
+	env := &productsv1pb.Environment{}
+	if err := proto.Unmarshal(body[5:], env); err != nil {
+		return nil, fmt.Errorf("UpdateEnvironment: unmarshal response: %w", err)
+	}
+	return environmentToEnvInfo(env), nil
 }
 
 // DeleteEnvironment deletes the environment with the given full resource name.
@@ -263,9 +219,11 @@ func (s *ProductService) DeleteEnvironment(envName string) error {
 		return err
 	}
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, envName)
+	req := &productsv1pb.DeleteEnvironmentRequest{Name: envName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("DeleteEnvironment: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -291,9 +249,11 @@ func (s *ProductService) generateServiceAccountKey(envName string) ([]byte, erro
 		return nil, err
 	}
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, envName)
+	req := &productsv1pb.GenerateServiceAccountKeyRequest{Resource: envName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("generateServiceAccountKey: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -308,57 +268,15 @@ func (s *ProductService) generateServiceAccountKey(envName string) ([]byte, erro
 	if len(body) < 5 {
 		return nil, fmt.Errorf("generateServiceAccountKey: response too short (%d bytes)", len(body))
 	}
-
-	// Top-level field 1 = ServiceAccountKey message; within it, field 3 = private_key_data bytes.
-	data := body[5:]
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		val, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num != 1 {
-			continue
-		}
-		sub := val
-		for len(sub) > 0 {
-			subNum, subTyp, subN := protowire.ConsumeTag(sub)
-			if subN < 0 {
-				break
-			}
-			sub = sub[subN:]
-			if subTyp != protowire.BytesType {
-				sm := protowire.ConsumeFieldValue(subNum, subTyp, sub)
-				if sm < 0 {
-					break
-				}
-				sub = sub[sm:]
-				continue
-			}
-			subVal, sm := protowire.ConsumeBytes(sub)
-			if sm < 0 {
-				break
-			}
-			sub = sub[sm:]
-			if subNum == 3 {
-				return subVal, nil
-			}
-		}
+	resp := &productsv1pb.GenerateServiceAccountKeyResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("generateServiceAccountKey: unmarshal response: %w", err)
 	}
-	return nil, fmt.Errorf("generateServiceAccountKey: no private_key_data in response")
+	keyData := resp.GetServiceAccountKey().GetPrivateKeyData()
+	if len(keyData) == 0 {
+		return nil, fmt.Errorf("generateServiceAccountKey: no private_key_data in response")
+	}
+	return keyData, nil
 }
 
 // SwitchEnvironment rewrites the local .alis/.env and .alis/key.json files to

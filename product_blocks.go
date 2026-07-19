@@ -1,7 +1,6 @@
 package main
 
 import (
-	"alis-hub-v3/internal/alisclient"
 	"context"
 	"fmt"
 	"os"
@@ -12,7 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
+	neuronsv1pb "alis-hub-v3/gen/go/alis/os/neurons/v1"
+	productsv1pb "alis-hub-v3/gen/go/alis/os/products/v1"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+
+	longrunningpb "cloud.google.com/go/longrunning/autogen/longrunningpb"
 )
 
 // ListInstallOrgs returns all organisations the user belongs to (for install location picker).
@@ -20,7 +26,13 @@ func (s *ProductService) ListInstallOrgs() ([]Organisation, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	protoBytes := marshalListOrganisationsRequest([]string{"name", "display_name"})
+	req := &productsv1pb.ListOrganisationsRequest{
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name"}},
+	}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListInstallOrgs: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.products.v1.OrganisationsService/ListOrganisations", protoBytes)
@@ -33,7 +45,15 @@ func (s *ProductService) ListInstallOrgs() ([]Organisation, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListInstallOrgs: response too short (%d bytes)", len(body))
 	}
-	return parseListOrganisationsResponse(body[5:])
+	resp := &productsv1pb.ListOrganisationsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListInstallOrgs: unmarshal response: %w", err)
+	}
+	orgs := make([]Organisation, 0, len(resp.GetOrganisations()))
+	for _, o := range resp.GetOrganisations() {
+		orgs = append(orgs, Organisation{Name: o.GetName(), DisplayName: o.GetDisplayName()})
+	}
+	return orgs, nil
 }
 
 // ListInstallNeurons returns the neurons (packages) in the given org/product for install location picker.
@@ -41,10 +61,11 @@ func (s *ProductService) ListInstallNeurons(org, product string) ([]InstallNeuro
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, parent)
+	req := &neuronsv1pb.ListNeuronsRequest{Parent: fmt.Sprintf("organisations/%s/products/%s", org, product)}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListInstallNeurons: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.neurons.v1.NeuronsService/ListNeurons", buf)
@@ -57,7 +78,46 @@ func (s *ProductService) ListInstallNeurons(org, product string) ([]InstallNeuro
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListInstallNeurons: response too short (%d bytes)", len(body))
 	}
-	return parseInstallNeuronsResponse(body[5:]), nil
+	resp := &neuronsv1pb.ListNeuronsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListInstallNeurons: unmarshal response: %w", err)
+	}
+	neurons := make([]InstallNeuron, 0, len(resp.GetNeurons()))
+	for _, n := range resp.GetNeurons() {
+		neuron := installNeuronFromProto(n)
+		if neuron.Name != "" {
+			neurons = append(neurons, neuron)
+		}
+	}
+	return neurons, nil
+}
+
+// installNeuronFromProto maps a neurons.v1.Neuron onto InstallNeuron. Package is derived
+// from the neuron resource name when the server doesn't set it; there is no display_name
+// field on Neuron, so the neuron ID segment of the name is used instead.
+func installNeuronFromProto(n *neuronsv1pb.Neuron) InstallNeuron {
+	out := InstallNeuron{Name: n.GetName(), Package: n.GetPackage()}
+	if out.Name == "" {
+		return out
+	}
+	if out.Package == "" {
+		out.Package = neuronNameToPackage(out.Name)
+	}
+	if i := strings.LastIndex(out.Name, "/"); i >= 0 {
+		out.DisplayName = out.Name[i+1:]
+	}
+	return out
+}
+
+// neuronNameToPackage converts "organisations/{org}/products/{product}/neurons/{id}"
+// to "packages/{org}.{product}.{id}" where the neuron ID's "-" are replaced with ".".
+func neuronNameToPackage(neuronName string) string {
+	parts := strings.Split(neuronName, "/")
+	if len(parts) != 6 {
+		return ""
+	}
+	neuronID := strings.ReplaceAll(parts[5], "-", ".")
+	return "packages/" + parts[1] + "." + parts[3] + "." + neuronID
 }
 
 // ListBlockPlans returns the available entitlement plans for a block.
@@ -65,12 +125,14 @@ func (s *ProductService) ListBlockPlans(blockId string) ([]BlockPlan, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	fm := marshalFieldMask([]string{"name", "display_name"})
-	buf = protowire.AppendTag(buf, 5, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
+	req := &blocksv1pb.ListEntitlementPlansRequest{
+		Parent:   "blocks/" + blockId,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListBlockPlans: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.EntitlementPlansService/ListEntitlementPlans", buf)
@@ -83,7 +145,23 @@ func (s *ProductService) ListBlockPlans(blockId string) ([]BlockPlan, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListBlockPlans: response too short (%d bytes)", len(body))
 	}
-	return parseBlockPlansResponse(body[5:]), nil
+	resp := &blocksv1pb.ListEntitlementPlansResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListBlockPlans: unmarshal response: %w", err)
+	}
+	plans := make([]BlockPlan, 0, len(resp.GetEntitlementPlans()))
+	for _, e := range resp.GetEntitlementPlans() {
+		p := BlockPlan{Name: e.GetName(), DisplayName: e.GetDisplayName()}
+		if p.DisplayName == "" && p.Name != "" {
+			if i := strings.LastIndex(p.Name, "/"); i >= 0 {
+				p.DisplayName = p.Name[i+1:]
+			}
+		}
+		if p.Name != "" {
+			plans = append(plans, p)
+		}
+	}
+	return plans, nil
 }
 
 // DoInstallBlock creates an entitlement, creates the instance, then runs the installation pipeline.
@@ -141,16 +219,12 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 		return nil, fmt.Errorf("DoInstallBlock: install block: %w", err)
 	}
 
-	// Step 5: Poll the install operation until done; capture the final response data.
-	opData, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
-	if err != nil {
+	// Step 5: Poll the install operation until done.
+	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName); err != nil {
 		return nil, fmt.Errorf("DoInstallBlock: operation failed: %w", err)
 	}
 
-	// Suppress unused variable — opData is kept for future use but branch is fetched via GetInstance.
-	_ = opData
-
-	// Step 6: Fetch the instance to get git_branch (field 6 of Instance).
+	// Step 6: Fetch the instance to get its git branch.
 	branchName, _ := s.getInstanceGitBranch(ctx, instanceName)
 
 	// Derive local repo path from the package: packages/{org}.{product}.{...} → ~/alis.build/{org}/build/{product}
@@ -166,13 +240,14 @@ func (s *ProductService) DoInstallBlock(params InstallBlockParams) (*InstallBloc
 
 // getInstanceGitBranch calls InstancesService/GetInstance and returns the git_branch field.
 func (s *ProductService) getInstanceGitBranch(ctx context.Context, instanceName string) (string, error) {
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	fm := marshalFieldMask([]string{"git_branch"})
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
-
+	req := &blocksv1pb.GetInstanceRequest{
+		Name:     instanceName,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"git_branch"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("marshal request: %w", err)
+	}
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/GetInstance", buf)
 	if err != nil {
 		return "", err
@@ -183,8 +258,11 @@ func (s *ProductService) getInstanceGitBranch(ctx context.Context, instanceName 
 	if len(body) < 5 {
 		return "", fmt.Errorf("response too short")
 	}
-	// Instance.git_branch is field 6.
-	return parseStringFieldN(body[5:], 6), nil
+	inst := &blocksv1pb.Instance{}
+	if err := proto.Unmarshal(body[5:], inst); err != nil {
+		return "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	return inst.GetGitBranch(), nil
 }
 
 // packageToRepoPath converts a package resource name to the local alis build repo path.
@@ -219,36 +297,37 @@ func packageToDefineRepoPath(pkg string) string {
 
 func (s *ProductService) findExistingEntitlement(ctx context.Context, blockId, accountID string) (string, error) {
 	filter := fmt.Sprintf("Entitlement.account = '%s' AND Entitlement.state = REDEEMABLE", accountID)
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 6, protowire.BytesType)
-	buf = protowire.AppendString(buf, filter)
+	req := &blocksv1pb.ListEntitlementsRequest{Parent: "blocks/" + blockId, Filter: filter}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", nil // ignore errors, just proceed to create
+	}
 	body, grpcStatus, _, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.EntitlementsService/ListEntitlements", buf)
 	if err != nil || grpcStatus != 0 || len(body) < 5 {
 		return "", nil // ignore errors, just proceed to create
 	}
-	return parseFirstEntitlementName(body[5:]), nil
+	resp := &blocksv1pb.ListEntitlementsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil || len(resp.GetEntitlements()) == 0 {
+		return "", nil
+	}
+	return resp.GetEntitlements()[0].GetName(), nil
 }
 
 func (s *ProductService) createEntitlement(ctx context.Context, blockId, planName, accountID string) (string, error) {
-	// Entitlement sub-message: f2=entitlement_plan_reference, f3=account, f8=type(2=PLAN_USE).
-	// Matches what the real console sends on install (verified against its JS bundle); state
-	// (f7) is intentionally left unset there too — the server defaults it on create.
-	var entMsg []byte
-	entMsg = protowire.AppendTag(entMsg, 2, protowire.BytesType)
-	entMsg = protowire.AppendString(entMsg, planName)
-	entMsg = protowire.AppendTag(entMsg, 3, protowire.BytesType)
-	entMsg = protowire.AppendString(entMsg, accountID)
-	entMsg = protowire.AppendTag(entMsg, 8, protowire.VarintType)
-	entMsg = protowire.AppendVarint(entMsg, 2)
-
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, entMsg)
-
+	// Type=2 (PLAN_USE) matches what the real console sends on install (verified against its
+	// JS bundle); state is intentionally left unset there too — the server defaults it on create.
+	req := &blocksv1pb.CreateEntitlementRequest{
+		Parent: "blocks/" + blockId,
+		Entitlement: &blocksv1pb.Entitlement{
+			EntitlementPlanReference: planName,
+			Account:                  accountID,
+			Type:                     blocksv1pb.Entitlement_Type(2),
+		},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", err
+	}
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.EntitlementsService/CreateEntitlement", buf)
 	if err != nil {
 		return "", err
@@ -259,22 +338,22 @@ func (s *ProductService) createEntitlement(ctx context.Context, blockId, planNam
 	if len(body) < 5 {
 		return "", fmt.Errorf("response too short (%d bytes)", len(body))
 	}
-	name := parseStringField1(body[5:])
-	if name == "" {
+	ent := &blocksv1pb.Entitlement{}
+	if err := proto.Unmarshal(body[5:], ent); err != nil {
+		return "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	if ent.GetName() == "" {
 		return "", fmt.Errorf("empty entitlement name in response")
 	}
-	return name, nil
+	return ent.GetName(), nil
 }
 
 func (s *ProductService) addBlock(ctx context.Context, blockId, pkg, entitlement string) (string, error) {
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendString(buf, pkg)
-	buf = protowire.AppendTag(buf, 3, protowire.BytesType)
-	buf = protowire.AppendString(buf, entitlement)
-
+	req := &blocksv1pb.AddBlockRequest{Block: "blocks/" + blockId, Package: pkg, Entitlement: entitlement}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", err
+	}
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/AddBlock", buf)
 	if err != nil {
 		return "", err
@@ -285,31 +364,28 @@ func (s *ProductService) addBlock(ctx context.Context, blockId, pkg, entitlement
 	if len(body) < 5 {
 		return "", fmt.Errorf("response too short (%d bytes)", len(body))
 	}
-	name := parseStringField1(body[5:])
-	if name == "" {
+	resp := &blocksv1pb.AddBlockResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	if resp.GetInstance() == "" {
 		return "", fmt.Errorf("empty instance name in AddBlock response")
 	}
-	return name, nil
+	return resp.GetInstance(), nil
 }
 
 func (s *ProductService) installBlockLRO(ctx context.Context, blockId, pkg, instanceName, buildFolder, blockVersion string) (string, error) {
-	// BlocksService/InstallBlock: f1=block, f2=package, f3=build_folder, f4=instance, f5=block_version
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, "blocks/"+blockId)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendString(buf, pkg)
-	if buildFolder != "" {
-		buf = protowire.AppendTag(buf, 3, protowire.BytesType)
-		buf = protowire.AppendString(buf, buildFolder)
+	req := &blocksv1pb.InstallBlockRequest{
+		Block:        "blocks/" + blockId,
+		Package:      pkg,
+		BuildFolder:  buildFolder,
+		Instance:     instanceName,
+		BlockVersion: blockVersion,
 	}
-	buf = protowire.AppendTag(buf, 4, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	if blockVersion != "" {
-		buf = protowire.AppendTag(buf, 5, protowire.BytesType)
-		buf = protowire.AppendString(buf, blockVersion)
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", err
 	}
-
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/InstallBlock", buf)
 	if err != nil {
 		return "", err
@@ -320,20 +396,26 @@ func (s *ProductService) installBlockLRO(ctx context.Context, blockId, pkg, inst
 	if len(body) < 5 {
 		return "", fmt.Errorf("response too short (%d bytes)", len(body))
 	}
-	// Response is a google.longrunning.Operation — field 1 = name.
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return "", fmt.Errorf("empty operation name in InstallBlock response")
 	}
-	return opName, nil
+	return op.GetName(), nil
 }
 
-// pollOperation polls until the LRO is done and returns the raw proto bytes of the
-// final Operation (after the 5-byte gRPC frame header). Returns an error if the
-// operation fails or the context times out.
-// method is the full gRPC method path for GetOperation on the relevant service,
-// e.g. "alis.bl.blocks.v1.BlocksService/GetOperation" or "google.longrunning.Operations/GetOperation".
-func (s *ProductService) pollOperation(ctx context.Context, method string, opName string) ([]byte, error) {
+// pollOperation polls until the LRO is done and returns the final Operation. Returns an
+// error if the operation fails or the context times out. method is the full gRPC method
+// path for GetOperation on the relevant service, e.g. "alis.bl.blocks.v1.BlocksService/GetOperation"
+// or "google.longrunning.Operations/GetOperation".
+func (s *ProductService) pollOperation(ctx context.Context, method string, opName string) (*longrunningpb.Operation, error) {
+	req := &longrunningpb.GetOperationRequest{Name: opName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("GetOperation: marshal request: %w", err)
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -341,8 +423,7 @@ func (s *ProductService) pollOperation(ctx context.Context, method string, opNam
 		case <-time.After(3 * time.Second):
 		}
 
-		body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
-			method, alisclient.MarshalGetOperationRequest(opName))
+		body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, method, buf)
 		if err != nil {
 			return nil, fmt.Errorf("GetOperation: %w", err)
 		}
@@ -352,13 +433,15 @@ func (s *ProductService) pollOperation(ctx context.Context, method string, opNam
 		if len(body) < 5 {
 			continue
 		}
-		data := body[5:]
-		done, errMsg := parseOperationStatus(data)
-		if errMsg != "" {
-			return nil, fmt.Errorf("operation error: %s", errMsg)
+		op := &longrunningpb.Operation{}
+		if err := proto.Unmarshal(body[5:], op); err != nil {
+			return nil, fmt.Errorf("GetOperation: unmarshal response: %w", err)
 		}
-		if done {
-			return data, nil
+		if opErr := op.GetError(); opErr != nil && opErr.GetMessage() != "" {
+			return nil, fmt.Errorf("operation error: %s", opErr.GetMessage())
+		}
+		if op.GetDone() {
+			return op, nil
 		}
 	}
 }
@@ -382,13 +465,15 @@ func (s *ProductService) MergeBlockInstance(instanceName string) (*MergeBlockBra
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	buf = protowire.AppendTag(buf, 2, protowire.VarintType)
-	buf = protowire.AppendVarint(buf, 1) // merge_build_repository = true
-	buf = protowire.AppendTag(buf, 3, protowire.VarintType)
-	buf = protowire.AppendVarint(buf, 1) // merge_define_repository = true
+	req := &blocksv1pb.MergeBlockBranchRequest{
+		Instance:              instanceName,
+		MergeBuildRepository:  true,
+		MergeDefineRepository: true,
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
 		"alis.bl.blocks.v1.InstancesService/MergeBlockBranch", buf)
@@ -401,360 +486,28 @@ func (s *ProductService) MergeBlockInstance(instanceName string) (*MergeBlockBra
 	if len(body) < 5 {
 		return nil, fmt.Errorf("response too short (%d bytes)", len(body))
 	}
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return nil, fmt.Errorf("empty operation name in MergeBlockBranch response")
 	}
-	data, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	finalOp, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName())
 	if err != nil {
 		return nil, err
 	}
-	return parseMergeBlockBranchResponse(data), nil
-}
 
-// parseMergeBlockBranchResponse extracts MergeBlockBranchResponse{branch=1,
-// build_commit_sha=2, define_commit_sha=3} from a completed Operation's Any response
-// (field 5), mirroring parseInstallBlockBranch's approach for InstallBlockResponse.
-func parseMergeBlockBranchResponse(data []byte) *MergeBlockBranchResult {
-	out := &MergeBlockBranchResult{}
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num != 5 { // field 5 = response (google.protobuf.Any)
-			continue
-		}
-		anyData := b
-		for len(anyData) > 0 {
-			fn, ftyp, fn2 := protowire.ConsumeTag(anyData)
-			if fn2 < 0 {
-				break
-			}
-			anyData = anyData[fn2:]
-			if ftyp != protowire.BytesType {
-				m := protowire.ConsumeFieldValue(fn, ftyp, anyData)
-				if m < 0 {
-					break
-				}
-				anyData = anyData[m:]
-				continue
-			}
-			ab, am := protowire.ConsumeBytes(anyData)
-			if am < 0 {
-				break
-			}
-			anyData = anyData[am:]
-			if fn == 2 { // value bytes = serialized MergeBlockBranchResponse
-				out.Branch = parseStringFieldN(ab, 1)
-				out.BuildCommitSHA = parseStringFieldN(ab, 2)
-				out.DefineCommitSHA = parseStringFieldN(ab, 3)
-				return out
-			}
+	result := &MergeBlockBranchResult{}
+	if resp := finalOp.GetResponse(); resp != nil {
+		mbr := &blocksv1pb.MergeBlockBranchResponse{}
+		if err := resp.UnmarshalTo(mbr); err == nil {
+			result.Branch = mbr.GetBranch()
+			result.BuildCommitSHA = mbr.GetBuildCommitSha()
+			result.DefineCommitSHA = mbr.GetDefineCommitSha()
 		}
 	}
-	return out
-}
-
-// parseStringFieldN extracts field n (string/bytes) from a proto message.
-func parseStringFieldN(data []byte, fieldNum protowire.Number) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == fieldNum {
-				return string(b)
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return ""
-}
-
-// parseOperationStatus reads a google.longrunning.Operation and returns (done, errorMessage).
-// f1=name, f3=done(varint bool), f4=error(Status: f1=code, f2=message).
-func parseOperationStatus(data []byte) (done bool, errMsg string) {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return
-			}
-			if num == 3 {
-				done = v != 0
-			}
-			data = data[m:]
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return
-			}
-			if num == 4 {
-				_, msg := alisclient.ParseStatus(b)
-				if msg != "" {
-					errMsg = msg
-				}
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return
-			}
-			data = data[m:]
-		}
-	}
-	return
-}
-
-// parseStringField1 extracts field 1 (string) from a proto message — used for name fields.
-func parseStringField1(data []byte) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 {
-				return string(b)
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return ""
-}
-
-// parseFirstEntitlementName returns the name (field 1) of the first Entitlement in a ListEntitlements response.
-func parseFirstEntitlementName(data []byte) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num == 1 {
-			name := parseStringField1(b)
-			if name != "" {
-				return name
-			}
-		}
-	}
-	return ""
-}
-
-// parseInstallNeuronsResponse parses a ListNeurons response.
-// Outer field 1 = repeated Neuron (f1=name, f2=display_name).
-// Package is derived from the neuron resource name.
-func parseInstallNeuronsResponse(data []byte) []InstallNeuron {
-	var neurons []InstallNeuron
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num == 1 {
-			neuron := parseInstallNeuron(b)
-			if neuron.Name != "" {
-				neurons = append(neurons, neuron)
-			}
-		}
-	}
-	return neurons
-}
-
-func parseInstallNeuron(data []byte) InstallNeuron {
-	// Neuron proto fields: f1=name, f2=version, f3=build_commit, f4=package,
-	// f5=latest_version_state(enum), f6=last_version_logs_uri. No display_name field.
-	var n InstallNeuron
-	for len(data) > 0 {
-		num, typ, nn := protowire.ConsumeTag(data)
-		if nn < 0 {
-			break
-		}
-		data = data[nn:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		switch num {
-		case 1:
-			n.Name = string(b)
-		case 4:
-			n.Package = string(b)
-		}
-	}
-	if n.Name != "" {
-		// Derive package from name if the server didn't include it.
-		if n.Package == "" {
-			n.Package = neuronNameToPackage(n.Name)
-		}
-		// Display name = neuron ID segment (no display_name in the Neuron proto).
-		if i := strings.LastIndex(n.Name, "/"); i >= 0 {
-			n.DisplayName = n.Name[i+1:]
-		}
-	}
-	return n
-}
-
-// neuronNameToPackage converts "organisations/{org}/products/{product}/neurons/{id}"
-// to "packages/{org}.{product}.{id}" where the neuron ID's "-" are replaced with ".".
-func neuronNameToPackage(neuronName string) string {
-	parts := strings.Split(neuronName, "/")
-	if len(parts) != 6 {
-		return ""
-	}
-	neuronID := strings.ReplaceAll(parts[5], "-", ".")
-	return "packages/" + parts[1] + "." + parts[3] + "." + neuronID
-}
-
-// parseBlockPlansResponse parses a ListEntitlementPlans response.
-// Outer field 1 = repeated Entitlement (the plan list reuses the Entitlement message;
-// f1=name, f9=display_name — f2 is entitlement_plan_reference, not display_name).
-func parseBlockPlansResponse(data []byte) []BlockPlan {
-	var plans []BlockPlan
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		if num == 1 {
-			plan := parseBlockPlan(b)
-			if plan.Name != "" {
-				plans = append(plans, plan)
-			}
-		}
-	}
-	return plans
-}
-
-func parseBlockPlan(data []byte) BlockPlan {
-	var p BlockPlan
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-			continue
-		}
-		b, m := protowire.ConsumeBytes(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		switch num {
-		case 1:
-			p.Name = string(b)
-		case 9:
-			p.DisplayName = string(b)
-		}
-	}
-	if p.DisplayName == "" && p.Name != "" {
-		if i := strings.LastIndex(p.Name, "/"); i >= 0 {
-			p.DisplayName = p.Name[i+1:]
-		}
-	}
-	return p
+	return result, nil
 }
 
 // UninstallCodeblockInstance uninstalls an instance by resource name (e.g. "blocks/bb6b/instances/631").
@@ -767,9 +520,11 @@ func (s *ProductService) UninstallCodeblockInstance(instanceName string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
+	req := &blocksv1pb.UninstallBlockRequest{Instance: instanceName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("UninstallBlock: marshal request: %w", err)
+	}
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UninstallBlock", buf)
 	if err != nil {
@@ -781,11 +536,14 @@ func (s *ProductService) UninstallCodeblockInstance(instanceName string) error {
 	if len(body) < 5 {
 		return fmt.Errorf("UninstallBlock: response too short (%d bytes)", len(body))
 	}
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return fmt.Errorf("UninstallBlock: unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return fmt.Errorf("UninstallBlock: empty operation name in response")
 	}
-	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName())
 	return err
 }
 
@@ -800,11 +558,11 @@ func (s *ProductService) UpgradeCodeblockInstance(instanceName, blockVersionName
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendString(buf, blockVersionName)
+	req := &blocksv1pb.UpgradeBlockRequest{Instance: instanceName, BlockVersion: blockVersionName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("UpgradeBlock: marshal request: %w", err)
+	}
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UpgradeBlock", buf)
 	if err != nil {
@@ -816,11 +574,14 @@ func (s *ProductService) UpgradeCodeblockInstance(instanceName, blockVersionName
 	if len(body) < 5 {
 		return fmt.Errorf("UpgradeBlock: response too short (%d bytes)", len(body))
 	}
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return fmt.Errorf("UpgradeBlock: unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return fmt.Errorf("UpgradeBlock: empty operation name in response")
 	}
-	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName)
+	_, err = s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName())
 	return err
 }
 
@@ -830,10 +591,14 @@ func (s *ProductService) CreateCodeblock(params CreateCodeblockParams) (string, 
 		return "", err
 	}
 	accountName := s.myPrimaryAccountID()
-	protoBytes := marshalCreateBlockRequest(params, accountName)
+	req := buildCreateBlockRequest(params, accountName)
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("CreateBlock: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/CreateBlock", protoBytes)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/CreateBlock", buf)
 	if err != nil {
 		return "", fmt.Errorf("CreateBlock: %w", err)
 	}
@@ -843,7 +608,11 @@ func (s *ProductService) CreateCodeblock(params CreateCodeblockParams) (string, 
 	if len(body) < 5 {
 		return "", fmt.Errorf("CreateBlock: response too short (%d bytes)", len(body))
 	}
-	return parseCreateBlockName(body[5:]), nil
+	block := &blocksv1pb.Block{}
+	if err := proto.Unmarshal(body[5:], block); err != nil {
+		return "", fmt.Errorf("CreateBlock: unmarshal response: %w", err)
+	}
+	return block.GetName(), nil
 }
 
 // GetMyPrimaryAccountID returns the caller's primary account resource name (e.g. "accounts/8na6ap").
@@ -862,85 +631,59 @@ func (s *ProductService) myPrimaryAccountID() string {
 	return ""
 }
 
-func marshalCreateBlockRequest(p CreateCodeblockParams, accountName string) []byte {
-	// overview_details (field 31 of Block)
-	var overview []byte
-	if p.HeroStatement != "" {
-		overview = protowire.AppendTag(overview, 2, protowire.BytesType)
-		overview = protowire.AppendString(overview, p.HeroStatement)
+// buildOverviewDetails builds a Block.OverviewDetails message from the shared create/update
+// params, or nil if none of its source fields are set (so the field is omitted on the wire
+// rather than sent as an empty submessage).
+func buildOverviewDetails(p CreateCodeblockParams) *blocksv1pb.Block_OverviewDetails {
+	if p.HeroStatement == "" && p.Description == "" && len(p.Highlights) == 0 &&
+		len(p.KeyFeatures) == 0 && len(p.CodeArchitecture) == 0 {
+		return nil
 	}
-	if p.Description != "" {
-		overview = protowire.AppendTag(overview, 3, protowire.BytesType)
-		overview = protowire.AppendString(overview, p.Description)
+	ov := &blocksv1pb.Block_OverviewDetails{
+		HeroStatement: p.HeroStatement,
+		Description:   p.Description,
 	}
 	for _, h := range p.Highlights {
 		if h != "" {
-			overview = protowire.AppendTag(overview, 6, protowire.BytesType)
-			overview = protowire.AppendString(overview, h)
+			ov.Highlights = append(ov.Highlights, h)
 		}
 	}
 	for _, kf := range p.KeyFeatures {
-		var feat []byte
-		feat = protowire.AppendTag(feat, 1, protowire.BytesType)
-		feat = protowire.AppendString(feat, kf.Title)
-		feat = protowire.AppendTag(feat, 2, protowire.BytesType)
-		feat = protowire.AppendString(feat, kf.Description)
-		overview = protowire.AppendTag(overview, 7, protowire.BytesType)
-		overview = protowire.AppendBytes(overview, feat)
+		ov.KeyFeatures = append(ov.KeyFeatures, &blocksv1pb.Block_OverviewDetails_KeyFeature{
+			Title: kf.Title, Description: kf.Description,
+		})
 	}
 	for _, al := range p.CodeArchitecture {
-		var layer []byte
-		layer = protowire.AppendTag(layer, 1, protowire.BytesType)
-		layer = protowire.AppendString(layer, al.Title)
-		layer = protowire.AppendTag(layer, 2, protowire.BytesType)
-		layer = protowire.AppendString(layer, al.Description)
-		overview = protowire.AppendTag(overview, 8, protowire.BytesType)
-		overview = protowire.AppendBytes(overview, layer)
+		ov.CodeArchitecture = append(ov.CodeArchitecture, &blocksv1pb.Block_OverviewDetails_CodeArchitectureLayer{
+			Title: al.Title, Description: al.Description,
+		})
 	}
-
-	// publisher (field 30 of Block)
-	var publisher []byte
-	if accountName != "" {
-		publisher = protowire.AppendTag(publisher, 1, protowire.BytesType)
-		publisher = protowire.AppendString(publisher, accountName)
-	}
-
-	// Block message (field 2 of CreateBlockRequest)
-	var block []byte
-	if p.DisplayName != "" {
-		block = protowire.AppendTag(block, 2, protowire.BytesType)
-		block = protowire.AppendString(block, p.DisplayName)
-	}
-	if p.Tagline != "" {
-		block = protowire.AppendTag(block, 13, protowire.BytesType)
-		block = protowire.AppendString(block, p.Tagline)
-	}
-	if len(publisher) > 0 {
-		block = protowire.AppendTag(block, 30, protowire.BytesType)
-		block = protowire.AppendBytes(block, publisher)
-	}
-	if len(overview) > 0 {
-		block = protowire.AppendTag(block, 31, protowire.BytesType)
-		block = protowire.AppendBytes(block, overview)
-	}
-
-	// CreateBlockRequest: f2=block, f3=block_id
-	var req []byte
-	req = protowire.AppendTag(req, 2, protowire.BytesType)
-	req = protowire.AppendBytes(req, block)
-	req = protowire.AppendTag(req, 3, protowire.BytesType)
-	req = protowire.AppendString(req, p.BlockID)
-	return req
+	return ov
 }
 
-// parseCreateBlockName extracts the resource name (field 1) from the returned Block.
+func buildCreateBlockRequest(p CreateCodeblockParams, accountName string) *blocksv1pb.CreateBlockRequest {
+	block := &blocksv1pb.Block{
+		DisplayName:     p.DisplayName,
+		Tagline:         p.Tagline,
+		OverviewDetails: buildOverviewDetails(p),
+	}
+	if accountName != "" {
+		block.Publisher = &blocksv1pb.Block_Publisher{Account: accountName}
+	}
+	return &blocksv1pb.CreateBlockRequest{Block: block, BlockId: p.BlockID}
+}
+
 // UpdateCodeblock calls BlocksService/UpdateBlock with the given params.
 func (s *ProductService) UpdateCodeblock(params CreateCodeblockParams) error {
 	if err := s.initTokens(); err != nil {
 		return err
 	}
 	blockName := "blocks/" + params.BlockID
-	buf := marshalUpdateBlockRequest(blockName, params)
+	req := buildUpdateBlockRequest(blockName, params)
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("UpdateBlock: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/UpdateBlock", buf)
@@ -953,71 +696,17 @@ func (s *ProductService) UpdateCodeblock(params CreateCodeblockParams) error {
 	return nil
 }
 
-func marshalUpdateBlockRequest(blockName string, p CreateCodeblockParams) []byte {
-	// overview_details sub-message (same layout as create)
-	var overview []byte
-	if p.HeroStatement != "" {
-		overview = protowire.AppendTag(overview, 2, protowire.BytesType)
-		overview = protowire.AppendString(overview, p.HeroStatement)
+func buildUpdateBlockRequest(blockName string, p CreateCodeblockParams) *blocksv1pb.UpdateBlockRequest {
+	block := &blocksv1pb.Block{
+		Name:            blockName,
+		DisplayName:     p.DisplayName,
+		Tagline:         p.Tagline,
+		OverviewDetails: buildOverviewDetails(p),
 	}
-	if p.Description != "" {
-		overview = protowire.AppendTag(overview, 3, protowire.BytesType)
-		overview = protowire.AppendString(overview, p.Description)
+	return &blocksv1pb.UpdateBlockRequest{
+		Block:      block,
+		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"display_name", "tagline", "overview_details"}},
 	}
-	for _, h := range p.Highlights {
-		overview = protowire.AppendTag(overview, 6, protowire.BytesType)
-		overview = protowire.AppendString(overview, h)
-	}
-	for _, kf := range p.KeyFeatures {
-		var feat []byte
-		feat = protowire.AppendTag(feat, 1, protowire.BytesType)
-		feat = protowire.AppendString(feat, kf.Title)
-		feat = protowire.AppendTag(feat, 2, protowire.BytesType)
-		feat = protowire.AppendString(feat, kf.Description)
-		overview = protowire.AppendTag(overview, 7, protowire.BytesType)
-		overview = protowire.AppendBytes(overview, feat)
-	}
-	for _, al := range p.CodeArchitecture {
-		var layer []byte
-		layer = protowire.AppendTag(layer, 1, protowire.BytesType)
-		layer = protowire.AppendString(layer, al.Title)
-		layer = protowire.AppendTag(layer, 2, protowire.BytesType)
-		layer = protowire.AppendString(layer, al.Description)
-		overview = protowire.AppendTag(overview, 8, protowire.BytesType)
-		overview = protowire.AppendBytes(overview, layer)
-	}
-
-	// Block message: f1=name, f2=display_name, f13=tagline, f31=overview_details
-	var block []byte
-	block = protowire.AppendTag(block, 1, protowire.BytesType)
-	block = protowire.AppendString(block, blockName)
-	if p.DisplayName != "" {
-		block = protowire.AppendTag(block, 2, protowire.BytesType)
-		block = protowire.AppendString(block, p.DisplayName)
-	}
-	if p.Tagline != "" {
-		block = protowire.AppendTag(block, 13, protowire.BytesType)
-		block = protowire.AppendString(block, p.Tagline)
-	}
-	if len(overview) > 0 {
-		block = protowire.AppendTag(block, 31, protowire.BytesType)
-		block = protowire.AppendBytes(block, overview)
-	}
-
-	// update_mask (FieldMask): f1=paths repeated
-	var mask []byte
-	for _, path := range []string{"display_name", "tagline", "overview_details"} {
-		mask = protowire.AppendTag(mask, 1, protowire.BytesType)
-		mask = protowire.AppendString(mask, path)
-	}
-
-	// UpdateBlockRequest: f1=block, f2=update_mask
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendBytes(req, block)
-	req = protowire.AppendTag(req, 2, protowire.BytesType)
-	req = protowire.AppendBytes(req, mask)
-	return req
 }
 
 // ContributeBlock publishes a new block version with code files via BlockVersionsService/CreateBlockVersion (LRO).
@@ -1026,7 +715,28 @@ func (s *ProductService) ContributeBlock(params ContributeBlockParams) (string, 
 	if err := s.initTokens(); err != nil {
 		return "", err
 	}
-	buf := marshalCreateBlockVersionRequest(params)
+
+	bv := &blocksv1pb.BlockVersion{
+		// version (field 2) must stay empty — the ID is sent as block_version_id.
+		ReleaseNotes: params.ReleaseNotes,
+		ReleaseLevel: blocksv1pb.BlockVersion_ReleaseLevel(params.ReleaseLevel),
+	}
+	if len(params.BuildFiles) > 0 || len(params.InfraFiles) > 0 || len(params.ProtoFiles) > 0 {
+		bv.ContributedContent = &blocksv1pb.BlockVersion_Content{
+			BuildFiles: buildFileList(params.BuildFiles),
+			InfraFiles: buildFileList(params.InfraFiles),
+			ProtoFiles: buildFileList(params.ProtoFiles),
+		}
+	}
+	req := &blocksv1pb.CreateBlockVersionRequest{
+		Parent:         "blocks/" + params.BlockID,
+		BlockVersion:   bv,
+		BlockVersionId: params.VersionTag,
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("ContributeBlock: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/CreateBlockVersion", buf)
@@ -1039,96 +749,25 @@ func (s *ProductService) ContributeBlock(params ContributeBlockParams) (string, 
 	if len(body) < 5 {
 		return "", fmt.Errorf("ContributeBlock: response too short (%d bytes)", len(body))
 	}
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return "", fmt.Errorf("ContributeBlock: unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return "", fmt.Errorf("ContributeBlock: empty operation name in response")
 	}
-	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName); err != nil {
+	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName()); err != nil {
 		return "", fmt.Errorf("ContributeBlock: operation failed: %w", err)
 	}
 	return "blocks/" + params.BlockID + "/versions/" + params.VersionTag, nil
 }
 
-func marshalCreateBlockVersionRequest(p ContributeBlockParams) []byte {
-	// File sub-message: f1=filename, f2=content (bytes)
-	marshalFile := func(f CodeblockFileItem) []byte {
-		var b []byte
-		b = protowire.AppendTag(b, 1, protowire.BytesType)
-		b = protowire.AppendString(b, f.Name)
-		b = protowire.AppendTag(b, 2, protowire.BytesType)
-		b = protowire.AppendBytes(b, []byte(f.Content))
-		return b
+func buildFileList(items []CodeblockFileItem) []*blocksv1pb.File {
+	out := make([]*blocksv1pb.File, 0, len(items))
+	for _, f := range items {
+		out = append(out, &blocksv1pb.File{Filename: f.Name, Content: []byte(f.Content)})
 	}
-
-	// BlockVersion.Content: f1=build_files, f2=infra_files, f3=proto_files
-	var content []byte
-	for _, f := range p.BuildFiles {
-		content = protowire.AppendTag(content, 1, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-	for _, f := range p.InfraFiles {
-		content = protowire.AppendTag(content, 2, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-	for _, f := range p.ProtoFiles {
-		content = protowire.AppendTag(content, 3, protowire.BytesType)
-		content = protowire.AppendBytes(content, marshalFile(f))
-	}
-
-	// BlockVersion: f3=contributed_content, f4=release_notes, f9=release_level
-	// Note: version (f2) must be empty — the ID is sent as block_version_id on the request.
-	var bv []byte
-	if len(content) > 0 {
-		bv = protowire.AppendTag(bv, 3, protowire.BytesType)
-		bv = protowire.AppendBytes(bv, content)
-	}
-	if p.ReleaseNotes != "" {
-		bv = protowire.AppendTag(bv, 4, protowire.BytesType)
-		bv = protowire.AppendString(bv, p.ReleaseNotes)
-	}
-	if p.ReleaseLevel != 0 {
-		bv = protowire.AppendTag(bv, 9, protowire.VarintType)
-		bv = protowire.AppendVarint(bv, uint64(p.ReleaseLevel))
-	}
-
-	// CreateBlockVersionRequest: f1=parent, f2=block_version, f3=block_version_id
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendString(req, "blocks/"+p.BlockID)
-	req = protowire.AppendTag(req, 2, protowire.BytesType)
-	req = protowire.AppendBytes(req, bv)
-	if p.VersionTag != "" {
-		req = protowire.AppendTag(req, 3, protowire.BytesType)
-		req = protowire.AppendString(req, p.VersionTag)
-	}
-	return req
-}
-
-func parseCreateBlockName(data []byte) string {
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 {
-				return string(b)
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return ""
+	return out
 }
 
 // OpenBlockWorktrees creates git worktrees for an instance's build and define repos.
@@ -1140,27 +779,10 @@ func (s *ProductService) OpenBlockWorktrees(instanceName string) (string, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// Get the instance's package and git_branch.
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	fm := marshalFieldMask([]string{"package", "git_branch"})
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
-
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/GetInstance", buf)
+	pkg, branch, err := s.getInstancePackageAndBranch(ctx, instanceName)
 	if err != nil {
 		return "", fmt.Errorf("OpenBlockWorktrees: GetInstance: %w", err)
 	}
-	if grpcStatus != 0 {
-		return "", fmt.Errorf("OpenBlockWorktrees: GetInstance: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return "", fmt.Errorf("OpenBlockWorktrees: GetInstance: response too short")
-	}
-	data := body[5:]
-	pkg := parseStringFieldN(data, 2)    // Instance.package
-	branch := parseStringFieldN(data, 6) // Instance.git_branch
 	if pkg == "" {
 		return "", fmt.Errorf("OpenBlockWorktrees: instance has no package field")
 	}
@@ -1220,6 +842,33 @@ func (s *ProductService) OpenBlockWorktrees(instanceName string) (string, error)
 	return worktreeRoot, nil
 }
 
+// getInstancePackageAndBranch fetches an instance's package and git_branch fields.
+func (s *ProductService) getInstancePackageAndBranch(ctx context.Context, instanceName string) (pkg, branch string, err error) {
+	req := &blocksv1pb.GetInstanceRequest{
+		Name:     instanceName,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"package", "git_branch"}},
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", "", fmt.Errorf("marshal request: %w", err)
+	}
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/GetInstance", buf)
+	if err != nil {
+		return "", "", err
+	}
+	if grpcStatus != 0 {
+		return "", "", fmt.Errorf("grpc %d: %s", grpcStatus, grpcMsg)
+	}
+	if len(body) < 5 {
+		return "", "", fmt.Errorf("response too short")
+	}
+	inst := &blocksv1pb.Instance{}
+	if err := proto.Unmarshal(body[5:], inst); err != nil {
+		return "", "", fmt.Errorf("unmarshal response: %w", err)
+	}
+	return inst.GetPackage(), inst.GetGitBranch(), nil
+}
+
 // GetBlockCommits returns recent commits from the build or define repo for a given instance.
 // repoType must be "build" or "define".
 func (s *ProductService) GetBlockCommits(instanceName, repoType string, limit int) ([]BlockCommit, error) {
@@ -1229,27 +878,10 @@ func (s *ProductService) GetBlockCommits(instanceName, repoType string, limit in
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// Fetch instance package + git_branch.
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, instanceName)
-	fm := marshalFieldMask([]string{"package", "git_branch"})
-	buf = protowire.AppendTag(buf, 2, protowire.BytesType)
-	buf = protowire.AppendBytes(buf, fm)
-
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/GetInstance", buf)
+	pkg, branch, err := s.getInstancePackageAndBranch(ctx, instanceName)
 	if err != nil {
 		return nil, fmt.Errorf("GetBlockCommits: %w", err)
 	}
-	if grpcStatus != 0 {
-		return nil, fmt.Errorf("GetBlockCommits: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return nil, fmt.Errorf("GetBlockCommits: response too short")
-	}
-	data := body[5:]
-	pkg := parseStringFieldN(data, 2)
-	branch := parseStringFieldN(data, 6)
 	if pkg == "" || branch == "" {
 		return nil, fmt.Errorf("GetBlockCommits: missing package or git_branch on instance")
 	}
@@ -1312,11 +944,26 @@ func (s *ProductService) ContributeBlockFromCommits(instanceName, defineCommitSh
 	}
 	blockID := parts[1]
 
-	req := marshalCreateBlockVersionFromCommitsRequest(blockID, instanceName, defineCommitSha, buildCommitSha, releaseLevel, releaseNotes)
+	bv := &blocksv1pb.BlockVersion{
+		ReleaseNotes: releaseNotes,
+		ReleaseLevel: blocksv1pb.BlockVersion_ReleaseLevel(releaseLevel),
+	}
+	if defineCommitSha != "" {
+		bv.DefineSource = &blocksv1pb.BlockVersion_Source{Instance: instanceName, CommitSha: defineCommitSha}
+	}
+	if buildCommitSha != "" {
+		bv.BuildSource = &blocksv1pb.BlockVersion_Source{Instance: instanceName, CommitSha: buildCommitSha}
+	}
+
+	req := &blocksv1pb.CreateBlockVersionRequest{Parent: "blocks/" + blockID, BlockVersion: bv}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return "", fmt.Errorf("ContributeBlockFromCommits: marshal request: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/CreateBlockVersion", req)
+	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/CreateBlockVersion", buf)
 	if err != nil {
 		return "", fmt.Errorf("ContributeBlockFromCommits: %w", err)
 	}
@@ -1326,53 +973,17 @@ func (s *ProductService) ContributeBlockFromCommits(instanceName, defineCommitSh
 	if len(body) < 5 {
 		return "", fmt.Errorf("ContributeBlockFromCommits: response too short (%d bytes)", len(body))
 	}
-	opName := parseStringField1(body[5:])
-	if opName == "" {
+	op := &longrunningpb.Operation{}
+	if err := proto.Unmarshal(body[5:], op); err != nil {
+		return "", fmt.Errorf("ContributeBlockFromCommits: unmarshal response: %w", err)
+	}
+	if op.GetName() == "" {
 		return "", fmt.Errorf("ContributeBlockFromCommits: empty operation name in response")
 	}
-	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", opName); err != nil {
+	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName()); err != nil {
 		return "", fmt.Errorf("ContributeBlockFromCommits: operation failed: %w", err)
 	}
 	return "blocks/" + blockID, nil
-}
-
-func marshalCreateBlockVersionFromCommitsRequest(blockID, instanceName, defineCommitSha, buildCommitSha string, releaseLevel int32, releaseNotes string) []byte {
-	// BlockVersion.Source sub-message: f1=instance, f2=commit_sha
-	marshalSource := func(inst, sha string) []byte {
-		var b []byte
-		b = protowire.AppendTag(b, 1, protowire.BytesType)
-		b = protowire.AppendString(b, inst)
-		b = protowire.AppendTag(b, 2, protowire.BytesType)
-		b = protowire.AppendString(b, sha)
-		return b
-	}
-
-	// BlockVersion: f5=define_source, f6=build_source, f4=release_notes, f9=release_level
-	var bv []byte
-	if defineCommitSha != "" {
-		bv = protowire.AppendTag(bv, 5, protowire.BytesType)
-		bv = protowire.AppendBytes(bv, marshalSource(instanceName, defineCommitSha))
-	}
-	if buildCommitSha != "" {
-		bv = protowire.AppendTag(bv, 6, protowire.BytesType)
-		bv = protowire.AppendBytes(bv, marshalSource(instanceName, buildCommitSha))
-	}
-	if releaseNotes != "" {
-		bv = protowire.AppendTag(bv, 4, protowire.BytesType)
-		bv = protowire.AppendString(bv, releaseNotes)
-	}
-	if releaseLevel != 0 {
-		bv = protowire.AppendTag(bv, 9, protowire.VarintType)
-		bv = protowire.AppendVarint(bv, uint64(releaseLevel))
-	}
-
-	// CreateBlockVersionRequest: f1=parent, f2=block_version
-	var req []byte
-	req = protowire.AppendTag(req, 1, protowire.BytesType)
-	req = protowire.AppendString(req, "blocks/"+blockID)
-	req = protowire.AppendTag(req, 2, protowire.BytesType)
-	req = protowire.AppendBytes(req, bv)
-	return req
 }
 
 // OpenWorktreeInFinder opens the given directory in the system file manager.

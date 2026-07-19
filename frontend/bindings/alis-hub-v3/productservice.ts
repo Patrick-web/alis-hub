@@ -443,8 +443,7 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
 
 /**
  * SetEnvironmentVariables replaces all variables on an environment by calling
- * UpdateEnvironment with an update_mask of "envs". Variables are field 8
- * (repeated Environment.Env sub-messages: field 1=name/label, field 2=value).
+ * UpdateEnvironment with an update_mask of "envs".
  */
 export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariable[]): $CancellablePromise<void> {
     return $Call.ByID(1096665320, envName, vars);
@@ -483,7 +482,6 @@ export function UpdateBlockAccess(blockId: string, role: string, member: string,
 }
 
 /**
- * parseCreateBlockName extracts the resource name (field 1) from the returned Block.
  * UpdateCodeblock calls BlocksService/UpdateBlock with the given params.
  */
 export function UpdateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<void> {

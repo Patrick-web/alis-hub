@@ -1,15 +1,18 @@
 package main
 
 import (
-	"alis-hub-v3/internal/alisclient"
 	"context"
 	"fmt"
 	"net/url"
 	"time"
 
+	controllerv1pb "alis-hub-v3/gen/go/alis/ws/controller/v1"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
-	"google.golang.org/protobuf/encoding/protowire"
+
+	longrunningpb "cloud.google.com/go/longrunning/autogen/longrunningpb"
+	"google.golang.org/protobuf/proto"
 )
 
 // GetWorkstationURI returns the web IDE URI for the current user's workstation.
@@ -21,8 +24,12 @@ func (s *ProductService) GetWorkstationURI() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
+	reqBytes, err := proto.Marshal(&controllerv1pb.RetrieveMyWorkstationRequest{})
+	if err != nil {
+		return "", fmt.Errorf("RetrieveMyWorkstation: marshal request: %w", err)
+	}
 	dataFrame, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
-		"alis.ws.controller.v1.WorkstationsService/RetrieveMyWorkstation", nil)
+		"alis.ws.controller.v1.WorkstationsService/RetrieveMyWorkstation", reqBytes)
 	if err != nil {
 		return "", fmt.Errorf("RetrieveMyWorkstation: %w", err)
 	}
@@ -34,11 +41,21 @@ func (s *ProductService) GetWorkstationURI() (string, error) {
 	}
 
 	for {
-		done, opName, uri := parseWorkstationOperation(dataFrame[5:])
-		if done {
+		op := &longrunningpb.Operation{}
+		if err := proto.Unmarshal(dataFrame[5:], op); err != nil {
+			return "", fmt.Errorf("unmarshal operation: %w", err)
+		}
+		if op.GetDone() {
+			var uri string
+			if resp := op.GetResponse(); resp != nil {
+				wsResp := &controllerv1pb.RetrieveMyWorkstationResponse{}
+				if err := resp.UnmarshalTo(wsResp); err == nil {
+					uri = wsResp.GetUri()
+				}
+			}
 			return uri, nil
 		}
-		if opName == "" {
+		if op.GetName() == "" {
 			return "", nil // provisioning but no op name to poll with
 		}
 		select {
@@ -46,8 +63,12 @@ func (s *ProductService) GetWorkstationURI() (string, error) {
 			return "", nil // still provisioning after timeout
 		case <-time.After(time.Second):
 		}
+		getOpReqBytes, err := proto.Marshal(&longrunningpb.GetOperationRequest{Name: op.GetName()})
+		if err != nil {
+			return "", fmt.Errorf("GetOperation: marshal request: %w", err)
+		}
 		dataFrame, grpcStatus, grpcMsg, err = s.doConsoleGRPCWeb(ctx,
-			"google.longrunning.Operations/GetOperation", alisclient.MarshalGetOperationRequest(opName))
+			"google.longrunning.Operations/GetOperation", getOpReqBytes)
 		if err != nil {
 			return "", fmt.Errorf("GetOperation: %w", err)
 		}
@@ -185,100 +206,4 @@ func (s *ProductService) OpenInIDE(productName, ide string) error {
 	default:
 		return fmt.Errorf("unknown IDE %q", ide)
 	}
-}
-
-// parseWorkstationOperation parses a google.longrunning.Operation for RetrieveMyWorkstation.
-// Field 1=name, Field 3=done (varint bool), Field 5=response (google.protobuf.Any).
-func parseWorkstationOperation(b []byte) (done bool, opName, uri string) {
-	for len(b) > 0 {
-		num, typ, n := protowire.ConsumeTag(b)
-		if n < 0 {
-			break
-		}
-		b = b[n:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(b)
-			if m < 0 {
-				return
-			}
-			b = b[m:]
-			if num == 3 {
-				done = v != 0
-			}
-		case protowire.BytesType:
-			val, m := protowire.ConsumeBytes(b)
-			if m < 0 {
-				return
-			}
-			b = b[m:]
-			switch num {
-			case 1:
-				opName = string(val)
-			case 5:
-				uri = parseWorkstationAny(val)
-			}
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, b)
-			if m < 0 {
-				return
-			}
-			b = b[m:]
-		}
-	}
-	return
-}
-
-// parseWorkstationAny unwraps a google.protobuf.Any and reads field 1 (uri) from
-// RetrieveMyWorkstationResponse (Any.value field 2 holds the inner message bytes).
-func parseWorkstationAny(anyBytes []byte) string {
-	var valueBytes []byte
-	for len(anyBytes) > 0 {
-		num, typ, n := protowire.ConsumeTag(anyBytes)
-		if n < 0 {
-			break
-		}
-		anyBytes = anyBytes[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, anyBytes)
-			if m < 0 {
-				break
-			}
-			anyBytes = anyBytes[m:]
-			continue
-		}
-		val, m := protowire.ConsumeBytes(anyBytes)
-		if m < 0 {
-			break
-		}
-		anyBytes = anyBytes[m:]
-		if num == 2 {
-			valueBytes = val
-			break
-		}
-	}
-	for len(valueBytes) > 0 {
-		num, typ, n := protowire.ConsumeTag(valueBytes)
-		if n < 0 {
-			break
-		}
-		valueBytes = valueBytes[n:]
-		if typ != protowire.BytesType {
-			m := protowire.ConsumeFieldValue(num, typ, valueBytes)
-			if m < 0 {
-				break
-			}
-			valueBytes = valueBytes[m:]
-			continue
-		}
-		val, m := protowire.ConsumeBytes(valueBytes)
-		if m < 0 {
-			break
-		}
-		valueBytes = valueBytes[m:]
-		if num == 1 {
-			return string(val)
-		}
-	}
-	return ""
 }
