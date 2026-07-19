@@ -363,11 +363,14 @@ func systemCredentialHelper() string {
 }
 
 func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error) {
-	gitEnv := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	gitEnv := noPromptEnv()
 	ew := &emitWriter{emit: emit}
 
 	// GitHub uses the system credential helper; all other hosts (Forgejo, etc.)
-	// get the alis Bearer token injected as an HTTP header.
+	// get the alis Bearer token injected as an HTTP header, with the inherited
+	// credential.helper chain cleared so a rejected/expired token fails fast
+	// instead of falling through to an interactive system credential prompt
+	// (e.g. Windows' Git Credential Manager).
 	// The leading empty http.extraHeader= clears any value inherited from an
 	// include.path set by the VS Code extension, preventing duplicate headers.
 	var baseArgs []string
@@ -375,9 +378,12 @@ func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error
 		baseArgs = []string{"-c", "credential.helper=" + systemCredentialHelper()}
 	} else if token != "" {
 		baseArgs = []string{
+			"-c", "credential.helper=",
 			"-c", "http.extraHeader=",
 			"-c", "http.extraHeader=Authorization: Bearer " + token,
 		}
+	} else {
+		baseArgs = []string{"-c", "credential.helper="}
 	}
 
 	runGit := func(subcmd ...string) error {

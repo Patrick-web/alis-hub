@@ -1192,9 +1192,14 @@ func (s *ProductService) OpenBlockWorktrees(instanceName string) (string, error)
 		return "", fmt.Errorf("OpenBlockWorktrees: mkdir: %w", err)
 	}
 
-	// Fetch latest refs in both repos.
-	gitCmd(buildRepo, "git", "fetch", "--all", "--prune")
-	gitCmd(defineRepo, "git", "fetch", "--all", "--prune")
+	// Fetch latest refs in both repos. Uses the current access token directly
+	// (rather than relying on the on-disk git-auth.gitconfig, which is only
+	// refreshed every 2 minutes and can be stale relative to the ~5 minute
+	// token lifetime) so an expired token fails fast instead of falling
+	// through to an interactive system credential prompt on a 401.
+	gitToken, _ := s.tokens.AccessToken()
+	gitCmdAuthToken(buildRepo, gitToken, "git", "fetch", "--all", "--prune")
+	gitCmdAuthToken(defineRepo, gitToken, "git", "fetch", "--all", "--prune")
 
 	// Add build worktree (remove stale one first if it exists but isn't registered).
 	buildWorktreePath := filepath.Join(worktreeRoot, "build")

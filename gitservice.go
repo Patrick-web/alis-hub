@@ -462,15 +462,42 @@ func (g *GitService) AbortMerge(repoPath string) error {
 	return err
 }
 
+// noPromptEnv returns the environment for a non-interactive git subprocess.
+// GIT_TERMINAL_PROMPT=0 suppresses git's own built-in askpass fallback, and
+// GCM_INTERACTIVE=never tells Git Credential Manager (installed by default
+// with Git for Windows) not to fall back to its GUI prompt either — without
+// it, a rejected/expired Bearer token leads git to consult the configured
+// credential.helper chain, and on Windows that can pop up a blocking GCM
+// dialog even though the command is meant to run silently in the background.
+func noPromptEnv() []string {
+	return append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GCM_INTERACTIVE=never")
+}
+
 // gitCmd runs a git command in the given directory and returns combined output.
-// The first element of args must be "git".
+// The first element of args must be "git". Any inherited credential.helper is
+// cleared so a command that turns out to need auth fails fast instead of
+// falling through to an interactive system credential prompt.
 func gitCmd(dir string, args ...string) (string, error) {
+	return gitCmdAuthToken(dir, "", args...)
+}
+
+// gitCmdAuthToken runs a git command with a Bearer token injected via
+// http.extraHeader (when provided) and clears any inherited credential.helper
+// so a failed/expired token fails fast instead of falling through to an
+// interactive system credential prompt (e.g. Windows' Git Credential Manager).
+func gitCmdAuthToken(dir, token string, args ...string) (string, error) {
 	if len(args) == 0 || args[0] != "git" {
-		return "", fmt.Errorf("gitCmd: first arg must be 'git'")
+		return "", fmt.Errorf("gitCmdAuthToken: first arg must be 'git'")
 	}
-	cmd := exec.Command(args[0], args[1:]...)
+	fullArgs := make([]string, 0, len(args)+5)
+	fullArgs = append(fullArgs, "git", "-c", "credential.helper=")
+	if token != "" {
+		fullArgs = append(fullArgs, "-c", "http.extraHeader=", "-c", "http.extraHeader=Authorization: Bearer "+token)
+	}
+	fullArgs = append(fullArgs, args[1:]...)
+	cmd := exec.Command(fullArgs[0], fullArgs[1:]...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd.Env = noPromptEnv()
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -482,18 +509,10 @@ func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 		return "", fmt.Errorf("gitCmdAuth: first arg must be 'git'")
 	}
 	token, err := g.tokens.AccessToken()
-	if err != nil || token == "" {
-		return gitCmd(dir, args...)
+	if err != nil {
+		token = ""
 	}
-	// Inject as a -c flag between "git" and the subcommand.
-	authArgs := make([]string, 0, len(args)+2)
-	authArgs = append(authArgs, "git", "-c", "http.extraHeader=Authorization: Bearer "+token)
-	authArgs = append(authArgs, args[1:]...)
-	cmd := exec.Command(authArgs[0], authArgs[1:]...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	out, cerr := cmd.CombinedOutput()
-	return string(out), cerr
+	return gitCmdAuthToken(dir, token, args...)
 }
 
 // ProductRepoPaths holds the local filesystem paths for a product's git repos.
@@ -994,8 +1013,10 @@ func (g *GitService) ClearIndexLock(repoPath string) error {
 // If the token cannot be obtained, an auth:expired event is emitted so the
 // frontend can prompt the user to sign in again immediately.
 func (g *GitService) authedGitCmd(args ...string) *exec.Cmd {
-	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	var cmdArgs []string
+	// Clear any inherited credential.helper so an expired/rejected token
+	// fails fast instead of falling through to an interactive system
+	// credential prompt (e.g. Windows' Git Credential Manager).
+	cmdArgs := []string{"-c", "credential.helper="}
 	if g.tokens == nil {
 		g.tokens, _ = NewConsoleTokenSource()
 	}
@@ -1024,7 +1045,7 @@ func (g *GitService) authedGitCmd(args ...string) *exec.Cmd {
 	}
 	cmdArgs = append(cmdArgs, args...)
 	cmd := exec.Command("git", cmdArgs...)
-	cmd.Env = env
+	cmd.Env = noPromptEnv()
 	return cmd
 }
 
