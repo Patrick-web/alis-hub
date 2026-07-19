@@ -236,7 +236,7 @@ export function GCloudSetup({ onReady }: Props) {
                     Re-check.
                   </p>
 
-                  <div className="flex gap-[8px]">
+                  <div className="flex gap-[8px] mb-[12px]">
                     <Button
                       variant="primary"
                       onClick={() => Browser.OpenURL(INSTALL_URL)}
@@ -244,6 +244,20 @@ export function GCloudSetup({ onReady }: Props) {
                     >
                       Open Install Docs
                     </Button>
+                  </div>
+
+                  <div className="flex items-start gap-[6px] bg-amber-500/10 border border-amber-500/20 rounded-[4px] px-[10px] py-[8px]">
+                    <Icon
+                      icon="solar:danger-triangle-linear"
+                      className="text-[12px] text-amber-500 shrink-0 mt-[1px]"
+                    />
+                    <p className="text-[10px] text-amber-500/90 font-mono leading-relaxed">
+                      If it fails with "Python was not found; run without arguments to install
+                      from the Microsoft Store", that's Windows' fake python.exe stub, not a real
+                      missing dependency. Fix it via Settings → Apps → Advanced app settings → App
+                      execution aliases, and turn off "App Installer python.exe" and "python3.exe"
+                      — then re-run the installer.
+                    </p>
                   </div>
                 </>
               ) : (
