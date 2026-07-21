@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode } from "react";
 
 interface StageCardProps {
   step?: number;
@@ -10,22 +10,28 @@ interface StageCardProps {
   className?: string;
 }
 
-export function StageCard({ step, title, subtitle, icon, children, action, className = '' }: StageCardProps) {
+export function StageCard({
+  step,
+  title,
+  subtitle,
+  icon,
+  children,
+  action,
+  className = "",
+}: StageCardProps) {
   return (
-    <div className={`bg-[#2c2c2c] border border-[#464646] rounded-[4px] ${className}`}>
-      <div className="flex items-start justify-between p-[16px] border-b border-[#464646]">
+    <div className={`bg-card border border-border rounded-[4px] ${className}`}>
+      <div className="flex items-start justify-between p-[16px] border-b border-border">
         <div className="flex items-center gap-[12px]">
           {step && (
-            <div className="size-[24px] rounded-full bg-[rgba(248,129,169,0.15)] border border-[#f881a9] flex items-center justify-center shrink-0">
-              <span className="text-[11px] font-bold text-[#f881a9] font-['JetBrains_Mono',sans-serif]">{step}</span>
+            <div className="size-[24px] rounded-full bg-brand-fill/15 border border-brand-fill flex items-center justify-center shrink-0">
+              <span className="text-[11px] font-bold text-brand font-mono">{step}</span>
             </div>
           )}
-          {icon && <div className="text-white shrink-0">{icon}</div>}
+          {icon && <div className="text-foreground shrink-0">{icon}</div>}
           <div>
-            <h3 className="font-['JetBrains_Mono',sans-serif] font-bold text-[12px] text-white uppercase">{title}</h3>
-            {subtitle && (
-              <p className="text-[10px] text-[rgba(255,255,255,0.5)] mt-[2px]">{subtitle}</p>
-            )}
+            <h3 className="font-mono font-bold text-[12px] text-foreground uppercase">{title}</h3>
+            {subtitle && <p className="text-[10px] text-foreground/50 mt-[2px]">{subtitle}</p>}
           </div>
         </div>
         {action && <div className="shrink-0 ml-[12px]">{action}</div>}

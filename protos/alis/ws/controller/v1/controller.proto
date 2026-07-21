@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package alis.ws.controller.v1;
+
+import "google/longrunning/operations.proto";
+import "google/protobuf/timestamp.proto";
+
+message Workstation {
+  string name = 1;
+  string location = 2;
+  string size = 3;
+  repeated .alis.ws.controller.v1.Mount mounts = 4;
+  string image = 5;
+  string uri = 6;
+  string state = 7;
+  bool cpu_idle = 8;
+  repeated string emails = 9;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message Mount {
+  string path = 1;
+  string volume = 2;
+}
+
+message GetWorkstationRequest {
+  string name = 1;
+}
+
+message CreateWorkstationRequest {
+  string parent = 1;
+  .alis.ws.controller.v1.Workstation workstation = 2;
+  string workstation_id = 3;
+}
+
+message CreateWorkstationMetadata {
+  .alis.ws.controller.v1.Workstation workstation = 1;
+  string cloudrun_operation = 2;
+}
+
+message ListWorkstationsRequest {
+  string parent = 1;
+}
+
+message ListWorkstationsResponse {
+  repeated .alis.ws.controller.v1.Workstation workstations = 1;
+}
+
+message DeleteWorkstationRequest {
+  string name = 1;
+}
+
+message DeleteWorkstationMetadata {
+  .alis.ws.controller.v1.Workstation workstation = 1;
+  string cloudrun_operation = 2;
+}
+
+message UpgradeAllWorkstationsRequest {
+}
+
+message UpgradeAllWorkstationsMetadata {
+}
+
+message UpgradeAllWorkstationsResponse {
+  repeated string workstations = 1;
+}
+
+message RetrieveMyWorkstationRequest {
+  string country_code = 1;
+}
+
+message RetrieveMyWorkstationMetadata {
+  string progress = 1;
+  string user = 2;
+  string country_code = 3;
+  string location = 4;
+  string workstation = 5;
+  string email = 6;
+}
+
+message RetrieveMyWorkstationResponse {
+  string uri = 1;
+  string country_code = 2;
+  string city = 3;
+}
+
+service WorkstationsService {
+  rpc GetWorkstation(.alis.ws.controller.v1.GetWorkstationRequest) returns (.alis.ws.controller.v1.Workstation);
+  rpc CreateWorkstation(.alis.ws.controller.v1.CreateWorkstationRequest) returns (.google.longrunning.Operation);
+  rpc ListWorkstations(.alis.ws.controller.v1.ListWorkstationsRequest) returns (.alis.ws.controller.v1.ListWorkstationsResponse);
+  rpc DeleteWorkstation(.alis.ws.controller.v1.DeleteWorkstationRequest) returns (.google.longrunning.Operation);
+  rpc UpgradeAllWorkstations(.alis.ws.controller.v1.UpgradeAllWorkstationsRequest) returns (.google.longrunning.Operation);
+  rpc RetrieveMyWorkstation(.alis.ws.controller.v1.RetrieveMyWorkstationRequest) returns (.google.longrunning.Operation);
+  rpc GetOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+}

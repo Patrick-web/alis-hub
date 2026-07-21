@@ -1,33 +1,38 @@
-import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { ButtonHTMLAttributes, ReactNode } from "react";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: "primary" | "secondary" | "ghost";
   children: ReactNode;
   icon?: ReactNode;
+  iconPosition?: "leading" | "trailing";
 }
 
-export function Button({ 
-  variant = 'primary', 
-  children, 
+export function Button({
+  variant = "primary",
+  children,
   icon,
-  className = '',
-  ...props 
+  iconPosition = "leading",
+  className = "",
+  ...props
 }: ButtonProps) {
-  const baseStyles = "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-['JetBrains_Mono',sans-serif] transition-all";
-  
+  const baseStyles =
+    "content-stretch flex items-center justify-center gap-[5px] relative rounded-[5px] font-mono transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none";
+
   const variants = {
-    primary: 'bg-[#f881a9] text-[#6f0025] px-[10px] py-[5px] hover:bg-[#ff94ba]',
-    secondary: 'bg-[#2c2c2c] border border-[#464646] text-white px-[10px] py-[5px] hover:bg-[#3a3a3a]',
-    ghost: 'text-white px-[5px] py-[4px] hover:bg-[rgba(255,255,255,0.1)]',
+    primary: "bg-brand-fill text-brand-foreground px-[10px] py-[5px] hover:bg-brand-fill-hover",
+    secondary: "bg-card border border-border text-foreground px-[10px] py-[5px] hover:bg-accent",
+    ghost: "text-foreground px-[5px] py-[4px] hover:bg-foreground/10",
   };
 
+  const iconEl = icon && <div className="flex items-center justify-center shrink-0">{icon}</div>;
+
   return (
-    <button 
-      className={`${baseStyles} ${variants[variant]} ${className}`}
-      {...props}
-    >
-      {icon && <div className="flex items-center justify-center shrink-0">{icon}</div>}
-      <span className="text-[10px] uppercase leading-[normal] not-italic whitespace-nowrap">{children}</span>
+    <button className={`${baseStyles} ${variants[variant]} ${className}`} {...props}>
+      {iconPosition === "leading" && iconEl}
+      <span className="text-[10px] uppercase leading-[normal] not-italic whitespace-nowrap">
+        {children}
+      </span>
+      {iconPosition === "trailing" && iconEl}
     </button>
   );
 }

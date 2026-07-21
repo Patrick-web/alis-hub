@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package alis.os.quests.v1;
+
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message Quest {
+  enum ComponentSize {
+    COMPONENT_SIZE_UNSPECIFIED = 0;
+    SMALL = 1;
+    LARGE = 2;
+  }
+  message Step {
+    enum Position {
+      POSITION_UNSPECIFIED = 0;
+      LEFT = 1;
+      RIGHT = 2;
+      TOP = 3;
+      BOTTOM = 4;
+    }
+    enum Trigger {
+      TRIGGER_UNSPECIFIED = 0;
+      NEXT_BUTTON = 1;
+      ACTION = 2;
+    }
+    int32 id = 1;
+    string target = 2;
+    string title = 3;
+    string content = 4;
+    .alis.os.quests.v1.Quest.Step.Position position = 5;
+    .alis.os.quests.v1.Quest.Step.Trigger trigger = 6;
+  }
+  string name = 1;
+  string title = 2;
+  string description = 4;
+  int32 time = 5;
+  .alis.os.quests.v1.Quest.ComponentSize component_size = 6;
+  repeated string personas = 7;
+  repeated .alis.os.quests.v1.Quest.Step steps = 8;
+  string starting_url = 9;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetQuestRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateQuestRequest {
+}
+
+message UpdateQuestRequest {
+  .alis.os.quests.v1.Quest quest = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteQuestRequest {
+}
+
+message ListQuestsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListQuestsResponse {
+  repeated .alis.os.quests.v1.Quest quests = 1;
+  string next_page_token = 2;
+}
+
+service QuestsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetQuest(.alis.os.quests.v1.GetQuestRequest) returns (.alis.os.quests.v1.Quest);
+  rpc CreateQuest(.alis.os.quests.v1.CreateQuestRequest) returns (.alis.os.quests.v1.Quest);
+  rpc UpdateQuest(.alis.os.quests.v1.UpdateQuestRequest) returns (.alis.os.quests.v1.Quest);
+  rpc DeleteQuest(.alis.os.quests.v1.DeleteQuestRequest) returns (.google.protobuf.Empty);
+  rpc ListQuests(.alis.os.quests.v1.ListQuestsRequest) returns (.alis.os.quests.v1.ListQuestsResponse);
+}

@@ -15,11 +15,12 @@ import (
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
+	"alis-hub-v3/internal/alisclient"
 )
 
 // BuildService is a Wails-bound service that orchestrates the Build flow.
 type BuildService struct {
-	alisClient  *AlisClient
+	alisClient  *alisclient.AlisClient
 	productSvc  *ProductService
 	localBuilds sync.Map // map[string]*localBuildState
 }
@@ -92,7 +93,7 @@ func (s *BuildService) initClient() error {
 	log.Println("[build] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
@@ -406,7 +407,7 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 		Done:          op.Done,
 	}
 
-	meta := unpackBuildMetadata(op)
+	meta := alisclient.UnpackBuildMetadata(op)
 	if meta != nil {
 		log.Printf("[build] PollBuildOperation: metadata version=%q logsUrl=%q notes=%q", meta.Version, meta.LogsURL, meta.Notes)
 		result.Version = meta.Version
@@ -417,7 +418,7 @@ func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult,
 	}
 
 	if op.Done {
-		if resp := parseBuildResponse(op); resp != nil {
+		if resp := alisclient.ParseBuildResponse(op); resp != nil {
 			log.Printf("[build] PollBuildOperation: response neuronVersion=%q buildLogsUrl=%q version=%q",
 				resp.NeuronVersion, resp.BuildLogsURL, resp.Version)
 			if resp.BuildLogsURL != "" {
@@ -468,6 +469,10 @@ type LocalBuildChunk struct {
 // a build ID that can be passed to PollLocalBuild to stream output.
 // neuron is the full resource name e.g. "organisations/voyage/products/vp/neurons/hubspot-v1".
 func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult, error) {
+	if err := s.initClient(); err != nil {
+		return nil, fmt.Errorf("connecting to Alis backend: %w", err)
+	}
+
 	parts := strings.Split(neuron, "/")
 	if len(parts) < 6 {
 		return nil, fmt.Errorf("invalid neuron resource: %s", neuron)
@@ -516,10 +521,106 @@ func (s *BuildService) StartLocalBuild(neuron, commit string) (*LocalBuildResult
 			st.buf.WriteString("\n\nBuild complete: " + tag + "\n")
 		}
 		st.mu.Unlock()
+
+		go func(tag string, failed bool) {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			if err := s.alisClient.FinishLocalBuild(ctx, tag, failed); err != nil {
+				log.Printf("[build] FinishLocalBuild: %v", err)
+			}
+		}(tag, runErr != nil)
 	}()
 
 	log.Printf("[build] StartLocalBuild: buildID=%s tag=%s dir=%s", buildID, tag, neuronDir)
 	return &LocalBuildResult{BuildID: buildID}, nil
+}
+
+// GetCurrentBranch returns the currently checked-out branch name in the product build directory.
+func (s *BuildService) GetCurrentBranch(org, product string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "master", nil
+	}
+	productDir := filepath.Join(home, "alis.build", org, "build", product)
+	out, err := exec.Command("git", "-C", productDir, "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err != nil {
+		log.Printf("[build] GetCurrentBranch: rev-parse failed for %s: %v, defaulting to master", productDir, err)
+		return "master", nil
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "" || branch == "HEAD" {
+		log.Printf("[build] GetCurrentBranch: detached/empty HEAD in %s, defaulting to master", productDir)
+		return "master", nil
+	}
+	log.Printf("[build] GetCurrentBranch: org=%s product=%s branch=%s", org, product, branch)
+	return branch, nil
+}
+
+var neuronVersionDirRe = regexp.MustCompile(`^v\d+$`)
+
+// GetNeuronLastCommitTimes returns a map of neuron ID (e.g. "bff-v1") → ISO-8601 timestamp of
+// the last commit that touched that neuron's directory on the given branch. Neuron directories
+// on disk are laid out as <base>/<version>/ (e.g. bookings/v1, bookings/v2); this walks each
+// base folder's version subdirectories and keys results as "<base>-<version>" to match the
+// neuron ID convention used elsewhere (e.g. product overview, scanDockerfiles). Neurons with no
+// matching commits are omitted from the result.
+func (s *BuildService) GetNeuronLastCommitTimes(org, product, branch string) (map[string]string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	productDir := filepath.Join(home, "alis.build", org, "build", product)
+	if _, err := os.Stat(productDir); err != nil {
+		return nil, fmt.Errorf("product build dir not found: %w", err)
+	}
+
+	// Collect immediate subdirectory names (neuron base folders).
+	entries, err := os.ReadDir(productDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prefer the remote-tracking ref, but fall back to the local branch name
+	// (e.g. a checked-out branch that hasn't been pushed to origin yet).
+	ref := "origin/" + branch
+	fellBack := false
+	if err := exec.Command("git", "-C", productDir, "rev-parse", "--verify", "--quiet", ref).Run(); err != nil {
+		log.Printf("[build] GetNeuronLastCommitTimes: %q did not resolve, falling back to local ref %q", ref, branch)
+		ref = branch
+		fellBack = true
+	}
+	log.Printf("[build] GetNeuronLastCommitTimes: org=%s product=%s requestedBranch=%s ref=%s fellBack=%v dirEntries=%d", org, product, branch, ref, fellBack, len(entries))
+
+	result := make(map[string]string, len(entries))
+	var skipped []string
+	for _, entry := range entries {
+		if !entry.IsDir() || strings.HasPrefix(entry.Name(), ".") {
+			continue
+		}
+		baseName := entry.Name()
+		versionEntries, err := os.ReadDir(filepath.Join(productDir, baseName))
+		if err != nil {
+			continue
+		}
+		for _, ve := range versionEntries {
+			if !ve.IsDir() || !neuronVersionDirRe.MatchString(ve.Name()) {
+				continue
+			}
+			neuronID := baseName + "-" + ve.Name()
+			relPath := baseName + "/" + ve.Name() + "/"
+			out, err := exec.Command(
+				"git", "-C", productDir,
+				"log", "-1", "--format=%aI", ref, "--", relPath,
+			).Output()
+			if err != nil || len(strings.TrimSpace(string(out))) == 0 {
+				skipped = append(skipped, neuronID)
+				continue
+			}
+			result[neuronID] = strings.TrimSpace(string(out))
+		}
+	}
+	log.Printf("[build] GetNeuronLastCommitTimes: found=%d skipped=%d skippedNeurons=%v", len(result), len(skipped), skipped)
+	return result, nil
 }
 
 // PollLocalBuild returns new output from a running local Docker build.

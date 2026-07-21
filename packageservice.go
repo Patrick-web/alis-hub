@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/creack/pty"
+	"alis-hub-v3/internal/alisclient"
+	"alis-hub-v3/internal/terminal"
 )
 
 // PackageService orchestrates the Manage Packages flow: scan → GeneratePackageScripts → run scripts.
 type PackageService struct {
 	mu         sync.Mutex
-	alisClient *AlisClient
+	alisClient *alisclient.AlisClient
 	processes  sync.Map // map[runID]*packageProcess
 }
 
@@ -26,7 +27,7 @@ type packageProcess struct {
 	done   bool
 	errMsg string
 	cancel context.CancelFunc
-	ptmx   *os.File // PTY master — nil once the process has exited
+	ptmx   terminal.PTY // nil once the process has exited
 }
 
 func NewPackageService() *PackageService {
@@ -41,7 +42,7 @@ func (s *PackageService) initClient() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	c, err := NewAlisClient(ctx)
+	c, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("alis client: %w", err)
 	}
@@ -51,7 +52,7 @@ func (s *PackageService) initClient() error {
 
 // PreparePackageScripts scans the neuron build directory for language manifests, then calls
 // VscodeService/GeneratePackageScripts to obtain the shell commands for each folder.
-func (s *PackageService) PreparePackageScripts(org, product, neuron, version string) ([]PackageScript, error) {
+func (s *PackageService) PreparePackageScripts(org, product, neuron, version string, ignoreHidden bool, extraPatterns []string) ([]alisclient.PackageScript, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 	productDir := filepath.Join(home, "alis.build", org, "build", product)
 	folderName := neuron + "-" + version
 
-	locations, names, err := scanBuildDirForLocations(buildDir, productDir, folderName)
+	locations, names, err := scanBuildDirForLocations(buildDir, productDir, folderName, ignoreHidden, extraPatterns)
 	if err != nil {
 		return nil, err
 	}
@@ -105,23 +106,47 @@ func (s *PackageService) PreparePackageScripts(org, product, neuron, version str
 
 // scanBuildDirForLocations finds language manifest files and returns PackageScriptLocations
 // along with a map of workDir → display name (e.g. "asana-v1" or "asana-v1/proto").
-func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]PackageScriptLocation, map[string]string, error) {
+func scanBuildDirForLocations(buildDir, productDir, folderName string, ignoreHidden bool, extraPatterns []string) ([]alisclient.PackageScriptLocation, map[string]string, error) {
 	if _, err := os.Stat(buildDir); err != nil {
 		return nil, nil, fmt.Errorf("build dir not found at %s: %w", buildDir, err)
 	}
 
 	manifests := map[string]int{
-		"go.mod":           vscodeLanguageGO,
-		"package.json":     vscodeLanguageNODE,
-		"requirements.txt": vscodeLanguagePYTHON,
-		"pubspec.yaml":     vscodeLanguageDART,
+		"go.mod":           alisclient.VscodeLanguageGO,
+		"package.json":     alisclient.VscodeLanguageNODE,
+		"requirements.txt": alisclient.VscodeLanguagePYTHON,
+		"pubspec.yaml":     alisclient.VscodeLanguageDART,
+	}
+
+	skipDirs := map[string]bool{
+		"node_modules":     true,
+		".dart_tool":       true,
+		".symlinks":        true,
+		".plugin_symlinks": true,
+		".venv":            true,
+		"venv":             true,
+		"__pypackages__":   true,
 	}
 
 	seen := map[string]bool{}
-	var locations []PackageScriptLocation
+	var locations []alisclient.PackageScriptLocation
 	names := map[string]string{}
 	err := filepath.WalkDir(buildDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() {
+			if skipDirs[d.Name()] {
+				return filepath.SkipDir
+			}
+			if ignoreHidden && len(d.Name()) > 0 && d.Name()[0] == '.' {
+				return filepath.SkipDir
+			}
+			for _, pat := range extraPatterns {
+				if matched, _ := filepath.Match(pat, d.Name()); matched {
+					return filepath.SkipDir
+				}
+			}
 			return nil
 		}
 		langEnum, ok := manifests[d.Name()]
@@ -134,7 +159,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 			return nil
 		}
 		seen[key] = true
-		locations = append(locations, PackageScriptLocation{
+		locations = append(locations, alisclient.PackageScriptLocation{
 			WorkingDirectory: dir,
 			Language:         langEnum,
 			BuildDirectory:   productDir,
@@ -143,7 +168,7 @@ func scanBuildDirForLocations(buildDir, productDir, folderName string) ([]Packag
 		if rel == "" || rel == "." {
 			names[dir] = folderName
 		} else {
-			names[dir] = folderName + "/" + rel
+			names[dir] = folderName + "/" + filepath.ToSlash(rel)
 		}
 		return nil
 	})
@@ -163,16 +188,11 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 	go func() {
 		defer cancel()
 
-		shell := os.Getenv("SHELL")
-		if shell == "" {
-			shell = "/bin/bash"
-		}
-		// Start a persistent interactive login shell. The command is sent as
-		// input after a brief delay (matching VS Code's terminal.sendText).
-		cmd := exec.Command(shell, "-l")
+		shellBin, shellArgs := platformShell()
+		cmd := exec.Command(shellBin, shellArgs...)
 		cmd.Dir = workDir
 
-		ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: 24, Cols: 220})
+		ptmx, err := terminal.Start(cmd, 24, 220)
 		if err != nil {
 			p.mu.Lock()
 			p.done = true
@@ -197,7 +217,7 @@ func (s *PackageService) StartPackageScript(runID, command, workDir string) erro
 		// Send the command to the shell once it has had time to initialize.
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			ptmx.Write([]byte(command + "\n"))
+			ptmx.Write([]byte(command + platformShellExitSuffix() + "\n"))
 		}()
 
 		exitErrCh := make(chan error, 1)
@@ -269,10 +289,7 @@ func (s *PackageService) ResizePackageTerminal(runID string, cols, rows int) err
 	if ptmx == nil {
 		return nil
 	}
-	return pty.Setsize(ptmx, &pty.Winsize{
-		Rows: uint16(rows),
-		Cols: uint16(cols),
-	})
+	return ptmx.Resize(uint16(rows), uint16(cols))
 }
 
 // PollPackageRun returns new output since offset. Reuses LocalBuildChunk from buildservice.

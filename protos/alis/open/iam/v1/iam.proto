@@ -1,0 +1,401 @@
+syntax = "proto3";
+
+package alis.open.iam.v1;
+
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum IdentityProvider {
+  IDENTITY_PROVIDER_UNSPECIFIED = 0;
+  GOOGLE = 1;
+  MICROSOFT = 2;
+  EMAIL = 3;
+  LINKEDIN = 4;
+  APPLE = 5;
+}
+
+message AddIamBindingsRequest {
+  string resource = 1;
+  repeated string principals = 2;
+  repeated string roles = 3;
+  bool remove_from_other_roles = 4;
+}
+
+message RemoveIamBindingsRequest {
+  string resource = 1;
+  repeated string principals = 2;
+  repeated string roles = 3;
+}
+
+message BatchTestIamPermissionsRequest {
+  repeated string resources = 1;
+  repeated string permissions = 2;
+}
+
+message BatchTestIamPermissionsResponse {
+  message ResourcePermissions {
+    string resource = 1;
+    repeated string permissions = 2;
+  }
+  repeated .alis.open.iam.v1.BatchTestIamPermissionsResponse.ResourcePermissions resource_permissions = 1;
+}
+
+message SetUserPictureRequest {
+  string user = 1;
+  bytes data = 2;
+  string mime_type = 3;
+}
+
+message SetUserPictureResponse {
+  string public_uri = 1;
+}
+
+message User {
+  message GoogleIdentity {
+    string id = 1;
+  }
+  message MicrosoftIdentity {
+    string id = 1;
+  }
+  message LinkedinIdentity {
+    string id = 1;
+  }
+  message Subscription {
+    string name = 1;
+    string plan = 2;
+  }
+  message AppleIdentity {
+    string id = 1;
+  }
+  message Account {
+    message Seat {
+      int32 plan = 1;
+      int32 seat = 2;
+    }
+    map<int32, .alis.open.iam.v1.User.Account.Seat> seats = 1;
+  }
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  string email = 4;
+  bool verified_email = 5;
+  .alis.open.iam.v1.IdentityProvider identity_provider = 6;
+  string given_name = 7;
+  string family_name = 8;
+  string picture = 9;
+  string contact_number = 10;
+  .google.protobuf.Any metadata = 11;
+  string google_group = 12;
+  string position = 13;
+  string education = 14;
+  string linkedin_uri = 15;
+  .google.protobuf.Timestamp last_sign_in_time = 16;
+  .alis.open.iam.v1.User.GoogleIdentity google_identity = 17;
+  .alis.open.iam.v1.User.MicrosoftIdentity microsoft_identity = 18;
+  .google.protobuf.Any internal_metadata = 19;
+  .google.protobuf.Timestamp last_refresh_time = 20;
+  .alis.open.iam.v1.User.LinkedinIdentity linkedin_identity = 21;
+  repeated .alis.open.iam.v1.User.Subscription subscriptions = 22;
+  repeated string group_ids = 23;
+  .alis.open.iam.v1.User.AppleIdentity apple_identity = 24;
+  string etag = 97;
+  map<string, .alis.open.iam.v1.User.Account> accounts = 99;
+}
+
+message GetUserRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateUserRequest {
+  .alis.open.iam.v1.User user = 1;
+}
+
+message UpdateUserRequest {
+  .alis.open.iam.v1.User user = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteUserRequest {
+  string name = 1;
+}
+
+message ListUsersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListUsersResponse {
+  repeated .alis.open.iam.v1.User users = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveUserByEmailRequest {
+  string email = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchRetrieveMaskedUsersRequest {
+  repeated string users = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchRetrieveMaskedUsersResponse {
+  repeated .alis.open.iam.v1.MaskedUser masked_users = 1;
+}
+
+message LookupUserRequest {
+  string search_text = 1;
+}
+
+message LookupUserResponse {
+  message Result {
+    string user = 1;
+    string display_name = 2;
+    string masked_email = 3;
+  }
+  repeated .alis.open.iam.v1.LookupUserResponse.Result results = 1;
+}
+
+message RetrieveMaskedUsersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message RetrieveMaskedUsersResponse {
+  repeated .alis.open.iam.v1.MaskedUser users = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMaskedUserRequest {
+  oneof identifier {
+    string user = 1;
+    string email = 2;
+  }
+}
+
+message MaskedUser {
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  string masked_email = 4;
+  .alis.open.iam.v1.IdentityProvider identity_provider = 6;
+  string given_name = 7;
+  string family_name = 8;
+  string picture = 9;
+  string position = 10;
+  string education = 11;
+  string linkedin_uri = 12;
+}
+
+message EditUserInfoRequest {
+  string user = 1;
+  string given_name = 2;
+  string family_name = 3;
+  string picture = 4;
+  string contact_number = 5;
+  string position = 6;
+  string education = 7;
+  string linkedin_uri = 8;
+  .google.protobuf.FieldMask update_mask = 99;
+}
+
+message EditUserMetadataRequest {
+  string user = 1;
+  .google.protobuf.Any metadata = 2;
+}
+
+message RetrieveMyUserRequest {
+}
+
+message EditMyInfoRequest {
+  string given_name = 1;
+  string family_name = 2;
+  string picture = 3;
+  string contact_number = 4;
+  string position = 5;
+  string education = 6;
+  string linkedin_uri = 7;
+  .google.protobuf.FieldMask update_mask = 10;
+}
+
+message EditMyMetadataRequest {
+  .google.protobuf.Any metadata = 1;
+}
+
+message RemoveMyUserRequest {
+}
+
+message SyncToGoogleGroupRequest {
+}
+
+message SyncToGoogleGroupResponse {
+  int32 nr_added = 1;
+  int32 nr_removed = 2;
+}
+
+message IamConfig {
+  message AuthProviders {
+    .alis.open.iam.v1.OauthProvider google = 1;
+    .alis.open.iam.v1.OauthProvider microsoft = 2;
+    .alis.open.iam.v1.EmailAuthProvider email = 3;
+    .alis.open.iam.v1.OauthProvider linkedin = 4;
+    .alis.open.iam.v1.AppleAuthProvider apple = 5;
+  }
+  message SelfSignupSpec {
+    message DomainProvider {
+      string domain = 1;
+      .alis.open.iam.v1.IdentityProvider identity_provider = 2;
+      bool force_login = 3;
+    }
+    repeated .alis.open.iam.v1.IamConfig.SelfSignupSpec.DomainProvider domain_providers = 1;
+    repeated string default_roles = 2;
+  }
+  message CookieDomain {
+    enum SameSite {
+      SAME_SITE_UNSPECIFIED = 0;
+      SAME_SITE_STRICT = 1;
+      SAME_SITE_LAX = 2;
+      SAME_SITE_NONE = 3;
+    }
+    string host = 1;
+    string domain = 2;
+    .alis.open.iam.v1.IamConfig.CookieDomain.SameSite same_site = 3;
+  }
+  .alis.open.iam.v1.IamConfig.AuthProviders auth_providers = 1;
+  .alis.open.iam.v1.IamConfig.SelfSignupSpec self_signup_spec = 2;
+  string logo_uri = 3;
+  repeated .alis.open.iam.v1.IamConfig.CookieDomain cookie_domains = 4;
+  string google_group = 5;
+}
+
+message UiConfig {
+}
+
+message OauthProvider {
+  string client_id = 1;
+  string client_secret = 2;
+}
+
+message EmailAuthProvider {
+  message Server {
+    .alis.open.iam.v1.EmailAuthProvider.Sendgrid sendgrid = 1;
+  }
+  message Sendgrid {
+    string api_key = 1;
+    oneof template {
+      string dynamic_template_id = 2;
+    }
+  }
+  string from_email = 1;
+  .alis.open.iam.v1.EmailAuthProvider.Server server = 2;
+  .google.protobuf.Duration throttle_duration = 3;
+  .google.protobuf.Duration signed_in_duration = 4;
+}
+
+message AppleAuthProvider {
+  string team_id = 1;
+  string client_id = 2;
+  string client_secret = 3;
+  string key_id = 4;
+}
+
+message RefreshToken {
+  string token = 1;
+  .alis.open.iam.v1.IdentityProvider provider = 2;  // enum (heuristically resolved)
+  string redirect_uri = 3;
+}
+
+message Group {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  .google.protobuf.Timestamp update_time = 98;
+  .google.protobuf.Timestamp create_time = 99;
+}
+
+message GetGroupRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateGroupRequest {
+}
+
+message UpdateGroupRequest {
+  .alis.open.iam.v1.Group group = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteGroupRequest {
+}
+
+message ListGroupsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListGroupsResponse {
+  repeated .alis.open.iam.v1.Group groups = 1;
+  string next_page_token = 2;
+}
+
+message SyncGroupRequest {
+}
+
+message SyncGroupResponse {
+}
+
+service GroupsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetGroup(.alis.open.iam.v1.GetGroupRequest) returns (.alis.open.iam.v1.Group);
+  rpc CreateGroup(.alis.open.iam.v1.CreateGroupRequest) returns (.alis.open.iam.v1.Group);
+  rpc UpdateGroup(.alis.open.iam.v1.UpdateGroupRequest) returns (.alis.open.iam.v1.Group);
+  rpc DeleteGroup(.alis.open.iam.v1.DeleteGroupRequest) returns (.google.protobuf.Empty);
+  rpc ListGroups(.alis.open.iam.v1.ListGroupsRequest) returns (.alis.open.iam.v1.ListGroupsResponse);
+  rpc SyncGroup(.alis.open.iam.v1.SyncGroupRequest) returns (.alis.open.iam.v1.SyncGroupResponse);
+}
+
+service UsersService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetUser(.alis.open.iam.v1.GetUserRequest) returns (.alis.open.iam.v1.User);
+  rpc CreateUser(.alis.open.iam.v1.CreateUserRequest) returns (.alis.open.iam.v1.User);
+  rpc UpdateUser(.alis.open.iam.v1.UpdateUserRequest) returns (.alis.open.iam.v1.User);
+  rpc DeleteUser(.alis.open.iam.v1.DeleteUserRequest) returns (.google.protobuf.Empty);
+  rpc ListUsers(.alis.open.iam.v1.ListUsersRequest) returns (.alis.open.iam.v1.ListUsersResponse);
+  rpc RetrieveUserByEmail(.alis.open.iam.v1.RetrieveUserByEmailRequest) returns (.alis.open.iam.v1.User);
+  rpc LookupUser(.alis.open.iam.v1.LookupUserRequest) returns (.alis.open.iam.v1.LookupUserResponse);
+  rpc BatchRetrieveMaskedUsers(.alis.open.iam.v1.BatchRetrieveMaskedUsersRequest) returns (.alis.open.iam.v1.BatchRetrieveMaskedUsersResponse);
+  rpc RetrieveMaskedUsers(.alis.open.iam.v1.RetrieveMaskedUsersRequest) returns (.alis.open.iam.v1.RetrieveMaskedUsersResponse);
+  rpc RetrieveMaskedUser(.alis.open.iam.v1.RetrieveMaskedUserRequest) returns (.alis.open.iam.v1.MaskedUser);
+  rpc EditUserInfo(.alis.open.iam.v1.EditUserInfoRequest) returns (.alis.open.iam.v1.User);
+  rpc EditUserMetadata(.alis.open.iam.v1.EditUserMetadataRequest) returns (.alis.open.iam.v1.User);
+  rpc RetrieveMyUser(.alis.open.iam.v1.RetrieveMyUserRequest) returns (.alis.open.iam.v1.User);
+  rpc EditMyInfo(.alis.open.iam.v1.EditMyInfoRequest) returns (.alis.open.iam.v1.User);
+  rpc EditMyMetadata(.alis.open.iam.v1.EditMyMetadataRequest) returns (.alis.open.iam.v1.User);
+  rpc RemoveMyUser(.alis.open.iam.v1.RemoveMyUserRequest) returns (.google.protobuf.Empty);
+  rpc SyncToGoogleGroup(.alis.open.iam.v1.SyncToGoogleGroupRequest) returns (.alis.open.iam.v1.SyncToGoogleGroupResponse);
+  rpc SetUserPicture(.alis.open.iam.v1.SetUserPictureRequest) returns (.alis.open.iam.v1.SetUserPictureResponse);
+}

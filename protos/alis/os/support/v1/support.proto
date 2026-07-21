@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package alis.os.support.v1;
+
+import "alis/open/support/v1/support.proto";
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+
+message UploadImageRequest {
+  string product_deployment = 1;
+  bytes data = 2;
+  string mime_type = 3;
+}
+
+message UploadImageResponse {
+}
+
+message Guide {
+  string name = 1;
+  .alis.os.support.v1.Guide draft_guide = 2;
+  .alis.os.support.v1.Guide published_guide = 3;
+  string user = 4;
+  string etag = 5;
+}
+
+message GetGuideRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateGuideRequest {
+  string parent = 1;
+  .alis.os.support.v1.Guide guide = 2;
+}
+
+message UpdateGuideRequest {
+  .alis.os.support.v1.Guide guide = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteGuideRequest {
+}
+
+message ListGuidesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListGuidesResponse {
+  repeated .alis.os.support.v1.Guide guides = 1;
+  string next_page_token = 2;
+}
+
+message PublishGuideRequest {
+}
+
+message PublishGuideResponse {
+}
+
+message UnpublishGuideRequest {
+}
+
+message UnpublishGuideResponse {
+}
+
+message Issue {
+  string name = 1;
+  .alis.os.support.v1.Issue open_issue = 2;
+}
+
+message CreateIssueRequest {
+  string parent = 1;
+  .alis.os.support.v1.Issue open_issue = 2;
+}
+
+message GetIssueRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListIssuesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListIssuesResponse {
+  repeated .alis.os.support.v1.Issue issues = 1;
+  string next_page_token = 2;
+}
+
+message SetIssueAssigneeRequest {
+  string name = 1;
+  string assignee = 2;
+}
+
+message SetIssueTypeRequest {
+  string name = 1;
+  int32 type = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message PutIssueOnHoldRequest {
+}
+
+message ResumeIssueRequest {
+}
+
+message CloseIssueRequest {
+}
+
+message ReopenIssueRequest {
+}
+
+message IssueActivity {
+  string name = 1;
+  .alis.os.support.v1.IssueActivity open_issue_activity = 2;
+}
+
+message GetIssueActivityRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListIssueActivitiesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListIssueActivitiesResponse {
+  repeated .alis.os.support.v1.IssueActivity issue_activities = 1;
+  string next_page_token = 2;
+}
+
+message AddSupportCommentRequest {
+  string parent = 1;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 2;
+}
+
+message AddInternalCommentRequest {
+  string parent = 1;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 2;
+}
+
+message EditCommentRequest {
+  string name = 1;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 2;
+}
+
+message DeleteCommentRequest {
+}
+
+service PublicAttachmentsProxyService {
+  rpc UploadImage(.alis.os.support.v1.UploadImageRequest) returns (.alis.os.support.v1.UploadImageResponse);
+}
+
+service GuidesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetGuide(.alis.os.support.v1.GetGuideRequest) returns (.alis.os.support.v1.Guide);
+  rpc CreateGuide(.alis.os.support.v1.CreateGuideRequest) returns (.alis.os.support.v1.Guide);
+  rpc UpdateGuide(.alis.os.support.v1.UpdateGuideRequest) returns (.alis.os.support.v1.Guide);
+  rpc DeleteGuide(.alis.os.support.v1.DeleteGuideRequest) returns (.google.protobuf.Empty);
+  rpc ListGuides(.alis.os.support.v1.ListGuidesRequest) returns (.alis.os.support.v1.ListGuidesResponse);
+  rpc PublishGuide(.alis.os.support.v1.PublishGuideRequest) returns (.alis.os.support.v1.PublishGuideResponse);
+  rpc UnpublishGuide(.alis.os.support.v1.UnpublishGuideRequest) returns (.alis.os.support.v1.UnpublishGuideResponse);
+}
+
+service IssuesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc CreateIssue(.alis.os.support.v1.CreateIssueRequest) returns (.alis.os.support.v1.Issue);
+  rpc GetIssue(.alis.os.support.v1.GetIssueRequest) returns (.alis.os.support.v1.Issue);
+  rpc ListIssues(.alis.os.support.v1.ListIssuesRequest) returns (.alis.os.support.v1.ListIssuesResponse);
+  rpc SetIssueAssignee(.alis.os.support.v1.SetIssueAssigneeRequest) returns (.alis.os.support.v1.Issue);
+  rpc SetIssueType(.alis.os.support.v1.SetIssueTypeRequest) returns (.alis.os.support.v1.Issue);
+  rpc PutIssueOnHold(.alis.os.support.v1.PutIssueOnHoldRequest) returns (.alis.os.support.v1.Issue);
+  rpc ResumeIssue(.alis.os.support.v1.ResumeIssueRequest) returns (.alis.os.support.v1.Issue);
+  rpc CloseIssue(.alis.os.support.v1.CloseIssueRequest) returns (.alis.os.support.v1.Issue);
+  rpc ReopenIssue(.alis.os.support.v1.ReopenIssueRequest) returns (.alis.os.support.v1.Issue);
+}
+
+service IssueActivitiesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc GetIssueActivity(.alis.os.support.v1.GetIssueActivityRequest) returns (.alis.os.support.v1.IssueActivity);
+  rpc ListIssueActivities(.alis.os.support.v1.ListIssueActivitiesRequest) returns (.alis.os.support.v1.ListIssueActivitiesResponse);
+  rpc AddSupportComment(.alis.os.support.v1.AddSupportCommentRequest) returns (.alis.os.support.v1.IssueActivity);
+  rpc AddInternalComment(.alis.os.support.v1.AddInternalCommentRequest) returns (.alis.os.support.v1.IssueActivity);
+  rpc EditComment(.alis.os.support.v1.EditCommentRequest) returns (.alis.os.support.v1.IssueActivity);
+  rpc DeleteComment(.alis.os.support.v1.DeleteCommentRequest) returns (.google.protobuf.Empty);
+}

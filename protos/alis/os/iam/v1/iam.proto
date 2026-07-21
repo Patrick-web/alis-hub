@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package alis.os.iam.v1;
+
+import "alis/open/iam/v1/iam.proto";
+import "alis/open/validation/v1/validation.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message User {
+  string name = 1;
+  .alis.os.iam.v1.User open_user = 2;
+}
+
+message UserInternalMetadata {
+  message UserQuest {
+    string name = 1;
+    bool completed = 2;
+    string step_id = 3;
+    string resume_url = 4;
+    string starting_url = 5;
+  }
+  message AccountAccessRequest {
+    string account = 1;
+    bool approved = 2;
+  }
+  bool accepted_terms_of_service = 1;
+  bool accepted_privacy_policy = 2;
+  bool onboarded = 3;
+  repeated .alis.os.iam.v1.UserInternalMetadata.UserQuest quests = 4;
+  repeated .alis.os.iam.v1.UserInternalMetadata.AccountAccessRequest account_access_requests = 5;
+}
+
+message GetUserRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateUserRequest {
+  string parent = 1;
+  .alis.os.iam.v1.User user = 2;
+}
+
+message UpdateUserRequest {
+  .alis.os.iam.v1.User user = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteUserRequest {
+}
+
+message ListUsersRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListUsersResponse {
+  repeated .alis.os.iam.v1.User users = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveUserByEmailRequest {
+  string deployment = 1;
+  string email = 2;
+}
+
+message EditUserInfoRequest {
+  string user = 1;
+  string given_name = 2;
+  string family_name = 3;
+  string picture = 4;
+  string contact_number = 5;
+  string position = 6;
+  string education = 7;
+  string linkedin_uri = 8;
+  .google.protobuf.FieldMask update_mask = 99;
+}
+
+message SyncToGoogleGroupRequest {
+}
+
+message SyncToGoogleGroupResponse {
+  int32 nr_added = 1;
+  int32 nr_removed = 2;
+}
+
+message Role {
+  string name = 1;
+  .google.protobuf.Timestamp create_time = 2;
+  .google.protobuf.Timestamp update_time = 3;
+  bytes etag = 4;
+  string title = 5;
+  string description = 6;
+  repeated string permissions = 7;
+  repeated string resource_types = 8;
+  bool all_users = 9;
+}
+
+message GetRoleRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateRoleRequest {
+  string parent = 1;
+  .alis.os.iam.v1.Role role = 2;
+  string role_id = 3;
+}
+
+message UpdateRoleRequest {
+  .alis.os.iam.v1.Role role = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteRoleRequest {
+}
+
+message ListRolesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListRolesResponse {
+  repeated .alis.os.iam.v1.Role roles = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetRolesRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message BatchGetRolesResponse {
+}
+
+message BatchCreateRolesRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v1.CreateRoleRequest requests = 2;
+}
+
+message BatchCreateRolesResponse {
+}
+
+message BatchUpdateRolesRequest {
+  string parent = 1;
+  repeated .alis.os.iam.v1.UpdateRoleRequest requests = 2;
+}
+
+message BatchUpdateRolesResponse {
+}
+
+service RolesService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetRole(.alis.os.iam.v1.GetRoleRequest) returns (.alis.os.iam.v1.Role);
+  rpc CreateRole(.alis.os.iam.v1.CreateRoleRequest) returns (.alis.os.iam.v1.Role);
+  rpc UpdateRole(.alis.os.iam.v1.UpdateRoleRequest) returns (.alis.os.iam.v1.Role);
+  rpc DeleteRole(.alis.os.iam.v1.DeleteRoleRequest) returns (.google.protobuf.Empty);
+  rpc ListRoles(.alis.os.iam.v1.ListRolesRequest) returns (.alis.os.iam.v1.ListRolesResponse);
+  rpc BatchGetRoles(.alis.os.iam.v1.BatchGetRolesRequest) returns (.alis.os.iam.v1.BatchGetRolesResponse);
+  rpc BatchCreateRoles(.alis.os.iam.v1.BatchCreateRolesRequest) returns (.alis.os.iam.v1.BatchCreateRolesResponse);
+  rpc BatchUpdateRoles(.alis.os.iam.v1.BatchUpdateRolesRequest) returns (.alis.os.iam.v1.BatchUpdateRolesResponse);
+}
+
+service UsersService {
+  rpc ValidateMessage(.alis.open.validation.v1.ValidateMessageRequest) returns (.alis.open.validation.v1.ValidateMessageResponse);
+  rpc RetrieveRules(.alis.open.validation.v1.RetrieveRulesRequest) returns (.alis.open.validation.v1.RetrieveRulesResponse);
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetUser(.alis.os.iam.v1.GetUserRequest) returns (.alis.os.iam.v1.User);
+  rpc CreateUser(.alis.os.iam.v1.CreateUserRequest) returns (.alis.os.iam.v1.User);
+  rpc UpdateUser(.alis.os.iam.v1.UpdateUserRequest) returns (.alis.os.iam.v1.User);
+  rpc DeleteUser(.alis.os.iam.v1.DeleteUserRequest) returns (.google.protobuf.Empty);
+  rpc ListUsers(.alis.os.iam.v1.ListUsersRequest) returns (.alis.os.iam.v1.ListUsersResponse);
+  rpc RetrieveUserByEmail(.alis.os.iam.v1.RetrieveUserByEmailRequest) returns (.alis.os.iam.v1.User);
+  rpc SyncToGoogleGroup(.alis.os.iam.v1.SyncToGoogleGroupRequest) returns (.alis.os.iam.v1.SyncToGoogleGroupResponse);
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package alis.os.services.images.v1;
+message UploadImageRequest {
+  message UploadSizeConfig {
+    bool omit_original = 1;
+    bool upload_smaller = 2;
+    bool upload_icon = 3;
+  }
+  bytes data = 1;
+  string mime_type = 2;
+  .alis.os.services.images.v1.UploadImageRequest.UploadSizeConfig upload_size_config = 3;
+}
+
+message UploadImageResponse {
+  string original_image_uri = 1;
+  string smaller_image_uri = 2;
+  string icon_image_uri = 3;
+}
+
+service ImagesService {
+  rpc UploadImage(.alis.os.services.images.v1.UploadImageRequest) returns (.alis.os.services.images.v1.UploadImageResponse);
+}

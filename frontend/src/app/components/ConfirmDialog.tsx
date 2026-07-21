@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -7,7 +8,7 @@ import {
   AlertDialogDescription,
   AlertDialogAction,
   AlertDialogCancel,
-} from './ui/alert-dialog';
+} from "./ui/alert-dialog";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -15,8 +16,10 @@ interface ConfirmDialogProps {
   title: string;
   description: React.ReactNode;
   confirmLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
+  requireText?: string;
 }
 
 export function ConfirmDialog({
@@ -24,34 +27,71 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Delete',
+  confirmLabel = "Delete",
+  loadingLabel,
   loading = false,
   onConfirm,
+  requireText,
 }: ConfirmDialogProps) {
+  const [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    if (open) setInputValue("");
+  }, [open]);
+
+  const confirmed = !requireText || inputValue === requireText;
+
   return (
-    <AlertDialog open={open} onOpenChange={(o) => { if (!o && !loading) onOpenChange(false); }}>
-      <AlertDialogContent className="bg-[#2c2c2c] border border-[#464646] text-white">
+    <AlertDialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o && !loading) onOpenChange(false);
+      }}
+    >
+      <AlertDialogContent className="text-foreground">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-white font-['JetBrains_Mono',sans-serif] text-[14px]">
+          <AlertDialogTitle className="text-foreground font-mono text-[14px]">
             {title}
           </AlertDialogTitle>
-          <AlertDialogDescription className="text-[rgba(255,255,255,0.5)] font-['JetBrains_Mono',sans-serif] text-[12px]">
+          <AlertDialogDescription className="text-foreground/50 font-mono text-[12px]">
             {description}
           </AlertDialogDescription>
         </AlertDialogHeader>
+
+        {requireText && (
+          <div className="flex flex-col gap-[6px]">
+            <p className="font-mono text-[10px] text-foreground/40">
+              Type <span className="text-foreground">{requireText}</span> to confirm
+            </p>
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && confirmed && !loading && onConfirm()}
+              disabled={loading}
+              autoFocus
+              className="w-full bg-background border border-border rounded-[4px] px-[12px] py-[7px] text-foreground font-mono text-[12px] focus:outline-none focus:border-destructive disabled:opacity-50 placeholder:text-foreground/20"
+              placeholder={requireText}
+            />
+          </div>
+        )}
+
         <AlertDialogFooter>
           <AlertDialogCancel
-            className="bg-transparent border border-[#464646] text-white hover:bg-[rgba(255,255,255,0.05)] font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
+            className="bg-transparent border border-border text-foreground hover:bg-foreground/5 font-mono text-[11px] uppercase font-bold"
             disabled={loading}
           >
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
-            className="bg-[#ff5050] hover:bg-[#ff3333] text-white border-0 font-['JetBrains_Mono',sans-serif] text-[11px] uppercase font-bold"
-            onClick={(e) => { e.preventDefault(); onConfirm(); }}
-            disabled={loading}
+            className="bg-destructive hover:bg-destructive text-destructive-foreground border-0 font-mono text-[11px] uppercase font-bold disabled:opacity-40 disabled:pointer-events-none"
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}
+            disabled={loading || !confirmed}
           >
-            {loading ? 'Deleting…' : confirmLabel}
+            {loading ? (loadingLabel ?? "Processing…") : confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

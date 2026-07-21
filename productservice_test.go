@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -377,9 +378,15 @@ func TestDebugGetProduct(t *testing.T) {
 				t.Logf("parseProduct error: %v", err)
 			} else {
 				t.Logf("parseProduct result: Name=%q DisplayName=%q State=%d", p.Name, p.DisplayName, p.State)
-				if p.GoogleProject != nil { t.Logf("  GoogleProject.ID=%q Region=%q", p.GoogleProject.ID, p.GoogleProject.Region) }
-				if p.GitRepo != nil { t.Logf("  GitRepo.RemoteURI=%q", p.GitRepo.RemoteURI) }
-				if p.PackageRegistries != nil { t.Logf("  Pkgs.Go=%q", p.PackageRegistries.Go) }
+				if p.GoogleProject != nil {
+					t.Logf("  GoogleProject.ID=%q Region=%q", p.GoogleProject.ID, p.GoogleProject.Region)
+				}
+				if p.GitRepo != nil {
+					t.Logf("  GitRepo.RemoteURI=%q", p.GitRepo.RemoteURI)
+				}
+				if p.PackageRegistries != nil {
+					t.Logf("  Pkgs.Go=%q", p.PackageRegistries.Go)
+				}
 			}
 		}
 	}
@@ -402,15 +409,22 @@ func TestDebugGetProduct(t *testing.T) {
 				switch typ {
 				case protowire.VarintType:
 					v, m := protowire.ConsumeVarint(data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					t.Logf("  field %d (varint) = %d", num, v)
 					data = data[m:]
 				case protowire.BytesType:
 					b, m := protowire.ConsumeBytes(data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					printable := true
 					for _, c := range b {
-						if c < 32 && c != '\n' && c != '\r' { printable = false; break }
+						if c < 32 && c != '\n' && c != '\r' {
+							printable = false
+							break
+						}
 					}
 					if printable && len(b) < 100 {
 						t.Logf("  field %d (bytes, %d) = %q", num, len(b), string(b))
@@ -420,7 +434,9 @@ func TestDebugGetProduct(t *testing.T) {
 					data = data[m:]
 				default:
 					m := protowire.ConsumeFieldValue(num, typ, data)
-					if m < 0 { break }
+					if m < 0 {
+						break
+					}
 					t.Logf("  field %d (type %d, skip %d bytes)", num, typ, m)
 					data = data[m:]
 				}
@@ -804,6 +820,348 @@ func TestProbeGetBlock(t *testing.T) {
 	t.Logf("first block name: %q", firstBlockName)
 }
 
+// ── Codeblock detail live tests ──────────────────────────────────────────────
+
+func TestListMyCodeblocksLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	// First dump my account IDs to confirm JWT parsing
+	myIDs := svc.myAccountIDs()
+	t.Logf("my account IDs from JWT: %v", myIDs)
+
+	// Fetch all blocks and log their publisher fields to see what values we get
+	all, err := svc.ListCodeblocks()
+	if err != nil {
+		t.Fatalf("ListCodeblocks: %v", err)
+	}
+	t.Logf("total blocks in marketplace: %d", len(all))
+	for _, b := range all {
+		t.Logf("  name=%-35s publisher=%q", b.Name, b.Publisher)
+	}
+
+	blocks, err := svc.ListMyCodeblocks()
+	if err != nil {
+		t.Fatalf("ListMyCodeblocks: %v", err)
+	}
+	t.Logf("found %d block(s) owned by my account:", len(blocks))
+
+	var found bool
+	for _, b := range blocks {
+		t.Logf("  name=%-35s displayName=%q publisher=%s", b.Name, b.DisplayName, b.Publisher)
+		if b.Name == "blocks/testclaudeblock" {
+			found = true
+			t.Logf("✓ testclaudeblock present: displayName=%q releaseLevel=%d", b.DisplayName, b.ReleaseLevel)
+		}
+	}
+	if !found {
+		t.Error("blocks/testclaudeblock not found — ListMyCodeblocks filter may be broken")
+	}
+}
+
+func TestGetCodeblockLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	cb, err := svc.GetCodeblock("skills")
+	if err != nil {
+		t.Fatalf("GetCodeblock: %v", err)
+	}
+	t.Logf("name=%q displayName=%q releaseLevel=%d", cb.Name, cb.DisplayName, cb.ReleaseLevel)
+	t.Logf("publisher=%q latestVersion=%q", cb.Publisher, cb.LatestVersion)
+	t.Logf("headline=%q", cb.Headline)
+	t.Logf("description=%q", cb.Description[:min(100, len(cb.Description))])
+}
+
+func TestListCodeblockVersionsLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	versions, err := svc.ListCodeblockVersions("skills")
+	if err != nil {
+		t.Fatalf("ListCodeblockVersions: %v", err)
+	}
+	t.Logf("got %d versions", len(versions))
+	for i, v := range versions {
+		t.Logf("version[%d]: name=%q tag=%q level=%d time=%q notes=%q files=%d",
+			i, v.Name, v.VersionTag, v.ReleaseLevel, v.CreateTime, v.ReleaseNotes, len(v.Files))
+		for _, f := range v.Files {
+			t.Logf("  folder=%q files=%d", f.Name, len(f.Files))
+			for _, fi := range f.Files {
+				t.Logf("    file=%q content_len=%d", fi.Name, len(fi.Content))
+			}
+		}
+	}
+
+	// Also dump raw field tags from the first version to verify field numbers.
+	t.Log("--- raw field dump for BlockVersion ---")
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/skills")
+	buf = protowire.AppendTag(buf, 2, protowire.VarintType)
+	buf = protowire.AppendVarint(buf, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, _, _, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/ListBlockVersions", buf)
+	if reqErr != nil || len(body) < 5 {
+		t.Logf("raw dump skipped: %v", reqErr)
+		return
+	}
+	data := body[5:]
+	num, _, n := protowire.ConsumeTag(data)
+	if n > 0 && num == 1 {
+		data = data[n:]
+		b, m := protowire.ConsumeBytes(data)
+		if m > 0 {
+			dumpProtoFields(t, b, 0)
+		}
+	}
+}
+
+func TestGetCodeblockDocLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	versions, err := svc.ListCodeblockVersions("skills")
+	if err != nil || len(versions) == 0 {
+		t.Skipf("need at least one version: %v", err)
+	}
+	versionName := versions[0].Name
+	t.Logf("fetching doc for version %q", versionName)
+
+	doc, err := svc.GetCodeblockDoc(versionName, "user")
+	if err != nil {
+		t.Fatalf("GetCodeblockDoc: %v", err)
+	}
+	if doc == "" {
+		t.Error("user doc is empty — field number for documentation may be wrong")
+	}
+	t.Logf("user doc len=%d, first 200 chars: %q", len(doc), doc[:min(200, len(doc))])
+
+	agentDoc, err := svc.GetCodeblockDoc(versionName, "agent")
+	if err != nil {
+		t.Fatalf("GetCodeblockDoc agent: %v", err)
+	}
+	t.Logf("agent doc len=%d", len(agentDoc))
+}
+
+func TestListCodeblockInstancesLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	instances, err := svc.ListCodeblockInstances("oidc")
+	if err != nil {
+		t.Fatalf("ListCodeblockInstances: %v", err)
+	}
+	t.Logf("got %d instances", len(instances))
+	for i, inst := range instances {
+		t.Logf("instance[%d]: name=%q shortId=%q pkg=%q state=%d block=%q ver=%q created=%q entitlement=%q",
+			i, inst.Name, inst.ShortID, inst.Package, inst.State, inst.Block, inst.BlockVersion, inst.CreateTime, inst.Entitlement)
+	}
+
+	// Raw field dump to verify Instance field numbers.
+	t.Log("--- raw field dump for Instance ---")
+	fm := marshalFieldMask([]string{"name", "package", "state", "block", "block_version", "create_time", "update_time", "entitlement"})
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/oidc")
+	buf = protowire.AppendTag(buf, 4, protowire.BytesType)
+	buf = protowire.AppendBytes(buf, fm)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, _, _, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.InstancesService/ListInstances", buf)
+	if reqErr != nil || len(body) < 5 {
+		t.Logf("raw dump skipped: %v", reqErr)
+		return
+	}
+	data := body[5:]
+	// Dump first Instance message.
+	num, _, n := protowire.ConsumeTag(data)
+	if n > 0 && num == 1 {
+		data = data[n:]
+		b, m := protowire.ConsumeBytes(data)
+		if m > 0 {
+			dumpProtoFields(t, b, 0)
+		}
+	}
+}
+
+func TestGetCodeblockMembersLive(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	members, err := svc.GetCodeblockMembers("skills")
+	if err != nil {
+		t.Fatalf("GetCodeblockMembers: %v", err)
+	}
+	t.Logf("got %d members", len(members))
+	for i, m := range members {
+		t.Logf("member[%d]: name=%q displayName=%q photoUrl=%q", i, m.Name, m.DisplayName, m.PhotoURL)
+	}
+}
+
+func TestProbeGetBlockVersion(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	var buf []byte
+	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
+	buf = protowire.AppendString(buf, "blocks/bb6b/versions/1.0.0-experimental1")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	body, grpcStatus, grpcMsg, reqErr := svc.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/GetBlockVersion", buf)
+	if reqErr != nil {
+		t.Fatalf("request error: %v", reqErr)
+	}
+	if grpcStatus != 0 {
+		t.Fatalf("grpc error %d: %s", grpcStatus, grpcMsg)
+	}
+	t.Logf("response body %d bytes", len(body))
+
+	// Test the parsed result via GetCodeblockVersion
+	v, verr := svc.GetCodeblockVersion("blocks/bb6b/versions/1.0.0-experimental1")
+	if verr != nil {
+		t.Fatalf("GetCodeblockVersion: %v", verr)
+	}
+	t.Logf("parsed: name=%q tag=%q level=%d files=%d", v.Name, v.VersionTag, v.ReleaseLevel, len(v.Files))
+	for _, f := range v.Files {
+		t.Logf("  folder=%q files=%d", f.Name, len(f.Files))
+		for _, fi := range f.Files {
+			t.Logf("    file=%q content_len=%d", fi.Name, len(fi.Content))
+		}
+	}
+
+	t.Log("--- sub-field number summary for fields 3 and 7 ---")
+	data := body[5:]
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		if typ != protowire.BytesType {
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				break
+			}
+			data = data[m:]
+			continue
+		}
+		b, m := protowire.ConsumeBytes(data)
+		if m < 0 {
+			break
+		}
+		data = data[m:]
+		if num != 3 && num != 7 {
+			continue
+		}
+		// Count files per sub-field number
+		counts := map[protowire.Number][]string{}
+		inner := b
+		for len(inner) > 0 {
+			fn, ft, fn2 := protowire.ConsumeTag(inner)
+			if fn2 < 0 {
+				break
+			}
+			inner = inner[fn2:]
+			if ft != protowire.BytesType {
+				mv := protowire.ConsumeFieldValue(fn, ft, inner)
+				if mv < 0 {
+					break
+				}
+				inner = inner[mv:]
+				continue
+			}
+			fb, fm := protowire.ConsumeBytes(inner)
+			if fm < 0 {
+				break
+			}
+			inner = inner[fm:]
+			entry := parseCodeblockFileEntry(fb)
+			counts[fn] = append(counts[fn], entry.Name)
+		}
+		t.Logf("field %d (%d bytes): sub-field distribution:", num, len(b))
+		for sfn, names := range counts {
+			t.Logf("  sub-field %d: %d files → %v", sfn, len(names), names)
+		}
+	}
+}
+
+// dumpProtoFields recursively logs all field numbers and their types from a proto byte slice.
+func dumpProtoFields(t *testing.T, data []byte, depth int) {
+	t.Helper()
+	indent := strings.Repeat("  ", depth)
+	for len(data) > 0 {
+		num, typ, n := protowire.ConsumeTag(data)
+		if n < 0 {
+			break
+		}
+		data = data[n:]
+		switch typ {
+		case protowire.VarintType:
+			v, m := protowire.ConsumeVarint(data)
+			if m < 0 {
+				return
+			}
+			t.Logf("%sfield %d (varint) = %d", indent, num, v)
+			data = data[m:]
+		case protowire.BytesType:
+			b, m := protowire.ConsumeBytes(data)
+			if m < 0 {
+				return
+			}
+			printable := true
+			for _, c := range b {
+				if c < 32 && c != '\n' && c != '\r' && c != '\t' {
+					printable = false
+					break
+				}
+			}
+			if printable && len(b) < 500 {
+				t.Logf("%sfield %d (string, %d bytes) = %q", indent, num, len(b), string(b))
+			} else {
+				t.Logf("%sfield %d (bytes, %d bytes) hex-prefix=%x", indent, num, len(b), b[:min(16, len(b))])
+			}
+			data = data[m:]
+		default:
+			m := protowire.ConsumeFieldValue(num, typ, data)
+			if m < 0 {
+				return
+			}
+			t.Logf("%sfield %d (wire type %d, %d bytes)", indent, num, typ, m)
+			data = data[m:]
+		}
+	}
+}
+
 // TestPKCELoginFlow opens a browser window and completes the real OAuth2 login.
 // Run manually: go test -v -run TestPKCELoginFlow -timeout 2m .
 func TestPKCELoginFlow(t *testing.T) {
@@ -1006,7 +1364,7 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 	t.Run("GetBuildCommits — changelog data", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		client, err := NewAlisClient(ctx)
+		client, err := newAlisClient(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1018,7 +1376,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 		}
 		t.Logf("commits on master (%d):", len(commits))
 		for i, c := range commits {
-			if i >= 5 { break }
+			if i >= 5 {
+				break
+			}
 			t.Logf("  sha=%s author=%q ts=%d msg=%q", c.SHA[:7], c.Author, c.Timestamp, truncateStr(c.Message, 60))
 		}
 	})
@@ -1026,7 +1386,7 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 	t.Run("FetchBuildLogs — full pipeline for latest and an old version", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		client, err := NewAlisClient(ctx)
+		client, err := newAlisClient(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1038,7 +1398,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 
 		probes := []int{0, 5, 20}
 		for _, i := range probes {
-			if i >= len(vers) { continue }
+			if i >= len(vers) {
+				continue
+			}
 			v := vers[i]
 			if v.LogsURL == "" {
 				t.Logf("[%d] version=%s — no logsUrl (retagged)", i, v.Version)
@@ -1052,7 +1414,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 			t.Logf("[%d] version=%s — OK: %d chars", i, v.Version, len(result.Content))
 			if len(result.Content) > 0 {
 				snippet := result.Content
-				if len(snippet) > 200 { snippet = snippet[:200] }
+				if len(snippet) > 200 {
+					snippet = snippet[:200]
+				}
 				t.Logf("  first 200 chars:\n%s", snippet)
 			}
 		}
@@ -1062,7 +1426,9 @@ func TestProbeBuildsPageBackend(t *testing.T) {
 // buildGCSRUrlTest is the same pure function used in BuildsPage — copied here for testing.
 func buildGCSRUrlTest(remoteUri string, sha string) string {
 	m := regexp.MustCompile(`source\.developers\.google\.com/p/([^/]+)/r/([^/]+)`).FindStringSubmatch(remoteUri)
-	if m == nil { return "" }
+	if m == nil {
+		return ""
+	}
 	return fmt.Sprintf("https://source.cloud.google.com/%s/%s/+/%s", m[1], m[2], sha)
 }
 
@@ -1073,7 +1439,7 @@ func TestProbeBFFNeuronVersionLogs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1110,6 +1476,93 @@ func TestProbeBFFNeuronVersionLogs(t *testing.T) {
 		} else {
 			t.Logf("  (no content extracted from HTML)")
 		}
+	}
+}
+
+// TestSyncReposLive clones (or fetches) the define and build repos for a real
+// product and verifies that the Forgejo Bearer-token auth works end-to-end.
+// Run with: go test -v -run TestSyncReposLive -timeout 120s .
+func TestSyncReposLive(t *testing.T) {
+	const org, product = "voyage", "vp"
+
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v (run Login() first)", err)
+	}
+	svc.tokens = ts
+
+	// Verify the access token is present before trying git.
+	tok, err := ts.AccessToken()
+	if err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	t.Logf("access token length: %d", len(tok))
+
+	// Resolve the URLs the same way SyncRepos does, so we can log them.
+	overview, err := svc.GetProductOverview(org, product)
+	if err != nil {
+		t.Fatalf("GetProductOverview: %v", err)
+	}
+	orgBaseURL, err := svc.getOrganisationGitRepo(org)
+	if err != nil {
+		t.Fatalf("getOrganisationGitRepo: %v", err)
+	}
+	defineURL := strings.TrimRight(orgBaseURL, "/") + "/proto"
+	buildURL := strings.TrimRight(overview.GitRepo.RemoteURI, "/") + "/" + product
+	t.Logf("define URL: %s", defineURL)
+	t.Logf("build  URL: %s", buildURL)
+
+	// Run the actual sync, routing git output to t.Log.
+	t.Log("syncing repos ...")
+	result, err := svc.SyncRepos(org, product)
+	if err != nil {
+		t.Fatalf("SyncRepos returned error: %v", err)
+	}
+	if result.Error != "" {
+		t.Fatalf("SyncRepos result.Error: %s", result.Error)
+	}
+	t.Logf("define  → %s (%s)", result.DefineDir, result.DefineAction)
+	t.Logf("build   → %s (%s)", result.BuildDir, result.BuildAction)
+}
+
+// TestSyncReposGitDiag runs the git fetch manually so we can see raw git stderr.
+func TestSyncReposGitDiag(t *testing.T) {
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	tok, err := ts.AccessToken()
+	if err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	t.Logf("token length: %d prefix: %.20s", len(tok), tok)
+
+	defineDir := filepath.Join(os.Getenv("HOME"), "alis.build", "voyage", "define")
+	if _, err := os.Stat(defineDir); err != nil {
+		t.Skipf("define repo not cloned yet at %s", defineDir)
+	}
+
+	svc := NewProductService()
+	svc.tokens = ts
+	orgBaseURL, err := svc.getOrganisationGitRepo("voyage")
+	if err != nil {
+		t.Fatalf("getOrganisationGitRepo: %v", err)
+	}
+	defineURL := strings.TrimRight(orgBaseURL, "/") + "/proto"
+	t.Logf("fetch URL: %s", defineURL)
+
+	cmd := exec.Command("git",
+		"-c", "http.extraHeader=",
+		"-c", "http.extraHeader=Authorization: Bearer "+tok,
+		"-C", defineDir,
+		"fetch", defineURL,
+	)
+	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	out, runErr := cmd.CombinedOutput()
+	t.Logf("exit: %v\noutput:\n%s", runErr, string(out))
+	if runErr != nil {
+		t.Fail()
 	}
 }
 
@@ -1194,4 +1647,42 @@ func tryParseSubMessage(data []byte) string {
 		return ""
 	}
 	return strings.Join(parts, " ")
+}
+
+func TestGetWorkstationURI(t *testing.T) {
+	svc := NewProductService()
+	uri, err := svc.GetWorkstationURI()
+	if err != nil {
+		t.Fatalf("GetWorkstationURI: %v", err)
+	}
+	t.Logf("Workstation URI: %q", uri)
+	if uri == "" {
+		t.Log("(empty — workstation may still be provisioning)")
+	}
+}
+
+func TestContributeBlock(t *testing.T) {
+	svc := NewProductService()
+	ts, err := NewConsoleTokenSource()
+	if err != nil {
+		t.Skipf("no console credentials: %v", err)
+	}
+	svc.tokens = ts
+
+	result, err := svc.ContributeBlock(ContributeBlockParams{
+		BlockID:      "testclaudeblock",
+		VersionTag:   "v1.0.0-experimental5",
+		ReleaseNotes: "Test version from Go test",
+		ReleaseLevel: 3, // EXPERIMENTAL
+		ProtoFiles: []CodeblockFileItem{
+			{Name: "hello.proto", Content: "syntax = \"proto3\";\npackage hello.v1;"},
+		},
+		BuildFiles: []CodeblockFileItem{
+			{Name: "cloudbuild.yaml", Content: "steps:\n  - name: 'hello'"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("ContributeBlock: %v", err)
+	}
+	t.Logf("created version: %s", result)
 }

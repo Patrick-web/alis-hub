@@ -3,33 +3,117 @@ package main
 import (
 	"embed"
 	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 
 	"alis-hub-v3/internal/updater"
+	wailsnotif "github.com/wailsapp/wails/v3/pkg/services/notifications"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 var version = "dev"
 
+// deepLinkScheme is the custom URL scheme used to focus/return to the app,
+// e.g. from the OAuth login success page (alishub://auth/callback).
+const deepLinkScheme = "alishub"
+
 //go:embed all:frontend/dist
 var assets embed.FS
 
-func main() {
-	updaterSvc := updater.NewService(version)
+//go:embed build/appicon.png
+var appIcon []byte
 
-	app := application.New(application.Options{
-		Name:        "Alis Hub",
-		Description: "Alis Hub Desktop Application",
+func main() {
+	SetupLogging()
+
+	// Multi-call binary: act as git credential helper when invoked under that name.
+	if base := filepath.Base(os.Args[0]); strings.Contains(base, "git-credential-alis") {
+		RunAsCredentialHelper()
+		return
+	}
+
+	// Widen PATH before anything shells out: GUI launches inherit a minimal
+	// PATH missing /usr/local/bin, /opt/homebrew/bin, ~/.docker/bin, etc., so
+	// installed tools like docker would otherwise report "not found".
+	fixPathEnv()
+
+	// Best-effort: refresh git auth on launch, then keep it fresh. The
+	// underlying access token is short-lived (~5min), so only syncing at
+	// launch/login leaves git-auth.gitconfig stale for most of the session.
+	go func() {
+		if err := SyncGitAuth(); err != nil {
+			log.Printf("git auth sync: %v", err)
+		}
+		ticker := time.NewTicker(2 * time.Minute)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := SyncGitAuth(); err != nil {
+				log.Printf("git auth sync: %v", err)
+			}
+		}
+	}()
+
+	updaterSvc := updater.NewService(version)
+	notifSvc := wailsnotif.New()
+	productSvc := NewProductService()
+	gitSvc := NewGitService()
+	changelogSvc := NewChangelogService(version)
+	localAISvc := NewLocalAIService()
+	buildSvc := NewBuildService()
+	deploySvc := NewDeployService()
+	defineSvc := NewDefineService()
+	packageSvc := NewPackageService()
+	logSvc := NewLogService()
+
+	hubDB, err := OpenHubDB()
+	if err != nil {
+		log.Fatal("hub db:", err)
+	}
+	workflowSvc := NewWorkflowService(hubDB, buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
+	settingsSvc := NewSettingsService(hubDB)
+
+	// window is declared up front so the single-instance and deep-link
+	// callbacks can bring it to the foreground.
+	var window *application.WebviewWindow
+	focusMainWindow := func() {
+		if window == nil {
+			return
+		}
+		window.Show()
+		window.Restore()
+		window.Focus()
+	}
+
+	// app is declared up front so the single-instance callback can emit events.
+	var app *application.App
+	app = application.New(application.Options{
+		Name:        "AlisHub",
+		Description: "AlisHub Desktop Application",
+		Icon:        appIcon,
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
-			application.NewService(NewDefineService()),
-			application.NewService(NewBuildService()),
-			application.NewService(NewDeployService()),
-			application.NewService(NewProductService()),
-			application.NewService(NewPackageService()),
+			application.NewService(defineSvc),
+			application.NewService(buildSvc),
+			application.NewService(deploySvc),
+			application.NewService(productSvc),
+			application.NewService(packageSvc),
+			application.NewService(NewBuildKitService()),
 			application.NewService(updaterSvc),
+			application.NewService(notifSvc),
+			application.NewService(NewGCloudService()),
+			application.NewService(NewProtoDecodeService()),
+			application.NewService(gitSvc),
+			application.NewService(changelogSvc),
+			application.NewService(localAISvc),
+			application.NewService(workflowSvc),
+			application.NewService(settingsSvc),
+			application.NewService(logSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),
@@ -37,29 +121,55 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.patrickweb.alishub",
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				focusMainWindow()
+				for _, arg := range data.Args {
+					if strings.HasPrefix(arg, deepLinkScheme+"://") {
+						app.Event.Emit("deep-link", arg)
+					}
+				}
+			},
+		},
 	})
 
 	// Create a new window
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:  "Alis Hub",
-		Width:  1024,
-		Height: 768,
+	window = app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:           "AlisHub",
+		Width:           1024,
+		Height:          768,
+		Frameless:       true,
+		DevToolsEnabled: true,
 		Mac: application.MacWindow{
 			Backdrop: application.MacBackdropTranslucent,
-			TitleBar: application.MacTitleBarHiddenInset,
+			TitleBar: application.MacTitleBar{
+				AppearsTransparent: true,
+				Hide:               true,
+				HideTitle:          true,
+				FullSizeContent:    true,
+			},
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
 	})
 	window.Maximise()
 
+	// Bring the app to the foreground when it is opened via its custom URL
+	// scheme (e.g. the "Return to Alis Hub" button on the login page), and
+	// forward the URL to the frontend for deep-link routing.
+	app.Event.OnApplicationEvent(events.Common.ApplicationLaunchedWithUrl, func(e *application.ApplicationEvent) {
+		app.Event.Emit("deep-link", e.Context().URL())
+		focusMainWindow()
+	})
+
 	trayWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:         "Tray Window",
-		Width:         300,
-		Height:        400,
-		AlwaysOnTop:   true,
-		Frameless:     true,
-		Hidden:        true,
+		Title:       "Tray Window",
+		Width:       300,
+		Height:      400,
+		AlwaysOnTop: true,
+		Frameless:   true,
+		Hidden:      true,
 		Windows: application.WindowsWindow{
 			BackdropType: application.Acrylic,
 		},
@@ -93,11 +203,133 @@ func main() {
 
 	tray.SetMenu(trayMenu)
 
-	updaterSvc.SetApp(app)
-	updater.BackgroundCheck(app, version, 30*time.Second)
+	installAppMenu(app, updaterSvc)
 
-	err := app.Run()
-	if err != nil {
+	updaterSvc.SetApp(app)
+	productSvc.SetApp(app)
+	gitSvc.SetApp(app)
+	localAISvc.SetApp(app)
+	logSvc.SetApp(app)
+	if !isDevelopment {
+		updater.BackgroundCheck(app, version, 30*time.Second)
+	}
+
+	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func installAppMenu(app *application.App, updaterSvc *updater.Service) {
+	menu := app.NewMenu()
+
+	installAppRoleMenu(app, menu)
+	menu.AddRole(application.EditMenu)
+
+	view := menu.AddSubmenu("View")
+	view.Add("Command Palette").SetAccelerator("CmdOrCtrl+K").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:command-palette", nil)
+	})
+	view.AddSeparator()
+	view.AddRole(application.Reload)
+	view.AddRole(application.ForceReload)
+	view.AddRole(application.OpenDevTools)
+	view.AddSeparator()
+	view.AddRole(application.ResetZoom)
+	view.AddRole(application.ZoomIn)
+	view.AddRole(application.ZoomOut)
+	view.AddSeparator()
+	view.AddRole(application.ToggleFullscreen)
+
+	installGoMenu(app, menu)
+
+	menu.AddRole(application.WindowMenu)
+
+	installHelpMenu(app, menu, updaterSvc)
+
+	app.Menu.Set(menu)
+}
+
+// installAppRoleMenu builds the primary application menu. On macOS this is the
+// bold app-named menu; on other platforms AppMenu is a no-op so the extra
+// entries (Preferences, Sign Out) are appended under a "File" submenu instead.
+func installAppRoleMenu(app *application.App, menu *application.Menu) {
+	if runtime.GOOS == "darwin" {
+		menu.AddRole(application.AppMenu)
+		if appMenu := menu.FindByRole(application.AppMenu); appMenu != nil {
+			sub := appMenu.GetSubmenu()
+			prefs := sub.Add("Preferences…").SetAccelerator("CmdOrCtrl+,")
+			prefs.OnClick(func(_ *application.Context) { app.Event.Emit("menu:preferences", nil) })
+			signOut := sub.Add("Sign Out")
+			signOut.OnClick(func(_ *application.Context) { app.Event.Emit("menu:sign-out", nil) })
+		}
+		return
+	}
+
+	file := menu.AddSubmenu("File")
+	file.Add("Preferences…").SetAccelerator("CmdOrCtrl+,").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:preferences", nil)
+	})
+	file.AddSeparator()
+	file.Add("Sign Out").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:sign-out", nil)
+	})
+	file.AddSeparator()
+	file.AddRole(application.Quit)
+}
+
+// installGoMenu mirrors the command palette's navigation group so the primary
+// workspace destinations are reachable (and discoverable) from the menu bar.
+func installGoMenu(app *application.App, menu *application.Menu) {
+	navItems := []struct {
+		label, route, accelerator string
+	}{
+		{"Develop", "/develop", "CmdOrCtrl+1"},
+		{"Builds", "/builds", "CmdOrCtrl+2"},
+		{"Deployments", "/deployments", "CmdOrCtrl+3"},
+		{"Environments", "/environments", "CmdOrCtrl+4"},
+		{"Tools", "/tools", "CmdOrCtrl+5"},
+		{"Source Control", "/git", "CmdOrCtrl+Shift+G"},
+		{"Workflows", "/workflows", ""},
+	}
+
+	goMenu := menu.AddSubmenu("Go")
+	for _, item := range navItems {
+		route := item.route
+		mi := goMenu.Add(item.label)
+		if item.accelerator != "" {
+			mi.SetAccelerator(item.accelerator)
+		}
+		mi.OnClick(func(_ *application.Context) {
+			app.Event.Emit("menu:navigate", route)
+		})
+	}
+}
+
+// installHelpMenu surfaces about/updates/logs/support actions that were
+// previously only reachable through the profile or hidden dev-settings modals.
+func installHelpMenu(app *application.App, menu *application.Menu, updaterSvc *updater.Service) {
+	help := menu.AddSubmenu("Help")
+
+	if runtime.GOOS != "darwin" {
+		help.Add("About AlisHub").OnClick(func(_ *application.Context) {
+			app.Event.Emit("menu:about", nil)
+		})
+		help.AddSeparator()
+	}
+
+	help.Add("Check for Updates…").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:check-updates", nil)
+	})
+	help.Add("Release Notes").OnClick(func(_ *application.Context) {
+		if err := updaterSvc.OpenReleasePage(); err != nil {
+			log.Printf("open release page: %v", err)
+		}
+	})
+	help.AddSeparator()
+	help.Add("View Logs").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:view-logs", nil)
+	})
+	help.Add("Report an Issue").OnClick(func(_ *application.Context) {
+		openBrowserURL("https://github.com/Patrick-web/alis-hub-v3/issues")
+	})
 }

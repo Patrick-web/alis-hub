@@ -1,0 +1,428 @@
+syntax = "proto3";
+
+package alis.os.vscode.v2;
+
+import "alis/os/workstations/v1/workstations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+enum Language {
+  LANGUAGE_UNSPECIFIED = 0;
+  GO = 1;
+  NODE = 2;
+  PYTHON = 3;
+  DART = 4;
+  DOT_NET = 5;
+}
+
+enum Platform {
+  PLATFORM_UNSPECIFIED = 0;
+  WINDOWS = 1;
+  LINUX = 2;
+  MACOS = 3;
+}
+
+message BuildKit {
+  message Extensions {
+    message Ideate {
+      message Idea {
+        message Contributor {
+          string user = 1;
+          string display_name = 2;
+          string masked_email = 3;
+          string picture = 4;
+        }
+        string name = 1;
+        string title = 2;
+        string url = 3;
+        string overview = 4;
+        .google.protobuf.Timestamp update_time = 5;
+        repeated .alis.os.vscode.v2.BuildKit.Extensions.Ideate.Idea.Contributor contributors = 6;
+      }
+      repeated .alis.os.vscode.v2.BuildKit.Extensions.Ideate.Idea ideas = 1;
+    }
+    message Timesheet {
+      message LogEntry {
+        string builder = 1;
+        .google.protobuf.Timestamp end_time = 2;
+        .google.protobuf.Duration duration = 3;
+        string notes = 4;
+        bool experienced_flow = 5;
+        bool own = 6;
+        string builder_display_name = 7;
+      }
+      .google.protobuf.Duration total_duration = 1;
+      .google.protobuf.Timestamp update_time = 2;
+      int32 builder_count = 3;
+      double flow_percentage = 4;
+      repeated .alis.os.vscode.v2.BuildKit.Extensions.Timesheet.LogEntry log_entries = 5;
+    }
+    .alis.os.vscode.v2.BuildKit.Extensions.Ideate ideate = 1;
+    .alis.os.vscode.v2.BuildKit.Extensions.Timesheet timesheet = 2;
+  }
+  message Product {
+    string name = 1;
+    string display_name = 2;
+    string landing_zone_url = 3;
+  }
+  string build_spec = 1;
+  string display_name = 2;
+  int32 status = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+  string summary = 4;
+  .alis.os.vscode.v2.BuildKit.Extensions extensions = 5;
+  repeated .alis.os.vscode.v2.BuildKit.Product products = 6;
+  string builder = 7;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message RetrieveBuildKitRequest {
+  string build_spec = 1;
+}
+
+message RetrieveBuildKitResponse {
+  .alis.os.vscode.v2.BuildKit build_kit = 1;
+}
+
+message GenerateProductWorkspaceListOverviewRequest {
+}
+
+message GenerateProductWorkspaceListOverviewResponse {
+  message ProductWorkspace {
+    string product = 1;
+    string display_name = 2;
+    .alis.os.vscode.v2.Instance.State state = 3;  // enum (heuristically resolved)
+    string packages_domain = 4;
+  }
+  repeated .alis.os.vscode.v2.GenerateProductWorkspaceListOverviewResponse.ProductWorkspace product_workspaces = 1;
+}
+
+message GenerateBuildScriptsRequest {
+  message Location {
+    string working_directory = 1;
+    .alis.os.vscode.v2.Language language = 2;
+  }
+  string definition = 1;
+  repeated .alis.os.vscode.v2.GenerateBuildScriptsRequest.Location locations = 2;
+}
+
+message GenerateBuildScriptsResponse {
+  message Script {
+    string title = 1;
+    string working_directory = 2;
+    .alis.os.vscode.v2.Language language = 3;
+    string script = 4;
+  }
+  .alis.os.vscode.v2.GenerateBuildScriptsResponse.Script docker_build = 1;
+}
+
+message GeneratePackageScriptsRequest {
+  message Location {
+    string working_directory = 1;
+    .alis.os.vscode.v2.Language language = 2;
+    string build_directory = 3;
+  }
+  string definition = 1;
+  repeated .alis.os.vscode.v2.GeneratePackageScriptsRequest.Location locations = 2;
+  bool exclude_gcloud_auth = 3;
+  .alis.os.vscode.v2.Platform target_platform = 4;  // enum (heuristically resolved)
+}
+
+message GeneratePackageScriptsResponse {
+  message Scripts {
+    string title = 1;
+    string working_directory = 2;
+    .alis.os.vscode.v2.Language language = 3;
+    .google.protobuf.StringValue install_packages = 4;
+    .google.protobuf.StringValue upgrade_packages = 5;
+    .google.protobuf.StringValue upgrade_defined = 6;
+    .google.protobuf.StringValue add_defined = 7;
+  }
+  repeated .alis.os.vscode.v2.GeneratePackageScriptsResponse.Scripts go_lang = 1;
+  repeated .alis.os.vscode.v2.GeneratePackageScriptsResponse.Scripts node = 2;
+  repeated .alis.os.vscode.v2.GeneratePackageScriptsResponse.Scripts python = 3;
+  repeated .alis.os.vscode.v2.GeneratePackageScriptsResponse.Scripts dart = 4;
+}
+
+message GenerateConfigurationsRequest {
+  string product = 1;
+}
+
+message GenerateConfigurationsResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GenerateConfigurationsResponse.File editorconfigs = 1;
+  repeated .alis.os.vscode.v2.GenerateConfigurationsResponse.File gitignores = 2;
+  repeated .alis.os.vscode.v2.GenerateConfigurationsResponse.File buf = 3;
+  repeated .alis.os.vscode.v2.GenerateConfigurationsResponse.File nix = 4;
+}
+
+message GenerateLanguagePackageConfigsRequest {
+  string definition = 1;
+}
+
+message GenerateLanguagePackageConfigsResponse {
+  message GoConfig {
+    repeated string goproxies = 1;
+    repeated string gonosumdbs = 2;
+  }
+  message NodeConfig {
+    repeated string registries = 1;
+  }
+  message DartConfig {
+    message PubHost {
+      string host = 1;
+      string token = 2;
+    }
+    repeated .alis.os.vscode.v2.GenerateLanguagePackageConfigsResponse.DartConfig.PubHost pub_hosts = 1;
+  }
+  .alis.os.vscode.v2.GenerateLanguagePackageConfigsResponse.GoConfig go_config = 1;
+  .alis.os.vscode.v2.GenerateLanguagePackageConfigsResponse.NodeConfig node_config = 2;
+  .alis.os.vscode.v2.GenerateLanguagePackageConfigsResponse.DartConfig dart_config = 3;
+}
+
+message GenerateContextRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+}
+
+message GenerateContextResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+  }
+  string context = 1;
+  repeated .alis.os.vscode.v2.GenerateContextResponse.File files = 2;
+}
+
+message WorkspaceContext {
+  string user = 1;
+  string product = 2;
+  string solution = 3;
+  repeated string active_neurons = 4;
+  string root_directory = 5;
+  string organisation = 6;
+  string environment = 7;
+  string build_spec = 8;
+  string platform = 9;
+  string build_spec_etag = 10;
+  string editor = 11;
+  bool engineered = 12;
+  string workstation = 13;
+  string hostname = 14;
+  string title = 15;
+  string gemini_model = 16;
+  string agent_neuron = 17;
+  string environment_google_project_number = 18;
+  string environment_google_region = 19;
+  string organisation_display_name = 20;
+  string product_display_name = 21;
+  string environment_display_name = 22;
+  string environment_google_project_id = 23;
+  string identity_service_domain = 24;
+  string organisation_define_repo = 25;
+  string product_repo = 26;
+}
+
+message RetrievePackageCodeblockInstancesRequest {
+  string package = 1;
+}
+
+message RetrievePackageCodeblockInstancesResponse {
+  message CodeblockInstance {
+    .alis.os.vscode.v2.Block block = 1;
+    .alis.os.vscode.v2.Instance instance = 2;
+  }
+  repeated .alis.os.vscode.v2.RetrievePackageCodeblockInstancesResponse.CodeblockInstance codeblock_instances = 1;
+}
+
+message Block {
+  message Releases {
+    string ga = 1;
+    string beta = 2;
+    string rc = 3;
+    string alpha = 4;
+    string experimental = 5;
+  }
+  message Agent {
+    string service_endpoint = 1;
+    bool agentic_install_enabled = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.vscode.v2.Block.Releases releases = 4;
+  string tagline = 13;
+  .alis.os.vscode.v2.Block.Agent agent = 38;
+}
+
+message Instance {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PENDING_INSTALLATION = 1;
+    INSTALLING = 2;
+    ACTIVE = 3;
+    UNINSTALLED = 4;
+    SUSPENDED = 5;
+  }
+  string name = 1;
+  string package = 2;
+  string block = 3;
+  string block_version = 4;
+  string build_folder = 5;
+  string git_branch = 6;
+  .alis.os.vscode.v2.Instance.State state = 7;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message RetrieveProductNpmHostsRequest {
+  string product = 1;
+}
+
+message RetrieveProductNpmHostsResponse {
+  repeated string npm_hosts = 1;
+}
+
+message GeneratePlaygroundRequest {
+  repeated string neurons = 1;
+}
+
+message GeneratePlaygroundResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GeneratePlaygroundResponse.File files = 1;
+}
+
+message GenerateBuildSpecRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+}
+
+message GenerateBuildSpecResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GenerateBuildSpecResponse.File files = 1;
+  string build_spec_etag = 2;
+  repeated string neurons_to_add = 3;
+}
+
+message GenerateGeminiConfigsRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+  string model = 2;
+  string neuron = 3;
+}
+
+message GenerateGeminiConfigsResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GenerateGeminiConfigsResponse.File files = 1;
+  string location = 2;
+  string google_project = 3;
+  string directory = 4;
+}
+
+message GenerateCodexConfigsRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+  string neuron = 2;
+}
+
+message GenerateCodexConfigsResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GenerateCodexConfigsResponse.File files = 1;
+  string directory = 2;
+}
+
+message GenerateClaudeConfigsRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+  string neuron = 2;
+}
+
+message GenerateClaudeConfigsResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+    bool replace_existing = 3;
+  }
+  repeated .alis.os.vscode.v2.GenerateClaudeConfigsResponse.File files = 1;
+  string location = 2;
+  string google_project = 3;
+  string directory = 4;
+}
+
+message GenerateSshKeysRequest {
+}
+
+message GenerateSshKeysResponse {
+  bytes private_key = 1;
+  bytes public_key = 2;
+}
+
+message MergeSshConfigRequest {
+  bytes config = 1;
+  string name = 2;
+  string ip = 3;
+  string user = 4;
+  string identity_file_path = 5;
+}
+
+message MergeSshConfigResponse {
+  bytes config = 1;
+}
+
+message GetWorkstationProvisionOperationRequest {
+  string operation = 1;
+}
+
+message GetWorkstationProvisionOperationResponse {
+  .alis.os.workstations.v1.ProvisionMyWorkstationResponse response = 1;
+}
+
+message GenerateCommonProtosRequest {
+  .alis.os.vscode.v2.WorkspaceContext workspace = 1;
+}
+
+message GenerateCommonProtosResponse {
+  message File {
+    string name = 1;
+    bytes content = 2;
+  }
+  repeated .alis.os.vscode.v2.GenerateCommonProtosResponse.File files = 1;
+}
+
+service BuildKitService {
+  rpc RetrieveBuildKit(.alis.os.vscode.v2.RetrieveBuildKitRequest) returns (.alis.os.vscode.v2.RetrieveBuildKitResponse);
+}
+
+service VscodeService {
+  rpc GenerateProductWorkspaceListOverview(.alis.os.vscode.v2.GenerateProductWorkspaceListOverviewRequest) returns (.alis.os.vscode.v2.GenerateProductWorkspaceListOverviewResponse);
+  rpc GeneratePackageScripts(.alis.os.vscode.v2.GeneratePackageScriptsRequest) returns (.alis.os.vscode.v2.GeneratePackageScriptsResponse);
+  rpc GenerateBuildScripts(.alis.os.vscode.v2.GenerateBuildScriptsRequest) returns (.alis.os.vscode.v2.GenerateBuildScriptsResponse);
+  rpc GenerateConfigurations(.alis.os.vscode.v2.GenerateConfigurationsRequest) returns (.alis.os.vscode.v2.GenerateConfigurationsResponse);
+  rpc GenerateLanguagePackageConfigs(.alis.os.vscode.v2.GenerateLanguagePackageConfigsRequest) returns (.alis.os.vscode.v2.GenerateLanguagePackageConfigsResponse);
+  rpc GenerateCommonProtos(.alis.os.vscode.v2.GenerateCommonProtosRequest) returns (.alis.os.vscode.v2.GenerateCommonProtosResponse);
+  rpc GenerateContext(.alis.os.vscode.v2.GenerateContextRequest) returns (.alis.os.vscode.v2.GenerateContextResponse);
+  rpc GeneratePlayground(.alis.os.vscode.v2.GeneratePlaygroundRequest) returns (.alis.os.vscode.v2.GeneratePlaygroundResponse);
+  rpc GenerateGeminiConfigs(.alis.os.vscode.v2.GenerateGeminiConfigsRequest) returns (.alis.os.vscode.v2.GenerateGeminiConfigsResponse);
+  rpc GenerateCodexConfigs(.alis.os.vscode.v2.GenerateCodexConfigsRequest) returns (.alis.os.vscode.v2.GenerateCodexConfigsResponse);
+  rpc GenerateClaudeConfigs(.alis.os.vscode.v2.GenerateClaudeConfigsRequest) returns (.alis.os.vscode.v2.GenerateClaudeConfigsResponse);
+  rpc GenerateBuildSpec(.alis.os.vscode.v2.GenerateBuildSpecRequest) returns (.alis.os.vscode.v2.GenerateBuildSpecResponse);
+  rpc RetrievePackageCodeblockInstances(.alis.os.vscode.v2.RetrievePackageCodeblockInstancesRequest) returns (.alis.os.vscode.v2.RetrievePackageCodeblockInstancesResponse);
+  rpc RetrieveProductNpmHosts(.alis.os.vscode.v2.RetrieveProductNpmHostsRequest) returns (.alis.os.vscode.v2.RetrieveProductNpmHostsResponse);
+  rpc GenerateSshKeys(.alis.os.vscode.v2.GenerateSshKeysRequest) returns (.alis.os.vscode.v2.GenerateSshKeysResponse);
+  rpc MergeSshConfig(.alis.os.vscode.v2.MergeSshConfigRequest) returns (.alis.os.vscode.v2.MergeSshConfigResponse);
+  rpc GetWorkstationProvisionOperation(.alis.os.vscode.v2.GetWorkstationProvisionOperationRequest) returns (.alis.os.vscode.v2.GetWorkstationProvisionOperationResponse);
+}

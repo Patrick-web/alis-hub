@@ -20,7 +20,7 @@ func TestFetchBuildLogs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Skipf("no alis credentials: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestStreamBuildLogs_BffV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Skipf("no alis credentials: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestStreamBuildLogs_HubspotV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Skipf("no alis credentials: %v", err)
 	}
@@ -288,7 +288,7 @@ func TestRunBuild_BffV1(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		t.Skipf("no alis credentials: %v", err)
 	}

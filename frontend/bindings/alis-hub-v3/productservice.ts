@@ -7,7 +7,56 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
+
+export function BootstrapBlock(params: $models.BootstrapBlockParams): $CancellablePromise<string> {
+    return $Call.ByID(3259830753, params);
+}
+
+/**
+ * CheckAuth returns true when a valid, refreshable auth token can be obtained.
+ * Unlike IsLoggedIn, this actually tries to fetch/refresh the token, so it
+ * returns false when the refresh token has expired even if the credentials
+ * file still exists.
+ */
+export function CheckAuth(): $CancellablePromise<boolean> {
+    return $Call.ByID(2302560144);
+}
+
+/**
+ * CheckProductCloneStatus returns true if both the define and build repos for
+ * the given product are already present on the local filesystem.
+ */
+export function CheckProductCloneStatus(org: string, product: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2135548336, org, product);
+}
+
+/**
+ * ContributeBlock publishes a new block version with code files via BlockVersionsService/CreateBlockVersion (LRO).
+ * Returns the created version resource name, e.g. "blocks/myblock/versions/v1.0.0-experimental1".
+ */
+export function ContributeBlock(params: $models.ContributeBlockParams): $CancellablePromise<string> {
+    return $Call.ByID(2599750638, params);
+}
+
+/**
+ * ContributeBlockFromCommits publishes a new block version using define and build commit SHAs.
+ * This is the production path that matches the VSCode extension's worktree-based flow.
+ */
+export function ContributeBlockFromCommits(instanceName: string, defineCommitSha: string, buildCommitSha: string, releaseLevel: number, releaseNotes: string): $CancellablePromise<string> {
+    return $Call.ByID(1195485020, instanceName, defineCommitSha, buildCommitSha, releaseLevel, releaseNotes);
+}
+
+/**
+ * CreateCodeblock creates a new code block and returns its resource name (e.g. "blocks/myblock").
+ */
+export function CreateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<string> {
+    return $Call.ByID(3659538524, params);
+}
 
 /**
  * CreateEnvironment creates a new environment under the given org/product.
@@ -20,10 +69,94 @@ export function CreateEnvironment(org: string, product: string, displayName: str
 }
 
 /**
+ * GetServicesOverview fetches neurons and per-environment deployments in parallel.
+ * CreateNeuron creates a new neuron (service) under the given org/product.
+ * neuronId must follow the pattern: lowercase letters/digits/hyphens, ending with -v{N}.
+ */
+export function CreateNeuron(org: string, product: string, neuronId: string): $CancellablePromise<$models.NeuronItem | null> {
+    return $Call.ByID(2867503901, org, product, neuronId).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
+ * DeleteCodeblock permanently deletes a block by its ID.
+ */
+export function DeleteCodeblock(blockId: string): $CancellablePromise<void> {
+    return $Call.ByID(2167564701, blockId);
+}
+
+/**
  * DeleteEnvironment deletes the environment with the given full resource name.
  */
 export function DeleteEnvironment(envName: string): $CancellablePromise<void> {
     return $Call.ByID(2246279434, envName);
+}
+
+/**
+ * DoInstallBlock creates an entitlement, creates the instance, then runs the installation pipeline.
+ * It polls until the deployment operation completes (up to 5 minutes) before returning.
+ */
+export function DoInstallBlock(params: $models.InstallBlockParams): $CancellablePromise<$models.InstallBlockResult | null> {
+    return $Call.ByID(4070719875, params).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
+ * GetBlockAccessData fetches the IAM policy for a block and enriches each member with user details.
+ */
+export function GetBlockAccessData(blockId: string): $CancellablePromise<$models.BlockAccessData | null> {
+    return $Call.ByID(171805929, blockId).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
+ * GetBlockCommits returns recent commits from the build or define repo for a given instance.
+ * repoType must be "build" or "define".
+ */
+export function GetBlockCommits(instanceName: string, repoType: string, limit: number): $CancellablePromise<$models.BlockCommit[]> {
+    return $Call.ByID(2047809995, instanceName, repoType, limit).then(($result: any) => {
+        return $$createType9($result);
+    });
+}
+
+/**
+ * GetCodeblock fetches a single block by its short ID (e.g. "skills").
+ */
+export function GetCodeblock(blockId: string): $CancellablePromise<$models.Codeblock | null> {
+    return $Call.ByID(3775238228, blockId).then(($result: any) => {
+        return $$createType11($result);
+    });
+}
+
+/**
+ * GetCodeblockDoc returns documentation markdown for a specific block version.
+ * audience is "user" or "agent".
+ */
+export function GetCodeblockDoc(versionName: string, audience: string): $CancellablePromise<string> {
+    return $Call.ByID(2050061994, versionName, audience);
+}
+
+/**
+ * GetCodeblockMembers fetches the IAM members for a block and resolves their avatar URLs.
+ * It chains GetIamPolicy → BatchRetrieveMaskedUsers.
+ */
+export function GetCodeblockMembers(blockId: string): $CancellablePromise<$models.CodeblockMember[]> {
+    return $Call.ByID(854804143, blockId).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
+/**
+ * GetCodeblockVersion returns full details for a block version including files.
+ * versionName is the resource name, e.g. "blocks/bb6b/versions/1.0.0-experimental1".
+ */
+export function GetCodeblockVersion(versionName: string): $CancellablePromise<$models.CodeblockVersion | null> {
+    return $Call.ByID(2809120232, versionName).then(($result: any) => {
+        return $$createType15($result);
+    });
 }
 
 /**
@@ -32,22 +165,35 @@ export function DeleteEnvironment(envName: string): $CancellablePromise<void> {
  */
 export function GetEnvironmentVariables(envName: string): $CancellablePromise<$models.EnvVariable[]> {
     return $Call.ByID(3106139540, envName).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType17($result);
+    });
+}
+
+/**
+ * GetMyPrimaryAccountID returns the caller's primary account resource name (e.g. "accounts/8na6ap").
+ */
+export function GetMyPrimaryAccountID(): $CancellablePromise<string> {
+    return $Call.ByID(1119095964);
+}
+
+/**
+ * GetOrganisationProject returns the GCP project associated with an organisation.
+ */
+export function GetOrganisationProject(org: string): $CancellablePromise<$models.GCPProject | null> {
+    return $Call.ByID(1082294977, org).then(($result: any) => {
+        return $$createType19($result);
     });
 }
 
 export function GetProductOverview(org: string, product: string): $CancellablePromise<$models.ProductOverview | null> {
     return $Call.ByID(4137998258, org, product).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType21($result);
     });
 }
 
-/**
- * GetServicesOverview fetches neurons and per-environment deployments in parallel.
- */
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType23($result);
     });
 }
 
@@ -57,7 +203,7 @@ export function GetServicesOverview(org: string, product: string): $CancellableP
  */
 export function GetShareData(org: string, product: string): $CancellablePromise<$models.ShareData | null> {
     return $Call.ByID(1908839309, org, product).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType25($result);
     });
 }
 
@@ -67,8 +213,16 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType27($result);
     });
+}
+
+/**
+ * GetWorkstationURI returns the web IDE URI for the current user's workstation.
+ * Returns "" (no error) if the workstation is still being provisioned or is unavailable.
+ */
+export function GetWorkstationURI(): $CancellablePromise<string> {
+    return $Call.ByID(1516947257);
 }
 
 /**
@@ -79,35 +233,111 @@ export function IsLoggedIn(): $CancellablePromise<boolean> {
 }
 
 /**
+ * ListAccountUsers returns all users in the caller's primary account, used to
+ * populate IAM member pickers.
+ */
+export function ListAccountUsers(): $CancellablePromise<$models.AccountUser[]> {
+    return $Call.ByID(2615726607).then(($result: any) => {
+        return $$createType29($result);
+    });
+}
+
+/**
+ * ListBlockPlans returns the available entitlement plans for a block.
+ */
+export function ListBlockPlans(blockId: string): $CancellablePromise<$models.BlockPlan[]> {
+    return $Call.ByID(2087595101, blockId).then(($result: any) => {
+        return $$createType31($result);
+    });
+}
+
+/**
+ * ListBlockRoles returns the fixed set of IAM roles usable on a block's access policy.
+ * Blocks don't sit under an organisations/* /products/* parent, so the generic
+ * RolesService/ListRoles RPC (which requires one) can't be used here; the role set
+ * mirrors the roles/block.* names recognized by blockRoleLabel.
+ */
+export function ListBlockRoles(blockId: string): $CancellablePromise<$models.BlockRole[]> {
+    return $Call.ByID(392865116, blockId).then(($result: any) => {
+        return $$createType33($result);
+    });
+}
+
+/**
+ * ListCodeblockInstances lists installed instances for a block.
+ */
+export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
+    return $Call.ByID(2469208404, blockId).then(($result: any) => {
+        return $$createType35($result);
+    });
+}
+
+/**
+ * ListCodeblockVersions lists available versions for a block.
+ */
+export function ListCodeblockVersions(blockId: string): $CancellablePromise<$models.CodeblockVersion[]> {
+    return $Call.ByID(1837251873, blockId).then(($result: any) => {
+        return $$createType36($result);
+    });
+}
+
+/**
  * ListCodeblocks fetches all available codeblocks from alis.bl.blocks.v1.BlocksService.
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType37($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType38($result);
+    });
+}
+
+/**
+ * ListInstallNeurons returns the neurons (packages) in the given org/product for install location picker.
+ */
+export function ListInstallNeurons(org: string, product: string): $CancellablePromise<$models.InstallNeuron[]> {
+    return $Call.ByID(426248599, org, product).then(($result: any) => {
+        return $$createType40($result);
+    });
+}
+
+/**
+ * ListInstallOrgs returns all organisations the user belongs to (for install location picker).
+ */
+export function ListInstallOrgs(): $CancellablePromise<$models.Organisation[]> {
+    return $Call.ByID(3252611686).then(($result: any) => {
+        return $$createType42($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType44($result);
     });
 }
 
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType46($result);
+    });
+}
+
+/**
+ * ListMyCodeblocks returns only the blocks published by the current user's account.
+ */
+export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
+    return $Call.ByID(657485483).then(($result: any) => {
+        return $$createType37($result);
     });
 }
 
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType48($result);
     });
 }
 
@@ -127,12 +357,137 @@ export function Logout(): $CancellablePromise<void> {
 }
 
 /**
+ * MergeBlockInstance calls InstancesService/MergeBlockBranch to merge the git branch that
+ * InstallBlock creates into both the product's build and define repositories, then polls
+ * the resulting LRO. Unlike a manually opened pull request, this is instance-scoped on the
+ * backend (mirrors the VS Code "alis.blocks.scm.merge" command) and always merges into each
+ * repo's "master" branch — it does not accept an alternate base branch.
+ */
+export function MergeBlockInstance(instanceName: string): $CancellablePromise<$models.MergeBlockBranchResult | null> {
+    return $Call.ByID(4242359780, instanceName).then(($result: any) => {
+        return $$createType50($result);
+    });
+}
+
+/**
+ * OpenBlockWorktrees creates git worktrees for an instance's build and define repos.
+ * It returns the root worktree path, e.g. "{tmpdir}/.alis-blocks-worktrees/{blockId}/{packageId}/{instanceId}/".
+ */
+export function OpenBlockWorktrees(instanceName: string): $CancellablePromise<string> {
+    return $Call.ByID(2551618999, instanceName);
+}
+
+/**
+ * OpenEditorWindow opens the web IDE for the given product in a new WebView
+ * window, and reuses an existing editor window if one is already open.
+ * 
+ * Unlike Forgejo, the workstation host authenticates via its own ws_access_token/
+ * ws_refresh_token/ws_id_token cookies (minted by identity.alisx.com), not the
+ * alis console Bearer token, so it is opened directly rather than through the
+ * auth-injecting local proxy. On first use the WebView completes an interactive
+ * login exactly as a browser tab would; the window's cookie jar then carries
+ * that session for subsequent opens.
+ */
+export function OpenEditorWindow(productName: string): $CancellablePromise<void> {
+    return $Call.ByID(761887995, productName);
+}
+
+/**
+ * OpenForgejoWindow opens a new WebView window pointed at the given Forgejo URL.
+ * It routes the request through a local proxy that injects auth headers.
+ */
+export function OpenForgejoWindow(repoURL: string): $CancellablePromise<void> {
+    return $Call.ByID(3555025818, repoURL);
+}
+
+/**
+ * OpenInIDE opens the product in the specified IDE.
+ * ide must be "web", "vscode", or "cursor".
+ * productName is the full resource name, e.g. "organisations/voyage/products/vp".
+ */
+export function OpenInIDE(productName: string, ide: string): $CancellablePromise<void> {
+    return $Call.ByID(3656788695, productName, ide);
+}
+
+/**
+ * OpenWorktreeInFinder opens the given directory in the system file manager.
+ */
+export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
+    return $Call.ByID(1416065536, path);
+}
+
+/**
+ * ReadNeuronFileContents reads the content of the given selected files off disk for a neuron
+ * package, without publishing anything. Used to materialize file content for preview/diffing
+ * before a codeblock Update is published.
+ */
+export function ReadNeuronFileContents(neuronPackage: string, files: $models.ScannedNeuronFile[]): $CancellablePromise<$models.NeuronFileContents | null> {
+    return $Call.ByID(3333239169, neuronPackage, files).then(($result: any) => {
+        return $$createType52($result);
+    });
+}
+
+/**
+ * ScanNeuronFiles scans the local neuron version directory and returns build/infra files.
+ * Returns a soft error (NeuronScanResult.Error) when the path is missing or unreadable; no Go error.
+ */
+export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
+    return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
+        return $$createType54($result);
+    });
+}
+
+export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
+    return $Call.ByID(1786829241, app);
+}
+
+/**
  * SetEnvironmentVariables replaces all variables on an environment by calling
  * UpdateEnvironment with an update_mask of "envs". Variables are field 8
  * (repeated Environment.Env sub-messages: field 1=name/label, field 2=value).
  */
 export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariable[]): $CancellablePromise<void> {
     return $Call.ByID(1096665320, envName, vars);
+}
+
+/**
+ * SwitchEnvironment rewrites the local .alis/.env and .alis/key.json files to
+ * match the output produced by the Alis VSCode extension when switching
+ * environments.
+ */
+export function SwitchEnvironment(org: string, product: string, envName: string, projectID: string, projectNumber: string, region: string): $CancellablePromise<void> {
+    return $Call.ByID(3506000719, org, product, envName, projectID, projectNumber, region);
+}
+
+export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
+    return $Call.ByID(1467472974, org, product).then(($result: any) => {
+        return $$createType56($result);
+    });
+}
+
+/**
+ * UninstallCodeblockInstance uninstalls an instance by resource name (e.g. "blocks/bb6b/instances/631").
+ * The configuration is preserved on the server for potential reinstallation.
+ * Returns after the resulting LRO completes (up to 5 minutes).
+ */
+export function UninstallCodeblockInstance(instanceName: string): $CancellablePromise<void> {
+    return $Call.ByID(598414329, instanceName);
+}
+
+/**
+ * UpdateBlockAccess adds or removes a single member from a role on a block's IAM policy.
+ * member must be in "user:ID" IAM form. grant=true to add, grant=false to remove.
+ */
+export function UpdateBlockAccess(blockId: string, role: string, member: string, grant: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3240839382, blockId, role, member, grant);
+}
+
+/**
+ * parseCreateBlockName extracts the resource name (field 1) from the returned Block.
+ * UpdateCodeblock calls BlocksService/UpdateBlock with the given params.
+ */
+export function UpdateCodeblock(params: $models.CreateCodeblockParams): $CancellablePromise<void> {
+    return $Call.ByID(2070720319, params);
 }
 
 /**
@@ -145,25 +500,71 @@ export function UpdateEnvironment(envName: string, displayName: string): $Cancel
     });
 }
 
+/**
+ * UpgradeCodeblockInstance upgrades an instance to a different block version.
+ * instanceName is the full resource name (e.g. "blocks/bb6b/instances/631").
+ * blockVersionName is the full version resource name (e.g. "blocks/bb6b/versions/1.0.0-experimental1").
+ * Returns after the resulting LRO completes (up to 5 minutes).
+ */
+export function UpgradeCodeblockInstance(instanceName: string, blockVersionName: string): $CancellablePromise<void> {
+    return $Call.ByID(1284035243, instanceName, blockVersionName);
+}
+
 // Private type creation functions
 const $$createType0 = $models.EnvInfo.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.EnvVariable.createFrom;
-const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.ProductOverview.createFrom;
+const $$createType2 = $models.NeuronItem.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = $models.InstallBlockResult.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $models.ServicesOverview.createFrom;
+const $$createType6 = $models.BlockAccessData.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.ShareData.createFrom;
-const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $models.UserProfile.createFrom;
+const $$createType8 = $models.BlockCommit.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = $models.Codeblock.createFrom;
 const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.Codeblock.createFrom;
+const $$createType12 = $models.CodeblockMember.createFrom;
 const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = $Create.Array($$createType0);
-const $$createType15 = $models.InviteInfo.createFrom;
-const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.LandingZonesData.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
-const $$createType19 = $models.ProductSummary.createFrom;
-const $$createType20 = $Create.Array($$createType19);
+const $$createType14 = $models.CodeblockVersion.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = $models.EnvVariable.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = $models.GCPProject.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = $models.ProductOverview.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);
+const $$createType22 = $models.ServicesOverview.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $models.ShareData.createFrom;
+const $$createType25 = $Create.Nullable($$createType24);
+const $$createType26 = $models.UserProfile.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);
+const $$createType28 = $models.AccountUser.createFrom;
+const $$createType29 = $Create.Array($$createType28);
+const $$createType30 = $models.BlockPlan.createFrom;
+const $$createType31 = $Create.Array($$createType30);
+const $$createType32 = $models.BlockRole.createFrom;
+const $$createType33 = $Create.Array($$createType32);
+const $$createType34 = $models.CodeblockInstance.createFrom;
+const $$createType35 = $Create.Array($$createType34);
+const $$createType36 = $Create.Array($$createType14);
+const $$createType37 = $Create.Array($$createType10);
+const $$createType38 = $Create.Array($$createType0);
+const $$createType39 = $models.InstallNeuron.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = $models.Organisation.createFrom;
+const $$createType42 = $Create.Array($$createType41);
+const $$createType43 = $models.InviteInfo.createFrom;
+const $$createType44 = $Create.Array($$createType43);
+const $$createType45 = $models.LandingZonesData.createFrom;
+const $$createType46 = $Create.Nullable($$createType45);
+const $$createType47 = $models.ProductSummary.createFrom;
+const $$createType48 = $Create.Array($$createType47);
+const $$createType49 = $models.MergeBlockBranchResult.createFrom;
+const $$createType50 = $Create.Nullable($$createType49);
+const $$createType51 = $models.NeuronFileContents.createFrom;
+const $$createType52 = $Create.Nullable($$createType51);
+const $$createType53 = $models.NeuronScanResult.createFrom;
+const $$createType54 = $Create.Nullable($$createType53);
+const $$createType55 = $models.SyncReposResult.createFrom;
+const $$createType56 = $Create.Nullable($$createType55);

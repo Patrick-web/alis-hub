@@ -1,0 +1,259 @@
+syntax = "proto3";
+
+package alis.os.timesheet.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum TimeEntryView {
+  TIME_ENTRY_VIEW_UNSPECIFIED = 0;
+  TIME_ENTRY_VIEW_BASIC = 1;
+  TIME_ENTRY_VIEW_FULL = 2;
+}
+
+message TimeEntry {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    STATE_RUNNING = 2;
+    STATE_PAUSED = 3;
+    STATE_STOPPED = 4;
+    STATE_SUBMITTED = 5;
+    STATE_DELETED = 6;
+  }
+  message TimeLog {
+    .google.protobuf.Timestamp start_time = 1;
+    .google.protobuf.Timestamp stop_time = 2;
+    .google.protobuf.Duration duration = 3;
+  }
+  message Target {
+    string solution = 1;
+    string product = 2;
+    string build_spec = 3;
+    string builder = 4;
+  }
+  message Reflection {
+    string notes = 1;
+    bool experienced_flow = 2;
+  }
+  string name = 1;
+  .alis.os.timesheet.v1.TimeEntry.State state = 2;
+  repeated .alis.os.timesheet.v1.TimeEntry.TimeLog time_logs = 3;
+  .google.protobuf.Duration total_duration = 4;
+  .alis.os.timesheet.v1.TimeEntry.Target target = 5;
+  .alis.os.timesheet.v1.TimeEntry.Reflection reflection = 6;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateTimeEntryRequest {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 2;
+}
+
+message GetTimeEntryRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateTimeEntryRequest {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteTimeEntryRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteTimeEntryRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListTimeEntriesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveUserLatestTimeEntryRequest {
+  .alis.os.timesheet.v1.TimeEntry.Target target = 1;
+}
+
+message RetrieveUserLatestTimeEntryResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message StartTimeLoggingRequest {
+  string time_entry = 1;
+  .alis.os.timesheet.v1.TimeEntry.Target target = 2;
+}
+
+message StartTimeLoggingResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message PauseTimeLoggingRequest {
+  string time_entry = 1;
+}
+
+message PauseTimeLoggingResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message StopTimeLoggingRequest {
+  string time_entry = 1;
+}
+
+message StopTimeLoggingResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message SubmitTimeEntryRequest {
+  string time_entry = 1;
+  .alis.os.timesheet.v1.TimeEntry.Reflection reflection = 2;
+}
+
+message SubmitTimeEntryResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message SubmitManualTimeEntryRequest {
+  .google.protobuf.Duration duration = 1;
+  .alis.os.timesheet.v1.TimeEntry.Target target = 2;
+  .alis.os.timesheet.v1.TimeEntry.Reflection reflection = 3;
+}
+
+message SubmitManualTimeEntryResponse {
+  .alis.os.timesheet.v1.TimeEntry time_entry = 1;
+}
+
+message DiscardTimeEntryRequest {
+  string time_entry = 1;
+}
+
+message DiscardTimeEntryResponse {
+}
+
+message BatchCreateTimeEntriesRequest {
+  repeated .alis.os.timesheet.v1.CreateTimeEntryRequest requests = 2;
+}
+
+message BatchCreateTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+}
+
+message BatchGetTimeEntriesRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+}
+
+message BatchUpdateTimeEntriesRequest {
+  repeated .alis.os.timesheet.v1.UpdateTimeEntryRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+}
+
+message BatchDeleteTimeEntriesRequest {
+  repeated .alis.os.timesheet.v1.DeleteTimeEntryRequest requests = 2;
+}
+
+message BatchDeleteTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+}
+
+message BatchUndeleteTimeEntriesRequest {
+  repeated .alis.os.timesheet.v1.UndeleteTimeEntryRequest requests = 2;
+}
+
+message BatchUndeleteTimeEntriesResponse {
+  repeated .alis.os.timesheet.v1.TimeEntry time_entries = 1;
+}
+
+message StreamTimeEntriesRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message TimeEntryCreatedEvent {
+  string time_entry = 1;
+}
+
+message TimeEntryUpdatedEvent {
+  string time_entry = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message TimeEntryDeletedEvent {
+  string time_entry = 1;
+}
+
+message GenerateTimeLogSummaryRequest {
+  string product = 1;
+  .google.protobuf.Timestamp start_time = 2;
+  .google.protobuf.Timestamp end_time = 3;
+}
+
+message GenerateTimeLogSummaryResponse {
+  .google.protobuf.Duration total_logged_duration = 1;
+}
+
+service TimeEntriesService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateTimeEntry(.alis.os.timesheet.v1.CreateTimeEntryRequest) returns (.alis.os.timesheet.v1.TimeEntry);
+  rpc GetTimeEntry(.alis.os.timesheet.v1.GetTimeEntryRequest) returns (.alis.os.timesheet.v1.TimeEntry);
+  rpc UpdateTimeEntry(.alis.os.timesheet.v1.UpdateTimeEntryRequest) returns (.alis.os.timesheet.v1.TimeEntry);
+  rpc DeleteTimeEntry(.alis.os.timesheet.v1.DeleteTimeEntryRequest) returns (.alis.os.timesheet.v1.TimeEntry);
+  rpc UndeleteTimeEntry(.alis.os.timesheet.v1.UndeleteTimeEntryRequest) returns (.alis.os.timesheet.v1.TimeEntry);
+  rpc ListTimeEntries(.alis.os.timesheet.v1.ListTimeEntriesRequest) returns (.alis.os.timesheet.v1.ListTimeEntriesResponse);
+  rpc RetrieveUserLatestTimeEntry(.alis.os.timesheet.v1.RetrieveUserLatestTimeEntryRequest) returns (.alis.os.timesheet.v1.RetrieveUserLatestTimeEntryResponse);
+  rpc StartTimeLogging(.alis.os.timesheet.v1.StartTimeLoggingRequest) returns (.alis.os.timesheet.v1.StartTimeLoggingResponse);
+  rpc PauseTimeLogging(.alis.os.timesheet.v1.PauseTimeLoggingRequest) returns (.alis.os.timesheet.v1.PauseTimeLoggingResponse);
+  rpc StopTimeLogging(.alis.os.timesheet.v1.StopTimeLoggingRequest) returns (.alis.os.timesheet.v1.StopTimeLoggingResponse);
+  rpc SubmitTimeEntry(.alis.os.timesheet.v1.SubmitTimeEntryRequest) returns (.alis.os.timesheet.v1.SubmitTimeEntryResponse);
+  rpc SubmitManualTimeEntry(.alis.os.timesheet.v1.SubmitManualTimeEntryRequest) returns (.alis.os.timesheet.v1.SubmitManualTimeEntryResponse);
+  rpc DiscardTimeEntry(.alis.os.timesheet.v1.DiscardTimeEntryRequest) returns (.alis.os.timesheet.v1.DiscardTimeEntryResponse);
+  rpc GenerateTimeLogSummary(.alis.os.timesheet.v1.GenerateTimeLogSummaryRequest) returns (.alis.os.timesheet.v1.GenerateTimeLogSummaryResponse);
+  rpc BatchCreateTimeEntries(.alis.os.timesheet.v1.BatchCreateTimeEntriesRequest) returns (.alis.os.timesheet.v1.BatchCreateTimeEntriesResponse);
+  rpc BatchGetTimeEntries(.alis.os.timesheet.v1.BatchGetTimeEntriesRequest) returns (.alis.os.timesheet.v1.BatchGetTimeEntriesResponse);
+  rpc BatchUpdateTimeEntries(.alis.os.timesheet.v1.BatchUpdateTimeEntriesRequest) returns (.alis.os.timesheet.v1.BatchUpdateTimeEntriesResponse);
+  rpc BatchDeleteTimeEntries(.alis.os.timesheet.v1.BatchDeleteTimeEntriesRequest) returns (.alis.os.timesheet.v1.BatchDeleteTimeEntriesResponse);
+  rpc BatchUndeleteTimeEntries(.alis.os.timesheet.v1.BatchUndeleteTimeEntriesRequest) returns (.alis.os.timesheet.v1.BatchUndeleteTimeEntriesResponse);
+  rpc StreamTimeEntries(.alis.os.timesheet.v1.StreamTimeEntriesRequest) returns (stream .alis.os.timesheet.v1.TimeEntry);
+}

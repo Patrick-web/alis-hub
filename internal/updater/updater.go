@@ -2,6 +2,7 @@ package updater
 
 import (
 	"archive/zip"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -20,9 +22,8 @@ import (
 )
 
 const (
-	repo       = "Patrick-web/alis-hub"
-	apiLatest  = "https://api.github.com/repos/" + repo + "/releases/latest"
-	releaseURL = "https://github.com/" + repo + "/releases/latest"
+	workerBase = "https://alishub.justpatrick.workers.dev"
+	releaseURL = "https://github.com/Patrick-web/alis-hub/releases/latest"
 )
 
 type UpdateInfo struct {
@@ -76,41 +77,30 @@ func (s *Service) emit(event string, data any) {
 
 func (s *Service) CurrentVersion() string { return s.version }
 
-// githubRelease matches the subset of GitHub's releases-API JSON we consume.
-type githubRelease struct {
-	TagName    string        `json:"tag_name"`
-	HTMLURL    string        `json:"html_url"`
-	Body       string        `json:"body"`
-	Draft      bool          `json:"draft"`
-	Prerelease bool          `json:"prerelease"`
-	Assets     []githubAsset `json:"assets"`
+// workerRelease is the response shape from the Cloudflare Worker /api/release endpoint.
+type workerRelease struct {
+	Version   string            `json:"version"`
+	URL       string            `json:"url"`
+	Notes     string            `json:"notes"`
+	Platforms map[string]string `json:"platforms"` // "macos" | "linux" | "windows" → "/download/<platform>"
 }
 
-type githubAsset struct {
-	Name               string `json:"name"`
-	BrowserDownloadURL string `json:"browser_download_url"`
-	Size               int64  `json:"size"`
-}
-
-func fetchLatestRelease() (*githubRelease, error) {
-	req, err := http.NewRequest("GET", apiLatest, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "AlisHub-updater")
+func fetchWorkerRelease() (*workerRelease, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := client.Get(workerBase + "/api/release")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("github: %s", resp.Status)
+		return nil, fmt.Errorf("worker: %s", resp.Status)
 	}
-	var rel githubRelease
+	var rel workerRelease
 	if err := json.NewDecoder(resp.Body).Decode(&rel); err != nil {
 		return nil, err
+	}
+	if rel.Version == "" {
+		return nil, fmt.Errorf("worker returned empty version")
 	}
 	return &rel, nil
 }
@@ -118,88 +108,82 @@ func fetchLatestRelease() (*githubRelease, error) {
 func (s *Service) CheckForUpdate() (UpdateInfo, error) {
 	info := UpdateInfo{CurrentVersion: s.version}
 
-	rel, err := fetchLatestRelease()
+	rel, err := fetchWorkerRelease()
 	if err != nil {
 		return info, fmt.Errorf("update check failed: %w", err)
 	}
-	if rel.Draft || rel.Prerelease {
-		return info, nil
-	}
 
-	latest, err := semver.Parse(trimV(rel.TagName))
+	latest, err := semver.Parse(trimV(rel.Version))
 	if err != nil {
-		return info, fmt.Errorf("parse latest tag %q: %w", rel.TagName, err)
+		return info, fmt.Errorf("parse latest version %q: %w", rel.Version, err)
 	}
 	current, err := semver.Parse(trimV(s.version))
 	if err != nil {
 		info.Available = true
 		info.LatestVersion = latest.String()
-		info.ReleaseURL = rel.HTMLURL
-		info.ReleaseNotes = rel.Body
+		info.ReleaseURL = rel.URL
+		info.ReleaseNotes = inlineImages(rel.Notes)
 		return info, nil
 	}
 
 	info.LatestVersion = latest.String()
 	if latest.GT(current) {
 		info.Available = true
-		info.ReleaseURL = rel.HTMLURL
-		info.ReleaseNotes = rel.Body
+		info.ReleaseURL = rel.URL
+		info.ReleaseNotes = inlineImages(rel.Notes)
 	}
 	return info, nil
 }
 
-// pickAsset returns the release asset that matches the current platform.
-// macOS: prefer the .zip (contains Alis Hub.app), not the .dmg.
-func pickAsset(assets []githubAsset) (*githubAsset, error) {
-	var wantOS, wantExt string
+// platformKey maps runtime.GOOS to the key used in the Worker's platforms map.
+func platformKey() (string, error) {
 	switch runtime.GOOS {
 	case "darwin":
-		wantOS, wantExt = "macos", ".zip"
+		return "macos", nil
 	case "linux":
-		wantOS, wantExt = "linux", ".tar.gz"
+		return "linux", nil
 	case "windows":
-		wantOS, wantExt = "windows", ".zip"
+		return "windows", nil
 	default:
-		return nil, fmt.Errorf("no update asset for %s", runtime.GOOS)
+		return "", fmt.Errorf("no update asset for %s", runtime.GOOS)
 	}
-	for i := range assets {
-		name := strings.ToLower(assets[i].Name)
-		if strings.Contains(name, wantOS) && strings.HasSuffix(name, wantExt) {
-			return &assets[i], nil
-		}
-	}
-	return nil, fmt.Errorf("no asset matching %s%s in release", wantOS, wantExt)
 }
 
-// DownloadUpdate pulls the appropriate artifact for this platform, extracts
-// it to a temp directory, and stashes the resulting .app path. Progress is
-// reported over the "update:progress" event every ~100ms.
+// DownloadUpdate pulls the appropriate artifact for this platform via the
+// Cloudflare Worker proxy, extracts it to a temp directory, and stashes
+// the resulting path. Progress is reported over the "update:progress" event
+// every ~100ms.
 //
-// Returns the path to the extracted .app (macOS) or the binary (Linux).
-// Windows is not yet supported end-to-end — falls back to the release URL.
+// Returns the path to the extracted .app (macOS), directory (Linux), or
+// .exe (Windows).
 func (s *Service) DownloadUpdate() (string, error) {
-	if runtime.GOOS == "windows" {
-		return releaseURL, fmt.Errorf("auto-download not supported on Windows — opening release page")
+	rel, err := fetchWorkerRelease()
+	if err != nil {
+		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+		return "", err
 	}
 
-	rel, err := fetchLatestRelease()
+	key, err := platformKey()
 	if err != nil {
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
 	}
-	asset, err := pickAsset(rel.Assets)
-	if err != nil {
+	path, ok := rel.Platforms[key]
+	if !ok {
+		err := fmt.Errorf("no download available for %s", runtime.GOOS)
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
 	}
+	downloadURL := workerBase + path
 
 	tmpDir, err := os.MkdirTemp("", "alishub-update-*")
 	if err != nil {
 		return "", fmt.Errorf("mkdir temp: %w", err)
 	}
 
-	archivePath := filepath.Join(tmpDir, asset.Name)
-	if err := s.downloadFile(asset.BrowserDownloadURL, archivePath, asset.Size); err != nil {
+	archiveName := key + "-" + trimV(rel.Version) + map[string]string{"macos": ".zip", "linux": ".tar.gz", "windows": ".zip"}[key]
+	archivePath := filepath.Join(tmpDir, archiveName)
+	if err := s.downloadFile(downloadURL, archivePath, 0); err != nil {
 		_ = os.RemoveAll(tmpDir)
 		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
 		return "", err
@@ -209,6 +193,9 @@ func (s *Service) DownloadUpdate() (string, error) {
 	if err := os.MkdirAll(extractDir, 0o755); err != nil {
 		return "", err
 	}
+	// TODO(security): verify checksum of downloaded archive before extraction.
+	// The worker should return a SHA-256 hash alongside the download URL so the
+	// client can verify integrity before unzipping.
 	var newPath string
 	switch runtime.GOOS {
 	case "darwin":
@@ -230,13 +217,25 @@ func (s *Service) DownloadUpdate() (string, error) {
 			return "", fmt.Errorf("untar: %w", err)
 		}
 		newPath = extractDir
+	case "windows":
+		if err := unzip(archivePath, extractDir); err != nil {
+			_ = os.RemoveAll(tmpDir)
+			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+			return "", fmt.Errorf("unzip: %w", err)
+		}
+		newPath, err = findWindowsExe(extractDir)
+		if err != nil {
+			_ = os.RemoveAll(tmpDir)
+			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+			return "", err
+		}
 	}
 
 	s.mu.Lock()
 	s.staged = newPath
 	s.mu.Unlock()
 
-	s.emit("update:progress", DownloadProgress{Downloaded: asset.Size, Total: asset.Size, Done: true, Path: newPath})
+	s.emit("update:progress", DownloadProgress{Done: true, Path: newPath})
 	return newPath, nil
 }
 
@@ -294,7 +293,7 @@ func (s *Service) downloadFile(url, dst string, expectedSize int64) error {
 }
 
 // ApplyUpdate swaps the running bundle/binary with the staged one and
-// relaunches. macOS only for now; other platforms return an error.
+// relaunches. Supported on macOS and Windows; Linux returns an error.
 func (s *Service) ApplyUpdate() error {
 	s.mu.Lock()
 	staged := s.staged
@@ -306,6 +305,8 @@ func (s *Service) ApplyUpdate() error {
 	switch runtime.GOOS {
 	case "darwin":
 		return s.applyDarwin(staged)
+	case "windows":
+		return s.applyWindows(staged)
 	default:
 		return fmt.Errorf("auto-apply not supported on %s", runtime.GOOS)
 	}
@@ -316,8 +317,8 @@ func (s *Service) applyDarwin(newAppPath string) error {
 	if err != nil {
 		return err
 	}
-	// exe is like /Applications/Alis Hub.app/Contents/MacOS/alis-hub-v3
-	// oldApp  = /Applications/Alis Hub.app
+	// exe is like /Applications/AlisHub.app/Contents/MacOS/alis-hub-v3
+	// oldApp  = /Applications/AlisHub.app
 	oldApp := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
 	if !strings.HasSuffix(oldApp, ".app") {
 		return fmt.Errorf("not running from an .app bundle (%s)", exe)
@@ -327,7 +328,7 @@ func (s *Service) applyDarwin(newAppPath string) error {
 	scriptPath := filepath.Join(filepath.Dir(newAppPath), "alishub-relaunch.sh")
 
 	script := fmt.Sprintf(`#!/bin/bash
-# Wait for the running Alis Hub to exit.
+# Wait for the running AlisHub to exit.
 PID=%d
 OLD=%q
 NEW=%q
@@ -350,6 +351,60 @@ open "$OLD"
 	}
 
 	cmd := exec.Command("/bin/bash", scriptPath)
+	detachCmd(cmd)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start relauncher: %w", err)
+	}
+
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		s.mu.Lock()
+		app := s.app
+		s.mu.Unlock()
+		if app != nil {
+			app.Quit()
+		} else {
+			os.Exit(0)
+		}
+	}()
+	return nil
+}
+
+func (s *Service) applyWindows(newExePath string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exe, _ = filepath.EvalSymlinks(exe)
+
+	pid := os.Getpid()
+
+	// Escape single quotes so the paths are safe inside PS single-quoted strings.
+	escapedOld := strings.ReplaceAll(exe, "'", "''")
+	escapedNew := strings.ReplaceAll(newExePath, "'", "''")
+
+	scriptPath := filepath.Join(filepath.Dir(newExePath), "alishub-relaunch.ps1")
+	script := fmt.Sprintf(`
+$pidToWait = %d
+$oldExe = '%s'
+$newExe = '%s'
+for ($i = 0; $i -lt 100; $i++) {
+    if (-not (Get-Process -Id $pidToWait -ErrorAction SilentlyContinue)) { break }
+    Start-Sleep -Milliseconds 200
+}
+Start-Sleep -Milliseconds 500
+Remove-Item -Force $oldExe -ErrorAction SilentlyContinue
+Move-Item -Force $newExe $oldExe
+Start-Process $oldExe
+`, pid, escapedOld, escapedNew)
+
+	if err := os.WriteFile(scriptPath, []byte(script), 0o755); err != nil {
+		return fmt.Errorf("write relaunch script: %w", err)
+	}
+
+	cmd := exec.Command("powershell.exe", "-WindowStyle", "Hidden", "-NonInteractive", "-File", scriptPath)
 	detachCmd(cmd)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -394,6 +449,36 @@ func (s *Service) AppInfo() map[string]string {
 		"arch":       runtime.GOARCH,
 		"executable": exe,
 	}
+}
+
+// inlineImages replaces markdown image URLs with base64 data URIs so the
+// Wails WebView can render them without loading external resources.
+var mdImageRe = regexp.MustCompile(`!\[([^\]]*)\]\((https?://[^)]+)\)`)
+
+func inlineImages(notes string) string {
+	client := &http.Client{Timeout: 10 * time.Second}
+	return mdImageRe.ReplaceAllStringFunc(notes, func(match string) string {
+		parts := mdImageRe.FindStringSubmatch(match)
+		if len(parts) < 3 {
+			return match
+		}
+		alt, url := parts[1], parts[2]
+		resp, err := client.Get(url)
+		if err != nil || resp.StatusCode != 200 {
+			return match
+		}
+		defer resp.Body.Close()
+		data, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return match
+		}
+		ct := resp.Header.Get("Content-Type")
+		if ct == "" {
+			ct = "image/png"
+		}
+		encoded := base64.StdEncoding.EncodeToString(data)
+		return fmt.Sprintf("![%s](data:%s;base64,%s)", alt, ct, encoded)
+	})
 }
 
 func trimV(v string) string {
@@ -454,6 +539,23 @@ func untarGz(archive, dst string) error {
 		return fmt.Errorf("tar: %s: %w", strings.TrimSpace(string(out)), err)
 	}
 	return nil
+}
+
+func findWindowsExe(dir string) (string, error) {
+	var found string
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || found != "" {
+			return nil
+		}
+		if strings.HasSuffix(strings.ToLower(info.Name()), ".exe") {
+			found = path
+		}
+		return nil
+	})
+	if found == "" {
+		return "", fmt.Errorf("no .exe found in extracted archive")
+	}
+	return found, nil
 }
 
 func findAppBundle(dir string) (string, error) {

@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workflow Canvas Variants</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d0f;
+    --card: #141417;
+    --card2: #1a1a1f;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.13);
+    --fg: #e8e8ec;
+    --fg2: rgba(232,232,236,0.5);
+    --fg3: rgba(232,232,236,0.25);
+    --brand: #f881a9;
+    --brand-dim: rgba(248,129,169,0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74,222,128,0.1);
+    --red: #f87171;
+    --red-dim: rgba(248,113,113,0.1);
+    --blue: #60a5fa;
+    --blue-dim: rgba(96,165,250,0.1);
+    --yellow: #fbbf24;
+    --mono: 'JetBrains Mono', 'Fira Mono', monospace;
+  }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; min-height: 100vh; }
+
+  .top-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,13,15,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; height: 44px; padding: 0 16px;
+  }
+  .top-bar-title { font-size: 11px; font-weight: 600; color: var(--fg2); letter-spacing: .08em; text-transform: uppercase; margin-right: 20px; }
+  .tab-btn { height: 44px; padding: 0 14px; border: none; background: transparent; color: var(--fg2); font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; white-space: nowrap; }
+  .tab-btn:hover { color: var(--fg); }
+  .tab-btn.active { color: var(--brand); border-bottom-color: var(--brand); }
+
+  .variant { display: none; padding: 60px 0 40px; min-height: 100vh; }
+  .variant.active { display: flex; flex-direction: column; }
+
+  .variant-header { padding: 24px 32px 0; }
+  .variant-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .variant-desc { font-size: 12px; color: var(--fg2); margin-bottom: 16px; }
+  .ref-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 8px; border-radius: 20px; background: var(--card2); border: 1px solid var(--border); color: var(--fg2); margin-right: 6px; }
+  .ref-tag span { color: var(--brand); }
+
+  .run-controls { display: flex; align-items: center; gap: 8px; padding: 8px 32px 16px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border2); background: var(--card); font-size: 11px; color: var(--fg); cursor: pointer; transition: all .15s; }
+  .btn:hover { border-color: var(--brand); color: var(--brand); }
+  .btn.primary { background: var(--brand); color: #000; border-color: var(--brand); font-weight: 600; }
+  .btn.primary:hover { background: #ff9dbf; }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+  .run-status { font-size: 11px; color: var(--fg3); margin-left: auto; }
+
+  .icon-spin { display: inline-block; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dot-pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity:.3; transform:scale(.8); } 50% { opacity:1; transform:scale(1); } }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 2px; }
+  .step-pending { opacity: .45; }
+  .log-line { color: var(--fg2); line-height: 1.7; }
+  .log-line.ok { color: var(--green); }
+  .log-line.err { color: var(--red); }
+  .log-line.dim { color: var(--fg3); }
+  .log-line.head { color: var(--brand); font-weight: 600; }
+
+  /* ══════════════════════════════════
+     VARIANT 1 — ACCORDION
+     ══════════════════════════════════ */
+  .v1-canvas { flex: 1; padding: 0 32px 32px; max-width: 720px; }
+  .v1-step { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; transition: border-color .2s; }
+  .v1-step.running { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue), 0 0 20px rgba(96,165,250,0.08); }
+  .v1-step.success { border-color: rgba(74,222,128,0.3); }
+  .v1-step.failed  { border-color: rgba(248,113,113,0.3); }
+  .v1-step-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--card); cursor: pointer; user-select: none; }
+  .v1-step-head:hover { background: var(--card2); }
+  .v1-idx { width: 20px; height: 20px; border-radius: 50%; background: var(--card2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--fg3); flex-shrink: 0; font-family: var(--mono); }
+  .v1-step.running .v1-idx { border-color: var(--blue); color: var(--blue); }
+  .v1-step.success .v1-idx { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .v1-step.failed  .v1-idx { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .v1-step-name { flex: 1; font-size: 12px; font-weight: 500; }
+  .v1-step-sub { font-size: 10px; color: var(--fg3); font-family: var(--mono); }
+  .v1-step-time { font-size: 10px; color: var(--fg3); font-family: var(--mono); }
+  .v1-badge { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+  .v1-badge.running { background: var(--blue-dim); color: var(--blue); }
+  .v1-badge.success { background: var(--green-dim); color: var(--green); }
+  .v1-badge.failed  { background: var(--red-dim); color: var(--red); }
+  .v1-badge.pending { background: var(--card2); color: var(--fg3); }
+  .v1-chevron { color: var(--fg3); font-size: 10px; transition: transform .2s; }
+  .v1-step.open .v1-chevron { transform: rotate(90deg); }
+  .play-from-btn { display: none; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; background: var(--brand-dim); border: 1px solid rgba(248,129,169,0.2); color: var(--brand); font-size: 10px; cursor: pointer; white-space: nowrap; margin-right: 4px; }
+  .v1-step-head:hover .play-from-btn { display: flex; }
+  .v1-log-panel { display: none; background: #0a0a0c; border-top: 1px solid var(--border); padding: 12px 16px; font-family: var(--mono); font-size: 11px; line-height: 1.7; max-height: 220px; overflow-y: auto; }
+  .v1-step.open .v1-log-panel { display: block; }
+  .v1-connector { width: 1px; height: 10px; background: var(--border); margin: 0 22px; }
+
+  /* ══════════════════════════════════
+     VARIANT 2 — SPLIT PANEL (full edit)
+     ══════════════════════════════════ */
+  .v2-canvas { flex: 1; display: flex; gap: 12px; overflow: hidden; padding: 0 32px 32px; max-height: calc(100vh - 160px); }
+
+  /* Left: step list */
+  .v2-left { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .v2-progress-track { width: 100%; height: 2px; background: var(--border); border-radius: 1px; margin-bottom: 10px; overflow: hidden; flex-shrink: 0; }
+  .v2-progress-bar { height: 100%; background: var(--brand); border-radius: 1px; transition: width .5s ease; }
+  #v2-step-list { flex: 1; overflow-y: auto; }
+
+  .v2-step {
+    display: flex; flex-direction: column; padding: 8px 10px; border-radius: 8px;
+    border: 1px solid transparent; cursor: pointer; transition: all .15s; margin-bottom: 4px;
+    background: var(--card); user-select: none;
+  }
+  .v2-step:hover { border-color: var(--border2); }
+  .v2-step.selected { border-color: var(--brand); background: var(--brand-dim); }
+  .v2-step.running { border-color: var(--blue); background: var(--blue-dim); }
+  .v2-step.success { border-color: rgba(74,222,128,0.25); }
+  .v2-step.failed  { border-color: rgba(248,113,113,0.25); }
+  .v2-step.drag-over { border-color: var(--brand); border-style: dashed; }
+  .v2-step.dragging { opacity: 0.35; }
+
+  .v2-step-main { display: flex; align-items: center; gap: 7px; }
+  .v2-drag-handle { color: var(--fg3); cursor: grab; font-size: 13px; flex-shrink: 0; opacity: 0; line-height: 1; padding: 0 1px; }
+  .v2-step:hover .v2-drag-handle { opacity: 1; }
+  .v2-drag-handle:active { cursor: grabbing; }
+  .v2-step-icon { font-size: 14px; flex-shrink: 0; }
+  .v2-step-info { flex: 1; min-width: 0; }
+  .v2-step-name { font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v2-step-sub { font-size: 9.5px; color: var(--fg3); font-family: var(--mono); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v2-step-badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 500; flex-shrink: 0; }
+  .v2-step-badge.idle    { background: var(--card2); color: var(--fg3); }
+  .v2-step-badge.running { background: var(--blue-dim); color: var(--blue); }
+  .v2-step-badge.success { background: var(--green-dim); color: var(--green); }
+  .v2-step-badge.failed  { background: var(--red-dim); color: var(--red); }
+  .v2-step-del { opacity: 0; cursor: pointer; color: var(--fg3); width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; transition: all .1s; border: none; background: transparent; }
+  .v2-step:hover .v2-step-del { opacity: 1; }
+  .v2-step-del:hover { color: var(--red); background: var(--red-dim); }
+  .v2-play-from { display: none; font-size: 9.5px; color: var(--brand); cursor: pointer; padding-left: 21px; margin-top: 4px; }
+  .v2-step:hover .v2-play-from { display: block; }
+
+  .v2-add-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; margin-top: 6px; padding: 8px; border-radius: 7px;
+    border: 1px dashed var(--border2); background: transparent; color: var(--fg3);
+    font-size: 11px; cursor: pointer; transition: all .15s; flex-shrink: 0;
+  }
+  .v2-add-btn:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-dim); }
+
+  /* Right: inspector panel */
+  .v2-panel { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .v2-panel-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: var(--card); flex-shrink: 0; min-height: 42px; }
+  .v2-panel-icon { font-size: 15px; flex-shrink: 0; }
+  .v2-panel-title { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v2-tab-group { display: flex; background: var(--card2); border-radius: 6px; padding: 2px; gap: 2px; flex-shrink: 0; }
+  .v2-tab { padding: 3px 11px; border-radius: 4px; border: none; background: transparent; color: var(--fg3); font-size: 10px; cursor: pointer; transition: all .15s; }
+  .v2-tab.active { background: var(--bg); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+  .v2-tab:hover:not(.active) { color: var(--fg2); }
+  .v2-pane { flex: 1; overflow-y: auto; }
+
+  /* Edit form */
+  .v2-form { padding: 16px 16px 20px; }
+  .v2-field { margin-bottom: 14px; }
+  .v2-field-label { font-size: 9.5px; color: var(--fg3); margin-bottom: 5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  .v2-field-label em { font-weight: 400; font-style: normal; text-transform: none; opacity: .7; letter-spacing: 0; }
+  .v2-input {
+    width: 100%; background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 11px; color: var(--fg); outline: none; font-family: inherit;
+    transition: border-color .15s;
+  }
+  .v2-input:focus { border-color: var(--brand); }
+  .v2-input.mono { font-family: var(--mono); }
+  .v2-input:disabled { opacity: .5; cursor: not-allowed; }
+  .v2-select {
+    width: 100%; background: var(--card2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 11px; color: var(--fg); outline: none; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(232,232,236,0.3)'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+  .v2-select:focus { border-color: var(--brand); }
+  .v2-select:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Tag input for environments */
+  .v2-tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; min-height: 34px; cursor: text; transition: border-color .15s; }
+  .v2-tags:focus-within { border-color: var(--brand); }
+  .v2-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--brand-dim); border: 1px solid rgba(248,129,169,0.2); color: var(--brand); font-size: 10px; font-family: var(--mono); padding: 2px 7px; border-radius: 4px; }
+  .v2-tag-rm { cursor: pointer; opacity: .6; font-size: 10px; line-height: 1; border: none; background: transparent; color: inherit; padding: 0; }
+  .v2-tag-rm:hover { opacity: 1; }
+  .v2-tag-input-field { flex: 1; min-width: 60px; background: transparent; border: none; outline: none; font-size: 11px; color: var(--fg); font-family: inherit; padding: 1px 2px; }
+  .v2-tag-input-field::placeholder { color: var(--fg3); }
+  .v2-tag-hint { font-size: 9px; color: var(--fg3); margin-top: 3px; }
+
+  /* Failure / divider */
+  .v2-form-divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .v2-failure-row { display: flex; align-items: center; gap: 10px; }
+  .v2-failure-label { font-size: 11px; color: var(--fg2); flex-shrink: 0; }
+  .v2-form-actions { display: flex; justify-content: flex-end; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--border); }
+  .v2-delete-step-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: 6px; border: 1px solid rgba(248,113,113,0.25); background: transparent; color: var(--red); font-size: 11px; cursor: pointer; transition: all .15s; }
+  .v2-delete-step-btn:hover { background: var(--red-dim); border-color: var(--red); }
+
+  /* Type picker */
+  .v2-type-picker-wrap { padding: 16px; }
+  .v2-type-picker-title { font-size: 11px; color: var(--fg2); margin-bottom: 12px; font-weight: 500; }
+  .v2-type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .v2-type-card { padding: 11px 12px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
+  .v2-type-card:hover { border-color: var(--brand); background: var(--brand-dim); }
+  .v2-type-card-icon { font-size: 16px; margin-bottom: 5px; }
+  .v2-type-card-name { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
+  .v2-type-card-desc { font-size: 9.5px; color: var(--fg3); line-height: 1.4; }
+
+  /* Log pane */
+  .v2-log-body { flex: 1; overflow-y: auto; padding: 14px 16px; font-family: var(--mono); font-size: 11px; background: #07070a; }
+
+  /* Empty state */
+  .v2-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 8px; color: var(--fg3); font-size: 12px; padding: 32px; text-align: center; }
+  .v2-empty-icon { font-size: 28px; opacity: .4; }
+
+  /* ══════════════════════════════════
+     VARIANT 3 — NODE GRAPH
+     ══════════════════════════════════ */
+  .v3-canvas { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .v3-graph-area { flex: 1; position: relative; overflow: hidden; background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.015) 0%, transparent 70%); }
+  .v3-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .v3-node { position: absolute; width: 180px; background: var(--card); border: 1.5px solid var(--border2); border-radius: 12px; cursor: pointer; transition: all .2s; overflow: hidden; }
+  .v3-node:hover { border-color: var(--brand); transform: scale(1.02); }
+  .v3-node.running { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(96,165,250,0.12), 0 0 30px rgba(96,165,250,0.1); }
+  .v3-node.success { border-color: var(--green); }
+  .v3-node.failed  { border-color: var(--red); }
+  .v3-node.selected { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-dim); }
+  .v3-node-head { padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  .v3-node-icon { font-size: 16px; }
+  .v3-node-name { font-size: 11px; font-weight: 600; flex: 1; }
+  .v3-node-badge { width: 8px; height: 8px; border-radius: 50%; background: var(--fg3); flex-shrink: 0; }
+  .v3-node.running .v3-node-badge { background: var(--blue); box-shadow: 0 0 6px var(--blue); animation: pulse 1.2s ease-in-out infinite; }
+  .v3-node.success .v3-node-badge { background: var(--green); }
+  .v3-node.failed  .v3-node-badge { background: var(--red); }
+  .v3-node-sub { padding: 0 12px 10px; font-size: 10px; color: var(--fg3); font-family: var(--mono); }
+  .v3-node-log-preview { padding: 8px 10px; background: #08080b; border-top: 1px solid var(--border); font-family: var(--mono); font-size: 9.5px; color: var(--fg3); line-height: 1.6; max-height: 60px; overflow: hidden; }
+  .v3-node-time { padding: 0 12px 8px; font-size: 9px; color: var(--fg3); font-family: var(--mono); }
+  .v3-play-from { position: absolute; bottom: -32px; left: 50%; transform: translateX(-50%); background: var(--brand); color: #000; font-size: 9px; font-weight: 600; padding: 3px 8px; border-radius: 4px; white-space: nowrap; cursor: pointer; opacity: 0; transition: opacity .15s; }
+  .v3-node:hover .v3-play-from { opacity: 1; }
+  .v3-detail { height: 180px; border-top: 1px solid var(--border); display: flex; flex-direction: column; background: #09090c; }
+  .v3-detail-head { padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; font-size: 11px; background: var(--card); flex-shrink: 0; }
+  .v3-detail-body { flex: 1; overflow-y: auto; padding: 10px 16px; font-family: var(--mono); font-size: 10.5px; line-height: 1.7; }
+
+  /* ══════════════════════════════════
+     VARIANT 4 — LIVE FEED
+     ══════════════════════════════════ */
+  .v4-canvas { flex: 1; display: flex; gap: 12px; padding: 0 32px 32px; max-height: calc(100vh - 160px); }
+  .v4-timeline { width: 200px; flex-shrink: 0; }
+  .v4-tl-step { display: flex; align-items: flex-start; gap: 8px; }
+  .v4-tl-left { display: flex; flex-direction: column; align-items: center; width: 24px; flex-shrink: 0; }
+  .v4-tl-dot { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--border2); background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--fg3); flex-shrink: 0; transition: all .2s; cursor: pointer; }
+  .v4-tl-step.running .v4-tl-dot { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+  .v4-tl-step.success .v4-tl-dot { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+  .v4-tl-step.failed  .v4-tl-dot { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .v4-tl-line { width: 1.5px; flex: 1; min-height: 28px; background: var(--border); margin: 3px 0; }
+  .v4-tl-step.success .v4-tl-line { background: var(--green); opacity: .3; }
+  .v4-tl-step.running .v4-tl-line { background: linear-gradient(var(--blue), var(--border)); opacity: .5; }
+  .v4-tl-right { padding-top: 2px; cursor: pointer; }
+  .v4-tl-name { font-size: 11px; font-weight: 500; color: var(--fg2); }
+  .v4-tl-step.running .v4-tl-name { color: var(--fg); }
+  .v4-tl-sub { font-size: 9px; color: var(--fg3); font-family: var(--mono); margin-top: 2px; }
+  .v4-tl-dur { font-size: 9px; color: var(--fg3); font-family: var(--mono); }
+  .v4-play-from-tl { font-size: 9px; color: var(--brand); cursor: pointer; display: none; margin-top: 2px; }
+  .v4-tl-right:hover .v4-play-from-tl { display: block; }
+  .v4-feed { flex: 1; background: #07070a; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+  .v4-feed-header { padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .v4-feed-body { flex: 1; overflow-y: auto; padding: 0; font-family: var(--mono); font-size: 11px; }
+  .v4-section { border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .v4-section-head { padding: 8px 16px; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); cursor: pointer; }
+  .v4-section-head:hover { background: rgba(255,255,255,0.04); }
+  .v4-section-label { font-size: 11px; font-weight: 600; flex: 1; }
+  .v4-section-lines { padding: 6px 16px 10px; line-height: 1.8; }
+  .v4-section.collapsed .v4-section-lines { display: none; }
+
+  /* ══════════════════════════════════
+     VARIANT 5 — PIPELINE STAGES
+     ══════════════════════════════════ */
+  .v5-canvas { flex: 1; display: flex; flex-direction: column; padding: 0 32px 32px; overflow: hidden; }
+  .v5-pipeline { display: flex; align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+  .v5-stage-wrap { display: flex; align-items: flex-start; }
+  .v5-connector-line { width: 24px; flex-shrink: 0; height: 2px; background: var(--border); margin-top: 34px; }
+  .v5-connector-line.done { background: rgba(74,222,128,0.3); }
+  .v5-connector-line.active { background: linear-gradient(90deg, rgba(74,222,128,0.3), var(--blue)); animation: flow .8s linear infinite; background-size: 200%; }
+  @keyframes flow { 0% { background-position: 0%; } 100% { background-position: 200%; } }
+  .v5-stage { width: 200px; flex-shrink: 0; border: 1px solid var(--border2); border-radius: 12px; background: var(--card); overflow: hidden; transition: all .2s; cursor: pointer; }
+  .v5-stage:hover { border-color: var(--brand); }
+  .v5-stage.running { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(96,165,250,0.1), 0 8px 24px rgba(0,0,0,.4); }
+  .v5-stage.success { border-color: rgba(74,222,128,0.35); }
+  .v5-stage.failed  { border-color: rgba(248,113,113,0.35); }
+  .v5-stage.selected { border-color: var(--brand); }
+  .v5-stage-head { padding: 10px 12px; display: flex; align-items: center; gap: 8px; }
+  .v5-stage-icon { font-size: 15px; }
+  .v5-stage-name { font-size: 11px; font-weight: 600; flex: 1; }
+  .v5-stage-status { font-size: 10px; }
+  .v5-stage.running .v5-stage-status { color: var(--blue); }
+  .v5-stage.success .v5-stage-status { color: var(--green); }
+  .v5-stage.failed  .v5-stage-status { color: var(--red); }
+  .v5-stage-sub { padding: 0 12px 6px; font-size: 10px; color: var(--fg3); font-family: var(--mono); }
+  .v5-stage-bar { height: 3px; background: var(--border); }
+  .v5-stage.running .v5-stage-bar { background: linear-gradient(90deg, var(--blue), rgba(96,165,250,0.2)); animation: shimmer 1.5s linear infinite; background-size: 200%; }
+  .v5-stage.success .v5-stage-bar { background: var(--green); opacity: .5; }
+  .v5-stage.failed  .v5-stage-bar { background: var(--red); opacity: .5; }
+  @keyframes shimmer { 0% { background-position: -200%; } 100% { background-position: 200%; } }
+  .v5-play-from { padding: 6px 12px 8px; font-size: 10px; color: var(--brand); cursor: pointer; display: none; }
+  .v5-stage:hover .v5-play-from { display: block; }
+  .v5-log-area { flex: 1; background: #07070a; border: 1px solid var(--border); border-radius: 10px; margin-top: 12px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  .v5-log-header { padding: 9px 14px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .v5-tab-pills { display: flex; gap: 4px; flex: 1; }
+  .v5-pill { padding: 3px 10px; border-radius: 20px; font-size: 10px; cursor: pointer; border: 1px solid transparent; color: var(--fg3); transition: all .15s; }
+  .v5-pill:hover { color: var(--fg); border-color: var(--border2); }
+  .v5-pill.active { background: var(--brand-dim); border-color: rgba(248,129,169,0.25); color: var(--brand); }
+  .v5-pill.success { color: var(--green); }
+  .v5-log-body { flex: 1; overflow-y: auto; padding: 12px 16px; font-family: var(--mono); font-size: 11px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <span class="top-bar-title">Workflow Canvas</span>
+  <button class="tab-btn active" onclick="show(1,this)">1 · Accordion</button>
+  <button class="tab-btn" onclick="show(2,this)">2 · Split Panel</button>
+  <button class="tab-btn" onclick="show(3,this)">3 · Node Graph</button>
+  <button class="tab-btn" onclick="show(4,this)">4 · Live Feed</button>
+  <button class="tab-btn" onclick="show(5,this)">5 · Pipeline Stages</button>
+</div>
+
+<!-- ══════════════════════════ VARIANT 1 ══════════════════════════ -->
+<div id="v1" class="variant active">
+  <div class="variant-header">
+    <div class="variant-title">Variant 1 — Accordion Steps</div>
+    <div class="variant-desc">Steps expand in place. Running step auto-opens and glows. Hover any step for "Run from here".</div>
+    <div><span class="ref-tag">Like <span>GitHub Actions</span></span><span class="ref-tag">Like <span>Buildkite</span></span><span class="ref-tag">Like <span>CircleCI</span></span></div>
+  </div>
+  <div class="run-controls">
+    <button class="btn primary" onclick="v1Start()">▶ Run Workflow</button>
+    <button class="btn danger" onclick="v1Reset()">↺ Reset</button>
+    <span class="run-status" id="v1-status">Ready</span>
+  </div>
+  <div class="v1-canvas">
+    <div class="v1-step open" id="v1s0">
+      <div class="v1-step-head" onclick="v1Toggle(0)">
+        <div class="v1-idx">1</div>
+        <div style="flex:1"><div class="v1-step-name">Cloud Build</div><div class="v1-step-sub">asana-v1 · latest commit</div></div>
+        <button class="play-from-btn" onclick="event.stopPropagation();v1Start(0)">▶ Run from here</button>
+        <span class="v1-badge pending">pending</span><span class="v1-step-time" id="v1t0"></span><span class="v1-chevron">▶</span>
+      </div>
+      <div class="v1-log-panel" id="v1log0"><div class="log-line dim">Waiting to start…</div></div>
+    </div>
+    <div class="v1-connector"></div>
+    <div class="v1-step step-pending" id="v1s1">
+      <div class="v1-step-head" onclick="v1Toggle(1)">
+        <div class="v1-idx">2</div>
+        <div style="flex:1"><div class="v1-step-name">Deploy</div><div class="v1-step-sub">asana-v1 → staging</div></div>
+        <button class="play-from-btn" onclick="event.stopPropagation();v1Start(1)">▶ Run from here</button>
+        <span class="v1-badge pending">pending</span><span class="v1-step-time" id="v1t1"></span><span class="v1-chevron">▶</span>
+      </div>
+      <div class="v1-log-panel" id="v1log1"><div class="log-line dim">Waiting to start…</div></div>
+    </div>
+    <div class="v1-connector"></div>
+    <div class="v1-step step-pending" id="v1s2">
+      <div class="v1-step-head" onclick="v1Toggle(2)">
+        <div class="v1-idx">3</div>
+        <div style="flex:1"><div class="v1-step-name">Git: Commit & Push</div><div class="v1-step-sub">define repo · "chore: bump"</div></div>
+        <button class="play-from-btn" onclick="event.stopPropagation();v1Start(2)">▶ Run from here</button>
+        <span class="v1-badge pending">pending</span><span class="v1-step-time" id="v1t2"></span><span class="v1-chevron">▶</span>
+      </div>
+      <div class="v1-log-panel" id="v1log2"><div class="log-line dim">Waiting to start…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ VARIANT 2 ══════════════════════════ -->
+<div id="v2" class="variant">
+  <div class="variant-header">
+    <div class="variant-title">Variant 2 — Split Panel</div>
+    <div class="variant-desc">Step list on the left. Right panel is a context-aware inspector — edit form when idle, live log during/after runs. Add, remove, and reorder steps freely. Tabs switch automatically.</div>
+    <div><span class="ref-tag">Like <span>Retool Workflows</span></span><span class="ref-tag">Like <span>Windmill</span></span><span class="ref-tag">Like <span>Linear</span></span></div>
+  </div>
+  <div class="run-controls">
+    <button class="btn primary" id="v2-run-btn" onclick="v2Start()">▶ Run Workflow</button>
+    <button class="btn danger" onclick="v2ResetRun()">↺ Reset</button>
+    <span class="run-status" id="v2-status">Ready — edit steps, then run</span>
+  </div>
+  <div class="v2-canvas">
+    <div class="v2-left">
+      <div class="v2-progress-track"><div class="v2-progress-bar" id="v2-progress" style="width:0%"></div></div>
+      <div id="v2-step-list"></div>
+      <button class="v2-add-btn" id="v2-add-btn" onclick="v2ShowTypePicker()">+ Add Step</button>
+    </div>
+    <div class="v2-panel" id="v2-panel">
+      <div class="v2-panel-header" id="v2-panel-header">
+        <span class="v2-panel-icon" id="v2-ph-icon">📋</span>
+        <span class="v2-panel-title" id="v2-ph-title">Select a step to edit</span>
+        <div class="v2-tab-group" id="v2-tab-group" style="display:none">
+          <button class="v2-tab active" id="v2-tab-edit" onclick="v2SetTab('edit')">Edit</button>
+          <button class="v2-tab" id="v2-tab-log" onclick="v2SetTab('log')">Log</button>
+        </div>
+      </div>
+      <div id="v2-edit-pane" class="v2-pane">
+        <div class="v2-empty"><div class="v2-empty-icon">↖</div><div>Select a step on the left to edit it</div><div style="font-size:11px;color:var(--fg3)">or click + Add Step to create one</div></div>
+      </div>
+      <div id="v2-log-pane" class="v2-pane v2-log-body" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ VARIANT 3 ══════════════════════════ -->
+<div id="v3" class="variant">
+  <div class="variant-header">
+    <div class="variant-title">Variant 3 — Node Graph</div>
+    <div class="variant-desc">Steps as visual nodes connected by edges. Running node pulses. Click any node to inspect. Hover for "Run from here".</div>
+    <div><span class="ref-tag">Like <span>n8n</span></span><span class="ref-tag">Like <span>Dagster</span></span><span class="ref-tag">Like <span>Prefect</span></span><span class="ref-tag">Like <span>Temporal</span></span></div>
+  </div>
+  <div class="run-controls">
+    <button class="btn primary" onclick="v3Start()">▶ Run Workflow</button>
+    <button class="btn danger" onclick="v3Reset()">↺ Reset</button>
+    <span class="run-status" id="v3-status">Ready</span>
+  </div>
+  <div class="v3-canvas" style="padding:0 32px 0">
+    <div class="v3-graph-area">
+      <svg class="v3-svg" id="v3-svg"></svg>
+      <div class="v3-node" id="v3n0" style="left:40px;top:40px" onclick="v3Select(0)">
+        <div class="v3-node-head"><span class="v3-node-icon">☁️</span><span class="v3-node-name">Cloud Build</span><span class="v3-node-badge"></span></div>
+        <div class="v3-node-sub" id="v3ns0">asana-v1 · latest</div>
+        <div class="v3-node-log-preview" id="v3nlp0" style="display:none"></div>
+        <div class="v3-node-time" id="v3nt0"></div>
+        <div class="v3-play-from" onclick="event.stopPropagation();v3Start(0)">▶ Run from here</div>
+      </div>
+      <div class="v3-node" id="v3n1" style="left:280px;top:40px" onclick="v3Select(1)">
+        <div class="v3-node-head"><span class="v3-node-icon">🚀</span><span class="v3-node-name">Deploy</span><span class="v3-node-badge"></span></div>
+        <div class="v3-node-sub" id="v3ns1">asana-v1 → staging</div>
+        <div class="v3-node-log-preview" id="v3nlp1" style="display:none"></div>
+        <div class="v3-node-time" id="v3nt1"></div>
+        <div class="v3-play-from" onclick="event.stopPropagation();v3Start(1)">▶ Run from here</div>
+      </div>
+      <div class="v3-node" id="v3n2" style="left:520px;top:40px" onclick="v3Select(2)">
+        <div class="v3-node-head"><span class="v3-node-icon">📝</span><span class="v3-node-name">Git Commit & Push</span><span class="v3-node-badge"></span></div>
+        <div class="v3-node-sub" id="v3ns2">define repo · "chore: bump"</div>
+        <div class="v3-node-log-preview" id="v3nlp2" style="display:none"></div>
+        <div class="v3-node-time" id="v3nt2"></div>
+        <div class="v3-play-from" onclick="event.stopPropagation();v3Start(2)">▶ Run from here</div>
+      </div>
+    </div>
+    <div class="v3-detail">
+      <div class="v3-detail-head"><span id="v3-detail-icon">📋</span><span id="v3-detail-name" style="font-size:11px;font-weight:600">Select a node</span><span id="v3-detail-badge" style="font-size:10px;color:var(--fg3)"></span></div>
+      <div class="v3-detail-body" id="v3-detail-body"><div class="log-line dim">Click a node above to inspect its output.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ VARIANT 4 ══════════════════════════ -->
+<div id="v4" class="variant">
+  <div class="variant-header">
+    <div class="variant-title">Variant 4 — Live Feed</div>
+    <div class="variant-desc">Timeline spine on the left marks step state. Right pane is a unified log stream grouped by step with collapsible sections.</div>
+    <div><span class="ref-tag">Like <span>Cursor agent</span></span><span class="ref-tag">Like <span>Claude Code</span></span><span class="ref-tag">Like <span>Airflow logs</span></span></div>
+  </div>
+  <div class="run-controls">
+    <button class="btn primary" onclick="v4Start()">▶ Run Workflow</button>
+    <button class="btn danger" onclick="v4Reset()">↺ Reset</button>
+    <span class="run-status" id="v4-status">Ready</span>
+  </div>
+  <div class="v4-canvas">
+    <div class="v4-timeline">
+      <div class="v4-tl-step" id="v4tl0">
+        <div class="v4-tl-left"><div class="v4-tl-dot">1</div><div class="v4-tl-line"></div></div>
+        <div class="v4-tl-right"><div class="v4-tl-name">Cloud Build</div><div class="v4-tl-sub">asana-v1</div><div class="v4-tl-dur" id="v4td0"></div><div class="v4-play-from-tl" onclick="v4Start(0)">▶ Run from here</div></div>
+      </div>
+      <div class="v4-tl-step" id="v4tl1">
+        <div class="v4-tl-left"><div class="v4-tl-dot">2</div><div class="v4-tl-line"></div></div>
+        <div class="v4-tl-right"><div class="v4-tl-name">Deploy</div><div class="v4-tl-sub">asana-v1 → staging</div><div class="v4-tl-dur" id="v4td1"></div><div class="v4-play-from-tl" onclick="v4Start(1)">▶ Run from here</div></div>
+      </div>
+      <div class="v4-tl-step" id="v4tl2">
+        <div class="v4-tl-left"><div class="v4-tl-dot">3</div></div>
+        <div class="v4-tl-right"><div class="v4-tl-name">Git Commit & Push</div><div class="v4-tl-sub">define repo</div><div class="v4-tl-dur" id="v4td2"></div><div class="v4-play-from-tl" onclick="v4Start(2)">▶ Run from here</div></div>
+      </div>
+    </div>
+    <div class="v4-feed">
+      <div class="v4-feed-header"><span>🖥</span><span>Execution Log</span><span id="v4-feed-status" style="font-size:10px;color:var(--fg3);margin-left:auto"></span></div>
+      <div class="v4-feed-body" id="v4-feed-body"><div style="padding:20px 16px;color:var(--fg3);font-family:var(--mono);font-size:11px">Press Run to start the workflow…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ VARIANT 5 ══════════════════════════ -->
+<div id="v5" class="variant">
+  <div class="variant-header">
+    <div class="variant-title">Variant 5 — Pipeline Stage Cards</div>
+    <div class="variant-desc">Steps as horizontal pipeline stages. Progress flows left to right. Click a stage to view its log in the panel below.</div>
+    <div><span class="ref-tag">Like <span>Jenkins Blue Ocean</span></span><span class="ref-tag">Like <span>GitLab CI</span></span><span class="ref-tag">Like <span>Concourse CI</span></span></div>
+  </div>
+  <div class="run-controls">
+    <button class="btn primary" onclick="v5Start()">▶ Run Workflow</button>
+    <button class="btn danger" onclick="v5Reset()">↺ Reset</button>
+    <span class="run-status" id="v5-status">Ready</span>
+  </div>
+  <div class="v5-canvas">
+    <div class="v5-pipeline">
+      <div class="v5-stage-wrap">
+        <div class="v5-stage" id="v5s0" onclick="v5Select(0)"><div class="v5-stage-bar"></div><div class="v5-stage-head"><span class="v5-stage-icon">☁️</span><span class="v5-stage-name">Cloud Build</span><span class="v5-stage-status" id="v5st0">—</span></div><div class="v5-stage-sub">asana-v1 · latest</div><div class="v5-play-from" onclick="event.stopPropagation();v5Start(0)">▶ Run from here</div></div>
+      </div>
+      <div class="v5-stage-wrap"><div class="v5-connector-line" id="v5c0"></div>
+        <div class="v5-stage" id="v5s1" onclick="v5Select(1)"><div class="v5-stage-bar"></div><div class="v5-stage-head"><span class="v5-stage-icon">🚀</span><span class="v5-stage-name">Deploy</span><span class="v5-stage-status" id="v5st1">—</span></div><div class="v5-stage-sub">asana-v1 → staging</div><div class="v5-play-from" onclick="event.stopPropagation();v5Start(1)">▶ Run from here</div></div>
+      </div>
+      <div class="v5-stage-wrap"><div class="v5-connector-line" id="v5c1"></div>
+        <div class="v5-stage" id="v5s2" onclick="v5Select(2)"><div class="v5-stage-bar"></div><div class="v5-stage-head"><span class="v5-stage-icon">📝</span><span class="v5-stage-name">Git Commit</span><span class="v5-stage-status" id="v5st2">—</span></div><div class="v5-stage-sub">define repo · "chore: bump"</div><div class="v5-play-from" onclick="event.stopPropagation();v5Start(2)">▶ Run from here</div></div>
+      </div>
+    </div>
+    <div class="v5-log-area">
+      <div class="v5-log-header">
+        <div class="v5-tab-pills" id="v5-pills"><div class="v5-pill active" onclick="v5Select(0)">☁️ Build</div><div class="v5-pill" onclick="v5Select(1)">🚀 Deploy</div><div class="v5-pill" onclick="v5Select(2)">📝 Git</div></div>
+        <span id="v5-log-badge" style="font-size:10px;color:var(--fg3)">No run yet</span>
+      </div>
+      <div class="v5-log-body" id="v5-log-body"><div class="log-line dim">Click a stage above or press Run Workflow.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// Shared log data
+// ─────────────────────────────────────────────
+const sharedStepDefs = [
+  { name:'Cloud Build', icon:'☁️', sub:'asana-v1 · latest commit' },
+  { name:'Deploy',      icon:'🚀', sub:'asana-v1 → staging' },
+  { name:'Git Commit',  icon:'📝', sub:'define repo · "chore: bump"' },
+];
+const stepLogs = [
+  [
+    {t:200,  cls:'head', text:'━━━ Cloud Build: asana-v1 ━━━'},
+    {t:400,  cls:'info', text:'Resolved latest commit: 3b10573d'},
+    {t:600,  cls:'info', text:'Starting cloud build: organisations/voyage/products/vp/neurons/asana-v1'},
+    {t:900,  cls:'dim',  text:'Operation: operations/b74a8cfe-6a7b-4f5c'},
+    {t:1200, cls:'dim',  text:'#1 [internal] load .dockerignore — DONE 0.1s'},
+    {t:1500, cls:'dim',  text:'#2 [internal] load build definition — DONE 0.1s'},
+    {t:1900, cls:'dim',  text:'#3 load metadata for debian:bookworm-slim — DONE 0.9s'},
+    {t:2300, cls:'dim',  text:'#8 [builder 2/6] WORKDIR /app — CACHED'},
+    {t:2700, cls:'dim',  text:'#9 artifact registry auth — DONE 3.2s'},
+    {t:3200, cls:'dim',  text:'#12 go build -mod=readonly — DONE 6.0s'},
+    {t:3700, cls:'dim',  text:'#15 exporting layers — DONE 0.2s'},
+    {t:4100, cls:'dim',  text:'#16 pushing image 30.36MB… DONE 2.7s'},
+    {t:4500, cls:'ok',   text:'Build complete. Version: 1.0.38'},
+    {t:4600, cls:'ok',   text:'✓ done in 68.1s'},
+  ],
+  [
+    {t:200,  cls:'head', text:'━━━ Deploy: asana-v1 ━━━'},
+    {t:400,  cls:'info', text:'Deploying asana-v1 @ 1.0.38 to [staging]'},
+    {t:700,  cls:'dim',  text:'Operation: operations/deploy/d8f2a11c'},
+    {t:1100, cls:'dim',  text:'Terraform plan: 2 to add, 0 to destroy'},
+    {t:1600, cls:'dim',  text:'Applying changes… container image updated'},
+    {t:2200, cls:'dim',  text:'Cloud Run service asana-v1 updated'},
+    {t:2800, cls:'ok',   text:'Deploy complete. Version: 1.0.38'},
+    {t:3000, cls:'ok',   text:'✓ done in 28.4s'},
+  ],
+  [
+    {t:200,  cls:'head', text:'━━━ Git: Commit & Push ━━━'},
+    {t:400,  cls:'info', text:'Staging all changes in ~/alis.build/voyage/define/vp'},
+    {t:700,  cls:'dim',  text:'git add -A'},
+    {t:1000, cls:'info', text:'Committing: "chore: bump"'},
+    {t:1300, cls:'dim',  text:'[master 3b10573] chore: bump'},
+    {t:1600, cls:'info', text:'Pushing to origin/master…'},
+    {t:2000, cls:'dim',  text:'To github.com:voyage/vp.git'},
+    {t:2400, cls:'ok',   text:'✓ done in 4.2s'},
+  ],
+];
+const stepDurations = [4600, 3000, 2400];
+
+// ─────────────────────────────────────────────
+// VARIANT 1
+// ─────────────────────────────────────────────
+let v1Timers=[], v1Intervals=[];
+function v1Toggle(i){ document.getElementById('v1s'+i).classList.toggle('open'); }
+function v1Reset(){
+  v1Timers.forEach(clearTimeout); v1Timers=[];
+  v1Intervals.forEach(clearInterval); v1Intervals=[];
+  document.getElementById('v1-status').textContent='Ready';
+  for(let i=0;i<3;i++){
+    const el=document.getElementById('v1s'+i);
+    el.className='v1-step'+(i===0?' open':'');
+    if(i>0) el.classList.add('step-pending');
+    el.querySelector('.v1-badge').className='v1-badge pending';
+    el.querySelector('.v1-badge').textContent='pending';
+    document.getElementById('v1log'+i).innerHTML='<div class="log-line dim">Waiting to start…</div>';
+    document.getElementById('v1t'+i).textContent='';
+  }
+}
+function v1Start(from){ v1Reset(); document.getElementById('v1-status').textContent='Running…'; v1RunStep(from??0); }
+function v1RunStep(idx){
+  if(idx>=3){ document.getElementById('v1-status').textContent='✓ Completed'; return; }
+  const el=document.getElementById('v1s'+idx);
+  el.classList.remove('step-pending'); el.classList.add('running','open');
+  el.querySelector('.v1-badge').className='v1-badge running';
+  el.querySelector('.v1-badge').innerHTML='<span class="dot-pulse"></span> running';
+  const logEl=document.getElementById('v1log'+idx); logEl.innerHTML='';
+  const t0=Date.now();
+  const iv=setInterval(()=>{ document.getElementById('v1t'+idx).textContent=((Date.now()-t0)/1000).toFixed(1)+'s'; },100);
+  v1Intervals.push(iv);
+  stepLogs[idx].forEach(c=>{ v1Timers.push(setTimeout(()=>{ const d=document.createElement('div'); d.className='log-line '+c.cls; d.textContent=c.text; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight; },c.t)); });
+  v1Timers.push(setTimeout(()=>{
+    clearInterval(iv); el.classList.remove('running'); el.classList.add('success');
+    el.querySelector('.v1-idx').textContent='✓';
+    el.querySelector('.v1-badge').className='v1-badge success'; el.querySelector('.v1-badge').textContent='✓ success';
+    document.getElementById('v1t'+idx).textContent=(stepDurations[idx]/1000).toFixed(1)+'s';
+    const nx=document.getElementById('v1s'+(idx+1)); if(nx) nx.classList.remove('step-pending');
+    v1RunStep(idx+1);
+  }, stepDurations[idx]));
+}
+
+// ─────────────────────────────────────────────
+// VARIANT 2 — full edit experience
+// ─────────────────────────────────────────────
+let v2_steps = [
+  { id:'a', type:'build-cloud', icon:'☁️', name:'Cloud Build',       params:{neuron:'organisations/voyage/products/vp/neurons/asana-v1', commit:''}, onFailure:'stop', status:'idle' },
+  { id:'b', type:'deploy',      icon:'🚀', name:'Deploy',            params:{neuron:'organisations/voyage/products/vp/neurons/asana-v1', environments:['staging']}, onFailure:'stop', status:'idle' },
+  { id:'c', type:'git-commit-push', icon:'📝', name:'Git Commit & Push', params:{repoPath:'~/alis.build/voyage/define/vp', message:'chore: bump'}, onFailure:'stop', status:'idle' },
+];
+let v2_sel = null;      // index into v2_steps
+let v2_tab = 'edit';    // 'edit' | 'log'
+let v2_running = false;
+let v2_logs = { a:null, b:null, c:null };
+let v2_timers=[], v2_intervals=[];
+let v2_dragIdx = null;
+
+const V2_TYPES = [
+  { type:'build-cloud',      icon:'☁️', name:'Cloud Build',       desc:'Build a neuron from source',          defaultParams:{neuron:'',commit:''} },
+  { type:'deploy',           icon:'🚀', name:'Deploy',            desc:'Deploy to one or more environments',  defaultParams:{neuron:'',environments:[]} },
+  { type:'git-commit-push',  icon:'📝', name:'Git Commit & Push', desc:'Stage all, commit, and push',         defaultParams:{repoPath:'',message:''} },
+  { type:'git-stage',        icon:'📂', name:'Git Stage All',     desc:'Stage all changes in a repo',         defaultParams:{repoPath:''} },
+  { type:'define',           icon:'🧬', name:'Define Neuron',     desc:'Run alis define on a neuron',         defaultParams:{neuron:''} },
+  { type:'shell',            icon:'💻', name:'Shell Command',     desc:'Run an arbitrary shell command',      defaultParams:{command:'',workdir:''} },
+  { type:'wait',             icon:'⏱', name:'Wait',              desc:'Pause execution for N seconds',       defaultParams:{seconds:5} },
+];
+
+function v2_stepLogData(step) {
+  const m = { 'build-cloud':0, 'deploy':1, 'git-commit-push':2, 'git-stage':2, 'define':0, 'shell':2, 'wait':2 };
+  return stepLogs[m[step.type]??0];
+}
+function v2_stepDuration(step) {
+  const m = { 'build-cloud':0, 'deploy':1, 'git-commit-push':2 };
+  return stepDurations[m[step.type]??2];
+}
+
+function v2_stepSub(step) {
+  const p = step.params;
+  if(step.type==='build-cloud') return (p.neuron||'').split('/').pop() || 'no neuron';
+  if(step.type==='deploy') return `${(p.neuron||'').split('/').pop()||'?'} → ${(p.environments||[]).join(', ')||'no env'}`;
+  if(step.type==='git-commit-push'||step.type==='git-stage') return p.repoPath||'no path';
+  if(step.type==='define') return (p.neuron||'').split('/').pop()||'no neuron';
+  if(step.type==='shell') return p.command||'no command';
+  if(step.type==='wait') return `${p.seconds}s`;
+  return '';
+}
+
+function v2RenderList() {
+  const list = document.getElementById('v2-step-list');
+  list.innerHTML = '';
+  v2_steps.forEach((step, idx) => {
+    const statusCls = step.status === 'idle' ? 'idle' : step.status;
+    const statusTxt = step.status === 'idle' ? '—' : step.status==='running'?'…':step.status==='success'?'✓':'✗';
+    const isSel = idx === v2_sel;
+    const div = document.createElement('div');
+    div.className = 'v2-step' + (isSel?' selected':'') + (step.status==='running'?' running':'') + (step.status==='success'?' success':'') + (step.status==='failed'?' failed':'');
+    div.draggable = !v2_running;
+    div.dataset.idx = idx;
+    div.innerHTML = `
+      <div class="v2-step-main">
+        <span class="v2-drag-handle" title="Drag to reorder">⠿</span>
+        <span class="v2-step-icon">${step.icon}</span>
+        <div class="v2-step-info">
+          <div class="v2-step-name">${step.name}</div>
+          <div class="v2-step-sub">${v2_stepSub(step)}</div>
+        </div>
+        <span class="v2-step-badge ${statusCls}">${statusTxt}</span>
+        <button class="v2-step-del" title="Remove step" onclick="event.stopPropagation();v2DeleteStep(${idx})">✕</button>
+      </div>
+      <div class="v2-play-from" onclick="event.stopPropagation();v2Start(${idx})">▶ Run from here</div>
+    `;
+    div.addEventListener('click', () => v2SelectStep(idx));
+    div.addEventListener('dragstart', e => { v2_dragIdx=idx; e.dataTransfer.effectAllowed='move'; setTimeout(()=>div.classList.add('dragging'),0); });
+    div.addEventListener('dragend', () => { div.classList.remove('dragging'); document.querySelectorAll('.v2-step').forEach(d=>d.classList.remove('drag-over')); });
+    div.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect='move'; div.classList.add('drag-over'); });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => { e.preventDefault(); div.classList.remove('drag-over'); if(v2_dragIdx===null||v2_dragIdx===idx) return; const moved=v2_steps.splice(v2_dragIdx,1)[0]; const newIdx=v2_dragIdx<idx?idx-1:idx; v2_steps.splice(newIdx,0,moved); v2_sel=newIdx; v2_dragIdx=null; v2RenderList(); });
+    list.appendChild(div);
+  });
+}
+
+function v2SelectStep(idx) {
+  v2_sel = idx;
+  v2RenderList();
+  const step = v2_steps[idx];
+  document.getElementById('v2-ph-icon').textContent = step.icon;
+  document.getElementById('v2-ph-title').textContent = step.name;
+  document.getElementById('v2-tab-group').style.display = 'flex';
+  const hasLog = v2_logs[step.id] && v2_logs[step.id].length > 0;
+  v2SetTab(hasLog && step.status !== 'idle' ? 'log' : 'edit');
+}
+
+function v2SetTab(tab) {
+  v2_tab = tab;
+  document.getElementById('v2-tab-edit').className = 'v2-tab' + (tab==='edit'?' active':'');
+  document.getElementById('v2-tab-log').className  = 'v2-tab' + (tab==='log'?' active':'');
+  document.getElementById('v2-edit-pane').style.display = tab==='edit' ? '' : 'none';
+  document.getElementById('v2-log-pane').style.display  = tab==='log'  ? '' : 'none';
+  if(tab==='edit' && v2_sel!==null) v2RenderForm(v2_sel);
+  if(tab==='log'  && v2_sel!==null) v2RenderLogPane(v2_sel);
+}
+
+function v2RenderForm(idx) {
+  const step = v2_steps[idx];
+  const p = step.params;
+  const dis = v2_running ? 'disabled' : '';
+  let fields = '';
+
+  if(step.type==='build-cloud') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Neuron</div>
+        <input class="v2-input mono" ${dis} value="${p.neuron||''}" placeholder="organisations/…/neurons/name-v1"
+               oninput="v2UpdateParam(${idx},'neuron',this.value)">
+      </div>
+      <div class="v2-field">
+        <div class="v2-field-label">Commit <em>— leave blank for latest</em></div>
+        <input class="v2-input mono" ${dis} value="${p.commit||''}" placeholder="sha or branch · defaults to latest"
+               oninput="v2UpdateParam(${idx},'commit',this.value)">
+      </div>`;
+  } else if(step.type==='deploy') {
+    const envs = p.environments||[];
+    const tags = envs.map(e=>`<span class="v2-tag">${e}<button class="v2-tag-rm" onclick="v2RemoveEnv(${idx},'${e}')">×</button></span>`).join('');
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Neuron</div>
+        <input class="v2-input mono" ${dis} value="${p.neuron||''}" placeholder="organisations/…/neurons/name-v1"
+               oninput="v2UpdateParam(${idx},'neuron',this.value)">
+      </div>
+      <div class="v2-field">
+        <div class="v2-field-label">Environments</div>
+        <div class="v2-tags" id="v2-env-tags-${idx}">
+          ${tags}
+          <input class="v2-tag-input-field" ${dis} placeholder="${envs.length?'add more…':'staging, production…'}"
+                 onkeydown="v2EnvKeydown(event,${idx})">
+        </div>
+        <div class="v2-tag-hint">Press Enter or comma to add</div>
+      </div>`;
+  } else if(step.type==='git-commit-push') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Repository path</div>
+        <input class="v2-input mono" ${dis} value="${p.repoPath||''}" placeholder="~/alis.build/org/product/define"
+               oninput="v2UpdateParam(${idx},'repoPath',this.value)">
+      </div>
+      <div class="v2-field">
+        <div class="v2-field-label">Commit message</div>
+        <input class="v2-input" ${dis} value="${p.message||''}" placeholder="chore: bump"
+               oninput="v2UpdateParam(${idx},'message',this.value)">
+      </div>`;
+  } else if(step.type==='git-stage') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Repository path</div>
+        <input class="v2-input mono" ${dis} value="${p.repoPath||''}" placeholder="~/alis.build/org/product/define"
+               oninput="v2UpdateParam(${idx},'repoPath',this.value)">
+      </div>`;
+  } else if(step.type==='define') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Neuron</div>
+        <input class="v2-input mono" ${dis} value="${p.neuron||''}" placeholder="organisations/…/neurons/name-v1"
+               oninput="v2UpdateParam(${idx},'neuron',this.value)">
+      </div>`;
+  } else if(step.type==='shell') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Command</div>
+        <input class="v2-input mono" ${dis} value="${p.command||''}" placeholder="echo hello"
+               oninput="v2UpdateParam(${idx},'command',this.value)">
+      </div>
+      <div class="v2-field">
+        <div class="v2-field-label">Working directory <em>— optional</em></div>
+        <input class="v2-input mono" ${dis} value="${p.workdir||''}" placeholder="~/project"
+               oninput="v2UpdateParam(${idx},'workdir',this.value)">
+      </div>`;
+  } else if(step.type==='wait') {
+    fields = `
+      <div class="v2-field">
+        <div class="v2-field-label">Seconds</div>
+        <input class="v2-input" type="number" min="1" ${dis} value="${p.seconds||5}"
+               oninput="v2UpdateParam(${idx},'seconds',+this.value)">
+      </div>`;
+  }
+
+  document.getElementById('v2-edit-pane').innerHTML = `
+    <div class="v2-form">
+      ${fields}
+      <div class="v2-form-divider"></div>
+      <div class="v2-failure-row">
+        <span class="v2-failure-label">On failure</span>
+        <select class="v2-select" ${dis} onchange="v2UpdateOnFailure(${idx},this.value)" style="width:auto;flex:1">
+          <option value="stop"     ${step.onFailure==='stop'    ?'selected':''}>Stop workflow</option>
+          <option value="continue" ${step.onFailure==='continue'?'selected':''}>Continue anyway</option>
+        </select>
+      </div>
+      <div class="v2-form-actions">
+        <button class="v2-delete-step-btn" ${dis} onclick="v2DeleteStep(${idx})">✕ Remove step</button>
+      </div>
+    </div>`;
+}
+
+function v2RenderLogPane(idx) {
+  const step = v2_steps[idx];
+  const logPane = document.getElementById('v2-log-pane');
+  const logs = v2_logs[step.id];
+  if(!logs || logs.length===0) {
+    logPane.innerHTML = '<div class="log-line dim" style="padding:16px">No run yet for this step.</div>';
+  } else {
+    logPane.innerHTML = logs.join('');
+    logPane.scrollTop = logPane.scrollHeight;
+  }
+}
+
+function v2UpdateParam(idx, key, value) {
+  v2_steps[idx].params[key] = value;
+  // Re-render the sub-label in the list
+  const rows = document.querySelectorAll('#v2-step-list .v2-step');
+  if(rows[idx]) rows[idx].querySelector('.v2-step-sub').textContent = v2_stepSub(v2_steps[idx]);
+}
+
+function v2UpdateOnFailure(idx, value) { v2_steps[idx].onFailure = value; }
+
+function v2EnvKeydown(e, idx) {
+  if(e.key==='Enter'||e.key===',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/,$/,'');
+    if(val && !v2_steps[idx].params.environments.includes(val)) {
+      v2_steps[idx].params.environments.push(val);
+      v2RenderForm(idx);
+      v2RenderList();
+    } else { e.target.value=''; }
+  }
+}
+
+function v2RemoveEnv(idx, env) {
+  v2_steps[idx].params.environments = v2_steps[idx].params.environments.filter(e=>e!==env);
+  v2RenderForm(idx);
+  v2RenderList();
+}
+
+function v2DeleteStep(idx) {
+  const id = v2_steps[idx].id;
+  delete v2_logs[id];
+  v2_steps.splice(idx, 1);
+  if(v2_sel===idx) { v2_sel=v2_steps.length>0?Math.min(idx,v2_steps.length-1):null; }
+  else if(v2_sel>idx) { v2_sel--; }
+  v2RenderList();
+  if(v2_sel!==null) v2SelectStep(v2_sel);
+  else {
+    document.getElementById('v2-tab-group').style.display='none';
+    document.getElementById('v2-ph-icon').textContent='📋';
+    document.getElementById('v2-ph-title').textContent='Select a step to edit';
+    document.getElementById('v2-edit-pane').innerHTML='<div class="v2-empty"><div class="v2-empty-icon">↖</div><div>Select a step on the left to edit it</div><div style="font-size:11px;color:var(--fg3)">or click + Add Step to create one</div></div>';
+    document.getElementById('v2-edit-pane').style.display='';
+    document.getElementById('v2-log-pane').style.display='none';
+  }
+}
+
+function v2ShowTypePicker() {
+  v2_sel = null;
+  v2RenderList();
+  document.getElementById('v2-tab-group').style.display='none';
+  document.getElementById('v2-ph-icon').textContent='＋';
+  document.getElementById('v2-ph-title').textContent='Choose step type';
+  document.getElementById('v2-log-pane').style.display='none';
+  document.getElementById('v2-edit-pane').style.display='';
+  const cards = V2_TYPES.map(t=>`
+    <div class="v2-type-card" onclick="v2AddStep('${t.type}')">
+      <div class="v2-type-card-icon">${t.icon}</div>
+      <div class="v2-type-card-name">${t.name}</div>
+      <div class="v2-type-card-desc">${t.desc}</div>
+    </div>`).join('');
+  document.getElementById('v2-edit-pane').innerHTML = `
+    <div class="v2-type-picker-wrap">
+      <div class="v2-type-picker-title">Select a step type to add</div>
+      <div class="v2-type-grid">${cards}</div>
+    </div>`;
+}
+
+function v2AddStep(type) {
+  const tpl = V2_TYPES.find(t=>t.type===type);
+  const id = 'step_'+Date.now();
+  const step = { id, type, icon:tpl.icon, name:tpl.name, params:JSON.parse(JSON.stringify(tpl.defaultParams)), onFailure:'stop', status:'idle' };
+  v2_logs[id] = null;
+  v2_steps.push(step);
+  v2_sel = v2_steps.length - 1;
+  v2RenderList();
+  v2SelectStep(v2_sel);
+}
+
+function v2ResetRun() {
+  v2_timers.forEach(clearTimeout); v2_timers=[];
+  v2_intervals.forEach(clearInterval); v2_intervals=[];
+  v2_running = false;
+  document.getElementById('v2-status').textContent='Ready — edit steps, then run';
+  document.getElementById('v2-run-btn').textContent='▶ Run Workflow';
+  document.getElementById('v2-progress').style.width='0%';
+  document.getElementById('v2-add-btn').style.opacity='';
+  v2_steps.forEach(s=>{ s.status='idle'; v2_logs[s.id]=null; });
+  v2RenderList();
+  if(v2_sel!==null) { v2RenderForm(v2_sel); if(v2_tab==='log') v2RenderLogPane(v2_sel); }
+}
+
+function v2Start(fromIdx) {
+  if(v2_steps.length===0) return;
+  v2ResetRun();
+  v2_running=true;
+  document.getElementById('v2-status').textContent='Running…';
+  document.getElementById('v2-run-btn').textContent='■ Stop';
+  document.getElementById('v2-add-btn').style.opacity='0.3';
+  const start = fromIdx??0;
+  v2RunStep(start, start);
+}
+
+function v2RunStep(idx, startIdx) {
+  if(idx>=v2_steps.length) {
+    v2_running=false;
+    document.getElementById('v2-status').textContent='✓ Completed';
+    document.getElementById('v2-run-btn').textContent='▶ Run Workflow';
+    document.getElementById('v2-progress').style.width='100%';
+    document.getElementById('v2-add-btn').style.opacity='';
+    return;
+  }
+  const step = v2_steps[idx];
+  step.status = 'running';
+  v2_logs[step.id] = [];
+  v2RenderList();
+  // Auto-select running step and switch to log tab
+  v2_sel = idx;
+  document.getElementById('v2-ph-icon').textContent = step.icon;
+  document.getElementById('v2-ph-title').textContent = step.name;
+  document.getElementById('v2-tab-group').style.display='flex';
+  v2SetTab('log');
+
+  const total = v2_steps.length - startIdx;
+  const done = (idx - startIdx) / total;
+  document.getElementById('v2-progress').style.width=(done*100)+'%';
+
+  const logData = v2_stepLogData(step);
+  const logPane = document.getElementById('v2-log-pane');
+
+  logData.forEach(c=>{
+    v2_timers.push(setTimeout(()=>{
+      const html=`<div class="log-line ${c.cls}">${c.text}</div>`;
+      v2_logs[step.id].push(html);
+      if(v2_sel===idx && v2_tab==='log') { logPane.insertAdjacentHTML('beforeend',html); logPane.scrollTop=logPane.scrollHeight; }
+    }, c.t));
+  });
+
+  const dur = v2_stepDuration(step);
+  v2_timers.push(setTimeout(()=>{
+    step.status='success';
+    document.getElementById('v2-progress').style.width=((idx-startIdx+1)/total*100)+'%';
+    v2RenderList();
+    v2RunStep(idx+1, startIdx);
+  }, dur));
+}
+
+// Init V2
+v2RenderList();
+
+// ─────────────────────────────────────────────
+// VARIANT 3
+// ─────────────────────────────────────────────
+let v3Timers=[], v3Logs=[['<div class="log-line dim">Node not yet run.</div>'],['<div class="log-line dim">Node not yet run.</div>'],['<div class="log-line dim">Node not yet run.</div>']], v3Selected=0, v3Intervals=[];
+function v3Select(idx){ v3Selected=idx; document.querySelectorAll('.v3-node').forEach((n,i)=>n.classList.toggle('selected',i===idx&&!n.classList.contains('running'))); document.getElementById('v3-detail-icon').textContent=sharedStepDefs[idx].icon; document.getElementById('v3-detail-name').textContent=sharedStepDefs[idx].name; document.getElementById('v3-detail-body').innerHTML=v3Logs[idx].join(''); document.getElementById('v3-detail-body').scrollTop=9999; }
+function v3Reset(){ v3Timers.forEach(clearTimeout); v3Timers=[]; v3Intervals.forEach(clearInterval); v3Intervals=[]; v3Logs=[['<div class="log-line dim">Node not yet run.</div>'],['<div class="log-line dim">Node not yet run.</div>'],['<div class="log-line dim">Node not yet run.</div>']]; document.getElementById('v3-status').textContent='Ready'; for(let i=0;i<3;i++){ const n=document.getElementById('v3n'+i); n.className='v3-node'; document.getElementById('v3nt'+i).textContent=''; const lp=document.getElementById('v3nlp'+i); lp.style.display='none'; lp.textContent=''; } v3DrawEdges('idle'); v3Select(0); }
+function v3DrawEdges(state){ const svg=document.getElementById('v3-svg'); svg.innerHTML=''; const ns='http://www.w3.org/2000/svg'; const nodes=[{cx:130,cy:85},{cx:370,cy:85},{cx:610,cy:85}]; for(let i=0;i<nodes.length-1;i++){ const line=document.createElementNS(ns,'line'); line.setAttribute('x1',nodes[i].cx+90); line.setAttribute('y1',nodes[i].cy); line.setAttribute('x2',nodes[i+1].cx-90); line.setAttribute('y2',nodes[i+1].cy); line.setAttribute('stroke',state==='active'&&v3Selected===i?'rgba(96,165,250,0.6)':'rgba(255,255,255,0.1)'); line.setAttribute('stroke-width','1.5'); line.setAttribute('stroke-dasharray','4 4'); svg.appendChild(line); const arr=document.createElementNS(ns,'polygon'); const x=nodes[i+1].cx-91; const y=nodes[i+1].cy; arr.setAttribute('points',`${x},${y-4} ${x+8},${y} ${x},${y+4}`); arr.setAttribute('fill',state==='active'&&v3Selected===i?'rgba(96,165,250,0.6)':'rgba(255,255,255,0.1)'); svg.appendChild(arr); } }
+function v3Start(from){ v3Reset(); document.getElementById('v3-status').textContent='Running…'; v3RunStep(from??0); }
+function v3RunStep(idx){ if(idx>=3){document.getElementById('v3-status').textContent='✓ Completed';return;} const n=document.getElementById('v3n'+idx); n.className='v3-node running'; v3Logs[idx]=['']; v3Select(idx); v3DrawEdges('active'); const t0=Date.now(); const iv=setInterval(()=>{document.getElementById('v3nt'+idx).textContent=((Date.now()-t0)/1000).toFixed(1)+'s';},100); v3Intervals.push(iv); const lp=document.getElementById('v3nlp'+idx); lp.style.display='block'; stepLogs[idx].forEach(c=>{ v3Timers.push(setTimeout(()=>{ const html=`<div class="log-line ${c.cls}">${c.text}</div>`; v3Logs[idx].push(html); lp.textContent=c.text; if(v3Selected===idx){const b=document.getElementById('v3-detail-body');b.insertAdjacentHTML('beforeend',html);b.scrollTop=9999;} },c.t)); }); v3Timers.push(setTimeout(()=>{ clearInterval(iv); n.className='v3-node success'; document.getElementById('v3nt'+idx).textContent=(stepDurations[idx]/1000).toFixed(1)+'s'; v3DrawEdges('idle'); v3RunStep(idx+1); },stepDurations[idx])); }
+window.addEventListener('load',()=>{ v3DrawEdges('idle'); });
+
+// ─────────────────────────────────────────────
+// VARIANT 4
+// ─────────────────────────────────────────────
+let v4Timers=[], v4Intervals=[];
+function v4Reset(){ v4Timers.forEach(clearTimeout); v4Timers=[]; v4Intervals.forEach(clearInterval); v4Intervals=[]; document.getElementById('v4-status').textContent='Ready'; document.getElementById('v4-feed-status').textContent=''; document.getElementById('v4-feed-body').innerHTML='<div style="padding:20px 16px;color:var(--fg3);font-family:var(--mono);font-size:11px">Press Run to start the workflow…</div>'; for(let i=0;i<3;i++){document.getElementById('v4tl'+i).className='v4-tl-step';document.getElementById('v4td'+i).textContent='';} }
+function v4Start(from){ v4Reset(); document.getElementById('v4-feed-body').innerHTML=''; document.getElementById('v4-status').textContent='Running…'; v4RunStep(from??0); }
+function v4RunStep(idx){ if(idx>=3){document.getElementById('v4-status').textContent='✓ Completed';document.getElementById('v4-feed-status').textContent='All done';return;} document.getElementById('v4tl'+idx).className='v4-tl-step running'; const body=document.getElementById('v4-feed-body'); const sec=document.createElement('div'); sec.className='v4-section'; sec.id='v4sec'+idx; sec.innerHTML=`<div class="v4-section-head" onclick="this.parentElement.classList.toggle('collapsed')"><span>${sharedStepDefs[idx].icon}</span><span class="v4-section-label">${sharedStepDefs[idx].name}</span><span style="font-size:10px;color:var(--blue)" id="v4sh${idx}"><span class="dot-pulse"></span> running</span></div><div class="v4-section-lines" id="v4sl${idx}"></div>`; body.appendChild(sec); body.scrollTop=9999; const iv=setInterval(()=>{document.getElementById('v4-feed-status').textContent=idx===0?'Build running…':idx===1?'Deploying…':'Committing…';},100); v4Intervals.push(iv); stepLogs[idx].slice(1).forEach(c=>{ v4Timers.push(setTimeout(()=>{ const sl=document.getElementById('v4sl'+idx); const d=document.createElement('div'); d.className='log-line '+c.cls; d.textContent=c.text; sl.appendChild(d); body.scrollTop=9999; },c.t)); }); v4Timers.push(setTimeout(()=>{ clearInterval(iv); document.getElementById('v4tl'+idx).className='v4-tl-step success'; document.getElementById('v4td'+idx).textContent=(stepDurations[idx]/1000).toFixed(1)+'s'; const sh=document.getElementById('v4sh'+idx); if(sh){sh.style.color='var(--green)';sh.textContent='✓ '+(stepDurations[idx]/1000).toFixed(1)+'s';} v4RunStep(idx+1); },stepDurations[idx])); }
+
+// ─────────────────────────────────────────────
+// VARIANT 5
+// ─────────────────────────────────────────────
+let v5Timers=[], v5Logs=[['<div class="log-line dim">Stage not yet run.</div>'],['<div class="log-line dim">Stage not yet run.</div>'],['<div class="log-line dim">Stage not yet run.</div>']], v5Selected=0, v5Intervals=[];
+function v5Select(idx){ v5Selected=idx; document.querySelectorAll('#v5 .v5-stage').forEach((el,i)=>el.classList.toggle('selected',i===idx)); document.querySelectorAll('#v5-pills .v5-pill').forEach((p,i)=>p.classList.toggle('active',i===idx)); document.getElementById('v5-log-body').innerHTML=v5Logs[idx].join(''); document.getElementById('v5-log-body').scrollTop=9999; }
+function v5Reset(){ v5Timers.forEach(clearTimeout); v5Timers=[]; v5Intervals.forEach(clearInterval); v5Intervals=[]; v5Logs=[['<div class="log-line dim">Stage not yet run.</div>'],['<div class="log-line dim">Stage not yet run.</div>'],['<div class="log-line dim">Stage not yet run.</div>']]; document.getElementById('v5-status').textContent='Ready'; document.getElementById('v5-log-badge').textContent='No run yet'; for(let i=0;i<3;i++){const el=document.getElementById('v5s'+i);el.className='v5-stage';document.getElementById('v5st'+i).textContent='—';el.querySelector('.v5-stage-bar').style.cssText='';} document.getElementById('v5c0').className='v5-connector-line'; document.getElementById('v5c1').className='v5-connector-line'; v5Select(0); }
+function v5Start(from){ v5Reset(); document.getElementById('v5-status').textContent='Running…'; v5RunStep(from??0); }
+function v5RunStep(idx){ if(idx>=3){document.getElementById('v5-status').textContent='✓ Completed';document.getElementById('v5-log-badge').textContent='All done';return;} const el=document.getElementById('v5s'+idx); el.className='v5-stage running'; document.getElementById('v5st'+idx).textContent='⟳'; if(idx>0)document.getElementById('v5c'+(idx-1)).className='v5-connector-line active'; v5Logs[idx]=[''];v5Select(idx); document.getElementById('v5-log-badge').textContent='Running step '+(idx+1)+'/3…'; stepLogs[idx].forEach(c=>{ v5Timers.push(setTimeout(()=>{ const html=`<div class="log-line ${c.cls}">${c.text}</div>`; v5Logs[idx].push(html); if(v5Selected===idx){const b=document.getElementById('v5-log-body');b.insertAdjacentHTML('beforeend',html);b.scrollTop=9999;} },c.t)); }); v5Timers.push(setTimeout(()=>{ el.className='v5-stage success'; document.getElementById('v5st'+idx).textContent='✓'; if(idx>0)document.getElementById('v5c'+(idx-1)).className='v5-connector-line done'; document.getElementById('v5-log-badge').textContent='Step '+(idx+1)+' done in '+(stepDurations[idx]/1000).toFixed(1)+'s'; document.querySelectorAll('#v5-pills .v5-pill')[idx].classList.add('success'); v5RunStep(idx+1); },stepDurations[idx])); }
+
+// ─────────────────────────────────────────────
+// Tab switching
+// ─────────────────────────────────────────────
+function show(n,btn){ document.querySelectorAll('.variant').forEach(v=>v.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.getElementById('v'+n).classList.add('active'); btn.classList.add('active'); }
+</script>
+</body>
+</html>

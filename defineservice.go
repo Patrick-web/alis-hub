@@ -11,11 +11,12 @@ import (
 	"time"
 
 	dbdv1 "alis-hub-v3/dbdv1"
+	"alis-hub-v3/internal/alisclient"
 )
 
 // DefineService is a Wails-bound service that orchestrates the Define flow.
 type DefineService struct {
-	alisClient *AlisClient
+	alisClient *alisclient.AlisClient
 }
 
 func NewDefineService() *DefineService {
@@ -29,7 +30,7 @@ func (s *DefineService) initClient() error {
 	log.Println("[define] initialising Alis gRPC client")
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	client, err := NewAlisClient(ctx)
+	client, err := newAlisClient(ctx)
 	if err != nil {
 		return fmt.Errorf("connecting to Alis backend: %w", err)
 	}
@@ -211,7 +212,7 @@ func (s *DefineService) PollDefineOperation(name string) (*RunDefineResult, erro
 		Done:          op.Done,
 	}
 
-	meta := unpackDefineMetadata(op)
+	meta := alisclient.UnpackDefineMetadata(op)
 	if meta != nil {
 		log.Printf("[define] PollDefineOperation: metadata definition=%q version=%q notes=%q artifacts=%d",
 			meta.Definition, meta.Version, meta.Notes, len(meta.DefinitionArtifacts))
@@ -244,7 +245,7 @@ type DefineArtifactInfo struct {
 // definition is from RunDefineResult.Definition (e.g. "definitions/voyage.vp").
 // artifacts is from RunDefineResult.DefinitionArtifacts.
 // neuron is the neuron resource name (e.g. "organisations/voyage/products/vp/neurons/bff-v1").
-func (s *DefineService) ExplainDefine(definition string, artifacts []string, neuron string) (*GlassResult, error) {
+func (s *DefineService) ExplainDefine(definition string, artifacts []string, neuron string) (*alisclient.GlassResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}

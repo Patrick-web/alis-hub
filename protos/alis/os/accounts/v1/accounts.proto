@@ -1,0 +1,1150 @@
+syntax = "proto3";
+
+package alis.os.accounts.v1;
+
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/money.proto";
+import "google/type/phone_number.proto";
+import "google/type/postal_address.proto";
+
+enum Vendor {
+  VENDOR_UNSPECIFIED = 0;
+  ALIS_LU = 1;
+  ALIS_ZA = 2;
+  ALIS_UK = 3;
+  ALIS_US = 4;
+}
+
+enum Offering {
+  OFFERING_UNSPECIFIED = 0;
+  IDEATE = 1;
+  BUILD = 2;
+  MANAGE = 3;
+}
+
+enum Plan {
+  PLAN_UNSPECIFIED = 0;
+  STARTER = 1;
+  LAUNCH = 2;
+  SCALE = 3;
+  ENTERPRISE = 4;
+  BUILD_PARTNER = 5;
+  STARTER_TRIAL_EXPIRED = 98;
+  BUILD_PARTNER_TRIAL_EXPIRED = 99;
+}
+
+enum IdeateSeat {
+  IDEATE_SEAT_UNSPECIFIED = 0;
+  IDEATE_CREATOR = 1;
+  IDEATE_COLLABORATOR = 2;
+  IDEATE_VIEWER = 3;
+  IDEATE_USER_UBB = 4;
+}
+
+enum BuildSeat {
+  BUILD_SEAT_UNSPECIFIED = 0;
+  BUILD_BUILDER = 1;
+  BUILD_ARCHITECT = 2;
+  BUILD_VIEWER = 3;
+}
+
+enum ManageSeat {
+  MANAGE_SEAT_UNSPECIFIED = 0;
+  MANAGE_MANAGER = 1;
+  MANAGE_VIEWER = 2;
+}
+
+message RetrieveVendorRequest {
+  oneof selector {
+    .alis.os.accounts.v1.Vendor vendor = 1;
+    string country_code = 2;
+  }
+}
+
+message RetrieveVendorResponse {
+  .alis.os.accounts.v1.Vendor vendor = 1;
+  string currency_code = 2;
+  .alis.os.accounts.v1.IdeatePlans ideate_plans = 3;
+  .alis.os.accounts.v1.BuildPlans build_plans = 4;
+  .alis.os.accounts.v1.ManagePlans manage_plans = 5;
+}
+
+message IdeatePlans {
+  .alis.os.accounts.v1.IdeatePrices starter = 1;
+  .alis.os.accounts.v1.IdeatePrices launch = 2;
+  .alis.os.accounts.v1.IdeatePrices scale = 3;
+  .alis.os.accounts.v1.IdeatePrices enterprise = 4;
+  .alis.os.accounts.v1.IdeatePrices build_partner = 5;
+}
+
+message BuildPlans {
+  .alis.os.accounts.v1.BuildPrices starter = 1;
+  .alis.os.accounts.v1.BuildPrices launch = 2;
+  .alis.os.accounts.v1.BuildPrices scale = 3;
+  .alis.os.accounts.v1.BuildPrices enterprise = 4;
+  .alis.os.accounts.v1.BuildPrices build_partner = 5;
+}
+
+message ManagePlans {
+  .alis.os.accounts.v1.ManagePrices starter = 1;
+  .alis.os.accounts.v1.ManagePrices launch = 2;
+  .alis.os.accounts.v1.ManagePrices scale = 3;
+  .alis.os.accounts.v1.ManagePrices enterprise = 4;
+  .alis.os.accounts.v1.ManagePrices build_partner = 5;
+}
+
+message IdeatePrices {
+  .alis.os.accounts.v1.SeatPrice creator = 1;
+  .alis.os.accounts.v1.SeatPrice collaborator = 2;
+  .alis.os.accounts.v1.SeatPrice viewer = 3;
+  int64 max_seats = 11;
+  int64 max_ideas = 12;
+  .google.type.Money credit_price = 21;
+  .google.type.Money account_fee = 22;
+}
+
+message BuildPrices {
+  .alis.os.accounts.v1.SeatPrice builder = 1;
+  .alis.os.accounts.v1.SeatPrice architect = 2;
+  .alis.os.accounts.v1.SeatPrice viewer = 3;
+  int64 max_seats = 11;
+  int64 max_products = 12;
+  int32 free_products = 98;
+  .google.type.Money product = 99;
+}
+
+message ManagePrices {
+  .alis.os.accounts.v1.SeatPrice manager = 1;
+  .alis.os.accounts.v1.SeatPrice viewer = 2;
+  int64 max_seats = 11;
+  int64 max_environments = 12;
+  int64 free_environments = 98;
+  .google.type.Money environment = 99;
+}
+
+message SeatPrice {
+  .google.type.Money monthly = 1;
+  .google.type.Money annual = 2;
+}
+
+message ConvertCreditsToMoneyRequest {
+  string account = 1;
+  double credit_value = 2;
+}
+
+message ConvertCreditsToMoneyResponse {
+  .google.type.Money amount = 1;
+}
+
+message ConvertMoneyToCreditsRequest {
+  string account = 1;
+  .google.type.Money amount = 2;
+}
+
+message ConvertMoneyToCreditsResponse {
+  double credit_value = 1;
+}
+
+message Account {
+  message CustomLineItem {
+    string description = 1;
+    float amount = 2;
+  }
+  message PlanChanges {
+    int32 upgraded_from = 1;  // enum type not recoverable from bundle (wire-compatible int32)
+    .google.protobuf.Timestamp upgrade_time = 2;
+    int32 downgrade_to = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+  }
+  message IdeateUsageBilling {
+    oneof balance_config {
+      double prepaid_top_up_balance = 1;
+      double billed_in_arrears_limit = 2;
+    }
+  }
+  message BillingInformation {
+    message TaxId {
+      string type = 1;
+      string value = 2;
+      string verification_status = 3;
+    }
+    .google.type.PostalAddress address = 1;
+    string email = 2;
+    string phone = 3;
+    repeated .alis.os.accounts.v1.Account.BillingInformation.TaxId tax_id = 4;
+    string tax_exemption_status = 5;
+    string legal_name = 6;
+    string trading_name = 7;
+    bool annual = 10;
+    .google.protobuf.Timestamp annual_switch_time = 11;
+    bool test = 90;
+    repeated string additional_contact_emails = 91;
+    bool auto_charge = 92;
+    string stripe_last_setup_intent = 93;
+    string paystack_authorization = 95;
+    string xero_contact_id = 96;
+    string paystack_customer_code = 97;
+    int64 paystack_customer_id = 98;
+    string stripe_customer_id = 99;
+  }
+  message Attribution {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      SELF_SIGNUP = 1;
+      BUILD_PARTNER_CREATED = 2;
+      BUILD_PARTNER_INVITE = 3;
+    }
+    message SelfSignup {
+      string creator = 1;
+    }
+    message BuildPartnerCreated {
+      string build_partner = 1;
+      string build_partner_creator = 2;
+    }
+    message BuildPartnerInvite {
+      string build_partner = 1;
+      string build_partner_inviter = 2;
+      string creator = 3;
+    }
+    .alis.os.accounts.v1.Account.Attribution.Type type = 1;
+    oneof source {
+      .alis.os.accounts.v1.Account.Attribution.SelfSignup self_signup = 2;
+      .alis.os.accounts.v1.Account.Attribution.BuildPartnerCreated build_partner_created = 3;
+      .alis.os.accounts.v1.Account.Attribution.BuildPartnerInvite build_partner_invite = 4;
+    }
+  }
+  message PlatformAccountManagement {
+    enum AccountTier {
+      ACCOUNT_TIER_UNSPECIFIED = 0;
+      NAMED = 1;
+      STRATEGIC = 2;
+      TERRITORY = 3;
+      UNNAMED = 9;
+      EXCLUDE = 10;
+    }
+    message ExternalCrmReference {
+      message SalesforceReference {
+        string account_id = 1;
+        string account_url = 2;
+      }
+      message HubSpotReference {
+        string company_id = 1;
+        string company_url = 2;
+      }
+      message AttioReference {
+        message AttioCompany {
+          string record_id = 1;
+          repeated string domains = 2;
+          string name = 3;
+          string description = 4;
+          repeated string team_member_ids = 5;
+          repeated string list_entry_ids = 6;
+          repeated string categories = 7;
+          string primary_location = 8;
+          string logo_url = 9;
+          string angellist_url = 10;
+          string facebook_url = 11;
+          string instagram_url = 12;
+          string linkedin_url = 13;
+          string twitter_url = 14;
+          int64 twitter_follower_count = 15;
+          double estimated_arr = 16;
+          double funding_raised = 17;
+          string foundation_date = 18;
+          string employee_range = 19;
+          string first_calendar_interaction_id = 20;
+          string next_calendar_interaction_id = 21;
+          string first_email_interaction_id = 22;
+          string last_email_interaction_id = 23;
+          string first_interaction_id = 24;
+          string last_interaction_id = 25;
+          string next_interaction_id = 26;
+          double connection_strength_score = 27;
+          string connection_strength_category = 28;
+          string strongest_connection_user_id = 29;
+          string next_due_task_id = 30;
+          repeated string associated_deal_ids = 31;
+          .google.protobuf.Timestamp created_at = 32;
+          string created_by_user_id = 33;
+          repeated string alisx_account_ids = 34;
+          string segment = 35;
+          bool is_google_cloud_partner = 36;
+        }
+        string account_id = 1;
+        .alis.os.accounts.v1.Account.PlatformAccountManagement.ExternalCrmReference.AttioReference.AttioCompany company = 2;
+      }
+      .alis.os.accounts.v1.Account.PlatformAccountManagement.ExternalCrmReference.SalesforceReference salesforce_reference = 1;
+      .alis.os.accounts.v1.Account.PlatformAccountManagement.ExternalCrmReference.HubSpotReference hub_spot_reference = 2;
+      .alis.os.accounts.v1.Account.PlatformAccountManagement.ExternalCrmReference.AttioReference attio_reference = 3;
+      .google.protobuf.Timestamp last_sync_time = 99;
+    }
+    string key_account_manager = 1;
+    .alis.os.accounts.v1.Account.PlatformAccountManagement.AccountTier tier = 2;  // enum (heuristically resolved)
+    string account_plan_uri = 4;
+    string comments = 5;
+    .alis.os.accounts.v1.Account.PlatformAccountManagement.ExternalCrmReference external_crm_references = 6;
+  }
+  message BuildPartnerAccountManagement {
+    message ExternalCrmReference {
+      message SalesforceReference {
+        string account_id = 1;
+        string account_url = 2;
+      }
+      message HubSpotReference {
+        string company_id = 1;
+        string company_url = 2;
+      }
+      .alis.os.accounts.v1.Account.BuildPartnerAccountManagement.ExternalCrmReference.SalesforceReference salesforce_reference = 1;
+      .alis.os.accounts.v1.Account.BuildPartnerAccountManagement.ExternalCrmReference.HubSpotReference hub_spot_reference = 2;
+      .google.protobuf.Timestamp last_sync_time = 99;
+    }
+    string key_account_manager = 1;
+    string comments = 5;
+    .alis.os.accounts.v1.Account.BuildPartnerAccountManagement.ExternalCrmReference external_crm_references = 6;
+  }
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  string build_partner = 4;
+  string country_code = 5;
+  .alis.os.accounts.v1.Vendor vendor = 6;
+  string po_numbers = 10;
+  .alis.os.accounts.v1.Plan ideate_plan = 11;  // enum (heuristically resolved)
+  .alis.os.accounts.v1.Plan build_plan = 12;  // enum (heuristically resolved)
+  .alis.os.accounts.v1.Plan manage_plan = 13;  // enum (heuristically resolved)
+  .alis.os.accounts.v1.Account.PlanChanges ideate_plan_changes = 15;
+  .alis.os.accounts.v1.Account.PlanChanges build_plan_changes = 16;
+  .alis.os.accounts.v1.Account.PlanChanges manage_plan_changes = 17;
+  .alis.os.accounts.v1.Account.BillingInformation billing_information = 18;
+  string build_partner_primary_contact = 19;
+  repeated string associated_domains = 20;
+  string website_domain = 21;
+  bool individual_account = 22;
+  bool allow_auto_enrol = 23;
+  bool archived = 29;
+  .alis.os.accounts.v1.Account.IdeateUsageBilling ideate_usage_billing = 30;
+  bool consolidate_invoices = 45;
+  string sandbox_product = 50;
+  string gcp_billing_account_id = 51;
+  repeated .alis.os.accounts.v1.Account.CustomLineItem custom_line_items = 55;
+  .alis.os.accounts.v1.Account.PlatformAccountManagement platform_account_management = 78;
+  .alis.os.accounts.v1.Account.BuildPartnerAccountManagement build_partner_account_management = 79;
+  .google.protobuf.Timestamp ideate_trial_expiry_time = 91;
+  .google.protobuf.Timestamp build_trial_expiry_time = 92;
+  .google.protobuf.Timestamp manage_trial_expiry_time = 93;
+  .alis.os.accounts.v1.Account.Attribution attribution = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetAccountRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateAccountRequest {
+  .alis.os.accounts.v1.Account account = 2;
+}
+
+message UpdateAccountRequest {
+  .alis.os.accounts.v1.Account account = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteAccountRequest {
+  string name = 1;
+}
+
+message ListAccountsRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListAccountsResponse {
+  repeated .alis.os.accounts.v1.Account accounts = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveBuildPartnerAccountsRequest {
+  string build_partner = 1;
+}
+
+message RetrieveBuildPartnerAccountsResponse {
+  repeated .alis.os.accounts.v1.Account accounts = 1;
+}
+
+message ChangeAccountPlanRequest {
+  string account = 1;
+  .alis.os.accounts.v1.Offering offering = 2;
+  .alis.os.accounts.v1.Plan plan = 3;
+}
+
+message EditAccountBillingInfoRequest {
+  string account = 1;
+  .google.type.PostalAddress address = 2;
+  string email = 3;
+  string phone = 4;
+  string tax_number = 5;
+  string legal_name = 6;
+  string trading_name = 7;
+  repeated string additional_billing_contact_emails = 8;
+  string po_numbers = 9;
+  bool enable_auto_charge = 10;
+  bool disable_auto_charge = 11;
+  bool individual_account = 12;
+  bool switch_to_annual = 13;
+}
+
+message SwitchGcpBillingAccountRequest {
+  string account = 1;
+  string billing_account = 2;
+}
+
+message MaskedAccount {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  string build_partner = 4;
+  string country_code = 5;
+  .alis.os.accounts.v1.Vendor vendor = 6;
+  string website_domain = 7;
+}
+
+message RetrieveMaskedAccountsRequest {
+  repeated string accounts = 1;
+}
+
+message RetrieveMaskedAccountsResponse {
+  map<string, .alis.os.accounts.v1.MaskedAccount> masked_accounts = 1;
+}
+
+message RetrieveMaskedUsersRequest {
+  string account = 1;
+}
+
+message RetrieveMaskedUsersResponse {
+  message MaskedUser {
+    string name = 1;
+    .google.protobuf.Timestamp create_time = 2;
+    .google.protobuf.Timestamp update_time = 3;
+    string masked_email = 4;
+    int32 identity_provider = 6;  // enum type not recoverable from bundle (wire-compatible int32)
+    string given_name = 7;
+    string family_name = 8;
+    string picture = 9;
+    string position = 10;
+    string education = 11;
+    string linkedin_uri = 12;
+    .google.protobuf.Timestamp last_sign_in_time = 13;
+    .google.protobuf.Timestamp last_refresh_time = 14;
+  }
+  repeated .alis.os.accounts.v1.RetrieveMaskedUsersResponse.MaskedUser masked_users = 1;
+}
+
+message RetrieveDomainMaskedAccountsRequest {
+  string domain = 1;
+}
+
+message RetrieveDomainMaskedAccountsResponse {
+  repeated .alis.os.accounts.v1.MaskedAccount masked_accounts = 1;
+}
+
+message ResetAccountSandboxRequest {
+  string account = 1;
+}
+
+message ResetAccountSandboxResponse {
+  string deleted_product = 1;
+  string seeded_product = 2;
+}
+
+message AllocateBillingAccountRequest {
+  string account = 1;
+}
+
+message PrepareSandboxProductRequest {
+}
+
+message PrepareSandboxProductResponse {
+}
+
+message EnrollAccountAsBuildPartnerRequest {
+  string account = 1;
+}
+
+message RetrieveStripeClientSecretAndCustomerSessionSecretRequest {
+  string account = 1;
+  string redirect_url = 2;
+}
+
+message RetrieveStripeClientSecretAndCustomerSessionSecretResponse {
+  string stripe_client_secret = 1;
+  string stripe_customer_session_secret = 2;
+  string stripe_publishable_key = 3;
+}
+
+message PaystackIsAuthorizedRequest {
+  string account = 1;
+}
+
+message PaystackIsAuthorizedResponse {
+  bool authorized = 1;
+}
+
+message AuthorizePaystackRequest {
+  string account = 1;
+  string redirect_uri = 2;
+}
+
+message AuthorizePaystackResponse {
+  string payment_link = 1;
+}
+
+message SetStripeDefaultPaymentMethodRequest {
+  string account = 1;
+}
+
+message SetStripeDefaultPaymentMethodResponse {
+}
+
+message ArchiveAccountRequest {
+  string account = 1;
+}
+
+message ConfigureIdeateUsageBillingRequest {
+  message RemoveBalanceConfig {
+  }
+  string account = 1;
+  oneof balance_config {
+    double prepaid_top_up_balance = 2;
+    double billed_in_arrears_limit = 3;
+    .alis.os.accounts.v1.ConfigureIdeateUsageBillingRequest.RemoveBalanceConfig remove_balance_config = 4;
+  }
+}
+
+message SetAccountAutoEnrolRequest {
+  string account = 1;
+  bool allow_auto_enrol = 2;
+}
+
+message SetAccountAutoEnrolResponse {
+}
+
+message BuildPartner {
+  enum ServiceOffering {
+    SERVICE_OFFERING_UNSPECIFIED = 0;
+    DISCOVERY_AND_IDEATION = 1;
+    APPLICATION_DEVELOPMENT = 2;
+    MANAGED_SERVICES = 3;
+    END_TO_END_SOLUTIONS = 4;
+    CODEBLOCK_DEVELOPMENT = 5;
+    ALIS_GCP_CONSULTING = 6;
+  }
+  enum IndustryFocus {
+    INDUSTRY_FOCUS_UNSPECIFIED = 0;
+    RETAIL_AND_CONSUMER_GOODS = 1;
+    FINANCIAL_SERVICES = 2;
+    HEALTHCARE_AND_LIFE_SCIENCES = 3;
+    MANUFACTURING_AND_INDUSTRIAL = 4;
+    PUBLIC_SECTOR = 5;
+    MEDIA_AND_ENTERTAINMENT = 6;
+    TELECOMMUNICATIONS = 7;
+    GAMING = 8;
+    ENERGY_AND_UTILITIES = 9;
+    SUPPLY_CHAIN_AND_LOGISTICS = 10;
+    AUTOMOTIVE = 11;
+    TRAVEL_AND_HOSPITALITY = 12;
+    HIGH_TECH = 13;
+  }
+  message ContactInfo {
+    string display_name = 1;
+    string email = 2;
+    .google.type.PhoneNumber phone = 3;
+    .google.type.PostalAddress address = 4;
+  }
+  message GoogleCloudPartnership {
+    enum PartnerStatus {
+      GOOGLE_CLOUD_PARTNER_STATUS_UNSPECIFIED = 0;
+      NOT_A_PARTNER = 1;
+      MEMBER = 2;
+      PARTNER = 3;
+      PREMIER_PARTNER = 4;
+    }
+    .alis.os.accounts.v1.BuildPartner.GoogleCloudPartnership.PartnerStatus partner_status = 1;
+    string partner_directory_uri = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  string website_uri = 3;
+  string description = 4;
+  string logo_uri = 5;
+  .alis.os.accounts.v1.BuildPartner.ContactInfo partner_contact = 6;
+  .alis.os.accounts.v1.BuildPartner.ContactInfo general_contact = 7;
+  string subtitle = 8;
+  repeated int32 services_offered = 9;  // enum type not recoverable from bundle (wire-compatible int32)
+  repeated string specializations = 10;
+  repeated int32 industry_focuses = 11;  // enum type not recoverable from bundle (wire-compatible int32)
+  .alis.os.accounts.v1.BuildPartner.GoogleCloudPartnership google_cloud_partnership = 12;
+  string account = 13;
+  string country_code = 14;
+  .google.protobuf.Timestamp created_time = 98;
+  .google.protobuf.Timestamp updated_time = 99;
+}
+
+message GetBuildPartnerRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateBuildPartnerRequest {
+}
+
+message UpdateBuildPartnerRequest {
+  .alis.os.accounts.v1.BuildPartner build_partner = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteBuildPartnerRequest {
+}
+
+message ListBuildPartnersRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListBuildPartnersResponse {
+  repeated .alis.os.accounts.v1.BuildPartner build_partners = 1;
+  string next_page_token = 2;
+}
+
+message CreateBuildPartnerAndAccountRequest {
+}
+
+message Invite {
+  message User {
+    enum Role {
+      ROLE_UNSPECIFIED = 0;
+      ADMIN = 1;
+      VIEWER = 2;
+    }
+    string user = 1;
+    string email = 2;
+    string display_name = 3;
+    string profile_picture_uri = 4;
+    string domain = 5;
+    .google.protobuf.Timestamp claimed_time = 6;
+    .alis.os.accounts.v1.Invite.User.Role role = 7;
+  }
+  string name = 1;
+  .alis.os.accounts.v1.IdeateSeat ideate_seat = 2;
+  .alis.os.accounts.v1.BuildSeat build_seat = 3;
+  .alis.os.accounts.v1.ManageSeat manage_seat = 4;
+  .google.protobuf.Timestamp expiry_time = 6;
+  string designated_account = 7;
+  string idea = 8;
+  string build_partner = 9;
+  bool allow_all = 10;
+  repeated string domains = 11;
+  repeated .alis.os.accounts.v1.Invite.User users = 12;
+  string inviter = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetInviteRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateInviteRequest {
+  string parent = 1;
+  .alis.os.accounts.v1.Invite invite = 2;
+}
+
+message CreateInviteResponse {
+}
+
+message UpdateInviteRequest {
+  .alis.os.accounts.v1.Invite invite = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteInviteRequest {
+}
+
+message ListInvitesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListInvitesResponse {
+  repeated .alis.os.accounts.v1.Invite invites = 1;
+  string next_page_token = 2;
+}
+
+message GenerateInviteTokenRequest {
+  .alis.os.accounts.v1.Invite invite = 1;
+  string parent = 2;
+}
+
+message GenerateInviteTokenResponse {
+}
+
+message RegenerateInviteTokenRequest {
+}
+
+message RegenerateInviteTokenResponse {
+}
+
+message PreviewInviteRequest {
+}
+
+message PreviewInviteResponse {
+  message BuildPartner {
+    string build_partner = 1;
+    string display_name = 2;
+    string website_uri = 3;
+    string logo_uri = 4;
+  }
+  .alis.os.accounts.v1.Invite invite = 1;
+  .alis.os.accounts.v1.PreviewInviteResponse.BuildPartner build_partner = 3;
+}
+
+message AcceptInviteRequest {
+}
+
+message AcceptInviteResponse {
+  string account = 1;
+  string ideate_seat = 2;
+  string build_seat = 3;
+  string manage_seat = 4;
+}
+
+message AllocateSeatRequest {
+  string account = 1;
+  string user = 2;
+  bool annual = 3;
+  string seat = 4;
+  oneof type {
+    .alis.os.accounts.v1.IdeateSeat ideate_seat = 11;
+    .alis.os.accounts.v1.BuildSeat build_seat = 12;
+    .alis.os.accounts.v1.ManageSeat manage_seat = 13;
+  }
+}
+
+message AllocateSeatResponse {
+  .alis.os.accounts.v1.Seat allocated_seat = 1;
+  .alis.os.accounts.v1.Seat open_seat = 2;
+}
+
+message ClaimIdeateSeatRequest {
+}
+
+message ClaimIdeateSeatResponse {
+}
+
+message UnallocateSeatRequest {
+}
+
+message UnallocateSeatResponse {
+}
+
+message Seat {
+  enum State {
+    UNSPECIFIED = 0;
+    PAYMENT_PENDING = 1;
+    ACTIVE = 2;
+    CANCELLED = 3;
+  }
+  message UserInformation {
+    string email = 1;
+    string display_name = 2;
+    string profile_url = 3;
+  }
+  string name = 1;
+  .alis.os.accounts.v1.Offering offering = 2;
+  .alis.os.accounts.v1.Seat.State state = 4;
+  bool annual = 5;
+  string user = 6;
+  .alis.os.accounts.v1.Seat.UserInformation user_information = 7;
+  double ideate_credit_limit = 14;
+  double ideate_credit_spend = 15;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  oneof type {
+    .alis.os.accounts.v1.IdeateSeat ideate_seat = 11;
+    .alis.os.accounts.v1.BuildSeat build_seat = 12;
+    .alis.os.accounts.v1.ManageSeat manage_seat = 13;
+  }
+}
+
+message GetSeatRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateSeatRequest {
+  string parent = 1;
+  .alis.os.accounts.v1.Seat seat = 2;
+  string seat_id = 3;
+}
+
+message UpdateSeatRequest {
+  .alis.os.accounts.v1.Seat seat = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteSeatRequest {
+}
+
+message ListSeatsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListSeatsResponse {
+  repeated .alis.os.accounts.v1.Seat seats = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveSeatsPerOfferingRequest {
+  string account = 1;
+  .alis.os.accounts.v1.Offering offering = 2;
+}
+
+message RetrieveSeatsPerOfferingResponse {
+  repeated .alis.os.accounts.v1.Seat ideate_creator_seats = 1;
+  repeated .alis.os.accounts.v1.Seat ideate_collaborator_seats = 2;
+  repeated .alis.os.accounts.v1.Seat ideate_viewer_seats = 3;
+  repeated .alis.os.accounts.v1.Seat ideate_ubb_seats = 4;
+  repeated .alis.os.accounts.v1.Seat build_builder_seats = 11;
+  repeated .alis.os.accounts.v1.Seat build_architect_seats = 12;
+  repeated .alis.os.accounts.v1.Seat build_viewer_seats = 13;
+  repeated .alis.os.accounts.v1.Seat manage_manager_seats = 21;
+  repeated .alis.os.accounts.v1.Seat manage_viewer_seats = 23;
+}
+
+message EditSeatStateRequest {
+  string seat = 1;
+  .alis.os.accounts.v1.Seat.State state = 2;  // enum (heuristically resolved)
+}
+
+message SetIdeateSeatConfigRequest {
+  string account = 1;
+  string user = 2;
+  double credit_limit = 3;
+}
+
+message AddIdeateSeatSpendRequest {
+  string account = 1;
+  string user = 2;
+  double credits = 3;
+}
+
+message AddIdeateSeatSpendResponse {
+}
+
+message AllowUserTransactionRequest {
+  string account = 1;
+  string user = 2;
+}
+
+message AllowUserTransactionResponse {
+}
+
+message Invoice {
+  enum PaymentStatus {
+    UNSPECIFIED = 0;
+    NONE = 1;
+    DUE = 2;
+    PAID = 3;
+    VOID = 4;
+    DRAFT = 5;
+  }
+  message LineItem {
+    enum CreditLineItemType {
+      CREDIT_LINE_ITEM_TYPE_UNSPECIFIED = 0;
+      MONTHLY_FIXED_COST = 1;
+      CREDIT_USAGE = 2;
+      CREDIT_PURCHASE = 3;
+    }
+    message WorkOrderBillingEntryRef {
+      string work_order_billing = 1;
+      string entry_id = 2;
+    }
+    string description = 1;
+    .google.type.Money unit_price = 2;
+    float quantity = 3;
+    .google.type.Money subtotal = 4;
+    float vat_percentage = 5;
+    .google.type.Money vat_total = 6;
+    .google.type.Money total = 7;
+    bool annual_subscription = 11;
+    repeated string seats = 12;
+    string meter = 13;
+    repeated .alis.os.accounts.v1.Invoice.LineItem.WorkOrderBillingEntryRef work_order_billing_entry_refs = 14;
+    double credits = 15;
+    .alis.os.accounts.v1.Invoice.LineItem.CreditLineItemType credit_line_item_type = 16;
+  }
+  message SolutionBill {
+    string billing = 1;
+    repeated int32 deliverable_indexes = 2;
+    repeated int32 installment_indexes = 3;
+    repeated int32 sprint_indexes = 4;
+  }
+  message MeterInstances {
+    string meter = 1;
+    repeated string instance_keys = 2;
+  }
+  string name = 1;
+  string number = 2;
+  repeated .alis.os.accounts.v1.Invoice.LineItem line_items = 3;
+  .google.type.Money subtotal = 4;
+  .google.type.Money vat_total = 5;
+  .google.type.Money total = 6;
+  .google.type.Money total_due = 7;
+  string po_numbers = 9;
+  bool informational = 10;
+  .alis.os.accounts.v1.Invoice.PaymentStatus payment_status = 11;
+  string payment_uri = 12;
+  string invoice_uri = 13;
+  string pdf_url = 14;
+  int32 year = 21;
+  int32 month = 22;
+  repeated .alis.os.accounts.v1.Invoice.SolutionBill solutionbills = 40;
+  repeated .alis.os.accounts.v1.Invoice.MeterInstances deleted_meter_instances = 41;
+  repeated string unallocated_seats = 42;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  oneof gateway_ref {
+    string paystack_transaction_ref = 31;
+    string stripe_invoice_id = 32;
+  }
+}
+
+message GetInvoiceRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateInvoiceRequest {
+  string parent = 1;
+  .alis.os.accounts.v1.Invoice invoice = 2;
+  string invoice_id = 3;
+}
+
+message UpdateInvoiceRequest {
+  .alis.os.accounts.v1.Invoice invoice = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteInvoiceRequest {
+}
+
+message ListInvoicesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListInvoicesResponse {
+  repeated .alis.os.accounts.v1.Invoice invoices = 1;
+  string next_page_token = 2;
+}
+
+message MarkInvoiceAsPaidRequest {
+}
+
+message RecreateInvoiceRequest {
+}
+
+message FinalizeInvoiceRequest {
+}
+
+message VoidInvoiceRequest {
+}
+
+message ResendFinalizedEmailRequest {
+  string invoice = 1;
+  bool remove_attachments = 2;
+  bool override_addresses = 3;
+  repeated string to_emails = 4;
+  repeated string cc_emails = 5;
+  repeated string bcc_emails = 6;
+  bool overdue = 7;
+}
+
+message RunPostInvoicingCleanupRequest {
+}
+
+message SubmitMySeatApplicationRequest {
+  string account = 1;
+  int32 type = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message ProcessSeatApplicationRequest {
+  string seat_application = 1;
+  bool approved = 2;
+  int32 override_type = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+}
+
+message SeatApplication {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    IDEATE_CREATOR = 1;
+    IDEATE_COLLABORATOR = 2;
+    IDEATE_USER_UBB = 3;
+    BUILD_BUILDER = 11;
+    BUILD_ARCHITECT = 12;
+  }
+  enum Status {
+    STATUS_UNSPECIFIED = 0;
+    PENDING = 1;
+    APPROVED = 2;
+    REJECTED = 3;
+  }
+  string name = 1;
+  string user = 2;
+  .alis.os.accounts.v1.SeatApplication.Type type = 3;
+  .alis.os.accounts.v1.SeatApplication.Status status = 4;
+  string processed_by = 5;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetSeatApplicationRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListSeatApplicationsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+}
+
+message ListSeatApplicationsResponse {
+  repeated .alis.os.accounts.v1.SeatApplication seat_applications = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveMySeatApplicationsRequest {
+}
+
+message RetrieveMySeatApplicationsResponse {
+}
+
+service AccountsService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetAccount(.alis.os.accounts.v1.GetAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc CreateAccount(.alis.os.accounts.v1.CreateAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc UpdateAccount(.alis.os.accounts.v1.UpdateAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc DeleteAccount(.alis.os.accounts.v1.DeleteAccountRequest) returns (.google.protobuf.Empty);
+  rpc ListAccounts(.alis.os.accounts.v1.ListAccountsRequest) returns (.alis.os.accounts.v1.ListAccountsResponse);
+  rpc RetrieveBuildPartnerAccounts(.alis.os.accounts.v1.RetrieveBuildPartnerAccountsRequest) returns (.alis.os.accounts.v1.RetrieveBuildPartnerAccountsResponse);
+  rpc ChangeAccountPlan(.alis.os.accounts.v1.ChangeAccountPlanRequest) returns (.alis.os.accounts.v1.Account);
+  rpc EditAccountBillingInfo(.alis.os.accounts.v1.EditAccountBillingInfoRequest) returns (.alis.os.accounts.v1.Account);
+  rpc SwitchGcpBillingAccount(.alis.os.accounts.v1.SwitchGcpBillingAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc RetrieveMaskedAccounts(.alis.os.accounts.v1.RetrieveMaskedAccountsRequest) returns (.alis.os.accounts.v1.RetrieveMaskedAccountsResponse);
+  rpc RetrieveMaskedUsers(.alis.os.accounts.v1.RetrieveMaskedUsersRequest) returns (.alis.os.accounts.v1.RetrieveMaskedUsersResponse);
+  rpc RetrieveDomainMaskedAccounts(.alis.os.accounts.v1.RetrieveDomainMaskedAccountsRequest) returns (.alis.os.accounts.v1.RetrieveDomainMaskedAccountsResponse);
+  rpc ResetAccountSandbox(.alis.os.accounts.v1.ResetAccountSandboxRequest) returns (.alis.os.accounts.v1.ResetAccountSandboxResponse);
+  rpc AllocateBillingAccount(.alis.os.accounts.v1.AllocateBillingAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc PrepareSandboxProduct(.alis.os.accounts.v1.PrepareSandboxProductRequest) returns (.alis.os.accounts.v1.PrepareSandboxProductResponse);
+  rpc EnrollAccountAsBuildPartner(.alis.os.accounts.v1.EnrollAccountAsBuildPartnerRequest) returns (.alis.os.accounts.v1.Account);
+  rpc RetrieveStripeClientSecretAndCustomerSessionSecret(.alis.os.accounts.v1.RetrieveStripeClientSecretAndCustomerSessionSecretRequest) returns (.alis.os.accounts.v1.RetrieveStripeClientSecretAndCustomerSessionSecretResponse);
+  rpc SetStripeDefaultPaymentMethod(.alis.os.accounts.v1.SetStripeDefaultPaymentMethodRequest) returns (.alis.os.accounts.v1.SetStripeDefaultPaymentMethodResponse);
+  rpc PaystackIsAuthorized(.alis.os.accounts.v1.PaystackIsAuthorizedRequest) returns (.alis.os.accounts.v1.PaystackIsAuthorizedResponse);
+  rpc AuthorizePaystack(.alis.os.accounts.v1.AuthorizePaystackRequest) returns (.alis.os.accounts.v1.AuthorizePaystackResponse);
+  rpc ArchiveAccount(.alis.os.accounts.v1.ArchiveAccountRequest) returns (.alis.os.accounts.v1.Account);
+  rpc ConfigureIdeateUsageBilling(.alis.os.accounts.v1.ConfigureIdeateUsageBillingRequest) returns (.alis.os.accounts.v1.Account);
+  rpc SetAccountAutoEnrol(.alis.os.accounts.v1.SetAccountAutoEnrolRequest) returns (.alis.os.accounts.v1.SetAccountAutoEnrolResponse);
+}
+
+service BuildPartnersService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc GetBuildPartner(.alis.os.accounts.v1.GetBuildPartnerRequest) returns (.alis.os.accounts.v1.BuildPartner);
+  rpc CreateBuildPartner(.alis.os.accounts.v1.CreateBuildPartnerRequest) returns (.alis.os.accounts.v1.BuildPartner);
+  rpc UpdateBuildPartner(.alis.os.accounts.v1.UpdateBuildPartnerRequest) returns (.alis.os.accounts.v1.BuildPartner);
+  rpc DeleteBuildPartner(.alis.os.accounts.v1.DeleteBuildPartnerRequest) returns (.google.protobuf.Empty);
+  rpc ListBuildPartners(.alis.os.accounts.v1.ListBuildPartnersRequest) returns (.alis.os.accounts.v1.ListBuildPartnersResponse);
+  rpc CreateBuildPartnerAndAccount(.alis.os.accounts.v1.CreateBuildPartnerAndAccountRequest) returns (.alis.os.accounts.v1.BuildPartner);
+}
+
+service InvitesService {
+  rpc GetInvite(.alis.os.accounts.v1.GetInviteRequest) returns (.alis.os.accounts.v1.Invite);
+  rpc UpdateInvite(.alis.os.accounts.v1.UpdateInviteRequest) returns (.alis.os.accounts.v1.Invite);
+  rpc DeleteInvite(.alis.os.accounts.v1.DeleteInviteRequest) returns (.google.protobuf.Empty);
+  rpc ListInvites(.alis.os.accounts.v1.ListInvitesRequest) returns (.alis.os.accounts.v1.ListInvitesResponse);
+  rpc CreateInvite(.alis.os.accounts.v1.CreateInviteRequest) returns (.alis.os.accounts.v1.Invite);
+  rpc GenerateInviteToken(.alis.os.accounts.v1.GenerateInviteTokenRequest) returns (.alis.os.accounts.v1.GenerateInviteTokenResponse);
+  rpc RegenerateInviteToken(.alis.os.accounts.v1.RegenerateInviteTokenRequest) returns (.alis.os.accounts.v1.RegenerateInviteTokenResponse);
+  rpc PreviewInvite(.alis.os.accounts.v1.PreviewInviteRequest) returns (.alis.os.accounts.v1.PreviewInviteResponse);
+  rpc AcceptInvite(.alis.os.accounts.v1.AcceptInviteRequest) returns (.alis.os.accounts.v1.AcceptInviteResponse);
+}
+
+service InvoicesService {
+  rpc GetInvoice(.alis.os.accounts.v1.GetInvoiceRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc ListInvoices(.alis.os.accounts.v1.ListInvoicesRequest) returns (.alis.os.accounts.v1.ListInvoicesResponse);
+  rpc MarkInvoiceAsPaid(.alis.os.accounts.v1.MarkInvoiceAsPaidRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc RecreateInvoice(.alis.os.accounts.v1.RecreateInvoiceRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc FinalizeInvoice(.alis.os.accounts.v1.FinalizeInvoiceRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc ResendFinalizedEmail(.alis.os.accounts.v1.ResendFinalizedEmailRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc RunPostInvoicingCleanup(.alis.os.accounts.v1.RunPostInvoicingCleanupRequest) returns (.alis.os.accounts.v1.Invoice);
+  rpc VoidInvoice(.alis.os.accounts.v1.VoidInvoiceRequest) returns (.alis.os.accounts.v1.Invoice);
+}
+
+service SeatApplicationsService {
+  rpc GetSeatApplication(.alis.os.accounts.v1.GetSeatApplicationRequest) returns (.alis.os.accounts.v1.SeatApplication);
+  rpc ListSeatApplications(.alis.os.accounts.v1.ListSeatApplicationsRequest) returns (.alis.os.accounts.v1.ListSeatApplicationsResponse);
+  rpc SubmitMySeatApplication(.alis.os.accounts.v1.SubmitMySeatApplicationRequest) returns (.alis.os.accounts.v1.SeatApplication);
+  rpc ProcessSeatApplication(.alis.os.accounts.v1.ProcessSeatApplicationRequest) returns (.alis.os.accounts.v1.SeatApplication);
+  rpc RetrieveMySeatApplications(.alis.os.accounts.v1.RetrieveMySeatApplicationsRequest) returns (.alis.os.accounts.v1.RetrieveMySeatApplicationsResponse);
+}
+
+service SeatsService {
+  rpc GetSeat(.alis.os.accounts.v1.GetSeatRequest) returns (.alis.os.accounts.v1.Seat);
+  rpc ListSeats(.alis.os.accounts.v1.ListSeatsRequest) returns (.alis.os.accounts.v1.ListSeatsResponse);
+  rpc AllocateSeat(.alis.os.accounts.v1.AllocateSeatRequest) returns (.alis.os.accounts.v1.AllocateSeatResponse);
+  rpc UnallocateSeat(.alis.os.accounts.v1.UnallocateSeatRequest) returns (.alis.os.accounts.v1.UnallocateSeatResponse);
+  rpc RetrieveSeatsPerOffering(.alis.os.accounts.v1.RetrieveSeatsPerOfferingRequest) returns (.alis.os.accounts.v1.RetrieveSeatsPerOfferingResponse);
+  rpc EditSeatState(.alis.os.accounts.v1.EditSeatStateRequest) returns (.alis.os.accounts.v1.Seat);
+  rpc SetIdeateSeatConfig(.alis.os.accounts.v1.SetIdeateSeatConfigRequest) returns (.alis.os.accounts.v1.Seat);
+  rpc ClaimIdeateSeat(.alis.os.accounts.v1.ClaimIdeateSeatRequest) returns (.alis.os.accounts.v1.ClaimIdeateSeatResponse);
+  rpc AddIdeateSeatSpend(.alis.os.accounts.v1.AddIdeateSeatSpendRequest) returns (.alis.os.accounts.v1.AddIdeateSeatSpendResponse);
+  rpc AllowUserTransaction(.alis.os.accounts.v1.AllowUserTransactionRequest) returns (.alis.os.accounts.v1.AllowUserTransactionResponse);
+}
+
+service VendorsService {
+  rpc RetrieveVendor(.alis.os.accounts.v1.RetrieveVendorRequest) returns (.alis.os.accounts.v1.RetrieveVendorResponse);
+  rpc ConvertIdeateCreditsToMoney(.alis.os.accounts.v1.ConvertCreditsToMoneyRequest) returns (.alis.os.accounts.v1.ConvertCreditsToMoneyResponse);
+  rpc ConvertMoneyToIdeateCredits(.alis.os.accounts.v1.ConvertMoneyToCreditsRequest) returns (.alis.os.accounts.v1.ConvertMoneyToCreditsResponse);
+}

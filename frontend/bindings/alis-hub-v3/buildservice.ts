@@ -45,12 +45,33 @@ export function GetBuildCommits(org: string, product: string, neuron: string, ve
 }
 
 /**
+ * GetCurrentBranch returns the currently checked-out branch name in the product build directory.
+ */
+export function GetCurrentBranch(org: string, product: string): $CancellablePromise<string> {
+    return $Call.ByID(215098928, org, product);
+}
+
+/**
+ * GetNeuronLastCommitTimes returns a map of neuron ID (e.g. "bff-v1") → ISO-8601 timestamp of
+ * the last commit that touched that neuron's directory on the given branch. Neuron directories
+ * on disk are laid out as <base>/<version>/ (e.g. bookings/v1, bookings/v2); this walks each
+ * base folder's version subdirectories and keys results as "<base>-<version>" to match the
+ * neuron ID convention used elsewhere (e.g. product overview, scanDockerfiles). Neurons with no
+ * matching commits are omitted from the result.
+ */
+export function GetNeuronLastCommitTimes(org: string, product: string, branch: string): $CancellablePromise<{ [_ in string]?: string }> {
+    return $Call.ByID(2006141021, org, product, branch).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
+/**
  * PollBuildOperation checks the status of a running Build operation.
  * neuron is the full neuron resource name (needed to construct the logs URL when the API doesn't return one).
  */
 export function PollBuildOperation(name: string, neuron: string): $CancellablePromise<$models.RunBuildResult | null> {
     return $Call.ByID(2685900073, name, neuron).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType7($result);
     });
 }
 
@@ -60,7 +81,7 @@ export function PollBuildOperation(name: string, neuron: string): $CancellablePr
  */
 export function PollLocalBuild(buildID: string, offset: number): $CancellablePromise<$models.LocalBuildChunk | null> {
     return $Call.ByID(4081576225, buildID, offset).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType9($result);
     });
 }
 
@@ -69,7 +90,7 @@ export function PollLocalBuild(buildID: string, offset: number): $CancellablePro
  */
 export function RunBuild(neuron: string, commit: string): $CancellablePromise<$models.RunBuildResult | null> {
     return $Call.ByID(1354516010, neuron, commit).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType7($result);
     });
 }
 
@@ -80,7 +101,7 @@ export function RunBuild(neuron: string, commit: string): $CancellablePromise<$m
  */
 export function StartLocalBuild(neuron: string, commit: string): $CancellablePromise<$models.LocalBuildResult | null> {
     return $Call.ByID(1986611470, neuron, commit).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType11($result);
     });
 }
 
@@ -90,9 +111,10 @@ const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $Create.Array($Create.Any);
 const $$createType3 = $models.DefineCommit.createFrom;
 const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $models.RunBuildResult.createFrom;
-const $$createType6 = $Create.Nullable($$createType5);
-const $$createType7 = $models.LocalBuildChunk.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
-const $$createType9 = $models.LocalBuildResult.createFrom;
-const $$createType10 = $Create.Nullable($$createType9);
+const $$createType5 = $Create.Map($Create.Any, $Create.Any);
+const $$createType6 = $models.RunBuildResult.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = $models.LocalBuildChunk.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $models.LocalBuildResult.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);

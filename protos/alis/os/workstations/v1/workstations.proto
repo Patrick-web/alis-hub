@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package alis.os.workstations.v1;
+
+import "google/protobuf/field_mask.proto";
+
+message Workstation {
+  string name = 1;
+  string ssh_key_pub = 2;
+  string zone = 3;
+  string init_script = 4;
+  string machine_type = 5;
+  int32 disk_size = 6;
+  string status = 7;
+  string public_ip = 8;
+  string image = 9;
+}
+
+message GetWorkstationRequest {
+  string name = 1;
+}
+
+message CreateWorkstationRequest {
+  string parent = 1;
+  .alis.os.workstations.v1.Workstation workstation = 2;
+  string user_id = 3;
+}
+
+message CreateWorkstationMetadata {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  string compute_operation = 2;
+}
+
+message CreateWorkstationResponse {
+}
+
+message UpdateWorkstationRequest {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateWorkstationMetadata {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  string compute_operation = 2;
+}
+
+message UpdateWorkstationResponse {
+}
+
+message ListWorkstationsRequest {
+  string parent = 1;
+}
+
+message ListWorkstationsResponse {
+  repeated .alis.os.workstations.v1.Workstation workstations = 1;
+}
+
+message DeleteWorkstationRequest {
+  string name = 1;
+}
+
+message DeleteWorkstationMetadata {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  string compute_operation = 2;
+}
+
+message DeleteWorkstationResponse {
+}
+
+message ProvisionMyWorkstationRequest {
+  string organisation = 1;
+  string ssh_key_pub = 2;
+}
+
+message ProvisionMyWorkstationMetadata {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  string create_operation = 2;
+  string key_update_operation = 3;
+  string status_update_operation = 4;
+}
+
+message ProvisionMyWorkstationResponse {
+  string public_ip = 1;
+}
+
+message RetrieveMyWorkstationRequest {
+  string organisation = 1;
+}
+
+message DeleteMyWorkstationRequest {
+  string organisation = 1;
+}
+
+message DeleteMyWorkstationMetadata {
+  .alis.os.workstations.v1.Workstation workstation = 1;
+  string delete_operation = 2;
+}
+
+message DeleteMyWorkstationResponse {
+}

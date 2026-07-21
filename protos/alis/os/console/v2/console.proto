@@ -1,0 +1,856 @@
+syntax = "proto3";
+
+package alis.os.console.v2;
+
+import "alis/os/accounts/v1/accounts.proto";
+import "alis/os/iam/v1/iam.proto";
+import "alis/os/ideas/v1/ideas.proto";
+import "google/longrunning/operations.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+message GenerateLandingZonesOverviewRequest {
+}
+
+message GenerateLandingZonesOverviewResponse {
+  message OrgLandingZones {
+    message OrganisationOverview {
+      string organisation = 1;
+      string display_name = 2;
+    }
+    message LandingZone {
+      string product = 1;
+      string display_name = 2;
+      int32 state = 3;  // enum type not recoverable from bundle (wire-compatible int32)
+    }
+    .alis.os.console.v2.GenerateLandingZonesOverviewResponse.OrgLandingZones.OrganisationOverview organisation_overview = 1;
+    repeated .alis.os.console.v2.GenerateLandingZonesOverviewResponse.OrgLandingZones.LandingZone landing_zones = 2;
+  }
+}
+
+message GenerateCollectionOverviewRequest {
+}
+
+message GenerateCollectionOverviewResponse {
+  message MemberOverview {
+    message IdeaOverview {
+      string idea = 1;
+      string title = 2;
+      string overview = 3;
+      repeated .alis.os.ideas.v1.Idea.Contributor contributors = 5;
+      .google.protobuf.Timestamp latest_activity_time = 6;
+      int32 streams_count = 7;
+    }
+    .google.protobuf.Int32Value cycle = 1;
+    .alis.os.console.v2.GenerateCollectionOverviewResponse.MemberOverview.IdeaOverview idea_overview = 2;
+  }
+  string collection = 1;
+  string display_name = 2;
+  string description = 3;
+  repeated .alis.os.console.v2.GenerateCollectionOverviewResponse.MemberOverview members = 4;
+}
+
+message GenerateIdeasSharedWithMeRequest {
+}
+
+message GenerateIdeasSharedWithMeResponse {
+  message AccountGroup {
+    message Idea {
+      string name = 1;
+      string title = 2;
+      repeated .alis.os.ideas.v1.Idea.Contributor contributors = 3;
+      .google.protobuf.Timestamp latest_activity_time = 4;
+    }
+    string account = 1;
+    string display_name = 2;
+    repeated .alis.os.console.v2.GenerateIdeasSharedWithMeResponse.AccountGroup.Idea ideas = 3;
+  }
+}
+
+message GenerateIdeasListOverviewRequest {
+}
+
+message GenerateIdeasListOverviewResponse {
+  message IdeaOverview {
+    string idea = 1;
+    string title = 2;
+    int32 upvote_count = 3;
+    repeated .alis.os.ideas.v1.Idea.Contributor contributors = 4;
+    .google.protobuf.Timestamp latest_activity_time = 5;
+    int32 streams_count = 6;
+    int32 comments_count = 7;
+    string overview = 8;
+  }
+}
+
+message RetrieveAccountBuildPartnerOverviewRequest {
+}
+
+message RetrieveAccountBuildPartnerOverviewResponse {
+  message BuildPartnerOverview {
+    string build_partner = 1;
+    string display_name = 2;
+    string logo_uri = 3;
+    string account = 4;
+  }
+}
+
+message UpdateUserInternalMetadataRequest {
+  string user = 1;
+  .alis.os.iam.v1.UserInternalMetadata user_internal_metadata = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateUserInternalMetadataResponse {
+}
+
+message RetrieveSeatsFromAccessTokenRequest {
+}
+
+message RetrieveSeatsFromAccessTokenResponse {
+  message AccountSeatPlan {
+    message IdeatePlanSeatPair {
+      .alis.os.accounts.v1.Plan plan = 1;  // enum (heuristically resolved)
+      .alis.os.accounts.v1.IdeateSeat ideate_seat = 2;  // enum (heuristically resolved)
+    }
+    message BuildPlanSeatPair {
+      .alis.os.accounts.v1.Plan plan = 1;  // enum (heuristically resolved)
+      .alis.os.accounts.v1.BuildSeat build_seat = 2;  // enum (heuristically resolved)
+    }
+    message ManagePlanSeatPair {
+      .alis.os.accounts.v1.Plan plan = 1;  // enum (heuristically resolved)
+      .alis.os.accounts.v1.ManageSeat manage_seat = 2;  // enum (heuristically resolved)
+    }
+    .alis.os.accounts.v1.MaskedAccount account = 1;
+    .alis.os.console.v2.RetrieveSeatsFromAccessTokenResponse.AccountSeatPlan.IdeatePlanSeatPair ideate_plan_seat_pair = 2;
+    .alis.os.console.v2.RetrieveSeatsFromAccessTokenResponse.AccountSeatPlan.BuildPlanSeatPair build_plan_seat_pair = 3;
+    .alis.os.console.v2.RetrieveSeatsFromAccessTokenResponse.AccountSeatPlan.ManagePlanSeatPair manage_plan_seat_pair = 4;
+    bool is_admin = 5;
+  }
+}
+
+message RetrieveSpecGenerationFilterOptionsRequest {
+}
+
+message RetrieveSpecGenerationFilterOptionsResponse {
+  message ContributionSession {
+    string name = 1;
+    string subject = 2;
+    string overview = 3;
+    repeated .alis.os.ideas.v1.ContributionSession.User participants = 4;
+  }
+  repeated .alis.os.ideas.v1.Idea.Contributor contributors = 1;
+  repeated .alis.os.console.v2.RetrieveSpecGenerationFilterOptionsResponse.ContributionSession contribution_sessions = 2;
+}
+
+message RetrieveAllProductsRequest {
+}
+
+message RetrieveAllProductsResponse {
+}
+
+message RetrieveBuildPartnerForAssociatedAccountRequest {
+}
+
+message RetrieveBuildPartnerForAssociatedAccountResponse {
+  message BuildPartnerOverview {
+    string build_partner = 1;
+    string display_name = 2;
+    string description = 3;
+  }
+}
+
+message CreateAccountAndAllocateSeatRequest {
+}
+
+message CreateAccountAndAllocateSeatResponse {
+}
+
+message RetrieveAccountPlanLimitsRequest {
+}
+
+message RetrieveAccountPlanLimitsResponse {
+  message Trial {
+    .google.protobuf.Timestamp expiry_time = 1;
+    int64 trial_days_remaining = 2;
+    bool trial_has_expired = 3;
+  }
+  message IdeateLimits {
+    int64 max_ideas = 1;
+    int64 current_ideas = 2;
+    int64 remaining_ideas = 3;
+  }
+  message BuildLimits {
+    int64 max_seats = 1;
+    int64 current_seats = 2;
+    int64 remaining_seats = 3;
+    int64 max_products = 4;
+    int64 current_products = 5;
+    int64 remaining_products = 6;
+  }
+  message ForbiddenActions {
+    bool create_ideas = 1;
+    bool core_ideate_functionality = 2;
+    bool create_products = 3;
+    bool core_build_functionality = 4;
+  }
+  .alis.os.accounts.v1.Plan plan = 1;  // enum (heuristically resolved)
+  .alis.os.console.v2.RetrieveAccountPlanLimitsResponse.Trial trial = 2;
+  .alis.os.console.v2.RetrieveAccountPlanLimitsResponse.IdeateLimits ideate_limits = 3;
+  .alis.os.console.v2.RetrieveAccountPlanLimitsResponse.BuildLimits build_limits = 4;
+  .alis.os.console.v2.RetrieveAccountPlanLimitsResponse.ForbiddenActions forbidden_actions = 5;
+}
+
+message RetrieveAccountIdeateSeatMembersRequest {
+}
+
+message RetrieveAccountIdeateSeatMembersResponse {
+}
+
+message RetrieveAccountMembersSeatsPermissionsRequest {
+}
+
+message RetrieveAccountMembersSeatsPermissionsResponse {
+  message MemberSeatsPermission {
+    enum Role {
+      ROLE_UNSPECIFIED = 0;
+      ADMIN = 1;
+      VIEWER = 2;
+    }
+    .alis.os.console.v2.LandingZoneApprovalToken.MaskedUser member = 1;
+    .alis.os.accounts.v1.IdeateSeat ideate_seat = 2;  // enum (heuristically resolved)
+    .alis.os.accounts.v1.BuildSeat build_seat = 3;  // enum (heuristically resolved)
+    .alis.os.accounts.v1.ManageSeat manage_seat = 4;  // enum (heuristically resolved)
+    .alis.os.console.v2.RetrieveAccountMembersSeatsPermissionsResponse.MemberSeatsPermission.Role role = 5;
+    .google.protobuf.Timestamp last_active = 6;
+    .google.protobuf.Timestamp signup_time = 7;
+    string alisx_seat = 8;
+  }
+}
+
+message RemoveAccountMemberSeatsPermissionsRequest {
+  string account = 1;
+  string member = 2;
+}
+
+message RemoveAccountMemberSeatsPermissionsResponse {
+  string account = 1;
+  string member = 2;
+}
+
+message AddAccountMemberSeatsPermissionsRequest {
+  enum Role {
+    ROLE_UNSPECIFIED = 0;
+    ADMIN = 1;
+    VIEWER = 2;
+  }
+  string account = 1;
+  string member = 2;
+  .alis.os.accounts.v1.IdeateSeat ideate_seat = 3;  // enum (heuristically resolved)
+  .alis.os.accounts.v1.BuildSeat build_seat = 4;  // enum (heuristically resolved)
+  .alis.os.accounts.v1.ManageSeat manage_seat = 5;  // enum (heuristically resolved)
+  .alis.os.console.v2.AddAccountMemberSeatsPermissionsRequest.Role role = 6;
+  string member_given_name = 7;
+  string member_family_name = 8;
+  string member_profile_picture = 9;
+  string member_email = 10;
+}
+
+message AddAccountMemberSeatsPermissionsResponse {
+  string account = 1;
+  string member = 2;
+}
+
+message SendUserInviteEmailNotificationRequest {
+  string user_given_name = 1;
+  string account = 2;
+  string user_email = 3;
+  string inviter_full_name = 4;
+}
+
+message SendUserInviteEmailNotificationResponse {
+}
+
+message AddIdeaNewMemberIamBindingRequest {
+  message User {
+    string given_name = 1;
+    string family_name = 2;
+    string email = 3;
+  }
+  string idea = 1;
+  .alis.os.console.v2.AddIdeaNewMemberIamBindingRequest.User new_user = 2;
+}
+
+message AddIdeaNewMemberIamBindingResponse {
+}
+
+message LandingZoneApprovalToken {
+  message SetupProductRequest {
+    message NewOrganisation {
+      string organisation_id = 1;
+      string display_name = 2;
+      string gcp_region = 3;
+      string gcp_folder_id = 4;
+      string gcp_billing_account_id = 5;
+      string account = 6;
+    }
+    .alis.os.console.v2.LandingZoneApprovalToken.SetupProductRequest.NewOrganisation new_organisation = 2;
+    repeated string product_admins = 6;
+    repeated string product_builders = 7;
+  }
+  message MaskedUser {
+    string name = 1;
+    .google.protobuf.Timestamp create_time = 2;
+    .google.protobuf.Timestamp update_time = 3;
+    string masked_email = 4;
+    int32 identity_provider = 6;  // enum type not recoverable from bundle (wire-compatible int32)
+    string given_name = 7;
+    string family_name = 8;
+    string picture = 9;
+    string position = 10;
+    string education = 11;
+    string linkedin_uri = 12;
+    .google.protobuf.Timestamp last_sign_in_time = 13;
+    .google.protobuf.Timestamp last_refresh_time = 14;
+  }
+  .alis.os.console.v2.LandingZoneApprovalToken.SetupProductRequest setup_product_request = 1;
+  .alis.os.console.v2.LandingZoneApprovalToken.MaskedUser approval_target = 2;
+  .alis.os.console.v2.LandingZoneApprovalToken.MaskedUser approval_requester = 3;
+  bool alis_managed_gcp_billing_account = 4;
+  bool alis_managed_gcp_organisation = 5;
+  string create_landing_zone_operation = 6;
+  bool user_selects_billing_account_option = 7;
+  bool user_selects_organisation_option = 8;
+}
+
+message TestLandingZoneIDUniquenessRequest {
+}
+
+message TestLandingZoneIDUniquenessResponse {
+}
+
+message AllocateIdeateSeatAndGiveAccessToAccountRequest {
+  string account = 1;
+  string user = 2;
+  .alis.os.accounts.v1.IdeateSeat ideate_seat = 3;  // enum (heuristically resolved)
+  bool account_admin_access = 4;
+}
+
+message AllocateIdeateSeatAndGiveAccessToAccountResponse {
+}
+
+message CheckIfAccountIsOnExpressPlanRequest {
+}
+
+message CheckIfAccountIsOnExpressPlanResponse {
+}
+
+message CheckIfUserHasAlisXDomainOrBuildPartnerSeatRequest {
+}
+
+message CheckIfUserHasAlisXDomainOrBuildPartnerSeatResponse {
+  bool has_alisx_domain = 1;
+  bool has_build_partner_seat = 2;
+}
+
+message RetrieveMyWebWorkstationRequest {
+}
+
+message RetrieveMyWebWorkstationResponse {
+}
+
+message ProvisionMyWebWorkstationRequest {
+}
+
+message ProvisionMyWebWorkstationResponse {
+  string uri = 1;
+  string operation = 2;
+}
+
+message RetrieveWorkstationOperationRequest {
+}
+
+message RetrieveWorkstationOperationResponse {
+  bool done = 1;
+  string uri = 2;
+}
+
+message SendAlisBuildOnboardingRequestEmailNotificationRequest {
+  string requester_full_name = 1;
+  string requester_email = 2;
+  string account_display_name = 3;
+  string account = 4;
+}
+
+message SendAlisBuildOnboardingRequestEmailNotificationResponse {
+}
+
+message ConversionFlowCompletionLinkToken {
+  enum PaymentPeriod {
+    PAYMENT_PERIOD_UNSPECIFIED = 0;
+    MONTHLY = 1;
+    YEARLY = 2;
+  }
+  string account_display_name = 1;
+  string account = 2;
+  .alis.os.accounts.v1.Plan plan = 3;  // enum (heuristically resolved)
+  .alis.os.console.v2.ConversionFlowCompletionLinkToken.PaymentPeriod payment_period = 4;
+  bool request_card_details = 5;
+  string starting_step = 6;
+}
+
+message ViewGithubIssuesRequest {
+  string filter = 1;
+  string state = 2;
+}
+
+message ViewGithubIssuesResponse {
+}
+
+message GithubIssue {
+  string url = 1;
+  string title = 2;
+  string body = 3;
+  string state = 4;
+  .google.protobuf.Timestamp update_time = 5;
+}
+
+message CheckAccountLandingZoneBuildSeatLandingZonePermissionRequest {
+}
+
+message CheckAccountLandingZoneBuildSeatLandingZonePermissionResponse {
+  bool has_landingzone = 1;
+  bool has_permission = 2;
+  bool has_build_seat = 3;
+}
+
+message RequestIdeaAccessRequest {
+}
+
+message RequestIdeaAccessResponse {
+}
+
+message StreamIdeateAgentEventsRequest {
+  message ResourceContext {
+    string account = 1;
+    string collection = 2;
+    string idea = 3;
+    string contribution_session = 4;
+    string stream = 5;
+    string spec = 6;
+  }
+  string session = 1;
+  .alis.os.console.v2.StreamIdeateAgentEventsRequest.ResourceContext resource_context = 2;
+  .alis.os.console.v2.Part.Text text_body = 4;
+  repeated .alis.os.console.v2.Part.File uploaded_files = 5;
+  repeated string supported_catalog_ids = 6;
+  repeated string supported_extensions = 7;
+  repeated .google.protobuf.Struct inline_catalogs = 8;
+  string billing_account = 9;
+  oneof content {
+    .alis.os.console.v2.Part.Text text = 3;
+  }
+}
+
+message StreamIdeateAgentEventsResponse {
+  string session = 1;
+  .alis.os.console.v2.IdeateAgentEvent agent_event = 2;
+}
+
+message IdeateAgentEvent {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    SUBMITTED = 1;
+    WORKING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+    CANCELED = 5;
+    INPUT_REQUIRED = 6;
+    REJECTED = 7;
+    AUTH_REQUIRED = 8;
+  }
+  .alis.os.console.v2.IdeateAgentEvent.State state = 1;
+  repeated .alis.os.console.v2.Part updates = 2;
+  repeated .alis.os.console.v2.Part content = 3;
+  repeated .alis.os.console.v2.Part supplementary_content = 4;
+  .alis.os.console.v2.Part.Error error = 5;
+  .alis.os.console.v2.Part.Text input_suggestion = 6;
+  .google.protobuf.Timestamp timestamp = 99;
+}
+
+message StreamInterviewAgentEventsRequest {
+  message ResourceContext {
+    string research_stream = 1;
+    string contribution_session = 2;
+  }
+  .alis.os.console.v2.StreamInterviewAgentEventsRequest.ResourceContext resource_context = 1;
+  .alis.os.console.v2.Part.Text text_body = 2;
+  repeated .alis.os.console.v2.Part.File uploaded_files = 3;
+  repeated .google.protobuf.Struct inline_catalogs = 4;
+}
+
+message StreamInterviewAgentEventsResponse {
+}
+
+message ResearchAgentEvent {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    SUBMITTED = 1;
+    WORKING = 2;
+    COMPLETED = 3;
+    FAILED = 4;
+    CANCELED = 5;
+    INPUT_REQUIRED = 6;
+    REJECTED = 7;
+    AUTH_REQUIRED = 8;
+  }
+  .alis.os.console.v2.ResearchAgentEvent.State state = 1;
+  repeated .alis.os.console.v2.Part updates = 2;
+  repeated .alis.os.console.v2.Part content = 3;
+  repeated .alis.os.console.v2.Part supplementary_content = 4;
+  .alis.os.console.v2.Part.Error error = 5;
+  .google.protobuf.Timestamp timestamp = 99;
+}
+
+message UserEvent {
+  message User {
+    string name = 1;
+    string display_name = 2;
+    string picture = 3;
+  }
+  repeated .alis.os.console.v2.Part content = 1;
+  .alis.os.console.v2.UserEvent.User user = 2;
+  .google.protobuf.Timestamp timestamp = 99;
+}
+
+message Part {
+  message Text {
+  }
+  message UrlChip {
+    string uri = 1;
+    string display_text = 2;
+    string icon_uri = 3;
+    string meta_description = 4;
+  }
+  message File {
+    string display_name = 1;
+    string file_uri = 2;
+    string mime_type = 3;
+  }
+  message Error {
+    int32 code = 1;
+    string message = 2;
+  }
+  oneof content {
+    .alis.os.console.v2.Part.Text text = 1;
+    .alis.os.console.v2.Part.UrlChip url_chip = 2;
+    .alis.os.console.v2.Part.File file = 3;
+  }
+}
+
+message RetrieveIdeateAgentSessionEventsRequest {
+}
+
+message RetrieveIdeateAgentSessionEventsResponse {
+  message SessionEvent {
+    oneof payload {
+      .alis.os.console.v2.UserEvent user_event = 1;
+      .alis.os.console.v2.IdeateAgentEvent agent_event = 2;
+    }
+  }
+  string session = 1;
+  repeated .alis.os.console.v2.RetrieveIdeateAgentSessionEventsResponse.SessionEvent events = 2;
+}
+
+message RetrieveInterviewAgentSessionEventsRequest {
+}
+
+message RetrieveInterviewAgentSessionEventsResponse {
+  message SessionEvent {
+    oneof payload {
+      .alis.os.console.v2.UserEvent user_event = 1;
+      .alis.os.console.v2.ResearchAgentEvent agent_event = 2;
+    }
+  }
+  string contribution_session = 1;
+  repeated .alis.os.console.v2.RetrieveInterviewAgentSessionEventsResponse.SessionEvent events = 2;
+}
+
+message IngestUiAnalyticsEventsRequest {
+  message AnalyticsEvent {
+    string action = 1;
+    string resource = 2;
+    string route = 3;
+    string account = 4;
+    .google.protobuf.Timestamp event_time = 5;
+  }
+}
+
+message IngestUiAnalyticsEventsResponse {
+}
+
+message RetrieveIdeateAgentSessionsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message RetrieveIdeaNextStepSuggestionsRequest {
+}
+
+message RetrieveIdeaNextStepSuggestionsResponse {
+  message Suggestion {
+    string description = 1;
+    string prompt = 2;
+  }
+}
+
+message RetrieveIdeateAgentSessionsResponse {
+  message AgentSession {
+    string name = 1;
+    string display_name = 2;
+    string status = 3;
+    string idea_name = 4;
+    string account_name = 5;
+  }
+  repeated .alis.os.console.v2.RetrieveIdeateAgentSessionsResponse.AgentSession sessions = 1;
+  string next_page_token = 2;
+}
+
+message RetrieveInterviewInvitationRequest {
+  oneof identifier {
+    string token = 1;
+    string research_stream = 2;
+  }
+}
+
+message InterviewInvitation {
+  message Inviter {
+    string display_name = 1;
+    string email = 2;
+    string picture_url = 3;
+  }
+  .alis.os.console.v2.InterviewInvitation.Inviter inviter = 1;
+  string topic = 2;
+  string description = 3;
+  .google.protobuf.Duration estimated_duration = 4;
+}
+
+message RetrieveAccountOverviewRequest {
+}
+
+message RetrieveAccountOverviewResponse {
+  message Overview {
+    string name = 1;
+    string display_name = 2;
+    .alis.os.accounts.v1.Plan plan = 3;  // enum (heuristically resolved)
+  }
+  message ProductAccess {
+    bool has_ideate_seats = 1;
+    bool has_build_seats = 2;
+  }
+  message PendingRequests {
+  }
+  message UsageInfo {
+    oneof ideate_usage {
+      .google.protobuf.DoubleValue prepaid_balance = 1;
+      .google.protobuf.DoubleValue limit_percentage_used = 2;
+    }
+  }
+  message TrialExpiry {
+  }
+  .alis.os.console.v2.RetrieveAccountOverviewResponse.Overview overview = 1;
+  .alis.os.console.v2.RetrieveAccountOverviewResponse.ProductAccess product_access = 2;
+  .alis.os.console.v2.RetrieveAccountOverviewResponse.PendingRequests pending_requests = 3;
+  .alis.os.console.v2.RetrieveAccountOverviewResponse.UsageInfo usage_info = 4;
+  .alis.os.console.v2.RetrieveAccountOverviewResponse.TrialExpiry trial_expiry = 5;
+}
+
+message RetrieveAccountSeatsRequest {
+  string account = 1;
+  bool include_ideate = 2;
+  bool include_build = 3;
+}
+
+message RetrieveAccountSeatsResponse {
+  message Member {
+    enum AccountRole {
+      ACCOUNT_ROLE_UNSPECIFIED = 0;
+      ADMIN = 1;
+      VIEWER = 2;
+    }
+    message IdeateSeat {
+      string seat = 1;
+      int32 ideate_seat_type = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    }
+    message BuildSeat {
+      string seat = 1;
+      int32 build_seat_type = 2;  // enum type not recoverable from bundle (wire-compatible int32)
+    }
+    .alis.os.console.v2.LandingZoneApprovalToken.MaskedUser user = 1;
+    .alis.os.console.v2.RetrieveAccountSeatsResponse.Member.IdeateSeat ideate_seat = 2;
+    .alis.os.console.v2.RetrieveAccountSeatsResponse.Member.BuildSeat build_seat = 3;
+    .alis.os.console.v2.RetrieveAccountSeatsResponse.Member.AccountRole account_role = 4;
+  }
+}
+
+message AddAccountMemberRequest {
+  message NewUser {
+    string given_name = 1;
+    string family_name = 2;
+    string email = 3;
+    string profile_picture = 4;
+  }
+  string account = 1;
+  bool add_ideate = 4;
+  bool add_build = 5;
+  oneof member {
+    string user = 2;
+    .alis.os.console.v2.AddAccountMemberRequest.NewUser new_user = 3;
+  }
+}
+
+message AddAccountMemberResponse {
+}
+
+message SetMemberRoleRequest {
+  enum AccountRole {
+    ACCOUNT_ROLE_UNSPECIFIED = 0;
+    ADMIN = 1;
+    VIEWER = 2;
+  }
+  string account = 1;
+  string user = 2;
+  .alis.os.console.v2.SetMemberRoleRequest.AccountRole account_role = 3;
+}
+
+message SetMemberRoleResponse {
+}
+
+message RemoveAllUserAccessRequest {
+  string account = 1;
+  string user = 2;
+}
+
+message RemoveAllUserAccessResponse {
+}
+
+message RetrieveDomainAccountsRequest {
+}
+
+message RetrieveDomainAccountsResponse {
+  message DomainAccount {
+    enum EnrollmentStatus {
+      ENROLLMENT_STATUS_UNSPECIFIED = 0;
+      ALREADY_MEMBER = 1;
+      AUTO_ENROLL = 2;
+      REQUEST_TO_JOIN = 3;
+      REQUEST_PENDING = 4;
+    }
+    string account = 1;
+    string display_name = 2;
+    .alis.os.console.v2.RetrieveDomainAccountsResponse.DomainAccount.EnrollmentStatus enrollment_status = 3;
+  }
+}
+
+message AddAccountRequest {
+  message BillingInfo {
+  }
+  string account_display_name = 1;
+  .alis.os.console.v2.AddAccountRequest.BillingInfo billing_info = 2;
+  bool omit_ideate_seat = 3;
+  bool include_build_seat = 4;
+}
+
+message AddAccountResponse {
+}
+
+message AddLinearIssueRequest {
+  enum Team {
+    TEAM_UNSPECIFIED = 0;
+    IDEATE = 1;
+    BUILD = 2;
+  }
+  message Content {
+    enum FeedbackType {
+      FEEDBACK_TYPE_UNSPECIFIED = 0;
+      BUG = 1;
+      FEATURE_REQUEST = 2;
+      GENERAL = 3;
+    }
+    message File {
+      string display_name = 1;
+      string file_uri = 2;
+      string mime_type = 3;
+    }
+    string text = 1;
+    repeated .alis.os.console.v2.AddLinearIssueRequest.Content.File files = 2;
+    .alis.os.console.v2.AddLinearIssueRequest.Content.FeedbackType type = 3;  // enum (heuristically resolved)
+    string console_logs = 4;
+  }
+  .alis.os.console.v2.AddLinearIssueRequest.Content content = 1;
+  .alis.os.console.v2.AddLinearIssueRequest.Team team = 2;
+}
+
+message AddLinearIssueResponse {
+}
+
+service ConsoleAccountAdminService {
+  rpc RetrieveAccountOverview(.alis.os.console.v2.RetrieveAccountOverviewRequest) returns (.alis.os.console.v2.RetrieveAccountOverviewResponse);
+  rpc RetrieveAccountSeats(.alis.os.console.v2.RetrieveAccountSeatsRequest) returns (.alis.os.console.v2.RetrieveAccountSeatsResponse);
+  rpc AddAccountMember(.alis.os.console.v2.AddAccountMemberRequest) returns (.alis.os.console.v2.AddAccountMemberResponse);
+  rpc SetMemberRole(.alis.os.console.v2.SetMemberRoleRequest) returns (.alis.os.console.v2.SetMemberRoleResponse);
+  rpc RemoveAllUserAccess(.alis.os.console.v2.RemoveAllUserAccessRequest) returns (.alis.os.console.v2.RemoveAllUserAccessResponse);
+}
+
+service ConsoleService {
+  rpc GenerateLandingZonesOverview(.alis.os.console.v2.GenerateLandingZonesOverviewRequest) returns (.alis.os.console.v2.GenerateLandingZonesOverviewResponse);
+  rpc GenerateCollectionOverview(.alis.os.console.v2.GenerateCollectionOverviewRequest) returns (.alis.os.console.v2.GenerateCollectionOverviewResponse);
+  rpc GenerateIdeasSharedWithMe(.alis.os.console.v2.GenerateIdeasSharedWithMeRequest) returns (.alis.os.console.v2.GenerateIdeasSharedWithMeResponse);
+  rpc GenerateIdeasListOverview(.alis.os.console.v2.GenerateIdeasListOverviewRequest) returns (.alis.os.console.v2.GenerateIdeasListOverviewResponse);
+  rpc RetrieveAccountBuildPartnerOverview(.alis.os.console.v2.RetrieveAccountBuildPartnerOverviewRequest) returns (.alis.os.console.v2.RetrieveAccountBuildPartnerOverviewResponse);
+  rpc UpdateUserInternalMetadata(.alis.os.console.v2.UpdateUserInternalMetadataRequest) returns (.alis.os.console.v2.UpdateUserInternalMetadataResponse);
+  rpc RetrieveSeatsFromAccessToken(.alis.os.console.v2.RetrieveSeatsFromAccessTokenRequest) returns (.alis.os.console.v2.RetrieveSeatsFromAccessTokenResponse);
+  rpc RetrieveSpecGenerationFilterOptions(.alis.os.console.v2.RetrieveSpecGenerationFilterOptionsRequest) returns (.alis.os.console.v2.RetrieveSpecGenerationFilterOptionsResponse);
+  rpc RetrieveAllProducts(.alis.os.console.v2.RetrieveAllProductsRequest) returns (.alis.os.console.v2.RetrieveAllProductsResponse);
+  rpc RetrieveBuildPartnerForAssociatedAccount(.alis.os.console.v2.RetrieveBuildPartnerForAssociatedAccountRequest) returns (.alis.os.console.v2.RetrieveBuildPartnerForAssociatedAccountResponse);
+  rpc CreateAccountAndAllocateSeat(.alis.os.console.v2.CreateAccountAndAllocateSeatRequest) returns (.alis.os.console.v2.CreateAccountAndAllocateSeatResponse);
+  rpc RetrieveAccountPlanLimits(.alis.os.console.v2.RetrieveAccountPlanLimitsRequest) returns (.alis.os.console.v2.RetrieveAccountPlanLimitsResponse);
+  rpc RetrieveAccountIdeateSeatMembers(.alis.os.console.v2.RetrieveAccountIdeateSeatMembersRequest) returns (.alis.os.console.v2.RetrieveAccountIdeateSeatMembersResponse);
+  rpc RetrieveAccountMembersSeatsPermissions(.alis.os.console.v2.RetrieveAccountMembersSeatsPermissionsRequest) returns (.alis.os.console.v2.RetrieveAccountMembersSeatsPermissionsResponse);
+  rpc RemoveAccountMemberSeatsPermissions(.alis.os.console.v2.RemoveAccountMemberSeatsPermissionsRequest) returns (.alis.os.console.v2.RemoveAccountMemberSeatsPermissionsResponse);
+  rpc AddAccountMemberSeatsPermissions(.alis.os.console.v2.AddAccountMemberSeatsPermissionsRequest) returns (.alis.os.console.v2.AddAccountMemberSeatsPermissionsResponse);
+  rpc SendUserInviteEmailNotification(.alis.os.console.v2.SendUserInviteEmailNotificationRequest) returns (.alis.os.console.v2.SendUserInviteEmailNotificationResponse);
+  rpc AddIdeaNewMemberIamBinding(.alis.os.console.v2.AddIdeaNewMemberIamBindingRequest) returns (.alis.os.console.v2.AddIdeaNewMemberIamBindingResponse);
+  rpc GetBlocksOperation(.google.longrunning.GetOperationRequest) returns (.google.longrunning.Operation);
+  rpc TestLandingZoneIDUniqueness(.alis.os.console.v2.TestLandingZoneIDUniquenessRequest) returns (.alis.os.console.v2.TestLandingZoneIDUniquenessResponse);
+  rpc AllocateIdeateSeatAndGiveAccessToAccount(.alis.os.console.v2.AllocateIdeateSeatAndGiveAccessToAccountRequest) returns (.alis.os.console.v2.AllocateIdeateSeatAndGiveAccessToAccountResponse);
+  rpc CheckIfAccountIsOnExpressPlan(.alis.os.console.v2.CheckIfAccountIsOnExpressPlanRequest) returns (.alis.os.console.v2.CheckIfAccountIsOnExpressPlanResponse);
+  rpc CheckIfUserHasAlisXDomainOrBuildPartnerSeat(.alis.os.console.v2.CheckIfUserHasAlisXDomainOrBuildPartnerSeatRequest) returns (.alis.os.console.v2.CheckIfUserHasAlisXDomainOrBuildPartnerSeatResponse);
+  rpc RetrieveMyWebWorkstation(.alis.os.console.v2.RetrieveMyWebWorkstationRequest) returns (.alis.os.console.v2.RetrieveMyWebWorkstationResponse);
+  rpc ProvisionMyWebWorkstation(.alis.os.console.v2.ProvisionMyWebWorkstationRequest) returns (.alis.os.console.v2.ProvisionMyWebWorkstationResponse);
+  rpc RetrieveWorkstationOperation(.alis.os.console.v2.RetrieveWorkstationOperationRequest) returns (.alis.os.console.v2.RetrieveWorkstationOperationResponse);
+  rpc SendAlisBuildOnboardingRequestEmailNotification(.alis.os.console.v2.SendAlisBuildOnboardingRequestEmailNotificationRequest) returns (.alis.os.console.v2.SendAlisBuildOnboardingRequestEmailNotificationResponse);
+  rpc ViewGithubIssues(.alis.os.console.v2.ViewGithubIssuesRequest) returns (.alis.os.console.v2.ViewGithubIssuesResponse);
+  rpc CheckAccountLandingZoneBuildSeatLandingZonePermission(.alis.os.console.v2.CheckAccountLandingZoneBuildSeatLandingZonePermissionRequest) returns (.alis.os.console.v2.CheckAccountLandingZoneBuildSeatLandingZonePermissionResponse);
+  rpc RequestIdeaAccess(.alis.os.console.v2.RequestIdeaAccessRequest) returns (.alis.os.console.v2.RequestIdeaAccessResponse);
+  rpc StreamIdeateAgentEvents(.alis.os.console.v2.StreamIdeateAgentEventsRequest) returns (stream .alis.os.console.v2.StreamIdeateAgentEventsResponse);
+  rpc StreamInterviewAgentEvents(.alis.os.console.v2.StreamInterviewAgentEventsRequest) returns (stream .alis.os.console.v2.StreamInterviewAgentEventsResponse);
+  rpc RetrieveIdeateAgentSessions(.alis.os.console.v2.RetrieveIdeateAgentSessionsRequest) returns (.alis.os.console.v2.RetrieveIdeateAgentSessionsResponse);
+  rpc RetrieveIdeateAgentSessionEvents(.alis.os.console.v2.RetrieveIdeateAgentSessionEventsRequest) returns (.alis.os.console.v2.RetrieveIdeateAgentSessionEventsResponse);
+  rpc RetrieveInterviewAgentSessionEvents(.alis.os.console.v2.RetrieveInterviewAgentSessionEventsRequest) returns (.alis.os.console.v2.RetrieveInterviewAgentSessionEventsResponse);
+  rpc IngestUiAnalyticsEvents(.alis.os.console.v2.IngestUiAnalyticsEventsRequest) returns (.alis.os.console.v2.IngestUiAnalyticsEventsResponse);
+  rpc RetrieveInterviewInvitation(.alis.os.console.v2.RetrieveInterviewInvitationRequest) returns (.alis.os.console.v2.InterviewInvitation);
+  rpc RetrieveIdeaNextStepSuggestions(.alis.os.console.v2.RetrieveIdeaNextStepSuggestionsRequest) returns (.alis.os.console.v2.RetrieveIdeaNextStepSuggestionsResponse);
+}
+
+service ConsoleSignupService {
+  rpc RetrieveDomainAccounts(.alis.os.console.v2.RetrieveDomainAccountsRequest) returns (.alis.os.console.v2.RetrieveDomainAccountsResponse);
+  rpc AddAccount(.alis.os.console.v2.AddAccountRequest) returns (.alis.os.console.v2.AddAccountResponse);
+}
+
+service LinearService {
+  rpc AddLinearIssue(.alis.os.console.v2.AddLinearIssueRequest) returns (.alis.os.console.v2.AddLinearIssueResponse);
+}

@@ -1,0 +1,298 @@
+syntax = "proto3";
+
+package alis.os.prompts.v1;
+
+import "alis/bl/blocks/v1/blocks.proto";
+import "alis/open/iam/v1/iam.proto";
+import "google/iam/v1/iam_policy.proto";
+import "google/iam/v1/policy.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+enum EntityView {
+  ENTITY_VIEW_UNSPECIFIED = 0;
+  ENTITY_VIEW_BASIC = 1;
+  ENTITY_VIEW_FULL = 2;
+}
+
+enum PromptView {
+  PROMPT_VIEW_UNSPECIFIED = 0;
+  PROMPT_VIEW_BASIC = 1;
+  PROMPT_VIEW_FULL = 2;
+}
+
+message Entity {
+  message Variable {
+    string id = 1;
+    string description = 2;
+  }
+  string name = 1;
+  string type_id = 2;
+  string resource_name = 3;
+  repeated .alis.os.prompts.v1.Entity.Variable variables = 4;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message Prompt {
+  message Content {
+    string text = 1;
+  }
+  message Variable {
+    string name = 1;
+    string description = 2;
+  }
+  string name = 1;
+  string display_name = 2;
+  .alis.os.prompts.v1.Prompt.Content content = 3;
+  repeated .alis.os.prompts.v1.Prompt.Variable variables = 4;
+  string tagline = 5;
+  string etag = 97;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  .google.protobuf.Timestamp delete_time = 100;
+}
+
+message CreateEntityRequest {
+  .alis.os.prompts.v1.Entity entity = 2;
+  string entity_id = 3;
+}
+
+message GetEntityRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdateEntityRequest {
+  .alis.os.prompts.v1.Entity entity = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeleteEntityRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeleteEntityRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListEntitiesRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreateEntitiesRequest {
+  repeated .alis.os.prompts.v1.CreateEntityRequest requests = 2;
+}
+
+message BatchCreateEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+}
+
+message BatchGetEntitiesRequest {
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+}
+
+message BatchUpdateEntitiesRequest {
+  repeated .alis.os.prompts.v1.UpdateEntityRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdateEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+}
+
+message BatchDeleteEntitiesRequest {
+  repeated .alis.os.prompts.v1.DeleteEntityRequest requests = 2;
+}
+
+message BatchDeleteEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+}
+
+message BatchUndeleteEntitiesRequest {
+  repeated .alis.os.prompts.v1.UndeleteEntityRequest requests = 2;
+}
+
+message BatchUndeleteEntitiesResponse {
+  repeated .alis.os.prompts.v1.Entity entities = 1;
+}
+
+message StreamEntitiesRequest {
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message CreatePromptRequest {
+  string parent = 1;
+  .alis.os.prompts.v1.Prompt prompt = 2;
+}
+
+message GetPromptRequest {
+  string name = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+message UpdatePromptRequest {
+  .alis.os.prompts.v1.Prompt prompt = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+  bool allow_missing = 3;
+}
+
+message DeletePromptRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message UndeletePromptRequest {
+  string name = 1;
+  string etag = 2;
+}
+
+message ListPromptsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 4;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 5;
+  string filter = 6;
+  string order_by = 7;
+  bool show_deleted = 8;
+}
+
+message ListPromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+  string next_page_token = 2;
+}
+
+message BatchCreatePromptsRequest {
+  string parent = 1;
+  repeated .alis.os.prompts.v1.CreatePromptRequest requests = 2;
+}
+
+message BatchCreatePromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+}
+
+message BatchGetPromptsRequest {
+  string parent = 1;
+  repeated string names = 2;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 3;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message BatchGetPromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+}
+
+message BatchUpdatePromptsRequest {
+  string parent = 1;
+  repeated .alis.os.prompts.v1.UpdatePromptRequest requests = 2;
+  .google.protobuf.FieldMask update_mask = 3;
+  bool allow_missing = 4;
+}
+
+message BatchUpdatePromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+}
+
+message BatchDeletePromptsRequest {
+  string parent = 1;
+  repeated .alis.os.prompts.v1.DeletePromptRequest requests = 2;
+}
+
+message BatchDeletePromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+}
+
+message BatchUndeletePromptsRequest {
+  string parent = 1;
+  repeated .alis.os.prompts.v1.UndeletePromptRequest requests = 2;
+}
+
+message BatchUndeletePromptsResponse {
+  repeated .alis.os.prompts.v1.Prompt prompts = 1;
+}
+
+message StreamPromptsRequest {
+  string parent = 1;
+  .alis.bl.blocks.v1.ListEntitlementsRequest.View view = 2;  // enum (heuristically resolved)
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+  bool show_deleted = 6;
+}
+
+message ParsePromptRequest {
+  message Variable {
+    string id = 1;
+    string content = 2;
+  }
+  string prompt = 1;
+  repeated .alis.os.prompts.v1.ParsePromptRequest.Variable variables = 2;
+}
+
+message ParsePromptResponse {
+  string parsed_prompt = 1;
+}
+
+service EntitiesService {
+  rpc GetIamPolicy(.google.iam.v1.GetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc SetIamPolicy(.google.iam.v1.SetIamPolicyRequest) returns (.google.iam.v1.Policy);
+  rpc TestIamPermissions(.google.iam.v1.TestIamPermissionsRequest) returns (.google.iam.v1.TestIamPermissionsResponse);
+  rpc BatchTestIamPermissions(.alis.open.iam.v1.BatchTestIamPermissionsRequest) returns (.alis.open.iam.v1.BatchTestIamPermissionsResponse);
+  rpc AddIamBindings(.alis.open.iam.v1.AddIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc RemoveIamBindings(.alis.open.iam.v1.RemoveIamBindingsRequest) returns (.google.iam.v1.Policy);
+  rpc CreateEntity(.alis.os.prompts.v1.CreateEntityRequest) returns (.alis.os.prompts.v1.Entity);
+  rpc GetEntity(.alis.os.prompts.v1.GetEntityRequest) returns (.alis.os.prompts.v1.Entity);
+  rpc UpdateEntity(.alis.os.prompts.v1.UpdateEntityRequest) returns (.alis.os.prompts.v1.Entity);
+  rpc ListEntities(.alis.os.prompts.v1.ListEntitiesRequest) returns (.alis.os.prompts.v1.ListEntitiesResponse);
+  rpc DeleteEntity(.alis.os.prompts.v1.DeleteEntityRequest) returns (.alis.os.prompts.v1.Entity);
+  rpc UndeleteEntity(.alis.os.prompts.v1.UndeleteEntityRequest) returns (.alis.os.prompts.v1.Entity);
+  rpc BatchCreateEntities(.alis.os.prompts.v1.BatchCreateEntitiesRequest) returns (.alis.os.prompts.v1.BatchCreateEntitiesResponse);
+  rpc BatchGetEntities(.alis.os.prompts.v1.BatchGetEntitiesRequest) returns (.alis.os.prompts.v1.BatchGetEntitiesResponse);
+  rpc BatchUpdateEntities(.alis.os.prompts.v1.BatchUpdateEntitiesRequest) returns (.alis.os.prompts.v1.BatchUpdateEntitiesResponse);
+  rpc BatchDeleteEntities(.alis.os.prompts.v1.BatchDeleteEntitiesRequest) returns (.alis.os.prompts.v1.BatchDeleteEntitiesResponse);
+  rpc BatchUndeleteEntities(.alis.os.prompts.v1.BatchUndeleteEntitiesRequest) returns (.alis.os.prompts.v1.BatchUndeleteEntitiesResponse);
+  rpc StreamEntities(.alis.os.prompts.v1.StreamEntitiesRequest) returns (stream .alis.os.prompts.v1.Entity);
+  rpc CreatePrompt(.alis.os.prompts.v1.CreatePromptRequest) returns (.alis.os.prompts.v1.Prompt);
+  rpc GetPrompt(.alis.os.prompts.v1.GetPromptRequest) returns (.alis.os.prompts.v1.Prompt);
+  rpc UpdatePrompt(.alis.os.prompts.v1.UpdatePromptRequest) returns (.alis.os.prompts.v1.Prompt);
+  rpc ListPrompts(.alis.os.prompts.v1.ListPromptsRequest) returns (.alis.os.prompts.v1.ListPromptsResponse);
+  rpc DeletePrompt(.alis.os.prompts.v1.DeletePromptRequest) returns (.alis.os.prompts.v1.Prompt);
+  rpc UndeletePrompt(.alis.os.prompts.v1.UndeletePromptRequest) returns (.alis.os.prompts.v1.Prompt);
+  rpc BatchCreatePrompts(.alis.os.prompts.v1.BatchCreatePromptsRequest) returns (.alis.os.prompts.v1.BatchCreatePromptsResponse);
+  rpc BatchGetPrompts(.alis.os.prompts.v1.BatchGetPromptsRequest) returns (.alis.os.prompts.v1.BatchGetPromptsResponse);
+  rpc BatchUpdatePrompts(.alis.os.prompts.v1.BatchUpdatePromptsRequest) returns (.alis.os.prompts.v1.BatchUpdatePromptsResponse);
+  rpc BatchDeletePrompts(.alis.os.prompts.v1.BatchDeletePromptsRequest) returns (.alis.os.prompts.v1.BatchDeletePromptsResponse);
+  rpc BatchUndeletePrompts(.alis.os.prompts.v1.BatchUndeletePromptsRequest) returns (.alis.os.prompts.v1.BatchUndeletePromptsResponse);
+  rpc StreamPrompts(.alis.os.prompts.v1.StreamPromptsRequest) returns (stream .alis.os.prompts.v1.Prompt);
+  rpc ParsePrompt(.alis.os.prompts.v1.ParsePromptRequest) returns (.alis.os.prompts.v1.ParsePromptResponse);
+}

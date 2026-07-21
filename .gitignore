@@ -1,6 +1,10 @@
 .task
 bin
+/alis-hub-v3
 frontend/dist
 frontend/node_modules
 build/linux/appimage/build
 build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+# Proto reverse-engineering scratch (raw JS bundle + extraction scripts); ./protos is the deliverable
+.proto-extraction/

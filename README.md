@@ -1,59 +1,145 @@
-# Welcome to Your New Wails3 Project!
+# Alis Hub
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+A native desktop client for [alis.build](https://alis.build) developers - bringing the define → build → deploy pipeline off the browser and onto your machine.
 
-## Getting Started
+[![Platform](https://img.shields.io/badge/platform-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows-informational)](#building--distribution)
+[![License](https://img.shields.io/badge/license-MIT-green)](/LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/Patrick-web/alis-hub)](https://github.com/Patrick-web/alis-hub/releases/latest)
 
-1. Navigate to your project directory in the terminal.
+> Community project - not affiliated with or endorsed by Alis.
 
-2. To run your application in development mode, use the following command:
+---
 
-   ```
-   wails3 dev
-   ```
+<!-- Add a screenshot here -->
+> _Screenshot coming soon_
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
+---
 
-3. To build your application for production, use:
+## What is Alis Hub?
 
-   ```
-   wails3 build
-   ```
+Alis Hub is a desktop app for developers working on the alis.build platform. It exposes the full development workflow - define proto schemas, build Docker images, deploy to environments, manage packages, and browse codeblocks - in a single native window, without switching between the web console, a terminal, and VS Code.
 
-   This will create a production-ready executable in the `build` directory.
+It was built by reverse-engineering the web console (`console.alisx.com`) and the published VS Code extension (`alis-build`) to map the gRPC-web API surface. All communication uses the same endpoints the browser console uses - no official SDK or published proto definitions were available. Field numbers, message shapes, and auth flows were extracted by inspecting live network traffic and the compiled extension JS.
 
-## Exploring Wails3 Features
+This is a demonstration of what a native alis.build client experience could look like. It is an independent project and carries no guarantee of continued API compatibility.
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+---
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+## Features
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
+### Define → Build → Deploy pipeline
 
-   ```
-   go run .
-   ```
+- **Define** - pick a neuron, select commits, run proto compilation, and read a Glass AI explanation of what changed and why it matters
+- **Build** - trigger local Docker builds or cloud builds, stream logs in real time, tag versions
+- **Deploy** - select environments, preview a Terraform plan, apply to one or more environments, follow live deploy logs
+- **Packages** - scan Go, Node, Python, and Dart projects in your build repo; generate and run install/upgrade scripts in an embedded terminal
 
-   Note: Some examples may be under development during the alpha phase.
+### Product & environment management
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3.wails.io/) for in-depth guides and API references.
+- Browse organisations and products across your landing zones (own and shared)
+- Switch active environment - rewrites the local `.alis/.env` file automatically
+- Create, edit, and delete environments and their variables
+- View product overview: GCP project details, Git repository, package registries, environment status
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+### Codeblocks
 
-## Project Structure
+- Browse the full codeblock catalog with filters by release level (Experimental → Beta → Stable → GA)
+- Install blocks with entitlement and plan selection
+- Auto-merge the installed block's Git branch into your local build repo
+- Create new codeblocks and contribute new versions
 
-Take a moment to familiarize yourself with your project structure:
+### Build Kit
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+- Configure AI agents, agent tools, skills, and MCP servers
+- Gemini Enterprise and Claude integrations
+- Agentic launchpad, plugin management, and reporting dashboards
 
-## Next Steps
+### Embedded GCloud tools
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+No more switching to the browser for routine cloud operations:
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+- **Spanner explorer** - browse instances, databases, and tables
+- **Cloud Logging** - tail and filter log entries
+- **Artifact Registry** - browse images and packages
+- **Cloud Storage** - explore buckets and objects
+- **Secret Manager** - list secrets and versions
+
+---
+
+## Tech stack
+
+| Layer | Technology |
+|---|---|
+| Desktop framework | [Wails v3](https://v3.wails.io) (Go + WebView) |
+| Backend | Go 1.25 |
+| Frontend | React 18 + TypeScript + Tailwind CSS |
+| API transport | gRPC-Web (manual proto wire encoding via `google.golang.org/protobuf/encoding/protowire`) |
+| Git operations | go-git v5 |
+| Distribution | GitHub Releases - macOS `.dmg`, Linux `.tar.gz`, Windows `.zip` |
+
+---
+
+## Getting started
+
+**Prerequisites**
+
+- Go 1.25+
+- Node 20+
+- [Wails v3 CLI](https://v3.wails.io/getting-started/installation): `go install github.com/wailsapp/wails/v3/cmd/wails3@latest`
+- An alis.build account
+
+```bash
+git clone https://github.com/Patrick-web/alis-hub.git
+cd alis-hub
+wails3 dev
+```
+
+The app opens in dev mode with hot-reload on both Go and frontend changes. You'll be prompted to log in with your alis credentials on first launch.
+
+---
+
+## Building & distribution
+
+```bash
+# macOS - signed and notarized (requires cert setup, see docs/SIGNING.md)
+wails3 task darwin:sign:notarize
+
+# Release all platforms via CI - push a semver tag:
+git tag v0.x.y && git push origin v0.x.y
+```
+
+The CI pipeline (`.github/workflows/release.yml`) builds macOS, Linux, and Windows artifacts in parallel and publishes them as a GitHub Release automatically.
+
+Pre-built binaries are available on the [releases page](https://github.com/Patrick-web/alis-hub/releases).
+
+---
+
+## Project structure
+
+```
+alis-hub/
+├── *service.go          # Go backend services (Define, Build, Deploy, Product, Package, BuildKit, GCloud, Git)
+├── alisclient.go        # gRPC-web client - manual proto frame encoding/decoding
+├── alisauth.go          # OAuth2 PKCE login flow, token storage
+├── alistoken.go         # Token refresh and identity token management
+├── frontend/
+│   └── src/app/
+│       ├── pages/       # 35+ page components
+│       ├── components/  # UI primitives, embedded terminal, GCloud tool panels
+│       └── stores/      # Workspace state (org, product, environment)
+├── build/darwin/        # macOS bundle config, entitlements, signing Taskfile
+├── docs/                # Implementation guides, API surface notes, signing docs
+└── website/             # Landing page (deployed to Cloudflare Pages)
+```
+
+---
+
+## Disclaimer
+
+> Alis Hub is an independent, community-built project. It is not affiliated with, endorsed by, or supported by Alis. The gRPC-web API surface was discovered by inspecting live network traffic from the web console and studying the published VS Code extension - no proprietary source code was accessed or redistributed. Use at your own discretion.
+
+---
+
+## License
+
+[MIT](LICENSE)

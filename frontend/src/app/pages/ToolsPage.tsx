@@ -1,214 +1,294 @@
-import { useState } from 'react';
-import { Icon } from '@iconify/react';
-import { PageLayout } from '../components/PageLayout';
-import { StageCard } from '../components/StageCard';
-import { CodeBlock } from '../components/CodeBlock';
-import { Button } from '../components/Button';
-import { ConfigValue } from '../components/ConfigValue';
-import { Input } from '../components/Input';
+import { useState, useEffect, useCallback } from "react";
+import { Icon } from "@iconify/react";
+import { PageLayout } from "../components/PageLayout";
+import { EmptyState } from "../components/EmptyState";
+import { Loader } from "../components/Loader";
+import { useWorkspace } from "../stores/workspace";
+import { getToolDefault } from "../stores/toolsSettings";
+import { BucketsExplorer } from "../components/tools/BucketsExplorer";
+import { LogsExplorer } from "../components/tools/LogsExplorer";
+import { ArtifactRegistry } from "../components/tools/ArtifactRegistry";
+import { SecretManager } from "../components/tools/SecretManager";
+import { SpannerExplorer } from "../components/tools/SpannerExplorer";
+import { SpannerBackupsExplorer } from "../components/tools/SpannerBackupsExplorer";
+import { GCloudSetup } from "../components/tools/GCloudSetup";
+import { useGCloud } from "../stores/gcloud";
+import * as PS from "../../../bindings/alis-hub-v3/productservice";
 
-type ToolTab = 'identity' | 'mcp';
+type ToolTab = "buckets" | "logs" | "artifactregistry" | "secrets" | "spanner" | "backups";
 
-export function ToolsPage() {
-  const [activeTab, setActiveTab] = useState<ToolTab>('identity');
-  const [identityDomain, setIdentityDomain] = useState('');
-  const [mcpDomain, setMcpDomain] = useState('');
+type ProjectContext = {
+  id: string;
+  label: string;
+  projectID: string;
+  region: string;
+};
+
+const TOOLS: { id: ToolTab; label: string; subtitle: string; icon: string }[] = [
+  { id: "buckets", label: "Buckets", subtitle: "Cloud Storage", icon: "solar:cloud-storage-bold" },
+  { id: "logs", label: "Logs", subtitle: "Cloud Logging", icon: "solar:document-text-bold" },
+  {
+    id: "artifactregistry",
+    label: "Artifact Registry",
+    subtitle: "Packages",
+    icon: "solar:archive-bold",
+  },
+  { id: "secrets", label: "Secret Manager", subtitle: "Secrets", icon: "solar:lock-keyhole-bold" },
+  { id: "spanner", label: "Spanner", subtitle: "Cloud Spanner", icon: "solar:database-bold" },
+  { id: "backups", label: "Backups", subtitle: "Spanner Backups", icon: "solar:history-bold" },
+];
+
+function isAuthError(e: unknown): boolean {
+  const s = String(e);
+  return (
+    s.includes("invalid_grant") ||
+    s.includes("refresh token has expired") ||
+    s.includes("console token expired")
+  );
+}
+
+export function ToolsPanel() {
+  const { state, setPhase } = useWorkspace();
+  const {
+    ready: gcloudReady,
+    setReady: setGcloudReady,
+    activeTab,
+    setActiveTab,
+    handleError: handleGCloudError,
+  } = useGCloud();
+
+  const [contexts, setContexts] = useState<ProjectContext[]>([]);
+  const [selectedCtx, setSelectedCtx] = useState<ProjectContext | null>(null);
+  const [contextsLoading, setContextsLoading] = useState(true);
+  const [contextsError, setContextsError] = useState<string | null>(null);
+
+  const loadContexts = useCallback(() => {
+    if (!state.organisation || !state.product) return;
+    setContextsLoading(true);
+    setContextsError(null);
+
+    Promise.all([
+      PS.GetProductOverview(state.organisation, state.product),
+      PS.ListEnvironments(state.organisation, state.product),
+      PS.GetOrganisationProject(state.organisation),
+    ])
+      .then(([overview, envs, orgProject]) => {
+        const list: ProjectContext[] = [];
+        if (orgProject?.id) {
+          list.push({
+            id: "org",
+            label: "Org",
+            projectID: orgProject.id,
+            region: orgProject.region ?? "",
+          });
+        }
+        if (overview?.googleProject?.id) {
+          list.push({
+            id: "product",
+            label: "Product",
+            projectID: overview.googleProject.id,
+            region: overview.googleProject.region ?? "",
+          });
+        }
+        for (const env of envs ?? []) {
+          if (env.gcpProject?.id) {
+            list.push({
+              id: env.name,
+              label: env.displayName || env.name?.split("/").pop() || env.name,
+              projectID: env.gcpProject.id,
+              region: env.gcpProject.region ?? "",
+            });
+          }
+        }
+        setContexts(list);
+      })
+      .catch((e: unknown) => {
+        if (handleGCloudError(e)) return;
+        if (isAuthError(e)) {
+          setPhase("login");
+          return;
+        }
+        setContextsError(String(e));
+      })
+      .finally(() => setContextsLoading(false));
+  }, [state.organisation, state.product]);
+
+  useEffect(() => {
+    loadContexts();
+  }, [loadContexts]);
+
+  // Resolve and apply the active tool's default context whenever the tab, contexts, or active env changes.
+  useEffect(() => {
+    if (contexts.length === 0) return;
+    const defaultId = getToolDefault(state.organisation, state.product, activeTab);
+    const match =
+      defaultId === "env"
+        ? contexts.find((c) => c.id === state.activeEnvName)
+        : contexts.find((c) => c.id === defaultId);
+    if (match) setSelectedCtx(match);
+  }, [activeTab, contexts, state.organisation, state.product, state.activeEnvName]);
+
+  const projectID = selectedCtx?.projectID ?? "";
+  const region = selectedCtx?.region ?? "";
 
   return (
     <PageLayout
-      title="Developer Tools"
-      subtitle="Identity service and MCP server configuration"
+      title="GCloud Tools"
+      subtitle="Cloud Storage, Logging, Artifact Registry & Secret Manager"
       parentRoute="/"
+      onBack={gcloudReady ? () => setGcloudReady(false) : undefined}
     >
       <div className="flex h-full">
-        <div className="w-[200px] border-r border-[#464646] shrink-0 p-[16px]">
-          <div className="flex flex-col gap-[4px]">
-            <button
-              onClick={() => setActiveTab('identity')}
-              className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
-                activeTab === 'identity'
-                  ? 'bg-[rgba(248,129,169,0.1)] border border-[#f881a9]'
-                  : 'hover:bg-[rgba(255,255,255,0.03)] border border-transparent'
-              }`}
-            >
-              <Icon icon="solar:shield-check-linear" className={`text-lg ${activeTab === 'identity' ? 'text-[#f881a9]' : 'text-white opacity-50'}`} />
-              <div className="flex flex-col">
-                <p className={`text-[10px] font-bold uppercase font-['JetBrains_Mono',sans-serif] ${activeTab === 'identity' ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
-                  Identity
-                </p>
-                <p className="text-[8px] text-[rgba(255,255,255,0.3)] uppercase">OAuth & OIDC</p>
-              </div>
-            </button>
+        {gcloudReady && (
+          <div className="w-[200px] border-r border-border shrink-0 flex flex-col">
+            {/* Project context selector */}
+            <div className="px-[12px] py-[10px] border-b border-border">
+              <p className="text-[8px] font-bold uppercase text-foreground/30 font-mono mb-[6px]">
+                Project
+              </p>
+              {contextsLoading ? (
+                <div className="flex items-center gap-[6px]">
+                  <Loader size={12} />
+                  <span className="text-[9px] text-foreground/30 font-mono">Loading...</span>
+                </div>
+              ) : contextsError ? (
+                <p className="text-[9px] text-red-400 font-mono">{contextsError}</p>
+              ) : contexts.length === 0 ? (
+                <p className="text-[9px] text-foreground/30 font-mono">No projects found</p>
+              ) : (
+                <div className="flex flex-col gap-[2px]">
+                  {contexts.map((ctx) => {
+                    const isActive = selectedCtx?.id === ctx.id;
+                    const icon =
+                      ctx.id === "org"
+                        ? "solar:buildings-linear"
+                        : ctx.id === "product"
+                          ? "solar:box-linear"
+                          : "solar:server-minimalistic-linear";
+                    return (
+                      <button
+                        key={ctx.id}
+                        onClick={() => setSelectedCtx(ctx)}
+                        className={`flex items-center gap-[6px] px-[8px] py-[5px] rounded-[3px] text-left transition-all ${
+                          isActive
+                            ? "bg-brand-fill/12 border border-brand-fill"
+                            : "hover:bg-foreground/[4%] border border-transparent"
+                        }`}
+                      >
+                        <Icon
+                          icon={icon}
+                          className={`text-xs shrink-0 ${isActive ? "text-brand" : "text-foreground/30"}`}
+                        />
+                        <span
+                          className={`text-[10px] font-mono truncate ${isActive ? "text-foreground" : "text-foreground/50"}`}
+                        >
+                          {ctx.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
-            <button
-              onClick={() => setActiveTab('mcp')}
-              className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
-                activeTab === 'mcp'
-                  ? 'bg-[rgba(248,129,169,0.1)] border border-[#f881a9]'
-                  : 'hover:bg-[rgba(255,255,255,0.03)] border border-transparent'
-              }`}
-            >
-              <Icon icon="solar:server-square-linear" className={`text-lg ${activeTab === 'mcp' ? 'text-[#f881a9]' : 'text-white opacity-50'}`} />
-              <div className="flex flex-col">
-                <p className={`text-[10px] font-bold uppercase font-['JetBrains_Mono',sans-serif] ${activeTab === 'mcp' ? 'text-white' : 'text-[rgba(255,255,255,0.5)]'}`}>
-                  MCP Server
-                </p>
-                <p className="text-[8px] text-[rgba(255,255,255,0.3)] uppercase">Agent tools</p>
-              </div>
-            </button>
+            {/* Tool list */}
+            <div className="flex flex-col gap-[4px] flex-1 p-[12px]">
+              {TOOLS.map((tool) => {
+                const isActive = activeTab === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => setActiveTab(tool.id)}
+                    className={`flex items-center gap-[10px] px-[12px] py-[8px] rounded-[4px] text-left transition-all ${
+                      isActive
+                        ? "bg-brand-fill/10 border border-brand-fill"
+                        : "hover:bg-foreground/[3%] border border-transparent"
+                    }`}
+                  >
+                    <Icon
+                      icon={tool.icon}
+                      className={`text-lg shrink-0 ${isActive ? "text-brand" : "text-foreground opacity-50"}`}
+                    />
+                    <div className="flex flex-col min-w-0">
+                      <p
+                        className={`text-[10px] font-bold uppercase font-mono truncate ${isActive ? "text-foreground" : "text-foreground/50"}`}
+                      >
+                        {tool.label}
+                      </p>
+                      <p className="text-[8px] text-foreground/30 uppercase">{tool.subtitle}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Back to setup */}
+            <div className="px-[12px] pb-[12px]">
+              <button
+                onClick={() => setGcloudReady(false)}
+                className="flex items-center gap-[6px] px-[12px] py-[6px] rounded-[4px] text-left hover:bg-foreground/[3%] border border-transparent transition-all w-full"
+              >
+                <Icon icon="solar:settings-linear" className="text-sm text-foreground/20" />
+                <span className="text-[9px] text-foreground/30 uppercase font-mono">Setup</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto">
-          {activeTab === 'identity' && (
-            <div className="p-[24px] max-w-[900px] mx-auto">
-              <p className="text-[11px] text-[rgba(255,255,255,0.5)] uppercase font-bold mb-[16px]">
-                IDENTITY SERVICE
-              </p>
-              <h2 className="text-[18px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[8px]">
-                OIDC Identity Provider
-              </h2>
-              <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.5] mb-[24px]">
-                Configure OAuth 2.0 / OpenID Connect identity service with Google
-                and Microsoft login providers.
-              </p>
-
-              <StageCard title="Prerequisites" step={1} className="mb-[16px]">
-                <div className="grid grid-cols-2 gap-[12px] mb-[16px]">
-                  <div className="flex flex-col gap-[4px]">
-                    <label className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
-                      Cookie Domain
-                    </label>
-                    <Input
-                      placeholder="auth.example.com"
-                      value={identityDomain}
-                      onChange={(e) => setIdentityDomain(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <ConfigValue label="Service URL" value="https://identity.example.com" copyable />
-                </div>
-              </StageCard>
-
-              <StageCard title="OAuth Configuration" step={2} className="mb-[16px]">
-                <p className="text-[11px] text-[rgba(255,255,255,0.7)] mb-[12px]">
-                  Configure your OAuth 2.0 providers:
-                </p>
-
-                <div className="grid grid-cols-2 gap-[12px]">
-                  <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[12px]">
-                    <div className="flex items-center gap-[8px] mb-[8px]">
-                      <Icon icon="solar:google-linear" className="text-lg text-white" />
-                      <p className="text-[10px] font-bold text-white uppercase font-['JetBrains_Mono',sans-serif]">Google</p>
-                    </div>
-                    <ConfigValue label="Redirect URI" value="https://identity.example.com/auth/google/callback" copyable />
-                  </div>
-
-                  <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[12px]">
-                    <div className="flex items-center gap-[8px] mb-[8px]">
-                      <Icon icon="solar:code-linear" className="text-lg text-white" />
-                      <p className="text-[10px] font-bold text-white uppercase font-['JetBrains_Mono',sans-serif]">Microsoft</p>
-                    </div>
-                    <ConfigValue label="Redirect URI" value="https://identity.example.com/auth/microsoft/callback" copyable />
-                  </div>
-                </div>
-              </StageCard>
-
-              <StageCard title="Connectors" step={3}>
-                <p className="text-[11px] text-[rgba(255,255,255,0.7)] mb-[12px]">
-                  Define connectors for application access:
-                </p>
-                <CodeBlock
-                  title="connectors.yaml"
-                  language="yaml"
-                  code={`connectors:
-  - name: ideate
-    client_id: ideate-client
-    redirect_uris:
-      - "https://ideate.example.com/auth/callback"
-  - name: launchpad
-    client_id: launchpad-client
-    redirect_uris:
-      - "https://launchpad.example.com/auth/callback"`}
+        {/* Content */}
+        <div className="flex-1 overflow-hidden flex flex-col min-w-0">
+          {!gcloudReady ? (
+            <GCloudSetup onReady={handleGCloudReady} />
+          ) : contextsLoading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <Loader size={32} />
+            </div>
+          ) : contextsError ? (
+            <div className="flex-1 flex items-center justify-center p-[24px]">
+              <div className="text-center max-w-[320px]">
+                <Icon
+                  icon="solar:cloud-cross-linear"
+                  className="text-4xl text-foreground/10 mb-[8px]"
                 />
-                <div className="flex gap-[8px] mt-[12px]">
-                  <Button variant="primary" className="px-[16px]">
-                    Generate Config
-                  </Button>
-                  <Button variant="secondary" className="px-[16px]">
-                    Build & Deploy
-                  </Button>
-                </div>
-              </StageCard>
+                <p className="text-[11px] text-foreground/50 font-mono">{contextsError}</p>
+              </div>
             </div>
-          )}
-
-          {activeTab === 'mcp' && (
-            <div className="p-[24px] max-w-[900px] mx-auto">
-              <p className="text-[11px] text-[rgba(255,255,255,0.5)] uppercase font-bold mb-[16px]">
-                MCP SERVER
-              </p>
-              <h2 className="text-[18px] font-bold text-white font-['JetBrains_Mono',sans-serif] mb-[8px]">
-                Model Context Protocol
-              </h2>
-              <p className="text-[12px] text-[rgba(255,255,255,0.7)] leading-[1.5] mb-[24px]">
-                Set up an MCP server that exposes tools to AI coding agents
-                (Claude Code, Codex CLI, Gemini CLI, OpenCode).
-              </p>
-
-              <StageCard title="Prerequisites" step={1} className="mb-[16px]">
-                <div className="grid grid-cols-2 gap-[12px]">
-                  <div className="flex flex-col gap-[4px]">
-                    <label className="text-[9px] text-[rgba(255,255,255,0.5)] uppercase font-bold font-['JetBrains_Mono',sans-serif]">
-                      MCP Domain
-                    </label>
-                    <Input
-                      placeholder="mcp.example.com"
-                      value={mcpDomain}
-                      onChange={(e) => setMcpDomain(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-                  <ConfigValue label="MCP URL" value={`https://${mcpDomain || 'mcp.example.com'}/mcp`} copyable />
-                </div>
-              </StageCard>
-
-              <StageCard title="Connect Coding Agents" step={2} className="mb-[16px]">
-                <div className="grid grid-cols-2 gap-[12px]">
-                  <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[12px]">
-                    <p className="text-[10px] font-bold text-white uppercase font-['JetBrains_Mono',sans-serif] mb-[6px]">Claude Code</p>
-                    <CodeBlock
-                      language="json"
-                      code={`"mcpServers": {
-  "my-service": {
-    "command": "npx",
-    "args": ["@my-service/mcp"],
-    "url": "https://${mcpDomain || 'mcp.example.com'}/mcp"
-  }
-}`}
-                    />
-                  </div>
-                  <div className="bg-[#1e1e1e] border border-[#464646] rounded-[4px] p-[12px]">
-                    <p className="text-[10px] font-bold text-white uppercase font-['JetBrains_Mono',sans-serif] mb-[6px]">OpenCode</p>
-                    <CodeBlock
-                      language="json"
-                      code={`"mcpServers": {
-  "my-service": {
-    "type": "url",
-    "url": "https://${mcpDomain || 'mcp.example.com'}/mcp"
-  }
-}`}
-                    />
-                  </div>
-                </div>
-                <Button variant="primary" className="mt-[16px] px-[16px]">
-                  Build & Deploy MCP Server
-                </Button>
-              </StageCard>
+          ) : !projectID ? (
+            <div className="flex-1 flex items-center justify-center">
+              <EmptyState
+                icon="solar:cloud-cross-linear"
+                title="No GCP project linked to this product"
+                description="Link a GCP project in the product settings to use cloud tools"
+              />
             </div>
+          ) : (
+            <>
+              {activeTab === "buckets" && <BucketsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "logs" && <LogsExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "artifactregistry" && (
+                <ArtifactRegistry
+                  key={`${projectID}:${region}`}
+                  projectID={projectID}
+                  region={region}
+                />
+              )}
+              {activeTab === "secrets" && <SecretManager key={projectID} projectID={projectID} />}
+              {activeTab === "spanner" && <SpannerExplorer key={projectID} projectID={projectID} />}
+              {activeTab === "backups" && (
+                <SpannerBackupsExplorer key={projectID} projectID={projectID} />
+              )}
+            </>
           )}
         </div>
       </div>
     </PageLayout>
   );
+
+  function handleGCloudReady() {
+    setGcloudReady(true);
+  }
+}
+
+export function ToolsPage() {
+  return null;
 }

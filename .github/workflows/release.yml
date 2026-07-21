@@ -32,10 +32,6 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
         run: |
-          if [ -z "$MACOS_CERTIFICATE" ] || [ -z "$MACOS_CERTIFICATE_PWD" ]; then
-            echo "::warning::MACOS_CERTIFICATE or MACOS_CERTIFICATE_PWD not set; skipping import. Binary will be ad-hoc signed."
-            exit 0
-          fi
           echo "$MACOS_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           security create-keychain -p "" "$KEYCHAIN_PATH"
@@ -48,7 +44,7 @@ jobs:
           curl -sL https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer -o /tmp/WWDRG3.cer
           security import /tmp/WWDRG3.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
 
-          security import /tmp/certificate.p12 -P "$MACOS_CERTIFICATE_PWD" -A -k "$KEYCHAIN_PATH"
+          security import /tmp/certificate.p12 -P "$MACOS_CERTIFICATE_PWD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
           security list-keychain -d user -s "$KEYCHAIN_PATH" login.keychain-db
 
@@ -57,22 +53,19 @@ jobs:
 
           rm /tmp/certificate.p12 /tmp/DevIDG2.cer /tmp/WWDRG3.cer
       - name: Build binary
+        run: go build -tags production,devtools -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
         env:
-          REF_NAME: ${{ github.ref_name }}
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$REF_NAME" -o alis-hub-v3 .
+          GOOS: darwin
       - name: Create .app bundle and sign
-        env:
-          REF_NAME: ${{ github.ref_name }}
         run: |
-          APP="Alis Hub.app"
+          APP="AlisHub.app"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
           cp alis-hub-v3 "$APP/Contents/MacOS/"
           cp build/darwin/icons.icns "$APP/Contents/Resources/"
           cp build/darwin/Info.plist "$APP/Contents/Info.plist"
-          VERSION_NUM="${REF_NAME#v}"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION_NUM" "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION_NUM" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.ref_name }}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ github.ref_name }}" "$APP/Contents/Info.plist"
           # Try Developer ID signing; fall back to ad-hoc if cert unavailable
           IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/' || true)
           if [ -n "$IDENTITY" ]; then
@@ -83,9 +76,7 @@ jobs:
             codesign --force --sign "$IDENTITY" --options runtime --timestamp \
               --entitlements build/darwin/entitlements.plist \
               "$APP/Contents/MacOS/alis-hub-v3"
-            # Sign the app bundle itself — also needs entitlements for hardened runtime.
             codesign --force --sign "$IDENTITY" --options runtime --timestamp \
-              --entitlements build/darwin/entitlements.plist \
               "$APP"
             codesign --verify --strict --verbose=2 "$APP"
           else
@@ -98,7 +89,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          APP="Alis Hub.app"
+          APP="AlisHub.app"
           if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
             echo "::warning::Notarization secrets missing; skipping notarization. Downloaded app will be blocked by Gatekeeper."
             exit 0
@@ -126,14 +117,12 @@ jobs:
           spctl -a -vvv -t execute "$APP" || true
           rm /tmp/AlisHub-notarize.zip
       - name: Create zip + DMG with Applications shortcut
-        env:
-          REF_NAME: ${{ github.ref_name }}
         run: |
-          APP="Alis Hub.app"
-          VERSION="$REF_NAME"
+          APP="AlisHub.app"
+          VERSION=${{ github.ref_name }}
           ditto -c -k --sequesterRsrc --keepParent "$APP" "AlisHub-macOS-${VERSION}.zip"
 
-          hdiutil create -size 200m -volname "Alis Hub" -fs HFS+ -ov /tmp/alishub-rw.dmg
+          hdiutil create -size 200m -volname "AlisHub" -fs HFS+ -ov /tmp/alishub-rw.dmg
           hdiutil attach /tmp/alishub-rw.dmg -mountpoint /tmp/alishub-mount
           cp -R "$APP" /tmp/alishub-mount/
           ln -s /Applications /tmp/alishub-mount/Applications
@@ -170,14 +159,10 @@ jobs:
       - name: Build frontend
         run: npm --prefix frontend run build
       - name: Build binary
-        env:
-          REF_NAME: ${{ github.ref_name }}
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$REF_NAME" -o alis-hub-v3 .
+        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=${{ github.ref_name }}" -o alis-hub-v3 .
       - name: Package
-        env:
-          REF_NAME: ${{ github.ref_name }}
         run: |
-          VERSION="$REF_NAME"
+          VERSION=${{ github.ref_name }}
           mkdir -p AlisHub-linux
           cp alis-hub-v3 AlisHub-linux/
           cp build/appicon.png AlisHub-linux/alishub.png
@@ -199,41 +184,70 @@ jobs:
           node-version: "20"
       - name: Install Wails v3 CLI
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-alpha.74
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y
+          Add-Content $env:GITHUB_PATH "C:\Program Files (x86)\NSIS"
       - name: Install frontend deps
         run: cd frontend && npm install
       - name: Generate bindings
         run: wails3 generate bindings
       - name: Build frontend
         run: cd frontend && npm run build
-      - name: Build binary
+      - name: Generate Windows resources (amd64)
+        run: wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+      - name: Build binary (amd64)
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-amd64.exe .
         env:
-          REF_NAME: ${{ github.ref_name }}
-        run: go build -tags production -trimpath -ldflags="-w -s -X main.version=$env:REF_NAME" -o alis-hub-v3.exe .
-      - name: Package
+          GOARCH: amd64
+      - name: Generate Windows resources (arm64)
+        run: wails3 generate syso -arch arm64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_arm64.syso
+      - name: Build binary (arm64)
+        run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-arm64.exe .
         env:
-          REF_NAME: ${{ github.ref_name }}
-        run: Compress-Archive -Path alis-hub-v3.exe -DestinationPath "AlisHub-windows-$env:REF_NAME.zip"
+          GOARCH: arm64
+      - name: Generate WebView2 bootstrapper
+        run: wails3 generate webview2bootstrapper -dir build/windows/nsis
+      - name: Build NSIS installer (amd64 + arm64)
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $amd64Path = (Resolve-Path "alis-hub-v3-amd64.exe").Path
+          $arm64Path = (Resolve-Path "alis-hub-v3-arm64.exe").Path
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          & makensis "-DARG_WAILS_AMD64_BINARY=$amd64Path" "-DARG_WAILS_ARM64_BINARY=$arm64Path" "-DINFO_PRODUCTVERSION=$version" build/windows/nsis/project.nsi
+      - name: Rename installer
+        shell: pwsh
+        run: Move-Item "bin/alis-hub-v3-amd64_arm64-installer.exe" "AlisHub-windows-${{ github.ref_name }}-installer.exe"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: AlisHub-windows-*.zip
+          path: AlisHub-windows-*-installer.exe
 
   release:
     needs: [build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
           merge-multiple: true
-      - name: List artifacts
-        run: ls -la
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          NOTES=$(awk "/^## \[${VERSION}\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          echo "notes<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$NOTES" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             AlisHub-macOS-*.zip
             AlisHub-macOS-*.dmg
             AlisHub-linux-*.tar.gz
-            AlisHub-windows-*.zip
-          generate_release_notes: true
+            AlisHub-windows-*-installer.exe
+          body: ${{ steps.changelog.outputs.notes }}
           draft: false
           prerelease: false

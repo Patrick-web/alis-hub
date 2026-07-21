@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package alis.open.options.v1;
+message FileOptions {
+  message JsonSchema {
+    bool generate = 1;
+  }
+  .alis.open.options.v1.FileOptions.JsonSchema json_schema = 1;
+}
+
+message MessageOptions {
+  message JsonSchema {
+    bool generate = 1;
+  }
+  .alis.open.options.v1.MessageOptions.JsonSchema json_schema = 1;
+}
+
+message FieldOptions {
+  message JsonSchema {
+    string title = 1;
+    string description = 2;
+    bool ignore = 3;
+    string pattern = 4;
+    string format = 5;
+    string content_encoding = 6;
+    string content_media_type = 7;
+    int64 min_length = 8;
+    int64 max_length = 9;
+    double minimum = 10;
+    double maximum = 11;
+    bool exclusive_minimum = 12;
+    bool exclusive_maximum = 13;
+    int64 min_items = 14;
+    int64 max_items = 15;
+    bool unique_items = 16;
+    int64 min_properties = 17;
+    int64 max_properties = 18;
+  }
+  .alis.open.options.v1.FieldOptions.JsonSchema json_schema = 1;
+}

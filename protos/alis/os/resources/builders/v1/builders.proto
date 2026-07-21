@@ -1,0 +1,507 @@
+syntax = "proto3";
+
+package alis.os.resources.builders.v1;
+
+import "alis/os/resources/products/v1/products.proto";
+import "alis/os/services/dbd/v1/dbd.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message Builder {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    MASTER = 1;
+  }
+  message CalendarUri {
+    enum CalendarType {
+      CALENDAR_TYPE_UNSPECIFIED = 0;
+      GOOGLE_APPOINTMENT_SCHEDULE = 1;
+    }
+    string description = 1;
+    string uri = 2;
+    .alis.os.resources.builders.v1.Builder.CalendarUri.CalendarType calendar_type = 3;
+  }
+  message Activity {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      SUCCEEDED = 1;
+      FAILED = 2;
+    }
+    string description = 1;
+    .alis.os.resources.builders.v1.Builder.Activity.State state = 2;
+    .google.protobuf.Timestamp create_time = 3;
+  }
+  string name = 1;
+  string given_name = 2;
+  string family_name = 3;
+  string primary_email = 4;
+  repeated string build_partners = 5;
+  repeated .alis.os.resources.builders.v1.Builder.CalendarUri calendar_uris = 6;
+  string organisation = 7;
+  repeated .alis.os.resources.builders.v1.Builder.Activity activities = 8;
+  uint64 whatsapp = 9;
+  string position = 10;
+  string education = 11;
+  string linkedin_uri = 12;
+  string account = 13;
+  string profile_picture = 14;
+  .google.protobuf.Timestamp create_time = 99;
+}
+
+message SignupBuilderRequest {
+  string given_name = 1;
+  string family_name = 2;
+  string secondary_email = 3;
+  string primary_email_prefix = 4;
+}
+
+message SignupBuilderResponse {
+  .alis.os.resources.builders.v1.Builder builder = 1;
+}
+
+message SendBuilderWelcomeEmailRequest {
+  string given_name = 1;
+  string family_name = 2;
+  string temporary_password = 3;
+  string secondary_email = 4;
+}
+
+message SendBuilderWelcomeEmailResponse {
+}
+
+message CreateBuilderRequest {
+  .alis.os.resources.builders.v1.Builder builder = 1;
+  string builder_id = 2;
+}
+
+message GetBuilderRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateBuilderRequest {
+  .alis.os.resources.builders.v1.Builder builder = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteBuilderRequest {
+  string name = 1;
+}
+
+message ListBuildersRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  string filter = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListBuildersResponse {
+  repeated .alis.os.resources.builders.v1.Builder builders = 1;
+  string next_page_token = 2;
+}
+
+message BatchGetBuildersRequest {
+  repeated string names = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message BatchGetBuildersResponse {
+  repeated .alis.os.resources.builders.v1.Builder builders = 1;
+}
+
+message LookupBuilderRequest {
+  string search_text = 1;
+}
+
+message LookupBuilderResponse {
+  message Result {
+    string builder = 1;
+    string display_name = 2;
+    string masked_email = 3;
+  }
+  repeated .alis.os.resources.builders.v1.LookupBuilderResponse.Result results = 1;
+}
+
+message RetrieveMaskedBuilderRequest {
+  string builder = 1;
+}
+
+message RetrieveMaskedBuilderResponse {
+  .alis.os.resources.builders.v1.MaskedBuilder masked_builder = 1;
+}
+
+message BatchRetrieveMaskedBuildersRequest {
+  repeated string builders = 1;
+}
+
+message BatchRetrieveMaskedBuildersResponse {
+  repeated .alis.os.resources.builders.v1.MaskedBuilder masked_builders = 1;
+}
+
+message MaskedBuilder {
+  string builder = 1;
+  string display_name = 2;
+  string masked_email = 3;
+  string profile_picture = 4;
+}
+
+message BuilderConfig {
+  string name = 1;
+  .google.protobuf.Timestamp update_time = 2;
+  repeated string favourite_products = 3;
+  repeated string favourite_services = 4;
+  repeated string favourite_methods = 5;
+  .google.protobuf.Timestamp notifications_last_opened = 6;
+}
+
+message GetBuilderConfigRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateBuilderConfigRequest {
+  .alis.os.resources.builders.v1.BuilderConfig builder_config = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message SetNotificationsLastOpenedRequest {
+  .google.protobuf.Timestamp notifications_last_opened = 1;
+}
+
+message SetNotificationsLastOpenedResponse {
+  .alis.os.resources.builders.v1.BuilderConfig builder_config = 1;
+}
+
+message Notification {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    INFO = 1;
+    WARNING = 2;
+    ERROR = 3;
+    RUNNING = 4;
+    SUCCESS = 5;
+    ACTION_REQUIRED = 6;
+  }
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    KICKSTARTER = 1;
+    DEFINE = 2;
+    BUILD = 3;
+    DEPLOY = 4;
+    REQUEST_IAM_POLICY_CHANGE = 5;
+    IAM_POLICY_CHANGE_APPROVED = 6;
+    IAM_POLICY_CHANGE_REJECTED = 7;
+    IAM_POLICY_CHANGE_MADE = 8;
+    SUPPORT_CASE_ASSIGNMENT = 9;
+    SUPPORT_CASE_ACTION_REQUIRED = 10;
+    SUPPORT_CASE_STATE_CHANGE = 11;
+    DELETE_NEURON = 12;
+    PLAN_DESTROY_NEURON = 13;
+    DELETE_DEPLOYMENT = 14;
+    DELETE_PRODUCT = 15;
+    DELETE_ORGANISATION = 16;
+    CREATE_PRODUCT = 17;
+    CREATE_ORGANISATION = 18;
+    CREATE_DEPLOYMENT = 19;
+    TOGGLE_LOAD_BALANCER = 20;
+    BILLING_ACCOUNT_UPDATE = 21;
+    ALERT_INCIDENT = 22;
+    SOLUTION_PROPOSAL_SIGNED = 23;
+    SOLUTION_PROGRESS_UPDATE_COMMENT = 24;
+    BLOCK_CREATE = 25;
+    BLOCK_INSTALL = 26;
+    BLOCK_UPGRADE = 27;
+    BLOCK_UNINSTALL = 28;
+    BLOCK_VERSION_CREATE = 29;
+  }
+  message DeleteDeployment {
+    string deployment_display_name = 1;
+    string deployment_google_project_id = 2;
+    .alis.os.resources.builders.v1.MaskedBuilder deleted_by = 3;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 4;
+  }
+  message DeleteProduct {
+    string product_display_name = 1;
+    .alis.os.resources.builders.v1.MaskedBuilder deleted_by = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 3;
+  }
+  message DeleteOrganisation {
+    string organisation_display_name = 1;
+    .alis.os.resources.builders.v1.MaskedBuilder deleted_by = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 3;
+  }
+  message CreateProduct {
+    string product_display_name = 1;
+    .alis.os.resources.builders.v1.MaskedBuilder created_by = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 3;
+  }
+  message CreateOrganisation {
+    string organisation_display_name = 1;
+    string organisation_domain = 2;
+    .alis.os.resources.builders.v1.MaskedBuilder created_by = 3;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 4;
+  }
+  message CreateDeployment {
+    string deployment_display_name = 1;
+    string deployment_google_project_id = 2;
+    .alis.os.resources.builders.v1.MaskedBuilder created_by = 3;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 4;
+  }
+  message ToggleLoadBalancer {
+    string organisation_display_name = 1;
+    string organisation_domain = 2;
+    .alis.os.resources.builders.v1.MaskedBuilder actioned_by = 3;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 4;
+  }
+  message BillingAccountUpdate {
+    string resource_display_name = 1;
+    string actioned_by = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 3;
+  }
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      PLANNED = 1;
+      BUSY = 2;
+      CRITICAL_FAILURE = 3;
+      SUCCEEDED = 4;
+      NON_CRITICAL_FAILURE = 5;
+      SKIPPED = 6;
+    }
+    string display_name = 1;
+    string description = 2;
+    .alis.os.resources.builders.v1.Notification.Step.State state = 3;
+    string result = 4;
+    string id = 5;
+  }
+  message Kickstarter {
+    message Step {
+      enum State {
+        STATE_UNSPECIFIED = 0;
+        PENDING = 1;
+        RUNNING = 2;
+        SUCCEEDED = 3;
+        FAILED = 4;
+      }
+      .alis.os.resources.builders.v1.Notification.Kickstarter.Step.State state = 1;
+      string notes = 2;
+    }
+    repeated .alis.os.resources.builders.v1.Notification.Kickstarter.Step steps = 1;
+  }
+  message Define {
+    string commit_sha = 1;
+    repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 3;
+  }
+  message Build {
+    string version = 1;
+    string commit_sha = 2;
+    string define_commit_sha = 3;
+    repeated string dockerfile_paths_built = 4;
+    repeated string dockerfile_paths_retagged = 5;
+    string cloud_build_uri = 7;
+    repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 8;
+  }
+  message Deploy {
+    string product_deployment_display_name = 1;
+    string product_deployment_gcp_id = 2;
+    repeated .alis.os.services.dbd.v1.DefineBuildDeployProgress progress = 4;
+    string version = 5;
+    string cloud_build_uri = 6;
+  }
+  message DeleteNeuron {
+    repeated .alis.os.resources.products.v1.DeleteNeuronMetadata.DeleteNeuronProgress progress = 1;
+    string cloud_build_uri = 2;
+  }
+  message PlanDestroyNeuron {
+    string cloud_build_uri = 1;
+  }
+  message RequestIamPolicyChange {
+    string iam_policy_change = 1;
+    string requester_display_name = 2;
+    string role = 3;
+    string principal_display_name = 4;
+    string resource_display_name = 5;
+    string resource_identifier = 6;
+  }
+  message IamPolicyChangeApproved {
+    string iam_policy_change = 1;
+    string requester_display_name = 2;
+    string role = 3;
+    string principal_display_name = 4;
+    string resource_display_name = 5;
+    string resource_identifier = 6;
+    string applier_display_name = 7;
+    string applier_notes = 8;
+  }
+  message IamPolicyChangeRejected {
+    string iam_policy_change = 1;
+    string requester_display_name = 2;
+    string role = 3;
+    string principal_display_name = 4;
+    string resource_display_name = 5;
+    string resource_identifier = 6;
+    string applier_display_name = 7;
+    string applier_notes = 8;
+  }
+  message IamPolicyChangeMade {
+    string iam_policy_change = 1;
+    string role = 2;
+    string principal_display_name = 3;
+    string resource_display_name = 4;
+    string resource_identifier = 5;
+    string applier_display_name = 6;
+    string applier_notes = 7;
+  }
+  message SupportCaseAssignment {
+    string support_case = 1;
+    string description = 2;
+  }
+  message SupportCaseActionRequired {
+    string support_case = 1;
+    string description = 2;
+  }
+  message SupportCaseStateChange {
+    string support_case = 1;
+    string old_state = 2;
+    string new_state = 3;
+  }
+  message AlertIncident {
+    string incident = 1;
+    string description = 2;
+    string uri = 3;
+    string summary = 4;
+    string state = 5;
+    string resource_type_display_name = 7;
+    .google.protobuf.Timestamp start_time = 13;
+    .google.protobuf.Timestamp end_time = 14;
+  }
+  message SolutionProposalSigned {
+    string proposal = 1;
+    string signatory_display_name = 3;
+    string proposal_uri = 4;
+  }
+  message SolutionProgressUpdateComment {
+    string progress_update = 1;
+    string comment_preview = 2;
+    string commenter_display_name = 3;
+    string progress_update_uri = 4;
+  }
+  message BlockCreate {
+    string block_display_name = 1;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 5;
+  }
+  message BlockInstall {
+    string block_display_name = 1;
+    string branch = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 5;
+  }
+  message BlockUpgrade {
+    string block_display_name = 1;
+    string branch = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 5;
+  }
+  message BlockUninstall {
+    string block_display_name = 1;
+    string branch = 2;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 5;
+  }
+  message BlockVersionCreate {
+    string block_display_name = 1;
+    repeated .alis.os.resources.builders.v1.Notification.Step steps = 5;
+  }
+  string name = 1;
+  string title = 2;
+  string subtitle = 3;
+  .alis.os.resources.builders.v1.Notification.State state = 4;
+  string proto_package = 5;
+  string operation = 6;
+  .alis.os.resources.builders.v1.Notification.Type type = 7;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+  oneof body {
+    .alis.os.resources.builders.v1.Notification.Kickstarter kickstarter = 10;
+    .alis.os.resources.builders.v1.Notification.Define define = 11;
+    .alis.os.resources.builders.v1.Notification.Build build = 12;
+    .alis.os.resources.builders.v1.Notification.Deploy deploy = 13;
+    .alis.os.resources.builders.v1.Notification.RequestIamPolicyChange request_iam_policy_change = 14;
+    .alis.os.resources.builders.v1.Notification.IamPolicyChangeApproved iam_policy_change_approved = 15;
+    .alis.os.resources.builders.v1.Notification.IamPolicyChangeRejected iam_policy_change_rejected = 16;
+    .alis.os.resources.builders.v1.Notification.IamPolicyChangeMade iam_policy_change_made = 17;
+    .alis.os.resources.builders.v1.Notification.SupportCaseAssignment support_case_assignment = 18;
+    .alis.os.resources.builders.v1.Notification.SupportCaseActionRequired support_case_action_required = 19;
+    .alis.os.resources.builders.v1.Notification.SupportCaseStateChange support_case_state_change = 20;
+    .alis.os.resources.builders.v1.Notification.DeleteNeuron delete_neuron = 21;
+    .alis.os.resources.builders.v1.Notification.PlanDestroyNeuron plan_destroy_neuron = 22;
+    .alis.os.resources.builders.v1.Notification.DeleteDeployment delete_deployment = 23;
+    .alis.os.resources.builders.v1.Notification.DeleteProduct delete_product = 24;
+    .alis.os.resources.builders.v1.Notification.DeleteOrganisation delete_organisation = 25;
+    .alis.os.resources.builders.v1.Notification.CreateProduct create_product = 26;
+    .alis.os.resources.builders.v1.Notification.CreateOrganisation create_organisation = 27;
+    .alis.os.resources.builders.v1.Notification.CreateDeployment create_deployment = 28;
+    .alis.os.resources.builders.v1.Notification.ToggleLoadBalancer toggle_load_balancer = 29;
+    .alis.os.resources.builders.v1.Notification.BillingAccountUpdate billing_account_update = 30;
+    .alis.os.resources.builders.v1.Notification.AlertIncident alert_incident = 31;
+    .alis.os.resources.builders.v1.Notification.SolutionProposalSigned solution_proposal_signed = 32;
+    .alis.os.resources.builders.v1.Notification.SolutionProgressUpdateComment solution_progress_update_comment = 33;
+    .alis.os.resources.builders.v1.Notification.BlockCreate block_create = 34;
+    .alis.os.resources.builders.v1.Notification.BlockInstall block_install = 35;
+    .alis.os.resources.builders.v1.Notification.BlockUpgrade block_upgrade = 36;
+    .alis.os.resources.builders.v1.Notification.BlockUninstall block_uninstall = 37;
+    .alis.os.resources.builders.v1.Notification.BlockVersionCreate block_version_create = 38;
+  }
+}
+
+message GetNotificationRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message CreateNotificationRequest {
+  string parent = 1;
+  .alis.os.resources.builders.v1.Notification notification = 2;
+}
+
+message UpdateNotificationRequest {
+  .alis.os.resources.builders.v1.Notification notification = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteNotificationRequest {
+  string name = 1;
+}
+
+message ListNotificationsRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+}
+
+message ListNotificationsResponse {
+  repeated .alis.os.resources.builders.v1.Notification notifications = 1;
+  string next_page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+}
+
+service BuildersService {
+  rpc SignupBuilder(.alis.os.resources.builders.v1.SignupBuilderRequest) returns (.alis.os.resources.builders.v1.SignupBuilderResponse);
+  rpc SendBuilderWelcomeEmail(.alis.os.resources.builders.v1.SendBuilderWelcomeEmailRequest) returns (.alis.os.resources.builders.v1.SendBuilderWelcomeEmailResponse);
+  rpc CreateBuilder(.alis.os.resources.builders.v1.CreateBuilderRequest) returns (.alis.os.resources.builders.v1.Builder);
+  rpc GetBuilder(.alis.os.resources.builders.v1.GetBuilderRequest) returns (.alis.os.resources.builders.v1.Builder);
+  rpc UpdateBuilder(.alis.os.resources.builders.v1.UpdateBuilderRequest) returns (.alis.os.resources.builders.v1.Builder);
+  rpc DeleteBuilder(.alis.os.resources.builders.v1.DeleteBuilderRequest) returns (.google.protobuf.Empty);
+  rpc ListBuilders(.alis.os.resources.builders.v1.ListBuildersRequest) returns (.alis.os.resources.builders.v1.ListBuildersResponse);
+  rpc BatchGetBuilders(.alis.os.resources.builders.v1.BatchGetBuildersRequest) returns (.alis.os.resources.builders.v1.BatchGetBuildersResponse);
+  rpc LookupBuilder(.alis.os.resources.builders.v1.LookupBuilderRequest) returns (.alis.os.resources.builders.v1.LookupBuilderResponse);
+  rpc RetrieveMaskedBuilder(.alis.os.resources.builders.v1.RetrieveMaskedBuilderRequest) returns (.alis.os.resources.builders.v1.RetrieveMaskedBuilderResponse);
+  rpc BatchRetrieveMaskedBuilders(.alis.os.resources.builders.v1.BatchRetrieveMaskedBuildersRequest) returns (.alis.os.resources.builders.v1.BatchRetrieveMaskedBuildersResponse);
+  rpc GetBuilderConfig(.alis.os.resources.builders.v1.GetBuilderConfigRequest) returns (.alis.os.resources.builders.v1.BuilderConfig);
+  rpc UpdateBuilderConfig(.alis.os.resources.builders.v1.UpdateBuilderConfigRequest) returns (.alis.os.resources.builders.v1.BuilderConfig);
+  rpc SetNotificationsLastOpened(.alis.os.resources.builders.v1.SetNotificationsLastOpenedRequest) returns (.alis.os.resources.builders.v1.SetNotificationsLastOpenedResponse);
+  rpc GetNotification(.alis.os.resources.builders.v1.GetNotificationRequest) returns (.alis.os.resources.builders.v1.Notification);
+  rpc CreateNotification(.alis.os.resources.builders.v1.CreateNotificationRequest) returns (.alis.os.resources.builders.v1.Notification);
+  rpc UpdateNotification(.alis.os.resources.builders.v1.UpdateNotificationRequest) returns (.alis.os.resources.builders.v1.Notification);
+  rpc DeleteNotification(.alis.os.resources.builders.v1.DeleteNotificationRequest) returns (.google.protobuf.Empty);
+  rpc ListNotifications(.alis.os.resources.builders.v1.ListNotificationsRequest) returns (.alis.os.resources.builders.v1.ListNotificationsResponse);
+}

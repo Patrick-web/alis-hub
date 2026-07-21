@@ -1,0 +1,320 @@
+syntax = "proto3";
+
+package alis.open.support.v1;
+
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+message Guide {
+  message ContentBlock {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      TITLE = 1;
+      SUBTITLE = 2;
+      HEADING = 3;
+      TEXT_BODY = 4;
+      IMAGE = 5;
+      VIDEO = 6;
+      DIVIDER = 7;
+      LINK_PREVIEW = 8;
+      FOOTNOTE = 9;
+      DIAGRAM = 10;
+      CODE_BLOCK = 11;
+    }
+    message Title {
+    }
+    message Subtitle {
+    }
+    message Heading {
+    }
+    message TextBody {
+    }
+    message Image {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    message Video {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    message Divider {
+    }
+    message LinkPreview {
+      string uri = 1;
+      string avatar_uri = 2;
+      string title = 3;
+      string body = 4;
+    }
+    message Footnote {
+    }
+    message Diagram {
+      string mermaid_diagram_code = 1;
+      string mermaid_rendered_diagram = 2;
+    }
+    message CodeBlock {
+      enum Language {
+        LANGUAGE_UNSPECIFIED = 0;
+        GO = 1;
+        PROTO = 2;
+        PYTHON = 3;
+        VUE = 4;
+        TYPESCRIPT = 5;
+        LATEX = 6;
+        HCL = 7;
+        JSON = 8;
+        YAML = 9;
+        TEXT = 10;
+      }
+      .alis.open.support.v1.Guide.ContentBlock.CodeBlock.Language language = 1;
+      string code = 2;
+      string syntax_highlighted_code = 3;
+    }
+    .alis.open.support.v1.Guide.ContentBlock.Type type = 1;
+    oneof block {
+      .alis.open.support.v1.Guide.ContentBlock.Title title = 2;
+      .alis.open.support.v1.Guide.ContentBlock.Subtitle subtitle = 3;
+      .alis.open.support.v1.Guide.ContentBlock.Heading heading = 4;
+      .alis.open.support.v1.Guide.ContentBlock.TextBody text_body = 5;
+      .alis.open.support.v1.Guide.ContentBlock.Image image = 6;
+      .alis.open.support.v1.Guide.ContentBlock.Video video = 7;
+      .alis.open.support.v1.Guide.ContentBlock.Divider divider = 8;
+      .alis.open.support.v1.Guide.ContentBlock.LinkPreview link_preview = 9;
+      .alis.open.support.v1.Guide.ContentBlock.Footnote footnote = 10;
+      .alis.open.support.v1.Guide.ContentBlock.Diagram diagram = 11;
+      .alis.open.support.v1.Guide.ContentBlock.CodeBlock code_block = 12;
+    }
+  }
+  string name = 1;
+  string title = 2;
+  string subtitle = 3;
+  repeated .alis.open.support.v1.Guide.ContentBlock contents = 5;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message GetGuideRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListGuidesRequest {
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListGuidesResponse {
+  repeated .alis.open.support.v1.Guide guides = 1;
+  string next_page_token = 2;
+}
+
+message SyncGuideRequest {
+  string name = 1;
+  .alis.open.support.v1.Guide guide = 2;
+}
+
+message Issue {
+  enum Category {
+    CATEGORY_UNSPECIFIED = 0;
+    BUG = 1;
+    QUESTION = 2;
+    REQUEST = 3;
+  }
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    UNREACHABLE_SERVICE = 2;
+    GA_BUG = 4;
+    URGENT_SUPPORT = 6;
+    WORKAROUNDABLE_GA_BUG = 8;
+    PREVIEW_BUG = 10;
+    WORKAROUNDABLE_PREVIEW_BUG = 12;
+    SUPPORT = 14;
+    TRAINING = 16;
+    GENERAL = 18;
+    FEATURE_REQUEST = 20;
+  }
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    OPEN = 1;
+    ON_HOLD = 2;
+    CLOSED = 3;
+  }
+  enum IssueVisibility {
+    ISSUE_VISIBILITY_UNSPECIFIED = 0;
+    ISSUE_VISIBILITY_PRIVATE = 1;
+    ISSUE_VISIBILITY_PUBLIC = 2;
+  }
+  message ContentBlock {
+    enum Type {
+      TYPE_UNSPECIFIED = 0;
+      TEXT_BODY = 1;
+      IMAGE = 2;
+      VIDEO = 3;
+    }
+    message TextBody {
+    }
+    message Image {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    message Video {
+      string source_uri = 1;
+      string caption = 2;
+    }
+    .alis.open.support.v1.Issue.ContentBlock.Type type = 1;
+    oneof block {
+      .alis.open.support.v1.Issue.ContentBlock.TextBody text_body = 2;
+      .alis.open.support.v1.Issue.ContentBlock.Image image = 3;
+      .alis.open.support.v1.Issue.ContentBlock.Video video = 4;
+    }
+  }
+  message User {
+    string name = 1;
+    string email = 2;
+    string given_name = 3;
+    string family_name = 4;
+    string picture = 5;
+  }
+  string name = 1;
+  string display_name = 2;
+  repeated .alis.open.support.v1.Issue.ContentBlock description = 3;
+  .alis.open.support.v1.Issue.Category category = 4;
+  .alis.open.support.v1.Issue.Type type = 5;
+  .alis.open.support.v1.Issue.State state = 6;
+  .alis.open.support.v1.Issue.User reporter = 7;
+  .alis.open.support.v1.Issue.User assignee = 8;
+  .alis.open.support.v1.Issue.IssueVisibility visibility = 9;  // enum (heuristically resolved)
+  .google.protobuf.Timestamp create_time = 99;
+  .google.protobuf.Timestamp update_time = 100;
+}
+
+message CreateIssueRequest {
+}
+
+message UpdateIssueRequest {
+  .alis.open.support.v1.Issue issue = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message GetIssueRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message ListIssuesRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  .google.protobuf.FieldMask read_mask = 3;
+  string filter = 4;
+  string order_by = 5;
+}
+
+message ListIssuesResponse {
+  repeated .alis.open.support.v1.Issue issues = 1;
+  string next_page_token = 2;
+}
+
+message DeleteIssueRequest {
+}
+
+message EditNewIssueRequest {
+}
+
+message CancelNewIssueRequest {
+}
+
+message SetIssueAssigneeRequest {
+  string issue = 1;
+  .alis.open.support.v1.Issue.User assignee = 2;
+}
+
+message AddIssueViewersRequest {
+  string issue = 1;
+  repeated string viewers = 2;
+}
+
+message RemoveIssueViewersRequest {
+  string issue = 1;
+  repeated string viewers = 2;
+}
+
+message IssueActivity {
+  enum Type {
+    TYPE_UNSPECIFIED = 0;
+    REQUESTERS_CHANGE = 1;
+    ASSIGNEES_CHANGE = 2;
+    TYPE_CHANGE = 3;
+    CLOSED = 7;
+    REOPENED = 8;
+    ON_HOLD = 9;
+    RESUMED = 10;
+    REQUESTER_COMMENT = 13;
+    SUPPORT_COMMENT = 14;
+    INTERNAL_COMMENT = 15;
+  }
+  string name = 1;
+  .alis.open.support.v1.Issue.User creator = 2;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 3;
+  .alis.open.support.v1.IssueActivity.Type type = 5;
+  .google.protobuf.Timestamp create_time = 98;
+  .google.protobuf.Timestamp update_time = 99;
+}
+
+message CreateIssueActivityRequest {
+  string parent = 1;
+  .alis.open.support.v1.IssueActivity issue_activity = 2;
+}
+
+message GetIssueActivityRequest {
+  string name = 1;
+  .google.protobuf.FieldMask read_mask = 2;
+}
+
+message UpdateIssueActivityRequest {
+  .alis.open.support.v1.IssueActivity issue_activity = 1;
+  .google.protobuf.FieldMask update_mask = 2;
+}
+
+message DeleteIssueActivityRequest {
+}
+
+message ListIssueActivitiesRequest {
+  string parent = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+  .google.protobuf.FieldMask read_mask = 4;
+  string filter = 5;
+  string order_by = 6;
+}
+
+message ListIssueActivitiesResponse {
+  repeated .alis.open.support.v1.IssueActivity issue_activities = 1;
+  string next_page_token = 2;
+}
+
+message CreateCommentRequest {
+  string parent = 1;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 2;
+}
+
+message UpdateCommentRequest {
+  string name = 1;
+  repeated .alis.open.support.v1.Issue.ContentBlock body = 2;
+}
+
+message DeleteCommentRequest {
+}
+
+message UploadImageRequest {
+  bytes data = 1;
+  string mime_type = 2;
+}
+
+message UploadImageResponse {
+}
+
+service PublicAttachmentsService {
+  rpc UploadImage(.alis.open.support.v1.UploadImageRequest) returns (.alis.open.support.v1.UploadImageResponse);
+}

@@ -6,10 +6,10 @@
 		"0000": {
 			"ProductVersion": "0.0.1",
 			"CompanyName": "Patrick-web",
-			"FileDescription": "Alis Hub Desktop Application",
+			"FileDescription": "AlisHub Desktop Application",
 			"LegalCopyright": "(c) 2026, Patrick-web",
-			"ProductName": "Alis Hub",
-			"Comments": "Alis Hub desktop app"
+			"ProductName": "AlisHub",
+			"Comments": "AlisHub desktop app"
 		}
 	}
 }
