@@ -38,7 +38,7 @@ const (
 	// every caller sees "needs refresh" and immediately re-hits the identity
 	// server — a self-inflicted refresh storm that can trip its rate limits
 	// and surface as spurious auth failures.
-	alisConsoleTokenRefGrace = 1 * time.Minute
+	alisConsoleTokenRefGrace = 3 * time.Minute
 )
 
 // alisConsoleIdentityURL is the OAuth2 token/authorize endpoint host. It is a

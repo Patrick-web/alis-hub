@@ -64,7 +64,7 @@ func TestFreshCredsTransientFailureServesValidToken(t *testing.T) {
 	alisConsoleIdentityURL = srv.URL
 	defer func() { alisConsoleIdentityURL = old }()
 
-	// Token expires in 2m — inside the 5m refresh grace, so a refresh is
+	// Token expires in 2m — inside the refresh grace (now 3m), so a refresh is
 	// attempted, but it is still valid (>0), so the transient failure must fall
 	// back to serving it.
 	ts := writeTempCreds(t, &consoleCredentials{
