@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	neuronsv1pb "alis-hub-v3/gen/go/alis/os/neurons/v1"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type NeuronItem struct {
@@ -42,14 +44,14 @@ func (s *ProductService) CreateNeuron(org, product, neuronId string) (*NeuronIte
 		return nil, err
 	}
 
-	parent := fmt.Sprintf("organisations/%s/products/%s", org, product)
-
-	// CreateNeuronRequest: field 1=parent, field 3=neuronId
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, parent)
-	buf = protowire.AppendTag(buf, 3, protowire.BytesType)
-	buf = protowire.AppendString(buf, neuronId)
+	req := &neuronsv1pb.CreateNeuronRequest{
+		Parent:   fmt.Sprintf("organisations/%s/products/%s", org, product),
+		NeuronId: neuronId,
+	}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("CreateNeuron: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -64,11 +66,11 @@ func (s *ProductService) CreateNeuron(org, product, neuronId string) (*NeuronIte
 	if len(body) < 5 {
 		return nil, fmt.Errorf("CreateNeuron: response too short (%d bytes)", len(body))
 	}
-	neuron, err := parseNeuronItem(body[5:])
-	if err != nil {
-		return nil, fmt.Errorf("CreateNeuron: parse response: %w", err)
+	n := &neuronsv1pb.Neuron{}
+	if err := proto.Unmarshal(body[5:], n); err != nil {
+		return nil, fmt.Errorf("CreateNeuron: unmarshal response: %w", err)
 	}
-	return neuron, nil
+	return neuronItemFromProto(n), nil
 }
 
 func (s *ProductService) GetServicesOverview(org, product string) (*ServicesOverview, error) {
@@ -143,9 +145,11 @@ func (s *ProductService) GetServicesOverview(org, product string) (*ServicesOver
 }
 
 func (s *ProductService) fetchNeurons(parent string) ([]NeuronItem, error) {
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, parent)
+	req := &neuronsv1pb.ListNeuronsRequest{Parent: parent}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListNeurons: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -160,13 +164,23 @@ func (s *ProductService) fetchNeurons(parent string) ([]NeuronItem, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListNeurons: response too short (%d bytes)", len(body))
 	}
-	return parseNeuronsResponse(body[5:])
+	resp := &neuronsv1pb.ListNeuronsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListNeurons: unmarshal response: %w", err)
+	}
+	neurons := make([]NeuronItem, 0, len(resp.GetNeurons()))
+	for _, n := range resp.GetNeurons() {
+		neurons = append(neurons, *neuronItemFromProto(n))
+	}
+	return neurons, nil
 }
 
 func (s *ProductService) fetchDeployments(envResourceName string) ([]DeploymentItem, error) {
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, envResourceName)
+	req := &neuronsv1pb.ListDeploymentsRequest{Parent: envResourceName}
+	buf, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListDeployments: marshal request: %w", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -181,155 +195,34 @@ func (s *ProductService) fetchDeployments(envResourceName string) ([]DeploymentI
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListDeployments: response too short (%d bytes)", len(body))
 	}
-	return parseDeploymentsResponse(body[5:])
-}
-
-func parseNeuronsResponse(data []byte) ([]NeuronItem, error) {
-	var neurons []NeuronItem
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return neurons, nil
-			}
-			if num == 1 {
-				neuron, _ := parseNeuronItem(b)
-				if neuron != nil {
-					neurons = append(neurons, *neuron)
-				}
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return neurons, nil
-			}
-			data = data[m:]
-		}
+	resp := &neuronsv1pb.ListDeploymentsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListDeployments: unmarshal response: %w", err)
 	}
-	return neurons, nil
-}
-
-func parseNeuronItem(data []byte) (*NeuronItem, error) {
-	n := &NeuronItem{}
-	for len(data) > 0 {
-		num, typ, m := protowire.ConsumeTag(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return n, nil
-			}
-			if num == 5 {
-				n.State = int32(v)
-			}
-			data = data[m:]
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return n, nil
-			}
-			switch num {
-			case 1:
-				parts := strings.Split(string(b), "/")
-				n.ID = parts[len(parts)-1]
-			case 2:
-				n.Version = string(b)
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return n, nil
-			}
-			data = data[m:]
-		}
-	}
-	return n, nil
-}
-
-func parseDeploymentsResponse(data []byte) ([]DeploymentItem, error) {
-	var deps []DeploymentItem
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return deps, nil
-			}
-			if num == 1 {
-				dep, _ := parseDeploymentItem(b)
-				if dep != nil {
-					deps = append(deps, *dep)
-				}
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return deps, nil
-			}
-			data = data[m:]
-		}
+	deps := make([]DeploymentItem, 0, len(resp.GetDeployments()))
+	for _, d := range resp.GetDeployments() {
+		deps = append(deps, DeploymentItem{
+			NeuronID: lastPathSegment(d.GetName()),
+			Version:  d.GetVersion(),
+			State:    int32(d.GetState()),
+			LogsURL:  d.GetLogsUrl(),
+		})
 	}
 	return deps, nil
 }
 
-func parseDeploymentItem(data []byte) (*DeploymentItem, error) {
-	d := &DeploymentItem{}
-	for len(data) > 0 {
-		num, typ, m := protowire.ConsumeTag(data)
-		if m < 0 {
-			break
-		}
-		data = data[m:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return d, nil
-			}
-			if num == 4 {
-				d.State = int32(v)
-			}
-			data = data[m:]
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return d, nil
-			}
-			switch num {
-			case 1:
-				parts := strings.Split(string(b), "/")
-				d.NeuronID = parts[len(parts)-1]
-			case 2:
-				d.Version = string(b)
-			case 5:
-				d.LogsURL = string(b)
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return d, nil
-			}
-			data = data[m:]
-		}
+// neuronItemFromProto maps a neurons.v1.Neuron onto NeuronItem, using the last
+// path segment of the resource name as the ID.
+func neuronItemFromProto(n *neuronsv1pb.Neuron) *NeuronItem {
+	return &NeuronItem{
+		ID:      lastPathSegment(n.GetName()),
+		Version: n.GetVersion(),
+		State:   n.GetLatestVersionState(),
 	}
-	return d, nil
+}
+
+// lastPathSegment returns the final "/"-separated segment of a resource name.
+func lastPathSegment(name string) string {
+	parts := strings.Split(name, "/")
+	return parts[len(parts)-1]
 }

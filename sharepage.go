@@ -6,7 +6,12 @@ import (
 	"strings"
 	"time"
 
+	accountsv1pb "alis-hub-v3/gen/go/alis/os/accounts/v1"
+	iamv2pb "alis-hub-v3/gen/go/alis/os/iam/v2"
+
+	iampb "cloud.google.com/go/iam/apiv1/iampb"
 	"google.golang.org/protobuf/encoding/protowire"
+	"google.golang.org/protobuf/proto"
 )
 
 // ─── IAM-based share data ────────────────────────────────────────────────────
@@ -49,9 +54,11 @@ func (s *ProductService) GetShareData(org, product string) (*ShareData, error) {
 
 	// ── GetIamPolicy ──────────────────────────────────────────────────────────
 	resource := fmt.Sprintf("organisations/%s/products/%s", org, product)
-	var reqBuf []byte
-	reqBuf = protowire.AppendTag(reqBuf, 1, protowire.BytesType)
-	reqBuf = protowire.AppendString(reqBuf, resource)
+	getReq := &iampb.GetIamPolicyRequest{Resource: resource}
+	reqBuf, err := proto.Marshal(getReq)
+	if err != nil {
+		return nil, fmt.Errorf("GetIamPolicy: marshal request: %w", err)
+	}
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
 		"alis.os.products.v1.ProductsService/GetIamPolicy", reqBuf)
@@ -64,7 +71,11 @@ func (s *ProductService) GetShareData(org, product string) (*ShareData, error) {
 	if len(body) < 5 {
 		return nil, fmt.Errorf("GetIamPolicy: empty response")
 	}
-	bindings := parseIamPolicy(body[5:])
+	policy := &iampb.Policy{}
+	if err := proto.Unmarshal(body[5:], policy); err != nil {
+		return nil, fmt.Errorf("GetIamPolicy: unmarshal response: %w", err)
+	}
+	bindings := policyBindingsToIamBindings(policy)
 
 	// ── Collect user IDs and account IDs ──────────────────────────────────────
 	userIDs := map[string]struct{}{}
@@ -83,39 +94,53 @@ func (s *ProductService) GetShareData(org, product string) (*ShareData, error) {
 	// ── BatchRetrieveMaskedUsers ───────────────────────────────────────────────
 	userMap := map[string]iamUser{}
 	if len(userIDs) > 0 {
-		var buf []byte
+		usersReq := &iamv2pb.BatchRetrieveMaskedUsersRequest{}
 		for id := range userIDs {
-			buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-			buf = protowire.AppendString(buf, "users/"+id)
+			usersReq.Users = append(usersReq.Users, "users/"+id)
 		}
-		resp, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
-			"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
-		if err == nil && grpcStatus == 0 && len(resp) >= 5 {
-			for _, u := range parseBatchUsersResponse(resp[5:]) {
-				userMap[strings.TrimPrefix(u.Name, "users/")] = u
+		if buf, mErr := proto.Marshal(usersReq); mErr == nil {
+			resp, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
+				"alis.os.iam.v2.UsersService/BatchRetrieveMaskedUsers", buf)
+			if err == nil && grpcStatus == 0 && len(resp) >= 5 {
+				usersResp := &iamv2pb.BatchRetrieveMaskedUsersResponse{}
+				if proto.Unmarshal(resp[5:], usersResp) == nil {
+					for _, m := range usersResp.GetMaskedUsers() {
+						u := iamUserFromV2Masked(m)
+						userMap[strings.TrimPrefix(u.Name, "users/")] = u
+					}
+				}
+			} else if grpcStatus != 0 {
+				// non-fatal: continue without user details
+				_ = grpcMsg
 			}
-		} else if grpcStatus != 0 {
-			// non-fatal: continue without user details
-			_ = grpcMsg
 		}
 	}
 
 	// ── RetrieveMaskedAccounts ────────────────────────────────────────────────
 	accountMap := map[string]iamAccount{}
 	if len(accountIDs) > 0 {
-		var buf []byte
+		acctReq := &accountsv1pb.RetrieveMaskedAccountsRequest{}
 		for id := range accountIDs {
-			buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-			buf = protowire.AppendString(buf, "accounts/"+id)
+			acctReq.Accounts = append(acctReq.Accounts, "accounts/"+id)
 		}
-		resp, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
-			"alis.os.accounts.v1.AccountsService/RetrieveMaskedAccounts", buf)
-		if err == nil && grpcStatus == 0 && len(resp) >= 5 {
-			for _, a := range parseMaskedAccountsResponse(resp[5:]) {
-				accountMap[strings.TrimPrefix(a.Name, "accounts/")] = a
+		if buf, mErr := proto.Marshal(acctReq); mErr == nil {
+			resp, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx,
+				"alis.os.accounts.v1.AccountsService/RetrieveMaskedAccounts", buf)
+			if err == nil && grpcStatus == 0 && len(resp) >= 5 {
+				maResp := &accountsv1pb.RetrieveMaskedAccountsResponse{}
+				if proto.Unmarshal(resp[5:], maResp) == nil {
+					for key, ma := range maResp.GetMaskedAccounts() {
+						id := strings.TrimPrefix(key, "accounts/")
+						accountMap[id] = iamAccount{
+							Name:        key,
+							DisplayName: ma.GetDisplayName(),
+							PartnerRef:  ma.GetBuildPartner(),
+						}
+					}
+				}
+			} else if grpcStatus != 0 {
+				_ = grpcMsg
 			}
-		} else if grpcStatus != 0 {
-			_ = grpcMsg
 		}
 	}
 
@@ -195,70 +220,31 @@ func iamRoleLabel(role string) string {
 	}
 }
 
-// ─── IAM Policy parsing ───────────────────────────────────────────────────────
+// ─── IAM Policy conversion ──────────────────────────────────────────────────
 
 type iamBinding struct {
 	Role    string
 	Members []string
 }
 
-func parseIamPolicy(data []byte) []iamBinding {
-	var bindings []iamBinding
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 4 { // Policy.bindings is field 4 per google.iam.v1.Policy
-				bindings = append(bindings, parseIamBinding(b))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
+// policyBindingsToIamBindings maps a google.iam.v1.Policy onto the app's
+// internal iamBinding slice.
+func policyBindingsToIamBindings(p *iampb.Policy) []iamBinding {
+	bindings := make([]iamBinding, 0, len(p.GetBindings()))
+	for _, b := range p.GetBindings() {
+		bindings = append(bindings, iamBinding{Role: b.GetRole(), Members: b.GetMembers()})
 	}
 	return bindings
 }
 
-func parseIamBinding(data []byte) iamBinding {
-	var b iamBinding
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			s, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			switch num {
-			case 1:
-				b.Role = string(s)
-			case 2:
-				b.Members = append(b.Members, string(s))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
+// iamBindingsToPolicyBindings is the inverse of policyBindingsToIamBindings,
+// used when building a SetIamPolicy request.
+func iamBindingsToPolicyBindings(bindings []iamBinding) []*iampb.Binding {
+	out := make([]*iampb.Binding, 0, len(bindings))
+	for _, b := range bindings {
+		out = append(out, &iampb.Binding{Role: b.Role, Members: b.Members})
 	}
-	return b
+	return out
 }
 
 // ─── BatchRetrieveMaskedUsers parsing ─────────────────────────────────────────
@@ -271,197 +257,35 @@ type iamUser struct {
 	PhotoURL  string
 }
 
-func parseBatchUsersResponse(data []byte) []iamUser {
-	var users []iamUser
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 {
-				users = append(users, parseMaskedUser(b))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
+// iamUserFromV2Masked maps alis.os.iam.v2.MaskedUser onto the app's iamUser.
+func iamUserFromV2Masked(m *iamv2pb.MaskedUser) iamUser {
+	return iamUser{
+		Name:      m.GetName(),
+		Email:     m.GetMaskedEmail(),
+		FirstName: m.GetGivenName(),
+		LastName:  m.GetFamilyName(),
+		PhotoURL:  m.GetPicture(),
 	}
-	return users
 }
 
-func parseMaskedUser(data []byte) iamUser {
-	var u iamUser
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return u
-			}
-			switch num {
-			case 1:
-				u.Name = string(b)
-			case 4:
-				u.Email = string(b)
-			case 7:
-				u.FirstName = string(b)
-			case 8:
-				u.LastName = string(b)
-			case 9:
-				u.PhotoURL = string(b)
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return u
-			}
-			data = data[m:]
-		}
+// iamUserFromAccountsMasked maps alis.os.accounts.v1.RetrieveMaskedUsersResponse_MaskedUser
+// onto the app's iamUser.
+func iamUserFromAccountsMasked(m *accountsv1pb.RetrieveMaskedUsersResponse_MaskedUser) iamUser {
+	return iamUser{
+		Name:      m.GetName(),
+		Email:     m.GetMaskedEmail(),
+		FirstName: m.GetGivenName(),
+		LastName:  m.GetFamilyName(),
+		PhotoURL:  m.GetPicture(),
 	}
-	return u
 }
 
-// ─── RetrieveMaskedAccounts parsing ───────────────────────────────────────────
+// ─── Masked account type ──────────────────────────────────────────────────────
 
 type iamAccount struct {
 	Name        string
 	DisplayName string
 	PartnerRef  string // non-empty → external/partner account
-}
-
-func parseMaskedAccountsResponse(data []byte) []iamAccount {
-	var accounts []iamAccount
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 {
-				acc := parseSingleMaskedAccount(b)
-				if acc.Name != "" {
-					accounts = append(accounts, acc)
-				}
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
-	}
-	return accounts
-}
-
-// parseSingleMaskedAccount parses one MaskedAccount message.
-// The proto has field 1 (name) at the outer level and field 2 (nested details)
-// which contains the display name (inner field 2) and optional partner ref (inner field 4).
-func parseSingleMaskedAccount(data []byte) iamAccount {
-	var acc iamAccount
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return acc
-			}
-			switch num {
-			case 1:
-				if strings.HasPrefix(string(b), "accounts/") {
-					acc.Name = string(b)
-				}
-			case 2:
-				inner := parseMaskedAccountInner(b)
-				if acc.Name == "" && inner.Name != "" {
-					acc.Name = inner.Name
-				}
-				if inner.DisplayName != "" {
-					acc.DisplayName = inner.DisplayName
-				}
-				if inner.PartnerRef != "" {
-					acc.PartnerRef = inner.PartnerRef
-				}
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return acc
-			}
-			data = data[m:]
-		}
-	}
-	return acc
-}
-
-// parseMaskedAccountInner scans all fields of the nested details message.
-// Field 1 = name, field 2 = display_name (short), field 4 = partner ref.
-// The description (field 3) can be very long; we skip it.
-func parseMaskedAccountInner(data []byte) iamAccount {
-	var acc iamAccount
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return acc
-			}
-			s := string(b)
-			switch num {
-			case 1:
-				if strings.HasPrefix(s, "accounts/") {
-					acc.Name = s
-				}
-			case 2:
-				// display_name — short string; description is at field 3
-				if len(s) <= 100 {
-					acc.DisplayName = s
-				}
-			case 4:
-				if strings.HasPrefix(s, "partners/") {
-					acc.PartnerRef = s
-				}
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return acc
-			}
-			data = data[m:]
-		}
-	}
-	return acc
 }
 
 // ─── Legacy invite-based API (kept for reference) ─────────────────────────────
@@ -621,7 +445,11 @@ func (s *ProductService) ListInvites(org, product string) ([]InviteInfo, error) 
 		return nil, fmt.Errorf("ListInvites: resolving account: %w", err)
 	}
 
-	protoBytes := marshalListInvitesRequest(account)
+	req := &accountsv1pb.ListInvitesRequest{Parent: account}
+	protoBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListInvites: marshal request: %w", err)
+	}
 
 	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.os.accounts.v1.InvitesService/ListInvites", protoBytes)
 	if err != nil {
@@ -633,146 +461,35 @@ func (s *ProductService) ListInvites(org, product string) ([]InviteInfo, error) 
 	if len(body) < 5 {
 		return nil, fmt.Errorf("ListInvites: response too short (%d bytes)", len(body))
 	}
-	return parseListInvitesResponse(body[5:])
-}
 
-func marshalListInvitesRequest(parent string) []byte {
-	var buf []byte
-	buf = protowire.AppendTag(buf, 1, protowire.BytesType)
-	buf = protowire.AppendString(buf, parent)
-	return buf
-}
+	resp := &accountsv1pb.ListInvitesResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListInvites: unmarshal response: %w", err)
+	}
 
-func parseListInvitesResponse(data []byte) ([]InviteInfo, error) {
-	var invites []InviteInfo
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
+	invites := make([]InviteInfo, 0, len(resp.GetInvites()))
+	for _, inv := range resp.GetInvites() {
+		users := make([]InviteUserInfo, 0, len(inv.GetUsers()))
+		for _, u := range inv.GetUsers() {
+			users = append(users, InviteUserInfo{
+				User:           u.GetUser(),
+				Email:          u.GetEmail(),
+				DisplayName:    u.GetDisplayName(),
+				ProfilePicture: u.GetProfilePictureUri(),
+				Domain:         u.GetDomain(),
+				Claimed:        u.GetClaimedTime() != nil,
+				Role:           int32(u.GetRole()),
+			})
 		}
-		data = data[n:]
-		switch typ {
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return invites, nil
-			}
-			if num == 1 {
-				inv, _ := parseInvite(b)
-				if inv != nil {
-					invites = append(invites, *inv)
-				}
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return invites, nil
-			}
-			data = data[m:]
-		}
+		invites = append(invites, InviteInfo{
+			Name:       inv.GetName(),
+			BuildSeat:  int32(inv.GetBuildSeat()),
+			ManageSeat: int32(inv.GetManageSeat()),
+			AllowAll:   inv.GetAllowAll(),
+			Domains:    inv.GetDomains(),
+			Users:      users,
+			Inviter:    inv.GetInviter(),
+		})
 	}
 	return invites, nil
-}
-
-func parseInvite(data []byte) (*InviteInfo, error) {
-	inv := &InviteInfo{}
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return inv, nil
-			}
-			switch num {
-			case 3:
-				inv.BuildSeat = int32(v)
-			case 4:
-				inv.ManageSeat = int32(v)
-			case 10:
-				inv.AllowAll = v != 0
-			}
-			data = data[m:]
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return inv, nil
-			}
-			switch num {
-			case 1:
-				inv.Name = string(b)
-			case 11:
-				inv.Domains = append(inv.Domains, string(b))
-			case 12:
-				user, _ := parseInviteUser(b)
-				if user != nil {
-					inv.Users = append(inv.Users, *user)
-				}
-			case 97:
-				inv.Inviter = string(b)
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return inv, nil
-			}
-			data = data[m:]
-		}
-	}
-	return inv, nil
-}
-
-func parseInviteUser(data []byte) (*InviteUserInfo, error) {
-	u := &InviteUserInfo{}
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return u, nil
-			}
-			if num == 7 {
-				u.Role = int32(v)
-			}
-			data = data[m:]
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return u, nil
-			}
-			switch num {
-			case 1:
-				u.User = string(b)
-			case 2:
-				u.Email = string(b)
-			case 3:
-				u.DisplayName = string(b)
-			case 4:
-				u.ProfilePicture = string(b)
-			case 5:
-				u.Domain = string(b)
-			case 6:
-				u.Claimed = len(b) > 0
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return u, nil
-			}
-			data = data[m:]
-		}
-	}
-	return u, nil
 }

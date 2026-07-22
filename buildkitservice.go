@@ -7,7 +7,10 @@ import (
 	"log"
 	"time"
 
-	"google.golang.org/protobuf/encoding/protowire"
+	buildspecsv1pb "alis-hub-v3/gen/go/alis/os/buildspecs/v1"
+
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 // BuildSpecItem is a summary of a single build specification.
@@ -53,21 +56,16 @@ func (s *BuildKitService) ListBuildSpecs() ([]BuildSpecItem, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// google.protobuf.FieldMask: repeated field 1 = paths
-	var readMask []byte
-	for _, path := range []string{"name", "display_name", "status", "summary", "products"} {
-		readMask = protowire.AppendTag(readMask, 1, protowire.BytesType)
-		readMask = protowire.AppendString(readMask, path)
+	req := &buildspecsv1pb.ListBuildSpecsRequest{
+		PageSize: 100,
+		ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"name", "display_name", "status", "summary", "products"}},
+	}
+	reqBytes, err := proto.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("ListBuildSpecs: marshal request: %w", err)
 	}
 
-	// ListBuildSpecsRequest: field 2=pageSize, field 5=read_mask
-	var req []byte
-	req = protowire.AppendTag(req, 2, protowire.VarintType)
-	req = protowire.AppendVarint(req, 100)
-	req = protowire.AppendTag(req, 5, protowire.BytesType)
-	req = protowire.AppendBytes(req, readMask)
-
-	body, grpcStatus, grpcMsg, err := s.alisClient.DoGRPC(ctx, "alis.os.buildspecs.v1.BuildSpecsService/ListBuildSpecs", req)
+	body, grpcStatus, grpcMsg, err := s.alisClient.DoGRPC(ctx, "alis.os.buildspecs.v1.BuildSpecsService/ListBuildSpecs", reqBytes)
 	if err != nil {
 		return nil, fmt.Errorf("ListBuildSpecs: %w", err)
 	}
@@ -77,78 +75,19 @@ func (s *BuildKitService) ListBuildSpecs() ([]BuildSpecItem, error) {
 	if len(body) < 5 {
 		return []BuildSpecItem{}, nil
 	}
-	return parseBuildSpecsList(body[5:]), nil
-}
-
-func parseBuildSpecsList(data []byte) []BuildSpecItem {
-	var items []BuildSpecItem
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		if typ == protowire.BytesType {
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				break
-			}
-			if num == 1 { // buildSpecsList
-				items = append(items, parseBuildSpecItem(b))
-			}
-			data = data[m:]
-		} else {
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				break
-			}
-			data = data[m:]
-		}
+	resp := &buildspecsv1pb.ListBuildSpecsResponse{}
+	if err := proto.Unmarshal(body[5:], resp); err != nil {
+		return nil, fmt.Errorf("ListBuildSpecs: unmarshal response: %w", err)
 	}
-	return items
-}
-
-func parseBuildSpecItem(data []byte) BuildSpecItem {
-	item := BuildSpecItem{}
-	for len(data) > 0 {
-		num, typ, n := protowire.ConsumeTag(data)
-		if n < 0 {
-			break
-		}
-		data = data[n:]
-		switch typ {
-		case protowire.BytesType:
-			b, m := protowire.ConsumeBytes(data)
-			if m < 0 {
-				return item
-			}
-			switch num {
-			case 1:
-				item.Name = string(b)
-			case 2:
-				item.DisplayName = string(b)
-			case 4:
-				item.Summary = string(b)
-			case 6:
-				item.Products = append(item.Products, string(b))
-			}
-			data = data[m:]
-		case protowire.VarintType:
-			v, m := protowire.ConsumeVarint(data)
-			if m < 0 {
-				return item
-			}
-			if num == 3 {
-				item.Status = int32(v)
-			}
-			data = data[m:]
-		default:
-			m := protowire.ConsumeFieldValue(num, typ, data)
-			if m < 0 {
-				return item
-			}
-			data = data[m:]
-		}
+	items := make([]BuildSpecItem, 0, len(resp.GetBuildSpecs()))
+	for _, bs := range resp.GetBuildSpecs() {
+		items = append(items, BuildSpecItem{
+			Name:        bs.GetName(),
+			DisplayName: bs.GetDisplayName(),
+			Status:      int32(bs.GetStatus()),
+			Summary:     bs.GetSummary(),
+			Products:    bs.GetProducts(),
+		})
 	}
-	return item
+	return items, nil
 }

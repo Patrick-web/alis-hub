@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 package alis.os.glass.v1;
+
+option go_package = "alis-hub-v3/gen/go/alis/os/glass/v1;glassv1pb";
 message ExplainDefineRequest {
   string definition = 1;
   string version = 2;

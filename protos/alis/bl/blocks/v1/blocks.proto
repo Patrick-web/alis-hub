@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package alis.bl.blocks.v1;
 
+option go_package = "alis-hub-v3/gen/go/alis/bl/blocks/v1;blocksv1pb";
+
 import "alis/open/iam/v1/iam.proto";
 import "alis/open/validation/v1/validation.proto";
 import "google/iam/v1/iam_policy.proto";
@@ -84,6 +86,10 @@ message GetBlockVersionRequest {
 message CreateBlockVersionRequest {
   string parent = 1;
   .alis.bl.blocks.v1.BlockVersion block_version = 2;
+  // Not present in the console bundle extraction (the RPC was never called with an
+  // explicit ID from that surface) — recovered from a working hand-rolled client that
+  // has sent this field in production.
+  string block_version_id = 3;
 }
 
 message CreateBlockVersionResponse {

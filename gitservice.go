@@ -502,17 +502,35 @@ func gitCmdAuthToken(dir, token string, args ...string) (string, error) {
 	return string(out), err
 }
 
-// gitCmdAuth runs a git command with an injected Bearer token for HTTPS remotes.
-// git -c http.extraHeader="Authorization: Bearer {token}" {rest of args}
+// gitRemoteURL returns the "origin" remote URL for the repo at dir, or ""
+// if it can't be determined (e.g. not yet cloned, or no "origin" remote).
+func gitRemoteURL(dir string) string {
+	out, err := gitCmd(dir, "git", "remote", "get-url", "origin")
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+// gitCmdAuth runs a git command authenticated against the repo's origin
+// remote — the system credential helper for GitHub, or an injected Bearer
+// token header for everything else (see gitHostAuthArgs).
 func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 	if len(args) == 0 || args[0] != "git" {
 		return "", fmt.Errorf("gitCmdAuth: first arg must be 'git'")
 	}
+	remoteURL := gitRemoteURL(dir)
 	token, err := g.tokens.AccessToken()
 	if err != nil {
 		token = ""
 	}
-	return gitCmdAuthToken(dir, token, args...)
+	authArgs := append([]string{"git"}, gitHostAuthArgs(remoteURL, token)...)
+	authArgs = append(authArgs, args[1:]...)
+	cmd := exec.Command(authArgs[0], authArgs[1:]...)
+	cmd.Dir = dir
+	cmd.Env = noPromptEnv()
+	out, cerr := cmd.CombinedOutput()
+	return string(out), cerr
 }
 
 // ProductRepoPaths holds the local filesystem paths for a product's git repos.
@@ -890,7 +908,7 @@ func (g *GitService) GetBranches(repoPath string) ([]GitBranch, error) {
 	// is indistinguishable from a local branch named "origin/branch".
 	out, err := gitCmd(repoPath, "git", "branch", "-a", "--format=%(refname:short)|%(refname)|%(HEAD)")
 	if err != nil {
-		return nil, err
+		return nil, gitOutputError(out, err)
 	}
 	var branches []GitBranch
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
@@ -914,7 +932,10 @@ func (g *GitService) GetBranches(repoPath string) ([]GitBranch, error) {
 // GetCurrentBranch returns the name of the currently checked-out branch.
 func (g *GitService) GetCurrentBranch(repoPath string) (string, error) {
 	out, err := gitCmd(repoPath, "git", "rev-parse", "--abbrev-ref", "HEAD")
-	return strings.TrimSpace(out), err
+	if err != nil {
+		return "", gitOutputError(out, err)
+	}
+	return strings.TrimSpace(out), nil
 }
 
 // CheckoutBranch switches to an existing branch and returns a classified result.
@@ -942,8 +963,7 @@ func (g *GitService) UndoLastCommit(repoPath string) GitSyncResult {
 // PushOrigin pushes the current branch to origin and returns a classified result.
 func (g *GitService) PushOrigin(repoPath string) GitSyncResult {
 	g.emitScmLog(repoPath, "$ git push origin HEAD\r\n")
-	cmd := g.authedGitCmd("push", "origin", "HEAD")
-	cmd.Dir = repoPath
+	cmd := g.authedGitCmd(repoPath, "push", "origin", "HEAD")
 	output, err := g.streamScm(cmd, repoPath)
 	kind, message := classifyGitOutput(output, err)
 	if kind == "auth_error" {
@@ -959,8 +979,7 @@ func (g *GitService) PullOrigin(repoPath string) GitSyncResult {
 	// config, so a conflict always leaves a merge (not rebase) in progress — matching
 	// what CompleteMerge/AbortMerge assume.
 	g.emitScmLog(repoPath, "$ git pull --no-rebase\r\n")
-	cmd := g.authedGitCmd("pull", "--no-rebase")
-	cmd.Dir = repoPath
+	cmd := g.authedGitCmd(repoPath, "pull", "--no-rebase")
 	output, err := g.streamScm(cmd, repoPath)
 	kind, message := classifyGitOutput(output, err)
 	if kind == "auth_error" {
@@ -977,8 +996,7 @@ func (g *GitService) PullOrigin(repoPath string) GitSyncResult {
 // state) without touching the working tree or local branch. Used both for manual
 // refresh and periodic background polling.
 func (g *GitService) FetchOrigin(repoPath string) GitSyncResult {
-	cmd := g.authedGitCmd("fetch", "--prune")
-	cmd.Dir = repoPath
+	cmd := g.authedGitCmd(repoPath, "fetch", "--prune")
 	output, err := g.streamScm(cmd, repoPath)
 	kind, message := classifyGitOutput(output, err)
 	if kind == "auth_error" {
@@ -1008,43 +1026,52 @@ func (g *GitService) ClearIndexLock(repoPath string) error {
 	return nil
 }
 
-// authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0 and a Bearer
-// token injected via -c http.extraHeader when a token is available.
-// If the token cannot be obtained, an auth:expired event is emitted so the
-// frontend can prompt the user to sign in again immediately.
-func (g *GitService) authedGitCmd(args ...string) *exec.Cmd {
-	// Clear any inherited credential.helper so an expired/rejected token
-	// fails fast instead of falling through to an interactive system
-	// credential prompt (e.g. Windows' Git Credential Manager).
-	cmdArgs := []string{"-c", "credential.helper="}
-	if g.tokens == nil {
-		g.tokens, _ = NewConsoleTokenSource()
-	}
-	if g.tokens != nil {
-		token, err := g.tokens.AccessToken()
-		if err != nil {
-			// One short retry before concluding the session is dead: this call
-			// runs on whatever fired the git op (including the periodic
-			// background fetch), and a single transient blip here — e.g. the
-			// network still reconnecting right as the laptop wakes, the exact
-			// moment the fetch poll timer happens to fire — would otherwise pop
-			// the re-login modal even though the token is fine a moment later.
-			time.Sleep(300 * time.Millisecond)
-			token, err = g.tokens.AccessToken()
+// authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0, authenticated
+// against repoPath's origin remote — the system credential helper for GitHub,
+// or a Bearer token injected via -c http.extraHeader for everything else (see
+// gitHostAuthArgs), with any inherited credential.helper cleared so a
+// rejected/expired token fails fast instead of falling through to an
+// interactive system credential prompt (e.g. Windows' Git Credential
+// Manager). If a Bearer token is needed but can't be obtained, an
+// auth:expired event is emitted so the frontend can prompt the user to sign
+// in again immediately.
+func (g *GitService) authedGitCmd(repoPath string, args ...string) *exec.Cmd {
+	remoteURL := gitRemoteURL(repoPath)
+	var cmdArgs []string
+
+	if strings.Contains(remoteURL, "github.com") {
+		cmdArgs = append(cmdArgs, gitHostAuthArgs(remoteURL, "")...)
+	} else {
+		if g.tokens == nil {
+			g.tokens, _ = NewConsoleTokenSource()
 		}
-		if err == nil && token != "" {
-			cmdArgs = append(cmdArgs, "-c", "http.extraHeader=Authorization: Bearer "+token)
-		} else if err != nil {
-			g.mu.Lock()
-			app := g.app
-			g.mu.Unlock()
-			if app != nil {
-				app.Event.Emit("auth:expired")
+		if g.tokens != nil {
+			token, err := g.tokens.AccessToken()
+			if err != nil {
+				// One short retry before concluding the session is dead: this call
+				// runs on whatever fired the git op (including the periodic
+				// background fetch), and a single transient blip here — e.g. the
+				// network still reconnecting right as the laptop wakes, the exact
+				// moment the fetch poll timer happens to fire — would otherwise pop
+				// the re-login modal even though the token is fine a moment later.
+				time.Sleep(300 * time.Millisecond)
+				token, err = g.tokens.AccessToken()
+			}
+			if err == nil && token != "" {
+				cmdArgs = append(cmdArgs, gitHostAuthArgs(remoteURL, token)...)
+			} else if err != nil {
+				g.mu.Lock()
+				app := g.app
+				g.mu.Unlock()
+				if app != nil {
+					app.Event.Emit("auth:expired")
+				}
 			}
 		}
 	}
 	cmdArgs = append(cmdArgs, args...)
 	cmd := exec.Command("git", cmdArgs...)
+	cmd.Dir = repoPath
 	cmd.Env = noPromptEnv()
 	return cmd
 }
@@ -1054,7 +1081,7 @@ func (g *GitService) GetLog(repoPath string, limit int) ([]GitCommit, error) {
 	format := "%H|%P|%s|%an|%ct|%D"
 	out, err := gitCmd(repoPath, "git", "log", "--all", "--format="+format, "-n", strconv.Itoa(limit))
 	if err != nil {
-		return nil, err
+		return nil, gitOutputError(out, err)
 	}
 	var commits []GitCommit
 	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {

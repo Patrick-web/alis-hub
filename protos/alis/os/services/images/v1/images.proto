@@ -1,6 +1,8 @@
 syntax = "proto3";
 
 package alis.os.services.images.v1;
+
+option go_package = "alis-hub-v3/gen/go/alis/os/services/images/v1;imagesv1pb";
 message UploadImageRequest {
   message UploadSizeConfig {
     bool omit_original = 1;
