@@ -1,5 +1,21 @@
 # Changelog
 
+## [v0.14.6] - 2026-07-22
+
+### What's New
+- Codeblock publisher names are now shown instead of raw account IDs
+- Contributors and Admins granted access to a codeblock can now actually use that access: edit, contribute versions, and manage members, instead of only the original creator being able to
+
+### Bug Fixes
+- Fixed the Windows installer failing with "Error opening file for writing" when a previous version of Alis Hub was still running
+- Fixed the Windows gcloud install command failing with a TLS handshake error
+- The gcloud install step now points Windows users to the official installer instead of a silent install that could fail without explanation
+- Fixed Windows auto-update opening a browser page instead of downloading and installing the update automatically
+- Fixed git operations sometimes triggering a Windows credential popup instead of failing cleanly
+- Fixed git errors being silently swallowed instead of shown to the user
+- Fixed the browser tab title incorrectly showing "Design Component Library" instead of "Alis Hub"
+- Fixed release level labels not matching their correct values
+
 ## [v0.14.5] - 2026-07-17
 
 ### What's New
