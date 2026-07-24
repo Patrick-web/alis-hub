@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -135,5 +138,67 @@ func TestFreshCredsRefreshSuccess(t *testing.T) {
 	}
 	if tok != "new-id" {
 		t.Fatalf("expected refreshed id token, got %q", tok)
+	}
+}
+
+// TestFreshCredsCrossProcessLockSerializesRefresh simulates concurrent
+// git-credential-alis processes — each with its own independent
+// ConsoleTokenSource, since a fresh process gets a fresh in-memory mutex, so
+// only the cross-process file lock can serialize them — all hitting an
+// already-expiring token at once. Without the lock, every one of them would
+// redeem the same refresh_token concurrently; if the identity server rotates
+// it on use, all but the first get invalid_grant. With the lock, only the
+// first actually calls the identity server; the rest re-read the now-fresh
+// on-disk credentials instead of racing.
+func TestFreshCredsCrossProcessLockSerializesRefresh(t *testing.T) {
+	var refreshCount int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&refreshCount, 1)
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"access_token":"access-%d","id_token":"id-%d","refresh_token":"refresh-%d","expires_in":300}`, n, n, n)
+	}))
+	defer srv.Close()
+
+	old := alisConsoleIdentityURL
+	alisConsoleIdentityURL = srv.URL
+	defer func() { alisConsoleIdentityURL = old }()
+
+	dir := t.TempDir()
+	path := filepath.Join(dir, "console-credentials.json")
+	initial := &consoleCredentials{
+		AccessToken:  "old-access",
+		IDToken:      "old-id",
+		RefreshToken: "old-refresh",
+		Expiry:       time.Now().Add(1 * time.Minute), // inside the 3m grace window, needs refresh
+	}
+	data, err := json.MarshalIndent(initial, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	const n = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ts := &ConsoleTokenSource{path: path}
+			if _, err := ts.Token(); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Errorf("unexpected error from concurrent Token(): %v", err)
+	}
+
+	if got := atomic.LoadInt32(&refreshCount); got != 1 {
+		t.Fatalf("expected exactly 1 refresh call across %d concurrent processes, got %d", n, got)
 	}
 }

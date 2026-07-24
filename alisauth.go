@@ -39,6 +39,18 @@ const (
 	// server — a self-inflicted refresh storm that can trip its rate limits
 	// and surface as spurious auth failures.
 	alisConsoleTokenRefGrace = 3 * time.Minute
+
+	// credentialLockStaleAfter is how old an orphaned <path>.lock file must be
+	// before a waiter assumes its owner crashed mid-refresh and reclaims it.
+	// Must comfortably exceed a normal refresh round-trip (identity server
+	// call + atomic write) without wedging the lock for the rest of the
+	// session if a holder genuinely dies.
+	credentialLockStaleAfter = 10 * time.Second
+
+	// credentialLockWaitTimeout bounds how long a waiter blocks for the lock
+	// before giving up and proceeding without it. Losing this race just
+	// reverts that one call to the old unsynchronized behavior, not a hang.
+	credentialLockWaitTimeout = 15 * time.Second
 )
 
 // alisConsoleIdentityURL is the OAuth2 token/authorize endpoint host. It is a
@@ -118,6 +130,54 @@ func (s *ConsoleTokenSource) CookieHeader() (string, error) {
 	), nil
 }
 
+// isFreshCreds reports whether tok is non-empty and has more than the grace
+// window remaining before expiry.
+func isFreshCreds(tok string, expiry time.Time) bool {
+	return tok != "" && !expiry.IsZero() && time.Until(expiry) > alisConsoleTokenRefGrace
+}
+
+// acquireCredentialLock takes an exclusive, cross-process lock on lockPath via
+// atomic O_EXCL create — the same primitive git itself uses for
+// .git/index.lock. This is required because every `git-credential-alis get`
+// invocation is a brand-new OS process: ConsoleTokenSource's in-process mutex
+// only serializes refreshes within one process, but git spawns a fresh
+// credential-helper process per credential request, so concurrent git
+// operations (e.g. a multi-repo sync) each get their own unsynchronized
+// ConsoleTokenSource. Without this lock they can race to redeem the same
+// refresh_token; if the identity server rotates refresh tokens on use, all
+// but the winner get a rejected/stale access token that surfaces at Forgejo
+// as a generic "token has expired", indistinguishable from real clock expiry.
+//
+// On success the returned release func removes the lock file; on timeout it
+// returns a no-op release and a nil error, degrading that one call back to
+// the old unsynchronized behavior rather than blocking the caller forever.
+func acquireCredentialLock(lockPath string) (release func(), err error) {
+	deadline := time.Now().Add(credentialLockWaitTimeout)
+	for {
+		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if err == nil {
+			_, _ = f.WriteString(fmt.Sprintf("%d", os.Getpid()))
+			_ = f.Close()
+			return func() { _ = os.Remove(lockPath) }, nil
+		}
+		if !os.IsExist(err) {
+			return nil, fmt.Errorf("create lock file: %w", err)
+		}
+
+		if info, statErr := os.Stat(lockPath); statErr == nil && time.Since(info.ModTime()) > credentialLockStaleAfter {
+			// Owner likely crashed mid-refresh; reclaim the lock.
+			_ = os.Remove(lockPath)
+			continue
+		}
+
+		if time.Now().After(deadline) {
+			log.Printf("[auth] timed out waiting for credential lock %s; proceeding without it", lockPath)
+			return func() {}, nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
 func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -136,7 +196,7 @@ func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 		tok = creds.AccessToken
 	}
 
-	if tok != "" && !creds.Expiry.IsZero() && time.Until(creds.Expiry) > alisConsoleTokenRefGrace {
+	if isFreshCreds(tok, creds.Expiry) {
 		log.Printf("[auth] console token valid, no refresh needed (expiry=%s, in %s)",
 			creds.Expiry.Format(time.RFC3339), time.Until(creds.Expiry).Round(time.Second))
 		return creds, nil
@@ -144,6 +204,29 @@ func (s *ConsoleTokenSource) freshCreds() (*consoleCredentials, error) {
 
 	log.Printf("[auth] console token needs refresh (hasToken=%t expiry=%s untilExpiry=%s hasRefreshToken=%t)",
 		tok != "", formatExpiry(creds.Expiry), time.Until(creds.Expiry).Round(time.Second), creds.RefreshToken != "")
+
+	release, lockErr := acquireCredentialLock(s.path + ".lock")
+	if lockErr != nil {
+		log.Printf("[auth] could not acquire cross-process credential lock, proceeding without it: %v", lockErr)
+	} else {
+		defer release()
+	}
+
+	// Another process may have already refreshed while we waited for the
+	// lock — re-read rather than blindly redeeming a refresh_token that's
+	// potentially already been rotated out from under us.
+	if reRead, rerr := s.read(); rerr == nil {
+		rtok := reRead.IDToken
+		if rtok == "" {
+			rtok = reRead.AccessToken
+		}
+		if isFreshCreds(rtok, reRead.Expiry) {
+			log.Printf("[auth] credentials refreshed by another process while waiting for lock (expiry=%s)", formatExpiry(reRead.Expiry))
+			return reRead, nil
+		}
+		creds = reRead
+		tok = rtok
+	}
 
 	if creds.RefreshToken == "" {
 		if tok != "" {
