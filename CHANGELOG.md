@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.14.7] - 2026-07-28
+
+### Bug Fixes
+- Fixed an issue where concurrent processes could corrupt console credentials during token refresh
+- Fixed an issue where the token refresh grace window was too short, causing premature credential expiration
+
 ## [v0.14.6] - 2026-07-22
 
 ### What's New
