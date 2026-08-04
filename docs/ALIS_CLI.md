@@ -1,16 +1,20 @@
-# Alis CLI — current command reference
+# Alis CLI — current command reference (v1.54.0, superseded)
 
-> Verified live against the installed `alis` binary (v1.54.0, darwin-arm64) via
-> `alis --help`, `alis <cmd> --help`, and `alis docs`. Supersedes the binary
-> reverse-engineering notes below, which describe an older TUI-era build
+> **This document has been superseded by [ALIS_CLI_FEATURES.md](./ALIS_CLI_FEATURES.md)**
+> which covers the latest CLI version (v1.64.4) with complete feature documentation.
+> See also [ALIS_CLI_MIGRATION_ANALYSIS.md](./ALIS_CLI_MIGRATION_ANALYSIS.md) for
+> what this project can switch to using the CLI.
+
+> Originally verified against `alis` v1.54.0 (darwin-arm64). The binary
+> reverse-engineering notes in the appendix describe an older TUI-era build
 > (v1.0.54) and are kept for historical/internal-wiring context only.
 
 ## Purpose of this doc
 
 This repo (AlisHub) reimplements/wraps the same platform surface the `alis`
-CLI exposes. Use this doc as the source of truth when deciding whether a given
-piece of GitHub Actions / automation should shell out to `alis` directly
-instead of re-implementing a gRPC call or going through the MCP server.
+CLI exposes. This document is retained for historical reference on the
+underlying gRPC wiring and the rationale for preferring the CLI over the
+MCP server or direct gRPC calls.
 
 ## Command surface (`alis --help`)
 
