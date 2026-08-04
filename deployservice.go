@@ -21,7 +21,7 @@ func NewDeployService() *DeployService {
 	return &DeployService{}
 }
 
-func (s *DeployService) SetBackend(b DBDBackend) {
+func (s *DeployService) setBackend(b DBDBackend) {
 	s.backend = b
 }
 
@@ -211,6 +211,7 @@ func (s *DeployService) pollDeployGRPC(ctx context.Context, name string) (*RunDe
 
 // FetchDeployLogs fetches log output from a deploy logs URL.
 // Pass 0 as textOffset on the first call; pass the returned NextOffset on subsequent calls.
+// The deploy page defaults to a structured view; we fetch ?tab=logs for raw command output.
 func (s *DeployService) FetchDeployLogs(logsUrl string, textOffset int64) (*BuildLogsResult, error) {
 	if s.alisClient == nil {
 		return nil, fmt.Errorf("not connected to Alis backend")
@@ -219,7 +220,18 @@ func (s *DeployService) FetchDeployLogs(logsUrl string, textOffset int64) (*Buil
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	body, _, err := s.alisClient.FetchURL(ctx, logsUrl, 0)
+	// The alisproxy deploy page defaults to the "Deploy" tab. The raw logs
+	// are on the "Logs" tab, so append ?tab=logs if not already present.
+	url := logsUrl
+	if !strings.Contains(url, "?tab=") {
+		if strings.Contains(url, "?") {
+			url += "&tab=logs"
+		} else {
+			url += "?tab=logs"
+		}
+	}
+
+	body, _, err := s.alisClient.FetchURL(ctx, url, 0)
 	if err != nil {
 		return nil, fmt.Errorf("fetch deploy logs: %w", err)
 	}

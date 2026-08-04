@@ -49,7 +49,7 @@ func NewBuildService() *BuildService {
 	return &BuildService{}
 }
 
-func (s *BuildService) SetBackend(b DBDBackend) {
+func (s *BuildService) setBackend(b DBDBackend) {
 	s.backend = b
 }
 
@@ -337,35 +337,84 @@ type BuildLogsResult struct {
 var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
 
 // extractBuildLogText pulls the plain-text log out of the alisproxy HTML page.
-// The log lines are in <span class="log-line"> elements with <br> tags for line breaks.
+// Build pages use <span class="log-line"> elements with <br> tags for line breaks.
+// Deploy pages use a tabbed interface; we extract visible text from the rightPanel.
 func extractBuildLogText(pageHTML string) string {
-	var buf strings.Builder
-	// Find all <span class="log-line">...</span> blocks.
+	// Try log-line spans first (build pages).
 	marker := `<span class="log-line">`
-	searchFrom := 0
-	for {
-		start := strings.Index(pageHTML[searchFrom:], marker)
-		if start == -1 {
-			break
+	if strings.Contains(pageHTML, marker) {
+		var buf strings.Builder
+		searchFrom := 0
+		for {
+			start := strings.Index(pageHTML[searchFrom:], marker)
+			if start == -1 {
+				break
+			}
+			start = searchFrom + start + len(marker)
+			end := strings.Index(pageHTML[start:], "</span>")
+			if end == -1 {
+				break
+			}
+			text := pageHTML[start : start+end]
+			text = strings.ReplaceAll(text, "<br>", "\n")
+			text = strings.ReplaceAll(text, "<br/>", "\n")
+			text = strings.ReplaceAll(text, "<br />", "\n")
+			text = htmlTagRe.ReplaceAllString(text, "")
+			text = htmlpkg.UnescapeString(text)
+			if buf.Len() > 0 {
+				buf.WriteString("\n")
+			}
+			buf.WriteString(text)
+			searchFrom = start + end + len("</span>")
 		}
-		start = searchFrom + start + len(marker)
-		end := strings.Index(pageHTML[start:], "</span>")
-		if end == -1 {
-			break
+		return buf.String()
+	}
+
+	// Fallback for deploy pages: extract visible text from the rightPanel div.
+	panelStart := strings.Index(pageHTML, `id="rightPanel"`)
+	if panelStart == -1 {
+		return ""
+	}
+	// Find the rightPanel opening tag's >
+	tagEnd := strings.Index(pageHTML[panelStart:], ">")
+	if tagEnd == -1 {
+		return ""
+	}
+	contentStart := panelStart + tagEnd + 1
+
+	// Find the closing div by counting nested divs.
+	depth := 0
+	contentEnd := -1
+	for i := contentStart; i < len(pageHTML)-6; i++ {
+		if pageHTML[i:i+4] == "<div" {
+			depth++
+		} else if pageHTML[i:i+6] == "</div>" {
+			if depth == 0 {
+				contentEnd = i
+				break
+			}
+			depth--
 		}
-		text := pageHTML[start : start+end]
-		text = strings.ReplaceAll(text, "<br>", "\n")
-		text = strings.ReplaceAll(text, "<br/>", "\n")
-		text = strings.ReplaceAll(text, "<br />", "\n")
-		text = htmlTagRe.ReplaceAllString(text, "")
-		text = htmlpkg.UnescapeString(text)
-		if buf.Len() > 0 {
+	}
+	if contentEnd == -1 {
+		return ""
+	}
+	inner := pageHTML[contentStart:contentEnd]
+
+	// Strip HTML tags and decode entities.
+	text := htmlTagRe.ReplaceAllString(inner, " ")
+	text = htmlpkg.UnescapeString(text)
+
+	// Collapse whitespace but preserve line structure.
+	var buf strings.Builder
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			buf.WriteString(trimmed)
 			buf.WriteString("\n")
 		}
-		buf.WriteString(text)
-		searchFrom = start + end + len("</span>")
 	}
-	return buf.String()
+	return strings.TrimSpace(buf.String())
 }
 
 // FetchBuildLogs fetches the current log page from the alisproxy, extracts plain text,

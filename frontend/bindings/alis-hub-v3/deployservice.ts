@@ -17,6 +17,7 @@ import * as $models from "./models.js";
 /**
  * FetchDeployLogs fetches log output from a deploy logs URL.
  * Pass 0 as textOffset on the first call; pass the returned NextOffset on subsequent calls.
+ * The deploy page defaults to a structured view; we fetch ?tab=logs for raw command output.
  */
 export function FetchDeployLogs(logsUrl: string, textOffset: number): $CancellablePromise<$models.BuildLogsResult | null> {
     return $Call.ByID(2245220654, logsUrl, textOffset).then(($result: any) => {
@@ -53,6 +54,10 @@ export function RunDeploy(neuron: string, version: string, environments: string[
     return $Call.ByID(333160816, neuron, version, environments, planOnly, beta).then(($result: any) => {
         return $$createType6($result);
     });
+}
+
+export function SetBackend(b: $models.DBDBackend): $CancellablePromise<void> {
+    return $Call.ByID(378293102, b);
 }
 
 // Private type creation functions

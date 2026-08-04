@@ -119,14 +119,23 @@ func (r *Runner) Run(ctx context.Context, args ...string) (*Result, error) {
 	}
 }
 
-// RunAsync runs a command with --async appended and returns the operation name.
-func (r *Runner) RunAsync(ctx context.Context, args ...string) (string, error) {
+// RunAsync runs a command with --async appended and returns the full stdout as raw JSON.
+func (r *Runner) RunAsync(ctx context.Context, args ...string) (json.RawMessage, error) {
 	asyncArgs := append(args, "--async")
 	result, err := r.Run(ctx, asyncArgs...)
 	if err != nil {
+		return nil, err
+	}
+	return result.Stdout, nil
+}
+
+// RunAsyncName runs a command with --async and extracts just the operation name.
+func (r *Runner) RunAsyncName(ctx context.Context, args ...string) (string, error) {
+	stdout, err := r.RunAsync(ctx, args...)
+	if err != nil {
 		return "", err
 	}
-	return parseAsyncName(result.Stdout)
+	return parseAsyncName(stdout)
 }
 
 // Describe calls `alis operations describe <opName> --json` and returns the parsed state.

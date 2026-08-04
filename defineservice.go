@@ -24,7 +24,7 @@ func NewDefineService() *DefineService {
 	return &DefineService{}
 }
 
-func (s *DefineService) SetBackend(b DBDBackend) {
+func (s *DefineService) setBackend(b DBDBackend) {
 	s.backend = b
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"alis-hub-v3/internal/cliwrap"
@@ -28,6 +29,24 @@ type CLIBackend struct {
 	runner *cliwrap.Runner
 }
 
+// deployAsyncMeta holds the metadata from `alis deploy --json --async` output.
+type deployAsyncMeta struct {
+	Name     string              `json:"name"`
+	Metadata deployAsyncMetadata `json:"metadata"`
+}
+
+type deployAsyncMetadata struct {
+	Version     string                  `json:"version"`
+	Notes       string                  `json:"notes"`
+	Deployments []deployAsyncDeployment `json:"deployments"`
+}
+
+type deployAsyncDeployment struct {
+	Name    string `json:"name"`
+	State   string `json:"state"`
+	LogsURL string `json:"logsUrl"`
+}
+
 // NewCLIBackend creates a CLIBackend. Returns an error if alis is not in PATH.
 func NewCLIBackend() (*CLIBackend, error) {
 	runner, err := cliwrap.New("alis")
@@ -44,7 +63,7 @@ func (b *CLIBackend) RunDefine(ctx context.Context, neuron, commit string) (*Run
 		args = append(args, "--commit", commit)
 	}
 
-	opName, err := b.runner.RunAsync(ctx, args...)
+	opName, err := b.runner.RunAsyncName(ctx, args...)
 	if err != nil {
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
@@ -77,7 +96,7 @@ func (b *CLIBackend) RunBuild(ctx context.Context, neuron, commit string) (*RunB
 		args = append(args, "--commit", commit)
 	}
 
-	opName, err := b.runner.RunAsync(ctx, args...)
+	opName, err := b.runner.RunAsyncName(ctx, args...)
 	if err != nil {
 		return nil, fmt.Errorf("RunBuild: %w", err)
 	}
@@ -113,9 +132,8 @@ func (b *CLIBackend) RunDeploy(ctx context.Context, neuron, version string, envi
 		args = append(args, "--plan-only")
 	}
 
-	opName, err := b.runner.RunAsync(ctx, args...)
+	stdout, err := b.runner.RunAsync(ctx, args...)
 	if err != nil {
-		// Exit code 3 (confirmation required) — surface to frontend.
 		if cerr, ok := err.(*cliwrap.ErrConfirmationRequired); ok {
 			return &RunDeployResult{
 				Error: "PRODUCTION_CONFIRMATION_REQUIRED",
@@ -124,7 +142,23 @@ func (b *CLIBackend) RunDeploy(ctx context.Context, neuron, version string, envi
 		}
 		return nil, fmt.Errorf("RunDeploy: %w", err)
 	}
-	return &RunDeployResult{OperationName: opName, Done: false}, nil
+
+	// Parse the full --async output to get operation name + per-environment deployments.
+	var meta deployAsyncMeta
+	if err := json.Unmarshal(stdout, &meta); err != nil {
+		return nil, fmt.Errorf("parse deploy async: %w", err)
+	}
+
+	result := &RunDeployResult{
+		OperationName: meta.Name,
+		Done:          false,
+		Version:       meta.Metadata.Version,
+		Notes:         meta.Metadata.Notes,
+	}
+	for _, d := range meta.Metadata.Deployments {
+		result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})
+	}
+	return result, nil
 }
 
 func (b *CLIBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployResult, error) {
@@ -142,6 +176,11 @@ func (b *CLIBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployR
 	}
 	for _, d := range state.Deployments {
 		result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})
+	}
+	// Fallback: if no per-environment deployments but a top-level logsUri is present,
+	// surface it so FetchDeployLogs can stream it.
+	if len(result.Deployments) == 0 && state.LogsURI != "" {
+		result.Deployments = []*DeployItem{{LogsURL: state.LogsURI}}
 	}
 	return result, nil
 }

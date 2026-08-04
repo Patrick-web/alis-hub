@@ -75,15 +75,15 @@ func main() {
 	// gates for production deploys.
 	if cli, err := NewCLIBackend(); err == nil {
 		log.Println("[main] alis CLI backend available — DBD operations will use alis commands")
-		defineSvc.SetBackend(cli)
-		buildSvc.SetBackend(cli)
-		deploySvc.SetBackend(cli)
+		defineSvc.setBackend(cli)
+		buildSvc.setBackend(cli)
+		deploySvc.setBackend(cli)
 	} else {
 		log.Printf("[main] alis CLI not found (%v) — falling back to gRPC backend", err)
 		grpcBackend := NewGRPCBackend(defineSvc, buildSvc, deploySvc)
-		defineSvc.SetBackend(grpcBackend)
-		buildSvc.SetBackend(grpcBackend)
-		deploySvc.SetBackend(grpcBackend)
+		defineSvc.setBackend(grpcBackend)
+		buildSvc.setBackend(grpcBackend)
+		deploySvc.setBackend(grpcBackend)
 	}
 
 	hubDB, err := OpenHubDB()

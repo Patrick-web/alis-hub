@@ -1057,6 +1057,11 @@ export class CreateCodeblockParams {
 }
 
 /**
+ * DBDBackend abstracts define/build/deploy operations behind either the CLI or gRPC.
+ */
+export type DBDBackend = any;
+
+/**
  * DefineCommit represents a git commit in the define repository.
  */
 export class DefineCommit {

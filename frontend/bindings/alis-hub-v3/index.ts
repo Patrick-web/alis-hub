@@ -143,3 +143,7 @@ export {
     WorkflowStep,
     WorkspaceInfo
 } from "./models.js";
+
+export type {
+    DBDBackend
+} from "./models.js";
