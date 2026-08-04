@@ -20,6 +20,13 @@ import { useWorkflowRuns, type StepRunStatus } from "../stores/workflowRuns";
 import { useNotifications } from "../stores/notifications";
 import { useProtectedEnvironments } from "../stores/protectedEnvironments";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "../components/ui/context-menu";
 import { notify } from "../lib/notify";
 import * as WorkflowService from "../../../bindings/alis-hub-v3/workflowservice";
 import type { WorkflowRun } from "../../../bindings/alis-hub-v3/models";
@@ -415,6 +422,8 @@ export function WorkflowsPage() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [deleteWorkflowTarget, setDeleteWorkflowTarget] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // ── Run tab state ──────────────────────────────────────────────────────────
   // Run/poll state itself lives in WorkflowRunsProvider so it survives navigating
@@ -652,10 +661,20 @@ export function WorkflowsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this workflow?")) return;
-    await WorkflowService.DeleteWorkflow(id);
-    await load();
-    if (activeId === id) setActiveId(null);
+    setDeleteWorkflowTarget(id);
+  };
+
+  const executeDeleteWorkflow = async () => {
+    if (!deleteWorkflowTarget) return;
+    setDeleting(true);
+    try {
+      await WorkflowService.DeleteWorkflow(deleteWorkflowTarget);
+      await load();
+      if (activeId === deleteWorkflowTarget) setActiveId(null);
+    } finally {
+      setDeleting(false);
+      setDeleteWorkflowTarget(null);
+    }
   };
 
   const handleCreate = async () => {
@@ -872,6 +891,7 @@ export function WorkflowsPage() {
                       active={activeId === wf.id}
                       onClick={() => setActiveId(wf.id)}
                       onExport={() => handleExport(wf.id)}
+                      onClone={() => handleClone(wf.id)}
                     />
                   ))}
                   {userWorkflows.length > 0 && (
@@ -890,6 +910,8 @@ export function WorkflowsPage() {
                   active={activeId === wf.id}
                   onClick={() => setActiveId(wf.id)}
                   onExport={() => handleExport(wf.id)}
+                  onClone={() => handleClone(wf.id)}
+                  onDelete={() => handleDelete(wf.id)}
                 />
               ))}
               {workflows.length === 0 && (
@@ -1360,6 +1382,18 @@ export function WorkflowsPage() {
           if (pending) startRunNow(pending.argValues, pending.startPosition);
         }}
       />
+      <ConfirmDialog
+        open={deleteWorkflowTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteWorkflowTarget(null);
+        }}
+        title="Delete Workflow"
+        description="This permanently deletes the workflow and all of its run history. This action cannot be undone."
+        confirmLabel="Delete"
+        loading={deleting}
+        loadingLabel="Deleting…"
+        onConfirm={executeDeleteWorkflow}
+      />
     </div>
   );
 }
@@ -1665,46 +1699,79 @@ function WorkflowListItem({
   active,
   onClick,
   onExport,
+  onDelete,
+  onClone,
 }: {
   workflow: Workflow;
   active: boolean;
   onClick: () => void;
   onExport: () => void;
+  onDelete?: () => void;
+  onClone?: () => void;
 }) {
   return (
-    <div
-      className={`relative group flex items-stretch mx-1 rounded-lg transition-colors text-sm ${
-        active ? "bg-brand-fill/10 text-brand" : "text-foreground hover:bg-accent"
-      }`}
-      style={{ width: "calc(100% - 8px)" }}
-    >
-      <button onClick={onClick} className="flex-1 text-left px-3 py-2 min-w-0">
-        <div className="flex items-center gap-1.5">
-          {workflow.isTemplate && (
-            <Icon
-              icon="solar:lock-linear"
-              className="text-[10px] text-foreground/30 flex-shrink-0"
-            />
-          )}
-          <span className="font-medium truncate text-xs">{workflow.name}</span>
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className={`relative group flex items-stretch mx-1 rounded-lg transition-colors text-sm ${
+            active ? "bg-brand-fill/10 text-brand" : "text-foreground hover:bg-accent"
+          }`}
+          style={{ width: "calc(100% - 8px)" }}
+        >
+          <button onClick={onClick} className="flex-1 text-left px-3 py-2 min-w-0">
+            <div className="flex items-center gap-1.5">
+              {workflow.isTemplate && (
+                <Icon
+                  icon="solar:lock-linear"
+                  className="text-[10px] text-foreground/30 flex-shrink-0"
+                />
+              )}
+              <span className="font-medium truncate text-xs">{workflow.name}</span>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[10px] text-foreground/30">
+                {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onExport();
+            }}
+            className="opacity-0 group-hover:opacity-100 w-6 flex items-center justify-center text-foreground/40 hover:text-foreground transition-opacity flex-shrink-0 pr-1"
+            title="Export workflow"
+          >
+            <Icon icon="solar:export-linear" className="text-xs" />
+          </button>
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-foreground/30">
-            {workflow.steps.length} step{workflow.steps.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      </button>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onExport();
-        }}
-        className="opacity-0 group-hover:opacity-100 w-6 flex items-center justify-center text-foreground/40 hover:text-foreground transition-opacity flex-shrink-0 pr-1"
-        title="Export workflow"
-      >
-        <Icon icon="solar:export-linear" className="text-xs" />
-      </button>
-    </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        {!workflow.isTemplate && (
+          <ContextMenuItem onClick={onClick}>
+            <Icon icon="solar:pen-2-linear" className="text-sm" />
+            Rename
+          </ContextMenuItem>
+        )}
+        <ContextMenuItem onClick={onClone}>
+          <Icon icon="solar:copy-linear" className="text-sm" />
+          Clone
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onExport}>
+          <Icon icon="solar:export-linear" className="text-sm" />
+          Export
+        </ContextMenuItem>
+        {!workflow.isTemplate && onDelete && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem variant="destructive" onClick={onDelete}>
+              <Icon icon="solar:trash-bin-trash-linear" className="text-sm" />
+              Delete
+            </ContextMenuItem>
+          </>
+        )}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 
@@ -1787,8 +1854,8 @@ function StepCard({
         )}
         <Icon icon={type.icon} className={`text-sm flex-shrink-0 ${type.color}`} />
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium">{type.label}</div>
-          <div className="text-[10px] text-foreground/40 truncate font-mono mt-0.5">{summary}</div>
+          <div className="text-xs font-medium">{summary}</div>
+          <div className="text-[10px] text-foreground/40 truncate font-mono mt-0.5">{type.label}</div>
         </div>
         {!isTemplate && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
