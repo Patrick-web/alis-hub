@@ -21,6 +21,7 @@ import (
 // BuildService is a Wails-bound service that orchestrates the Build flow.
 type BuildService struct {
 	alisClient  *alisclient.AlisClient
+	backend     DBDBackend
 	productSvc  *ProductService
 	localBuilds sync.Map // map[string]*localBuildState
 }
@@ -46,6 +47,10 @@ func (w *lockedWriter) Write(p []byte) (int, error) {
 
 func NewBuildService() *BuildService {
 	return &BuildService{}
+}
+
+func (s *BuildService) SetBackend(b DBDBackend) {
+	s.backend = b
 }
 
 func (s *BuildService) initProductSvc() {
@@ -271,6 +276,15 @@ func (s *BuildService) scanDockerfiles(neuron string) map[string]dbdv1.RunBuildA
 
 // RunBuild starts a Build operation on the Alis backend.
 func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) {
+	log.Printf("[build] RunBuild: neuron=%s commit=%s backend=%T", neuron, commit, s.backend)
+	if s.backend != nil {
+		return s.backend.RunBuild(context.Background(), neuron, commit)
+	}
+	return s.runBuildGRPC(context.Background(), neuron, commit)
+}
+
+// runBuildGRPC is the original gRPC implementation of RunBuild.
+func (s *BuildService) runBuildGRPC(ctx context.Context, neuron, commit string) (*RunBuildResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -288,7 +302,7 @@ func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) 
 		Images: images,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.RunBuild(ctx, req)
@@ -385,13 +399,21 @@ func (s *BuildService) FetchBuildLogs(logsUrl string, textOffset int64) (*BuildL
 // PollBuildOperation checks the status of a running Build operation.
 // neuron is the full neuron resource name (needed to construct the logs URL when the API doesn't return one).
 func (s *BuildService) PollBuildOperation(name, neuron string) (*RunBuildResult, error) {
+	if s.backend != nil {
+		return s.backend.PollBuild(context.Background(), name, neuron)
+	}
+	return s.pollBuildGRPC(context.Background(), name, neuron)
+}
+
+// pollBuildGRPC is the original gRPC implementation of PollBuildOperation.
+func (s *BuildService) pollBuildGRPC(ctx context.Context, name, neuron string) (*RunBuildResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
 
 	log.Printf("[build] PollBuildOperation: polling %s", name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.GetOperation(ctx, name)

@@ -14,10 +14,15 @@ import (
 // DeployService is a Wails-bound service that orchestrates the Deploy flow.
 type DeployService struct {
 	alisClient *alisclient.AlisClient
+	backend    DBDBackend
 }
 
 func NewDeployService() *DeployService {
 	return &DeployService{}
+}
+
+func (s *DeployService) SetBackend(b DBDBackend) {
+	s.backend = b
 }
 
 func (s *DeployService) initClient() error {
@@ -98,6 +103,15 @@ func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSumma
 // neuron is the full neuron resource name. version is the neuron version to deploy.
 // planOnly runs terraform plan only; beta allows beta-state neurons to be deployed.
 func (s *DeployService) RunDeploy(neuron, version string, environments []string, planOnly, beta bool) (*RunDeployResult, error) {
+	log.Printf("[deploy] RunDeploy: neuron=%s version=%s envs=%v planOnly=%v backend=%T", neuron, version, environments, planOnly, s.backend)
+	if s.backend != nil {
+		return s.backend.RunDeploy(context.Background(), neuron, version, environments, planOnly)
+	}
+	return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly)
+}
+
+// runDeployGRPC is the original gRPC implementation of RunDeploy.
+func (s *DeployService) runDeployGRPC(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -110,17 +124,16 @@ func (s *DeployService) RunDeploy(neuron, version string, environments []string,
 		versionID = strings.ReplaceAll(version[idx+1:], "-", ".")
 	}
 
-	log.Printf("[deploy] RunDeploy: neuron=%s versionID=%s envs=%v planOnly=%v beta=%v", neuron, versionID, environments, planOnly, beta)
+	log.Printf("[deploy] RunDeploy: neuron=%s versionID=%s envs=%v planOnly=%v", neuron, versionID, environments, planOnly)
 
 	req := &dbdv1.RunDeployRequest{
 		Neuron:       neuron,
 		Version:      versionID,
 		Environments: environments,
 		PlanOnly:     planOnly,
-		Beta:         beta,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.RunDeploy(ctx, req)
@@ -146,13 +159,21 @@ func (s *DeployService) RunDeploy(neuron, version string, environments []string,
 
 // PollDeployOperation checks the status of a running Deploy operation.
 func (s *DeployService) PollDeployOperation(name string) (*RunDeployResult, error) {
+	if s.backend != nil {
+		return s.backend.PollDeploy(context.Background(), name)
+	}
+	return s.pollDeployGRPC(context.Background(), name)
+}
+
+// pollDeployGRPC is the original gRPC implementation of PollDeployOperation.
+func (s *DeployService) pollDeployGRPC(ctx context.Context, name string) (*RunDeployResult, error) {
 	if s.alisClient == nil {
 		return nil, fmt.Errorf("not connected to Alis backend")
 	}
 
 	log.Printf("[deploy] PollDeployOperation: polling %s", name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.GetOperation(ctx, name)

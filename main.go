@@ -70,6 +70,22 @@ func main() {
 	packageSvc := NewPackageService()
 	logSvc := NewLogService()
 
+	// Prefer the alis CLI backend when available; fall back to the existing gRPC
+	// backend. The CLI provides more reliable operation polling and built-in safety
+	// gates for production deploys.
+	if cli, err := NewCLIBackend(); err == nil {
+		log.Println("[main] alis CLI backend available — DBD operations will use alis commands")
+		defineSvc.SetBackend(cli)
+		buildSvc.SetBackend(cli)
+		deploySvc.SetBackend(cli)
+	} else {
+		log.Printf("[main] alis CLI not found (%v) — falling back to gRPC backend", err)
+		grpcBackend := NewGRPCBackend(defineSvc, buildSvc, deploySvc)
+		defineSvc.SetBackend(grpcBackend)
+		buildSvc.SetBackend(grpcBackend)
+		deploySvc.SetBackend(grpcBackend)
+	}
+
 	hubDB, err := OpenHubDB()
 	if err != nil {
 		log.Fatal("hub db:", err)

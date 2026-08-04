@@ -17,10 +17,15 @@ import (
 // DefineService is a Wails-bound service that orchestrates the Define flow.
 type DefineService struct {
 	alisClient *alisclient.AlisClient
+	backend    DBDBackend
 }
 
 func NewDefineService() *DefineService {
 	return &DefineService{}
+}
+
+func (s *DefineService) SetBackend(b DBDBackend) {
+	s.backend = b
 }
 
 func (s *DefineService) initClient() error {
@@ -152,19 +157,27 @@ type RunDefineResult struct {
 
 // RunDefine starts a Define operation on the Alis backend.
 func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefineResult, error) {
+	log.Printf("[define] RunDefine: neuron=%s commit=%s releaseType=%q backend=%T", neuron, commit, releaseType, s.backend)
+	if s.backend != nil {
+		return s.backend.RunDefine(context.Background(), neuron, commit)
+	}
+	return s.runDefineGRPC(context.Background(), neuron, commit)
+}
+
+// runDefineGRPC is the original gRPC implementation of RunDefine.
+func (s *DefineService) runDefineGRPC(ctx context.Context, neuron, commit string) (*RunDefineResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
 
-	log.Printf("[define] RunDefine: neuron=%s commit=%s releaseType=%q", neuron, commit, releaseType)
+	log.Printf("[define] RunDefine: neuron=%s commit=%s", neuron, commit)
 
 	req := &dbdv1.RunDefineRequest{
 		Neuron:      neuron,
 		Commit:      commit,
-		ReleaseType: releaseType,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.RunDefine(ctx, req)
@@ -190,13 +203,21 @@ func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefin
 
 // PollDefineOperation checks the status of a running Define operation.
 func (s *DefineService) PollDefineOperation(name string) (*RunDefineResult, error) {
+	if s.backend != nil {
+		return s.backend.PollDefine(context.Background(), name)
+	}
+	return s.pollDefineGRPC(context.Background(), name)
+}
+
+// pollDefineGRPC is the original gRPC implementation of PollDefineOperation.
+func (s *DefineService) pollDefineGRPC(ctx context.Context, name string) (*RunDefineResult, error) {
 	if s.alisClient == nil {
 		return nil, fmt.Errorf("not connected to Alis backend")
 	}
 
 	log.Printf("[define] PollDefineOperation: polling %s", name)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
 	op, err := s.alisClient.GetOperation(ctx, name)
