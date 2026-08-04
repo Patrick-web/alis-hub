@@ -86,6 +86,8 @@ func main() {
 		deploySvc.setBackend(grpcBackend)
 	}
 
+	cliSvc := NewCLIService()
+
 	hubDB, err := OpenHubDB()
 	if err != nil {
 		log.Fatal("hub db:", err)
@@ -130,6 +132,7 @@ func main() {
 			application.NewService(workflowSvc),
 			application.NewService(settingsSvc),
 			application.NewService(logSvc),
+			application.NewService(cliSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.BundledAssetFileServer(assets),

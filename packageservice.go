@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"alis-hub-v3/internal/alisclient"
+	"alis-hub-v3/internal/cliwrap"
 	"alis-hub-v3/internal/terminal"
 )
 
@@ -18,6 +20,7 @@ import (
 type PackageService struct {
 	mu         sync.Mutex
 	alisClient *alisclient.AlisClient
+	cliRunner  *cliwrap.Runner
 	processes  sync.Map // map[runID]*packageProcess
 }
 
@@ -31,7 +34,11 @@ type packageProcess struct {
 }
 
 func NewPackageService() *PackageService {
-	return &PackageService{}
+	svc := &PackageService{}
+	if r, err := cliwrap.New("alis"); err == nil {
+		svc.cliRunner = r
+	}
+	return svc
 }
 
 func (s *PackageService) initClient() error {
@@ -351,4 +358,64 @@ func (s *PackageService) StartVenvSetup(runID, org, product string) error {
 		".venv/bin/python3 -m pip install keyring keyrings.google-artifactregistry-auth wheel && " +
 		"gcloud auth application-default login"
 	return s.StartPackageScript(runID, cmd, workDir)
+}
+
+// =============================================================================
+// CLI-backed package operations (alis packages * --json)
+// =============================================================================
+
+// CLIPackageResult holds the output of a CLI package command.
+type CLIPackageResult struct {
+	Output string `json:"output"`
+	Error  string `json:"error,omitempty"`
+}
+
+// CLIPackagesInstall runs `alis packages install <pkg> --json`.
+func (s *PackageService) CLIPackagesInstall(org, product, neuron, version string) (*CLIPackageResult, error) {
+	if s.cliRunner == nil {
+		return nil, fmt.Errorf("alis CLI not available")
+	}
+	pkg := org + "." + product + "." + neuron + "." + version
+	log.Printf("[packages] CLI install: %s", pkg)
+	result, err := s.cliRunner.Run(context.Background(), "packages", "install", pkg, "--json")
+	if err != nil {
+		return nil, fmt.Errorf("packages install: %w", err)
+	}
+	return &CLIPackageResult{Output: string(result.Stdout)}, nil
+}
+
+// CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
+func (s *PackageService) CLIPackagesUpgrade(org, product, neuron, version string, all bool) (*CLIPackageResult, error) {
+	if s.cliRunner == nil {
+		return nil, fmt.Errorf("alis CLI not available")
+	}
+	pkg := org + "." + product + "." + neuron + "." + version
+	args := []string{"packages", "upgrade", pkg, "--json"}
+	if all {
+		args = append(args, "--all")
+	}
+	log.Printf("[packages] CLI upgrade: %s all=%v", pkg, all)
+	result, err := s.cliRunner.Run(context.Background(), args...)
+	if err != nil {
+		return nil, fmt.Errorf("packages upgrade: %w", err)
+	}
+	return &CLIPackageResult{Output: string(result.Stdout)}, nil
+}
+
+// CLIDefineWithInstall runs `alis define <pkg> --json --install` — define + install in one call.
+func (s *PackageService) CLIDefineWithInstall(org, product, neuron, version string, commit string) (*CLIPackageResult, error) {
+	if s.cliRunner == nil {
+		return nil, fmt.Errorf("alis CLI not available")
+	}
+	pkg := org + "." + product + "." + neuron + "." + version
+	args := []string{"define", pkg, "--json", "--install"}
+	if commit != "" {
+		args = append(args, "--commit", commit)
+	}
+	log.Printf("[packages] CLI define+install: %s", pkg)
+	result, err := s.cliRunner.Run(context.Background(), args...)
+	if err != nil {
+		return nil, fmt.Errorf("define --install: %w", err)
+	}
+	return &CLIPackageResult{Output: string(result.Stdout)}, nil
 }

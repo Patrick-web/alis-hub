@@ -19,6 +19,33 @@ import * as alisclient$0 from "./internal/alisclient/models.js";
 import * as $models from "./models.js";
 
 /**
+ * CLIDefineWithInstall runs `alis define <pkg> --json --install` — define + install in one call.
+ */
+export function CLIDefineWithInstall(org: string, product: string, neuron: string, version: string, commit: string): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(1483476993, org, product, neuron, version, commit).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * CLIPackagesInstall runs `alis packages install <pkg> --json`.
+ */
+export function CLIPackagesInstall(org: string, product: string, neuron: string, version: string): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(1240612287, org, product, neuron, version).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
+ */
+export function CLIPackagesUpgrade(org: string, product: string, neuron: string, version: string, all: boolean): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(465072776, org, product, neuron, version, all).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
  * CancelPackageRun cancels a running script.
  */
 export function CancelPackageRun(runID: string): $CancellablePromise<void> {
@@ -37,7 +64,7 @@ export function CheckVenvExists(org: string, product: string): $CancellablePromi
  */
 export function PollPackageRun(runID: string, offset: number): $CancellablePromise<$models.LocalBuildChunk | null> {
     return $Call.ByID(1401151733, runID, offset).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -47,7 +74,7 @@ export function PollPackageRun(runID: string, offset: number): $CancellablePromi
  */
 export function PreparePackageScripts(org: string, product: string, neuron: string, version: string, ignoreHidden: boolean, extraPatterns: string[]): $CancellablePromise<alisclient$0.PackageScript[]> {
     return $Call.ByID(972249452, org, product, neuron, version, ignoreHidden, extraPatterns).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
     });
 }
 
@@ -81,7 +108,9 @@ export function WritePackageInput(runID: string, data: string): $CancellableProm
 }
 
 // Private type creation functions
-const $$createType0 = $models.LocalBuildChunk.createFrom;
+const $$createType0 = $models.CLIPackageResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = alisclient$0.PackageScript.createFrom;
-const $$createType3 = $Create.Array($$createType2);
+const $$createType2 = $models.LocalBuildChunk.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = alisclient$0.PackageScript.createFrom;
+const $$createType5 = $Create.Array($$createType4);

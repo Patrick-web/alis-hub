@@ -3,6 +3,7 @@
 
 import * as BuildKitService from "./buildkitservice.js";
 import * as BuildService from "./buildservice.js";
+import * as CLIService from "./cliservice.js";
 import * as ChangelogService from "./changelogservice.js";
 import * as DefineService from "./defineservice.js";
 import * as DeployService from "./deployservice.js";
@@ -20,6 +21,7 @@ import * as WorkflowService from "./workflowservice.js";
 export {
     BuildKitService,
     BuildService,
+    CLIService,
     ChangelogService,
     DefineService,
     DeployService,
@@ -50,6 +52,7 @@ export {
     BootstrapBlockParams,
     BuildLogsResult,
     BuildSpecItem,
+    CLIPackageResult,
     CloudRunService,
     Codeblock,
     CodeblockFeature,
@@ -142,8 +145,4 @@ export {
     WorkflowRun,
     WorkflowStep,
     WorkspaceInfo
-} from "./models.js";
-
-export type {
-    DBDBackend
 } from "./models.js";

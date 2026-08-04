@@ -56,10 +56,6 @@ export function RunDeploy(neuron: string, version: string, environments: string[
     });
 }
 
-export function SetBackend(b: $models.DBDBackend): $CancellablePromise<void> {
-    return $Call.ByID(378293102, b);
-}
-
 // Private type creation functions
 const $$createType0 = $models.BuildLogsResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);

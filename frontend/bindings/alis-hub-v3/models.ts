@@ -460,6 +460,31 @@ export class BuildSpecItem {
     }
 }
 
+/**
+ * CLIPackageResult holds the output of a CLI package command.
+ */
+export class CLIPackageResult {
+    "output": string;
+    "error"?: string;
+
+    /** Creates a new CLIPackageResult instance. */
+    constructor($$source: Partial<CLIPackageResult> = {}) {
+        if (!("output" in $$source)) {
+            this["output"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CLIPackageResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CLIPackageResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new CLIPackageResult($$parsedSource as Partial<CLIPackageResult>);
+    }
+}
+
 export class CloudRunService {
     /**
      * Full resource name: projects/P/locations/L/services/S
@@ -1055,11 +1080,6 @@ export class CreateCodeblockParams {
         return new CreateCodeblockParams($$parsedSource as Partial<CreateCodeblockParams>);
     }
 }
-
-/**
- * DBDBackend abstracts define/build/deploy operations behind either the CLI or gRPC.
- */
-export type DBDBackend = any;
 
 /**
  * DefineCommit represents a git commit in the define repository.

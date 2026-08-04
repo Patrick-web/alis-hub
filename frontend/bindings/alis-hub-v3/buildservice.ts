@@ -94,10 +94,6 @@ export function RunBuild(neuron: string, commit: string): $CancellablePromise<$m
     });
 }
 
-export function SetBackend(b: $models.DBDBackend): $CancellablePromise<void> {
-    return $Call.ByID(1370141225, b);
-}
-
 /**
  * StartLocalBuild launches a local Docker build in a goroutine and returns
  * a build ID that can be passed to PollLocalBuild to stream output.
