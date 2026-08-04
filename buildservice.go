@@ -337,32 +337,35 @@ type BuildLogsResult struct {
 var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
 
 // extractBuildLogText pulls the plain-text log out of the alisproxy HTML page.
-// Both build and deploy pages embed logs in <span class="text-sm"> inside #rightPanel.
-// Build logs contain only text nodes; deploy logs contain nested <span style="..."> tags.
-// We find the outer span's content using </span></div> as the end marker, then strip inner tags.
+// The log lines are in <span class="log-line"> elements with <br> tags for line breaks.
 func extractBuildLogText(pageHTML string) string {
-	const marker = `<span class="text-sm">`
-	start := strings.Index(pageHTML, marker)
-	if start == -1 {
-		return ""
-	}
-	start += len(marker)
-	// Deploy logs: outer span closes just before the rightPanel </div>.
-	// Use </span></div> to skip nested spans.
-	end := strings.Index(pageHTML[start:], "</span></div>")
-	if end == -1 {
-		// Fallback for build logs with no nesting.
-		end = strings.Index(pageHTML[start:], "</span>")
-		if end == -1 {
-			return ""
+	var buf strings.Builder
+	// Find all <span class="log-line">...</span> blocks.
+	marker := `<span class="log-line">`
+	searchFrom := 0
+	for {
+		start := strings.Index(pageHTML[searchFrom:], marker)
+		if start == -1 {
+			break
 		}
+		start = searchFrom + start + len(marker)
+		end := strings.Index(pageHTML[start:], "</span>")
+		if end == -1 {
+			break
+		}
+		text := pageHTML[start : start+end]
+		text = strings.ReplaceAll(text, "<br>", "\n")
+		text = strings.ReplaceAll(text, "<br/>", "\n")
+		text = strings.ReplaceAll(text, "<br />", "\n")
+		text = htmlTagRe.ReplaceAllString(text, "")
+		text = htmlpkg.UnescapeString(text)
+		if buf.Len() > 0 {
+			buf.WriteString("\n")
+		}
+		buf.WriteString(text)
+		searchFrom = start + end + len("</span>")
 	}
-	text := pageHTML[start : start+end]
-	text = strings.ReplaceAll(text, "<br>", "\n")
-	text = strings.ReplaceAll(text, "<br/>", "\n")
-	text = strings.ReplaceAll(text, "<br />", "\n")
-	text = htmlTagRe.ReplaceAllString(text, "")
-	return htmlpkg.UnescapeString(text)
+	return buf.String()
 }
 
 // FetchBuildLogs fetches the current log page from the alisproxy, extracts plain text,
