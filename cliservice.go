@@ -123,6 +123,38 @@ func (s *CLIService) CLIBlocksVersions(blockID string) (string, error) {
 }
 
 // =============================================================================
+// Git credential setup
+// =============================================================================
+
+// CLIAuthorise runs `alis authorise <org>.<product> --json` to configure git
+// credential helpers and refresh package credentials for a product.
+func (s *CLIService) CLIAuthorise(org, product string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	ref := org + "." + product
+	result, err := s.runner.Run(context.Background(), "authorise", ref, "--json")
+	if err != nil {
+		return "", fmt.Errorf("authorise: %w", err)
+	}
+	return string(result.Stdout), nil
+}
+
+// CLIGitConfigure runs `alis git configure <org>.<product> --json` to show
+// git remote URLs, auth tokens, and user identity for the product repos.
+func (s *CLIService) CLIGitConfigure(org, product string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	ref := org + "." + product
+	result, err := s.runner.Run(context.Background(), "git", "configure", ref, "--json")
+	if err != nil {
+		return "", fmt.Errorf("git configure: %w", err)
+	}
+	return string(result.Stdout), nil
+}
+
+// =============================================================================
 // Environment management
 // =============================================================================
 

@@ -42,19 +42,16 @@ func main() {
 	// installed tools like docker would otherwise report "not found".
 	fixPathEnv()
 
-	// Best-effort: refresh git auth on launch, then keep it fresh. The
-	// underlying access token is short-lived (~5min), so only syncing at
-	// launch/login leaves git-auth.gitconfig stale for most of the session.
+	// Best-effort: install the legacy credential helper as a fallback for
+	// repos cloned before the alis CLI was available. Once the user selects
+	// a product, alis authorise configures the CLI's auto-refreshing helper
+	// which is preferred going forward.
 	go func() {
-		if err := SyncGitAuth(); err != nil {
-			log.Printf("git auth sync: %v", err)
+		if err := installCredentialHelper(); err != nil {
+			log.Printf("credential helper install: %v", err)
 		}
-		ticker := time.NewTicker(2 * time.Minute)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := SyncGitAuth(); err != nil {
-				log.Printf("git auth sync: %v", err)
-			}
+		if err := configureGlobalCredentialHelper(); err != nil {
+			log.Printf("credential helper config: %v", err)
 		}
 	}()
 
