@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +18,46 @@ import (
 )
 
 func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
+	// Try CLI first for fast basic listing.
+	if s.alisCli != nil {
+		if data, err := s.listZonesCLI(); err == nil {
+			return data, nil
+		} else {
+			log.Printf("[orgs] CLI org list failed, falling back to gRPC: %v", err)
+		}
+	}
+	return s.listZonesGRPC()
+}
+
+// listZonesCLI builds LandingZonesData from alis org list --json.
+func (s *ProductService) listZonesCLI() (*LandingZonesData, error) {
+	result, err := s.alisCli.Run(context.Background(), "org", "list", "--json")
+	if err != nil {
+		return nil, err
+	}
+	var v struct {
+		LandingZones []struct {
+			ID          string `json:"id"`
+			Status      string `json:"status"`
+			DisplayName string `json:"displayName"`
+		} `json:"landingZones"`
+	}
+	if err := json.Unmarshal(result.Stdout, &v); err != nil {
+		return nil, fmt.Errorf("parse org list: %w", err)
+	}
+	result2 := &LandingZonesData{}
+	for _, z := range v.LandingZones {
+		org := Organisation{
+			Name:        "organisations/" + z.ID,
+			DisplayName: z.DisplayName,
+		}
+		// Without gRPC we can't classify Own/Shared, so put all in Own.
+		result2.Own = append(result2.Own, org)
+	}
+	return result2, nil
+}
+
+func (s *ProductService) listZonesGRPC() (*LandingZonesData, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}
@@ -68,6 +110,45 @@ func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
 }
 
 func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
+	// Try CLI first via alis product view --json.
+	if s.alisCli != nil {
+		if products, err := s.listProductsCLI(org); err == nil {
+			return products, nil
+		} else {
+			log.Printf("[orgs] CLI product view failed for %s, falling back to gRPC: %v", org, err)
+		}
+	}
+	return s.listProductsGRPC(org)
+}
+
+// listProductsCLI builds ProductSummary list from alis org view --json.
+func (s *ProductService) listProductsCLI(org string) ([]ProductSummary, error) {
+	result, err := s.alisCli.Run(context.Background(), "org", "view", org, "--json")
+	if err != nil {
+		return nil, err
+	}
+	var v struct {
+		Products []struct {
+			ID          string `json:"id"`
+			Status      string `json:"status"`
+			DisplayName string `json:"displayName"`
+		} `json:"products"`
+	}
+	if err := json.Unmarshal(result.Stdout, &v); err != nil {
+		return nil, fmt.Errorf("parse org view: %w", err)
+	}
+	products := make([]ProductSummary, 0, len(v.Products))
+	for _, p := range v.Products {
+		products = append(products, ProductSummary{
+			Name:        "organisations/" + org + "/products/" + p.ID,
+			DisplayName: p.DisplayName,
+			State:       1, // ACTIVE from CLI has no numeric mapping; 1 = ACTIVE
+		})
+	}
+	return products, nil
+}
+
+func (s *ProductService) listProductsGRPC(org string) ([]ProductSummary, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}

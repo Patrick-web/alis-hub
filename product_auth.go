@@ -131,6 +131,14 @@ func (s *ProductService) initTokens() error {
 
 // IsLoggedIn returns true when console credentials exist.
 func (s *ProductService) IsLoggedIn() bool {
+	// Try CLI first.
+	if s.alisCli != nil {
+		result, err := s.alisCli.Run(context.Background(), "whoami", "--json")
+		if err == nil && result.ExitCode == 0 {
+			return true
+		}
+	}
+	// Fall back to local file check.
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return false
@@ -140,10 +148,15 @@ func (s *ProductService) IsLoggedIn() bool {
 }
 
 // CheckAuth returns true when a valid, refreshable auth token can be obtained.
-// Unlike IsLoggedIn, this actually tries to fetch/refresh the token, so it
-// returns false when the refresh token has expired even if the credentials
-// file still exists.
+// Tries CLI first, then the token source. Returns false if neither succeeds.
 func (s *ProductService) CheckAuth() bool {
+	// Try CLI auth check first.
+	if s.alisCli != nil {
+		if result, err := s.alisCli.Run(context.Background(), "whoami", "--json"); err == nil && result.ExitCode == 0 {
+			return true
+		}
+	}
+	// Fall back to token source check.
 	ts, err := NewConsoleTokenSource()
 	if err != nil {
 		log.Printf("[auth] CheckAuth: token source unavailable: %v", err)
@@ -226,9 +239,45 @@ func readIDTokenClaims() (email, sub string, err error) {
 	return claims.Email, claims.Sub, nil
 }
 
-// GetUserProfile fetches name and photo for the logged-in user via
-// BatchRetrieveMaskedUsers, using the sub from the stored token as the user ID.
+// GetUserProfile fetches name and photo for the logged-in user.
+// Tries CLI first (alis whoami --json), falls back to gRPC.
 func (s *ProductService) GetUserProfile() (*UserProfile, error) {
+	// Try CLI first.
+	if s.alisCli != nil {
+		if profile, err := s.getUserProfileCLI(); err == nil {
+			return profile, nil
+		} else {
+			log.Printf("[auth] CLI whoami failed, falling back to gRPC: %v", err)
+		}
+	}
+	return s.getUserProfileGRPC()
+}
+
+// getUserProfileCLI resolves user profile from alis whoami --json.
+func (s *ProductService) getUserProfileCLI() (*UserProfile, error) {
+	result, err := s.alisCli.Run(context.Background(), "whoami", "--json")
+	if err != nil {
+		return nil, err
+	}
+	var v struct {
+		Email string `json:"email"`
+		BuildProfile struct {
+			PreferredHarness string `json:"preferredHarness"`
+		} `json:"buildProfile"`
+	}
+	if err := json.Unmarshal(result.Stdout, &v); err != nil {
+		return nil, fmt.Errorf("parse whoami: %w", err)
+	}
+	if v.Email == "" {
+		return nil, fmt.Errorf("whoami: no email")
+	}
+	profile := &UserProfile{Email: v.Email}
+	// UserProfile also has Name and Picture, but alis whoami doesn't include
+	// those — they were fetched via BatchRetrieveMaskedUsers in the gRPC path.
+	return profile, nil
+}
+
+func (s *ProductService) getUserProfileGRPC() (*UserProfile, error) {
 	if err := s.initTokens(); err != nil {
 		return nil, err
 	}

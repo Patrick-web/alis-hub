@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"sync"
 
+	"alis-hub-v3/internal/cliwrap"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -250,6 +252,7 @@ type BootstrapBlockParams struct {
 type ProductService struct {
 	tokens       *ConsoleTokenSource
 	mu           sync.Mutex
+	alisCli      *cliwrap.Runner
 	app          *application.App
 	proxies      map[string]*authProxy
 	editorWindow *application.WebviewWindow
@@ -257,7 +260,11 @@ type ProductService struct {
 }
 
 func NewProductService() *ProductService {
-	return &ProductService{}
+	svc := &ProductService{}
+	if r, err := cliwrap.New("alis"); err == nil {
+		svc.alisCli = r
+	}
+	return svc
 }
 
 func (s *ProductService) SetApp(app *application.App) {

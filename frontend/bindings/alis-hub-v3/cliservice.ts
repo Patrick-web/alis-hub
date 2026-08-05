@@ -13,6 +13,14 @@
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
+ * CLIAuthorise runs `alis authorise <org>.<product> --json` to configure git
+ * credential helpers and refresh package credentials for a product.
+ */
+export function CLIAuthorise(org: string, product: string): $CancellablePromise<string> {
+    return $Call.ByID(3389528175, org, product);
+}
+
+/**
  * CLIBlocksInstall runs `alis blocks install <blockId> [<pkg>] --json`.
  */
 export function CLIBlocksInstall(blockID: string, pkg: string): $CancellablePromise<string> {
@@ -94,6 +102,14 @@ export function CLIEnvUnset(org: string, product: string, env: string, key: stri
  */
 export function CLIEnvVariables(org: string, product: string): $CancellablePromise<string> {
     return $Call.ByID(2865833575, org, product);
+}
+
+/**
+ * CLIGitConfigure runs `alis git configure <org>.<product> --json` to show
+ * git remote URLs, auth tokens, and user identity for the product repos.
+ */
+export function CLIGitConfigure(org: string, product: string): $CancellablePromise<string> {
+    return $Call.ByID(4154096211, org, product);
 }
 
 /**

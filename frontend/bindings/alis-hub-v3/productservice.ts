@@ -19,9 +19,7 @@ export function BootstrapBlock(params: $models.BootstrapBlockParams): $Cancellab
 
 /**
  * CheckAuth returns true when a valid, refreshable auth token can be obtained.
- * Unlike IsLoggedIn, this actually tries to fetch/refresh the token, so it
- * returns false when the refresh token has expired even if the credentials
- * file still exists.
+ * Tries CLI first, then the token source. Returns false if neither succeeds.
  */
 export function CheckAuth(): $CancellablePromise<boolean> {
     return $Call.ByID(2302560144);
@@ -217,8 +215,8 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
 }
 
 /**
- * GetUserProfile fetches name and photo for the logged-in user via
- * BatchRetrieveMaskedUsers, using the sub from the stored token as the user ID.
+ * GetUserProfile fetches name and photo for the logged-in user.
+ * Tries CLI first (alis whoami --json), falls back to gRPC.
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
