@@ -135,37 +135,3 @@ func TestProductViewResponse_DeploymentsAreAMap(t *testing.T) {
 		t.Error("built and deployed versions collapsed into one value")
 	}
 }
-
-func TestBlockArgs(t *testing.T) {
-	tests := []struct {
-		name                   string
-		blockID, pkg, instance string
-		want                   []string
-	}{
-		{"block only", "bff", "", "", []string{"bff"}},
-		{"block and package", "bff", "voyage.vp.bff.v1", "", []string{"bff", "voyage.vp.bff.v1"}},
-		{
-			"multi-install needs the instance ref",
-			"excel", "voyage.vp.bff.v1", "blocks/excel/instances/123",
-			[]string{"excel", "voyage.vp.bff.v1", "--instance", "blocks/excel/instances/123"},
-		},
-		{
-			"instance without package",
-			"excel", "", "blocks/excel/instances/2",
-			[]string{"excel", "--instance", "blocks/excel/instances/2"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := blockArgs(tt.blockID, tt.pkg, tt.instance)
-			if len(got) != len(tt.want) {
-				t.Fatalf("blockArgs = %v, want %v", got, tt.want)
-			}
-			for i := range got {
-				if got[i] != tt.want[i] {
-					t.Fatalf("blockArgs = %v, want %v", got, tt.want)
-				}
-			}
-		})
-	}
-}

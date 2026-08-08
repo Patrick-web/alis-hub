@@ -360,6 +360,136 @@ func TestSandbox_ApprovalGateIsReportedNotSwallowed(t *testing.T) {
 	t.Logf("gate=%s retry=%q", res.Code, res.RetryCmd)
 }
 
+// ── CLI-only capability surface ───────────────────────────────────────────────
+
+func TestSandbox_SkillsSearchAndLoad(t *testing.T) {
+	requireCLI(t)
+	svc := NewCLIService()
+	if !svc.available() {
+		t.Skip("alis CLI not available")
+	}
+
+	skills, err := svc.SkillsSearch("deploy a service to production")
+	if err != nil {
+		t.Fatalf("SkillsSearch: %v", err)
+	}
+	if len(skills) == 0 {
+		t.Fatal("expected search results")
+	}
+	for _, s := range skills {
+		if s.ID == "" {
+			t.Error("skill id not populated")
+		}
+	}
+
+	// search → load is the documented workflow, so the id a search returns must
+	// be directly loadable.
+	markdown, err := svc.SkillsLoad(skills[0].ID, "")
+	if err != nil {
+		t.Fatalf("SkillsLoad(%s): %v", skills[0].ID, err)
+	}
+	if markdown == "" {
+		t.Error("loaded skill was empty")
+	}
+	t.Logf("loaded %s: %d bytes of instructions", skills[0].ID, len(markdown))
+}
+
+func TestSandbox_SkillsInstalled(t *testing.T) {
+	requireCLI(t)
+	svc := NewCLIService()
+	if !svc.available() {
+		t.Skip("alis CLI not available")
+	}
+
+	installed, err := svc.SkillsInstalled()
+	if err != nil {
+		t.Fatalf("SkillsInstalled: %v", err)
+	}
+	for _, s := range installed {
+		if s.SkillID == "" || s.Path == "" {
+			t.Errorf("incomplete install record: %+v", s)
+		}
+	}
+	t.Logf("%d skill(s) installed locally", len(installed))
+}
+
+func TestSandbox_Doctor(t *testing.T) {
+	requireCLI(t)
+	svc := NewCLIService()
+	if !svc.available() {
+		t.Skip("alis CLI not available")
+	}
+
+	d, err := svc.Doctor()
+	if err != nil {
+		t.Fatalf("Doctor: %v", err)
+	}
+	if d.CLIVersion == "" {
+		t.Error("cliVersion not populated")
+	}
+	// The tier decides which commands come back as an exit-3 gate, so the UI
+	// needs a definite value rather than an empty string.
+	switch d.AutomationTier {
+	case "manual", "balanced", "autonomous":
+	default:
+		t.Errorf("unexpected automation tier %q", d.AutomationTier)
+	}
+	t.Logf("alis %s, authorized=%v, tier=%s, safeMode=%v %v",
+		d.CLIVersion, d.Authorized, d.AutomationTier, d.SafeModeEnabled, d.SafeModeOrganisations)
+}
+
+func TestSandbox_ListAccounts(t *testing.T) {
+	requireCLI(t)
+	svc := NewCLIService()
+	if !svc.available() {
+		t.Skip("alis CLI not available")
+	}
+
+	accounts, err := svc.ListAccounts()
+	if err != nil {
+		t.Fatalf("ListAccounts: %v", err)
+	}
+	if len(accounts) == 0 {
+		t.Fatal("expected at least one Build account")
+	}
+	for _, a := range accounts {
+		if a.Name == "" {
+			t.Error("account name not populated")
+		}
+		// This is the snake_case response; an empty display name would mean the
+		// tag no longer matches.
+		if a.DisplayName == "" {
+			t.Errorf("account %s: display_name not decoded", a.Name)
+		}
+	}
+}
+
+// TestSandbox_GitRemotesExcludeTokens checks the credential-stripping contract:
+// `alis git configure` returns live ID tokens, and they must not cross the
+// Wails boundary into the renderer.
+func TestSandbox_GitRemotesExcludeTokens(t *testing.T) {
+	requireCLI(t)
+	svc := NewCLIService()
+	if !svc.available() {
+		t.Skip("alis CLI not available")
+	}
+
+	remotes, err := svc.GitRemotesForProduct(sandboxOrg, sandboxProduct)
+	if err != nil {
+		t.Fatalf("GitRemotesForProduct: %v", err)
+	}
+	if remotes.BuildRemoteURL == "" && remotes.DefineRemoteURL == "" {
+		t.Error("no remote URLs returned")
+	}
+	// The struct has no token field at all, so this asserts the shape rather
+	// than the values: nothing here should look like a JWT.
+	for _, v := range []string{remotes.DefineRemoteURL, remotes.BuildRemoteURL, remotes.UserName, remotes.UserEmail} {
+		if strings.Contains(v, "eyJ") {
+			t.Errorf("a credential leaked into the result: %.20q", v)
+		}
+	}
+}
+
 func TestSandbox_VersionMeetsMinimum(t *testing.T) {
 	r := requireCLI(t)
 

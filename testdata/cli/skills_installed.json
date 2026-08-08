@@ -1,0 +1,10 @@
+[
+  {
+    "skillId": "block-arenaagent",
+    "harness": "claude",
+    "path": "/Users/jp/.claude/skills/block-arenaagent",
+    "version": "1.4.0",
+    "contentHash": "21bfdc07fabf523c03e4ccd60e3821967fca85127eeeba48f8eb266a15b344f6",
+    "installTime": "2026-08-04T04:53:57.190493Z"
+  }
+]

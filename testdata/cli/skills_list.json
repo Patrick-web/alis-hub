@@ -1,0 +1,53 @@
+{
+  "skills": [
+    {
+      "id": "adk-add-agent-skills",
+      "displayName": "adk-add-agent-skills",
+      "description": "Use this skill when the user wants embedded ADK runtime skills (SKILL.md under internal/skills), skilltoolset wiring, or load_skill toolsets on the agent \u2014 even if they do not say skilltoolset. Embeds markdown instruction packs via go:embed and llmagent.Config.Toolsets. Not for proto function tools (add-tool/add-lro) or neuron .agents/skills install skills.",
+      "zipBase64": "",
+      "state": "ACTIVE",
+      "source": "OPEN_REPO",
+      "createTime": "2026-07-22T12:26:59.679085140Z",
+      "updateTime": "2026-07-22T12:26:59.679085140Z",
+      "name": "skills/adk-add-agent-skills",
+      "sourceUri": "https://github.com/alis-build/skills.git",
+      "contentHash": "6f89a7bd174ee53229151a0ce46b43e194cd79674141b7b2911e06aea6eb664a",
+      "version": "",
+      "loadCount": "5",
+      "installCount": "0"
+    },
+    {
+      "id": "adk-add-agui",
+      "displayName": "adk-add-agui",
+      "description": "Use this skill when the user wants to expose an ADK agent to a custom frontend, integrate CopilotKit or other AG-UI clients, wire the AG-UI SSE endpoints, add thread history, add AG-UI capabilities and more. Wires webagui.NewLauncher with WithThreadService and WithGRPCRegistrar into the web launcher stack. For browser UI use add-console after AG-UI wiring.",
+      "zipBase64": "",
+      "state": "ACTIVE",
+      "source": "OPEN_REPO",
+      "createTime": "2026-07-22T12:26:59.682497714Z",
+      "updateTime": "2026-07-22T12:26:59.682497714Z",
+      "name": "skills/adk-add-agui",
+      "sourceUri": "https://github.com/alis-build/skills.git",
+      "contentHash": "320c7937972bef706e146aa30481dca446c8a30852b30c9d7543e4fe81055d82",
+      "version": "",
+      "loadCount": "11",
+      "installCount": "0"
+    },
+    {
+      "id": "adk-add-console",
+      "displayName": "adk-add-console",
+      "description": "Use this skill when the user wants a browser chat UI, operator console, custom frontend, agentsui, or agent branding \u2014 even if they do not say console. Default path installs the agentsui CodeBlock (Vue BFF + SPA) via InstallBlock and wires the agent as a backend. Requires add-agui and add-scheduler on the agent. Bundled console.NewLauncher is a fallback only. Not for LRO (add-lro), sync tools (add-tool), or embedded runtime skills (add-agent-skills).",
+      "zipBase64": "",
+      "state": "ACTIVE",
+      "source": "OPEN_REPO",
+      "createTime": "2026-07-22T12:26:59.671949417Z",
+      "updateTime": "2026-07-22T12:26:59.671949417Z",
+      "name": "skills/adk-add-console",
+      "sourceUri": "https://github.com/alis-build/skills.git",
+      "contentHash": "b418d0ec5e14c9cc8b984b8bc4ca76597ca05b485c70bdaa59bdd8545139bdd3",
+      "version": "",
+      "loadCount": "3",
+      "installCount": "0"
+    }
+  ],
+  "nextPageToken": ""
+}
