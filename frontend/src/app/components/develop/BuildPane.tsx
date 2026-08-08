@@ -36,6 +36,7 @@ import * as BuildService from "../../../../bindings/alis-hub-v3/buildservice";
 import * as DeployService from "../../../../bindings/alis-hub-v3/deployservice";
 import * as ProductService from "../../../../bindings/alis-hub-v3/productservice";
 import { SearchableSelect } from "../ui/searchable-select";
+import { useOperationProgress, progressLabel } from "../../stores/dbdProgress";
 
 const MAX_POLL_FAILURES = 3;
 
@@ -54,6 +55,11 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
 
   const session = useDevelopSessions((s) => s.sessions[tabId]) as BuildSession | undefined;
   const patch = (p: Partial<BuildSession>) => patchSession<BuildSession>(tabId, p);
+
+  // Live state changes streamed from `alis operations wait`. Purely additive:
+  // the poll below still drives every step transition, so this only fills the
+  // gap between ticks and is empty when no CLI stream is running.
+  const liveProgress = progressLabel(useOperationProgress(session?.buildResult?.operationName));
 
   const buildBus = getLogBus(tabId, "build");
   const logOffsetRef = useRef<number>(0);
@@ -864,7 +870,8 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
         session.buildPhase === "build" && (
           <BuildRunView
             step={session.step}
-            progressMsg={session.progressMsg}
+            // Live progress arrives between polls; session value is the fallback.
+            progressMsg={liveProgress || session.progressMsg}
             buildResult={session.buildResult}
             bus={buildBus}
             onRerun={session.step === "result" ? () => loadCommits("master") : undefined}

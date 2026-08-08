@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { Button } from "../Button";
+import { useOperationProgress, progressLabel } from "../../stores/dbdProgress";
 import { useWorkspace } from "../../stores/workspace";
 import { useNotifications } from "../../stores/notifications";
 import { useDevelopTabs } from "../../stores/developTabs";
@@ -39,6 +40,11 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
 
   const session = useDevelopSessions((s) => s.sessions[tabId]) as DefineSession | undefined;
   const patch = (p: Partial<DefineSession>) => patchSession<DefineSession>(tabId, p);
+
+  // Live state changes streamed from `alis operations wait`. Purely additive:
+  // the poll below still drives every step transition, so this only fills the
+  // gap between ticks and is empty when no CLI stream is running.
+  const liveProgress = progressLabel(useOperationProgress(session?.defineResult?.operationName));
 
   const taskIdRef = useRef<string | null>(null);
   const definePollFailuresRef = useRef(0);
@@ -330,7 +336,9 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
       {session.step === "running" && (
         <DefineRunView
           error={session.defineError}
-          progressMsg={session.progressMsg}
+          // Live progress from `alis operations wait` arrives between polls;
+          // the session value remains the fallback.
+          progressMsg={liveProgress || session.progressMsg}
           version={session.defineResult?.version}
           onRetry={loadCommits}
         />
