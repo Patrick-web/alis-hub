@@ -6,6 +6,14 @@ events, and verify a feature you just implemented, without a human relaying scre
 
 Read the whole page once before you start. The setup takes one command.
 
+This page covers the browser. Its companion,
+[AGENT_TESTING.md](./AGENT_TESTING.md), covers the shell: build traps, the three
+test tiers, the sandbox product, and the definition of done for a change. Read
+its "three traps" section before your first build, because a stale `GOFLAGS` and
+a private `GOPROXY` make every Go command fail in a way that looks like a code
+problem. The normal order is: implement, run the Go tiers, then verify the
+screen here.
+
 ## What the setup is
 
 AlisHub is a Wails v3 desktop app: a Go backend and a React frontend inside a native
@@ -105,6 +113,11 @@ Playwright works equally well against the same URL if you prefer scripted tests:
 4. Reload the tab, drive the UI, assert.
 5. Report what you actually observed: the snapshot text, the event, the value the service
    returned.
+
+Before you call it done, run the checklist in
+[AGENT_TESTING.md §8](./AGENT_TESTING.md#8-definition-of-done-for-a-change). Its §5 lists,
+page by page, what a pass looks like on each screen, which is the shortest way to know what
+to click and what to expect once you get there.
 
 ## Recipes
 
@@ -215,6 +228,10 @@ The bridge gives you the frontend and the backend. It does not give you the nati
 | OS notifications | Delivered by the app process, not the tab |
 | Screen and clipboard runtime APIs | Unreliable, avoid asserting on them |
 
+Most of the app's own modals are React components and work fine in the tab,
+`ApprovalGate.tsx` included. `WorkflowsPage.tsx` is the exception: it calls the Wails
+`Dialogs` runtime directly, so that flow needs the native window.
+
 If the feature you are testing *is* one of those, that part needs a human at the native
 window. Say so plainly rather than reporting a pass from the browser.
 
@@ -227,12 +244,24 @@ The backend is real. Assume everything you click has real consequences.
   test) and say what you did not run.
 - Prefer reading state to mutating it. When you must mutate, use scratch or test resources
   and clean up.
+- When you must work against a real product, use the sandbox `voyage.zz`, never the live
+  `voyage.vp`. [AGENT_TESTING.md §4](./AGENT_TESTING.md#4-the-sandbox-and-what-it-cannot-do)
+  has its services, environment, and the things it cannot complete.
 - `hub.db` holds the user's real settings and workflow history. Changing settings through
   the UI changes them for the user.
 - Only one app instance runs at a time (single-instance lock). Kill the old process before
   starting a new one, and do not leave several bridge builds fighting for `:34115`.
 
 ## Troubleshooting
+
+**The build fails before the app ever starts** Almost certainly the `GOFLAGS` and `GOPROXY`
+trap, not your code. See
+[AGENT_TESTING.md §0](./AGENT_TESTING.md#0-read-this-first--three-traps).
+
+**A page renders but its data is empty or errors** Check whether the failure is in the app
+or in the CLI underneath it. `tail -f ~/Library/Logs/AlisHub/alishub.log` shows every
+CLI-backed call with a bracketed prefix; AGENT_TESTING.md §3 lists the prefixes and the
+startup lines that tell you the CLI backend is actually active.
 
 **`connection refused` on :34115** The app is not running, or was built without
 `ALIS_HUB_DEV_BRIDGE=1`, or was built with `-tags production`. Check the log for

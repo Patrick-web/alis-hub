@@ -7,6 +7,11 @@
 > *what* changed and *why*. This document is about *how to exercise it and tell
 > pass from fail*.
 >
+> This file covers the shell: builds, Go tests, CLI behaviour. To click through
+> the running UI, read [AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md), which
+> re-serves the app over HTTP so you can drive it from Chrome. The two are
+> complements: run the tiers here first, then verify the screens there.
+>
 > Every command below was run on this machine on 2026-08-08. Where something is
 > broken or missing, that is stated rather than glossed over — the point of this
 > file is that you do not lose an hour rediscovering it.
@@ -49,8 +54,15 @@ application/dialogs_darwin.go:447:6: newDialogImpl redeclared in this block
 ```
 
 That is an upstream bug — the darwin files are not excluded under the `server`
-tag. **There is no headless HTTP mode available**, so a GUI-free agent cannot
-drive the app end to end today. Plan around §5.
+tag, fixed upstream by alpha.98. **Server mode is not the way to reach the UI.**
+
+Use the dev bridge instead: `wails3 task dev:bridge` runs the normal GUI app and
+re-serves the same handler chain on `http://127.0.0.1:34115`, so a browser
+becomes a second client of the same process. That is how the GUI rows in §5 get
+verified. See [AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md).
+
+Note this uses `wails3 task`, the runner embedded in `wails3`, so it works even
+though standalone `task` is missing (trap 2).
 
 ---
 
@@ -172,6 +184,15 @@ wails3 dev -config ./build/config.yml -port 9245     # hot-reload dev mode
 go build -o bin/alis-hub-v3 . && ./bin/alis-hub-v3
 ```
 
+To run it in a way you can also drive from a browser:
+
+```bash
+wails3 task dev:bridge                               # GUI + bridge on :34115
+```
+
+Same app, same backend, plus an HTTP endpoint a Chrome tab can load. Read
+[AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md) before using it.
+
 `go build ./build/ios` fails (`function main is undeclared`) — pre-existing
 scaffolding, ignore it. Use `go build ./internal/... .` rather than `./...` to
 avoid it.
@@ -272,6 +293,9 @@ silently self-approve a production change.
 dialog quoting the CLI's own message and showing a copyable equivalent command.
 Cancel must leave the variable in place.
 
+`ApprovalGate.tsx` is a React component, not a native dialog, so this one is
+verifiable through the bridge. Cancel is safe to exercise; approving is not.
+
 ### Live operation progress
 
 ```bash
@@ -314,7 +338,12 @@ output.** Re-capture (§6) and reconcile `cliviews.go`.
 
 ### GUI-only checks
 
-None of these can be verified from Go. They are the gap.
+None of these can be verified from Go, and none of them had been exercised at
+the time this file was written. They are now reachable: start the app with
+`wails3 task dev:bridge`, load `http://127.0.0.1:34115/` in Chrome and drive it
+per [AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md). Read its "Rules for acting
+inside the app" first, since the backend is real and some of these rows touch
+mutating paths.
 
 | Page | Route | What to confirm |
 |---|---|---|
@@ -389,6 +418,11 @@ cd frontend && npx tsc --noEmit && npx vite build         # expect: 0 errors, bu
 Plus: no new eslint errors (baseline 8), and no new warnings in files you
 touched (compare with the `count` helper in §2).
 
+If the change touches a screen, that is not yet done. Run it and click it:
+`wails3 task dev:bridge`, then follow
+[AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md) and report the snapshot text you
+saw. "It builds" is not verification of a UI change.
+
 ---
 
 ## 9. What still cannot be checked automatically
@@ -397,14 +431,21 @@ Be honest about this in any report.
 
 - **No page has been exercised in a running app.** Every UI change in this work
   was typechecked and built, never clicked. This is the largest untested
-  surface.
-- **No headless mode** (§0, trap 3), so a shell-only agent cannot drive the UI.
-  Options: fix the Wails server-tag build upstream, add a thin debug HTTP
-  surface behind a build tag, or drive the GUI with a screen-control tool.
+  surface. It is now reachable rather than blocked: the dev bridge
+  ([AI_UI_AUTOMATION.md](./AI_UI_AUTOMATION.md)) lets an agent drive the pages
+  in §5. Reachable is not the same as done, so keep reporting each page as
+  unverified until you have actually clicked it.
+- **The native shell still cannot be driven.** Window controls, the tray, the
+  app menu, accelerators, OS notifications and native file dialogs are outside
+  the browser. `WorkflowsPage.tsx` is the one page that calls a native dialog
+  directly. Those parts need a human at the native window.
 - **DBD round trips are untested end to end** — the sandbox cannot complete a
   define, build or deploy.
 - **36 of 56 new Go methods have no UI call site.** They are covered by Go
-  tests but have never run through a real user action.
+  tests but have never run through a real user action. A bound method with no
+  UI can still be exercised directly with `window.devBridge.call(<methodID>)`
+  over the bridge, which is closer to a real user action than a Go test but
+  still not one.
 - **Mutating CLI paths are the least proven code here**: `support
   send-message`/`send-session`, `accounts select`, and `UpgradeCLI` have no
   test at all, because each is irreversible or changes billing.
