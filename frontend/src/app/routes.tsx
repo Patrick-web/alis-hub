@@ -34,6 +34,7 @@ import { GitPage } from "./pages/GitPage";
 import { LearnPage } from "./pages/LearnPage";
 import { WorkflowsPage } from "./pages/WorkflowsPage";
 import { SkillsPage } from "./pages/SkillsPage";
+import { ServiceBlocksPage } from "./pages/ServiceBlocksPage";
 import { AskPage } from "./pages/AskPage";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
 
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
       { path: "agents", Component: AgentsPage },
       { path: "share", Component: SharePage },
       { path: "skills", Component: SkillsPage },
+      { path: "services/:neuronId/blocks", Component: ServiceBlocksPage },
       { path: "ask", Component: AskPage },
       { path: "diagnostics", Component: DiagnosticsPage },
       { path: "codeblocks", Component: CodeblocksPage },

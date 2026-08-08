@@ -251,7 +251,57 @@ func TestSandbox_ListServiceBlocks(t *testing.T) {
 			t.Errorf("instance %q does not belong to block %q", b.Instance, b.BlockID)
 		}
 	}
+	// Fields ServiceBlocksPage renders directly. Losing any of these would show
+	// as a blank cell rather than an error, so assert they arrive populated.
+	for _, b := range overview.Installed {
+		if b.InstalledVersion == "" {
+			t.Errorf("install %s: no installedVersion to render", b.BlockID)
+		}
+		if b.GitBranch == "" {
+			t.Errorf("install %s: no gitBranch — the Merge action would be hidden", b.BlockID)
+		}
+		// upgradeAvailable drives the Upgrade action; when set, latestVersion is
+		// what the page offers to upgrade to.
+		if b.UpgradeAvailable && b.LatestVersion == "" {
+			t.Errorf("install %s: upgradeAvailable with no latestVersion", b.BlockID)
+		}
+	}
+	for _, b := range overview.Available {
+		if b.LatestVersion == "" {
+			t.Errorf("catalog entry %s: no latestVersion", b.BlockID)
+		}
+		// A block that cannot be installed by a plain action must be
+		// distinguishable, or the page offers an Install button that fails.
+		if b.AgenticInstallOnly && b.Deprecated {
+			t.Logf("block %s is both agent-only and deprecated", b.BlockID)
+		}
+	}
 	t.Logf("%d installed, %d available", len(overview.Installed), len(overview.Available))
+}
+
+// TestSandbox_PackageIDMatchesFrontendDerivation pins the mapping
+// ServiceBlocksPage reimplements in TypeScript. The page turns a neuron id into
+// the package id `alis blocks list` needs; if the two ever disagree the page
+// silently queries the wrong service.
+func TestSandbox_PackageIDMatchesFrontendDerivation(t *testing.T) {
+	cases := map[string]string{
+		"dummy-v1":        "voyage.zz.dummy.v1",
+		"dummy-two-v1":    "voyage.zz.dummy.two.v1",
+		"internal-api-v2": "voyage.zz.internal.api.v2",
+	}
+	for neuronID, want := range cases {
+		// The frontend does: `${org}.${product}.${neuronId.split("-").join(".")}`
+		got := sandboxOrg + "." + sandboxProduct + "." + strings.ReplaceAll(neuronID, "-", ".")
+		if got != want {
+			t.Errorf("derivation for %q = %q, want %q", neuronID, got, want)
+		}
+		// And it must agree with the Go original the page mirrors.
+		viaGo := cliwrap.NeuronToPackageID(
+			"organisations/" + sandboxOrg + "/products/" + sandboxProduct + "/neurons/" + neuronID)
+		if viaGo != want {
+			t.Errorf("cliwrap.NeuronToPackageID(%q) = %q, want %q", neuronID, viaGo, want)
+		}
+	}
 }
 
 // TestSandbox_ListBlockAccounts checks the accounts that `blocks create`

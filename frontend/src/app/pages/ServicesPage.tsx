@@ -7,6 +7,7 @@ import { useWorkspace } from "../stores/workspace";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import { Loader } from "../components/Loader";
 import { NewServiceModal } from "../components/NewServiceModal";
+import { useNavigate } from "react-router";
 
 type NeuronItem = { id: string; version: string; state: number };
 type DeploymentItem = { neuronId: string; version: string; state: number; logsUrl: string };
@@ -104,6 +105,7 @@ function EnvCell({ neuronVersion, dep }: { neuronVersion: string; dep?: Deployme
 }
 
 export function ServicesPage() {
+  const navigate = useNavigate();
   const { state } = useWorkspace();
   const [overview, setOverview] = useState<ServicesOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -238,9 +240,20 @@ export function ServicesPage() {
                   className="border-b border-border hover:bg-foreground/[2%] transition-colors"
                 >
                   <td className="px-[20px] py-[12px]">
-                    <span className="text-[12px] font-bold font-mono text-foreground">
-                      {neuron.id}
-                    </span>
+                    {/* Drill-down to this service's code blocks. */}
+                    <button
+                      onClick={() => navigate(`/services/${neuron.id}/blocks`)}
+                      className="group/name flex items-center gap-[6px] text-left"
+                      title="View this service's code blocks"
+                    >
+                      <span className="text-[12px] font-bold font-mono text-foreground group-hover/name:text-brand transition-colors">
+                        {neuron.id}
+                      </span>
+                      <Icon
+                        icon="solar:box-linear"
+                        className="text-foreground/0 group-hover/name:text-foreground/35 text-[13px] transition-colors"
+                      />
+                    </button>
                   </td>
                   <td className="px-[16px] py-[12px]">
                     <span className="text-[11px] font-mono text-foreground/50">
