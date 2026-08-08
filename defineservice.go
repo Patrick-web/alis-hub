@@ -168,9 +168,35 @@ func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefin
 		return s.runDefineGRPC(context.Background(), neuron, commit, releaseType)
 	}
 	if s.backend != nil {
-		return s.backend.RunDefine(context.Background(), neuron, commit)
+		result, err := s.backend.RunDefine(context.Background(), neuron, commit)
+		if err == nil && result != nil {
+			dbdProgress.Follow(result.OperationName, "define")
+		}
+		return result, err
 	}
 	return s.runDefineGRPC(context.Background(), neuron, commit, releaseType)
+}
+
+// RunDefineOptions starts a define with the full option set — commit pinning
+// plus chained package install. Prefer it over RunDefine for new call sites;
+// RunDefine remains for the existing UI.
+func (s *DefineService) RunDefineOptions(neuron string, opts DefineOptions) (*RunDefineResult, error) {
+	log.Printf("[define] RunDefineOptions: neuron=%s opts=%+v backend=%T", neuron, opts, s.backend)
+
+	// releaseType has no CLI flag, so route those calls to gRPC rather than
+	// dropping the caller's choice.
+	if _, isCLI := s.backend.(*CLIBackend); isCLI && opts.needsGRPC() {
+		log.Printf("[define] releaseType=%q not expressible via alis CLI — using gRPC path", opts.ReleaseType)
+		return s.runDefineGRPC(context.Background(), neuron, opts.Commit, opts.ReleaseType)
+	}
+	if s.backend == nil {
+		return s.runDefineGRPC(context.Background(), neuron, opts.Commit, opts.ReleaseType)
+	}
+	result, err := s.backend.RunDefineOptions(context.Background(), neuron, opts)
+	if err == nil && result != nil {
+		dbdProgress.Follow(result.OperationName, "define")
+	}
+	return result, err
 }
 
 // runDefineGRPC is the original gRPC implementation of RunDefine.

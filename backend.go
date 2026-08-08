@@ -11,17 +11,29 @@ import (
 )
 
 // DBDBackend abstracts define/build/deploy operations behind either the CLI or gRPC.
+//
+// The Run*Options methods are the full surface; the narrow Run* forms are kept
+// because the existing UI calls them and they read better at those call sites.
+// Options the chosen backend cannot express are reported as errors rather than
+// dropped — see errCLIOnlyOption.
 type DBDBackend interface {
 	// RunDefine starts a define operation and returns the operation name.
 	RunDefine(ctx context.Context, neuron, commit string) (*RunDefineResult, error)
+	// RunDefineOptions starts a define with the full option set.
+	RunDefineOptions(ctx context.Context, neuron string, opts DefineOptions) (*RunDefineResult, error)
 	// PollDefine polls a running define operation.
 	PollDefine(ctx context.Context, opName string) (*RunDefineResult, error)
 	// RunBuild starts a build operation and returns the operation name.
 	RunBuild(ctx context.Context, neuron, commit string) (*RunBuildResult, error)
+	// RunBuildOptions starts a build with the full option set, including a
+	// chained deploy.
+	RunBuildOptions(ctx context.Context, neuron string, opts BuildOptions) (*RunBuildResult, error)
 	// PollBuild polls a running build operation.
 	PollBuild(ctx context.Context, opName, neuron string) (*RunBuildResult, error)
 	// RunDeploy starts a deploy operation and returns the operation name.
 	RunDeploy(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error)
+	// RunDeployOptions starts a deploy with the full option set.
+	RunDeployOptions(ctx context.Context, neuron string, opts DeployOptions) (*RunDeployResult, error)
 	// PollDeploy polls a running deploy operation.
 	PollDeploy(ctx context.Context, opName string) (*RunDeployResult, error)
 }
@@ -112,11 +124,15 @@ func confirmationRequired(err error) (code, retry string, ok bool) {
 }
 
 func (b *CLIBackend) RunDefine(ctx context.Context, neuron, commit string) (*RunDefineResult, error) {
-	pkg := cliwrap.NeuronToPackageID(neuron)
-	args := []string{"define", pkg, "--json"}
-	if commit != "" {
-		args = append(args, "--commit", commit)
+	return b.RunDefineOptions(ctx, neuron, DefineOptions{Commit: commit})
+}
+
+func (b *CLIBackend) RunDefineOptions(ctx context.Context, neuron string, opts DefineOptions) (*RunDefineResult, error) {
+	if opts.needsGRPC() {
+		return nil, errCLIOnlyOption("releaseType")
 	}
+	pkg := cliwrap.NeuronToPackageID(neuron)
+	args := defineArgs(pkg, opts)
 
 	op, err := b.runner.RunAsyncOperation(ctx, args...)
 	if err != nil {
@@ -156,11 +172,12 @@ func (b *CLIBackend) PollDefine(ctx context.Context, opName string) (*RunDefineR
 }
 
 func (b *CLIBackend) RunBuild(ctx context.Context, neuron, commit string) (*RunBuildResult, error) {
+	return b.RunBuildOptions(ctx, neuron, BuildOptions{Commit: commit})
+}
+
+func (b *CLIBackend) RunBuildOptions(ctx context.Context, neuron string, opts BuildOptions) (*RunBuildResult, error) {
 	pkg := cliwrap.NeuronToPackageID(neuron)
-	args := []string{"build", pkg, "--json"}
-	if commit != "" {
-		args = append(args, "--commit", commit)
-	}
+	args := buildArgs(pkg, opts)
 
 	op, err := b.runner.RunAsyncOperation(ctx, args...)
 	if err != nil {
@@ -194,17 +211,19 @@ func (b *CLIBackend) PollBuild(ctx context.Context, opName, neuron string) (*Run
 }
 
 func (b *CLIBackend) RunDeploy(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error) {
+	return b.RunDeployOptions(ctx, neuron, DeployOptions{
+		Version:      version,
+		Environments: environments,
+		PlanOnly:     planOnly,
+	})
+}
+
+func (b *CLIBackend) RunDeployOptions(ctx context.Context, neuron string, opts DeployOptions) (*RunDeployResult, error) {
+	if opts.needsGRPC() {
+		return nil, errCLIOnlyOption("beta")
+	}
 	pkg := cliwrap.NeuronToPackageID(neuron)
-	args := []string{"deploy", pkg, "--json"}
-	if version != "" {
-		args = append(args, "--version", version)
-	}
-	for _, env := range environments {
-		args = append(args, "-e", cliwrap.ExtractEnvID(env))
-	}
-	if planOnly {
-		args = append(args, "--plan-only")
-	}
+	args := deployArgs(pkg, opts)
 
 	stdout, err := b.runner.RunAsync(ctx, args...)
 	if err != nil {
@@ -300,6 +319,55 @@ func (b *GRPCBackend) PollBuild(ctx context.Context, opName, neuron string) (*Ru
 // DeployService.RunDeploy, which routes straight to the gRPC implementation.
 func (b *GRPCBackend) RunDeploy(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error) {
 	return b.deploySvc.runDeployGRPC(ctx, neuron, version, environments, planOnly, false)
+}
+
+// RunDefineOptions honours Commit and ReleaseType. Install chaining is a CLI
+// feature — the gRPC service defines only, so callers must run the package
+// install themselves rather than have it silently not happen.
+func (b *GRPCBackend) RunDefineOptions(ctx context.Context, neuron string, opts DefineOptions) (*RunDefineResult, error) {
+	if opts.Install {
+		return nil, errCLIOnlyOption("install")
+	}
+	return b.defineSvc.runDefineGRPC(ctx, neuron, opts.Commit, opts.ReleaseType)
+}
+
+// RunBuildOptions honours Commit, the build/retag path selection and a chained
+// deploy. Branch pinning and the three gate flags have no request field, so
+// they are refused rather than ignored: silently building the wrong commit or
+// dropping --plan-only would both be worse than failing.
+func (b *GRPCBackend) RunBuildOptions(ctx context.Context, neuron string, opts BuildOptions) (*RunBuildResult, error) {
+	switch {
+	case opts.Branch != "":
+		return nil, errCLIOnlyOption("branch")
+	case opts.ConfirmNoPaths:
+		return nil, errCLIOnlyOption("confirmNoPaths")
+	case opts.AllowBranchMismatch:
+		return nil, errCLIOnlyOption("allowBranchMismatch")
+	case opts.ConfirmProduction:
+		return nil, errCLIOnlyOption("confirmProduction")
+	case opts.PlanOnly:
+		// The nested gRPC deploy request does carry PlanOnly, but this backend
+		// has no path that threads it through RunBuild today; refusing keeps a
+		// plan-only request from becoming a real apply.
+		return nil, errCLIOnlyOption("planOnly with build")
+	case opts.Deploy || len(opts.Environments) > 0:
+		return nil, errCLIOnlyOption("deploy chaining")
+	case len(opts.BuildPaths) > 0 || len(opts.RetagPaths) > 0 || opts.Retag:
+		return nil, errCLIOnlyOption("build/retag path selection")
+	}
+	return b.buildSvc.runBuildGRPC(ctx, neuron, opts.Commit)
+}
+
+// RunDeployOptions honours Version, Environments, PlanOnly and Beta. The gate
+// flags exist only in the CLI.
+func (b *GRPCBackend) RunDeployOptions(ctx context.Context, neuron string, opts DeployOptions) (*RunDeployResult, error) {
+	switch {
+	case opts.AllowBranchMismatch:
+		return nil, errCLIOnlyOption("allowBranchMismatch")
+	case opts.ConfirmProduction:
+		return nil, errCLIOnlyOption("confirmProduction")
+	}
+	return b.deploySvc.runDeployGRPC(ctx, neuron, opts.Version, opts.Environments, opts.PlanOnly, opts.Beta)
 }
 
 func (b *GRPCBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployResult, error) {

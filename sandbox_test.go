@@ -182,6 +182,45 @@ func TestSandbox_OperationDescribeFlattensError(t *testing.T) {
 	}
 }
 
+// TestSandbox_WaitOnFailedOperation exercises the progress-streaming path
+// end-to-end against a real operation.
+//
+// This is the awkward case: `alis operations wait` exits 1 for a failed
+// operation, yet stdout still holds a valid flattened operation. Treating a
+// non-zero exit as a CLI-level failure would throw that away and report a
+// stream error instead of the operation's own error. stderr meanwhile mixes
+// NDJSON progress lines with a human-formatted ERROR block, so the scanner has
+// to skip unparseable lines rather than choke on them.
+func TestSandbox_WaitOnFailedOperation(t *testing.T) {
+	r := requireCLI(t)
+
+	const failedOp = "operations/59b166d7-e5a9-4c12-9037-587a7f8172d6"
+
+	var events []cliwrap.ProgressEvent
+	state, err := r.Wait(sandboxCtx(t, 60*time.Second), failedOp, func(ev cliwrap.ProgressEvent) {
+		events = append(events, ev)
+	})
+	if err != nil {
+		t.Fatalf("Wait surfaced a stream error instead of the operation result: %v", err)
+	}
+	if !state.Done {
+		t.Error("expected done=true")
+	}
+	if state.Error == "" {
+		t.Error("expected the operation's own error to be reported")
+	}
+	// The NDJSON progress line for a finished operation carries done/error.
+	t.Logf("received %d progress event(s)", len(events))
+	for _, ev := range events {
+		if ev.Error != "" {
+			return
+		}
+	}
+	if len(events) > 0 {
+		t.Log("progress events arrived but none carried an error field")
+	}
+}
+
 func TestSandbox_VersionMeetsMinimum(t *testing.T) {
 	r := requireCLI(t)
 

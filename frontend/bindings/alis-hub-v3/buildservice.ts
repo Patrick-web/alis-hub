@@ -95,6 +95,21 @@ export function RunBuild(neuron: string, commit: string): $CancellablePromise<$m
 }
 
 /**
+ * RunBuildOptions starts a build with the full option set: commit or branch
+ * pinning, explicit Dockerfile paths, retagging for infra-only changes, and a
+ * chained deploy. Prefer it over RunBuild for new call sites.
+ * 
+ * A chained build+deploy is a single operation, so the deploy cannot be lost
+ * between two round trips the way the app's separate build and deploy pages
+ * allow today.
+ */
+export function RunBuildOptions(neuron: string, opts: $models.BuildOptions): $CancellablePromise<$models.RunBuildResult | null> {
+    return $Call.ByID(775833380, neuron, opts).then(($result: any) => {
+        return $$createType7($result);
+    });
+}
+
+/**
  * StartLocalBuild launches a local Docker build in a goroutine and returns
  * a build ID that can be passed to PollLocalBuild to stream output.
  * neuron is the full resource name e.g. "organisations/voyage/products/vp/neurons/hubspot-v1".

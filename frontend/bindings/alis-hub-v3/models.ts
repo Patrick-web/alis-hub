@@ -409,6 +409,134 @@ export class BuildLogsResult {
 }
 
 /**
+ * BuildOptions covers `alis build`.
+ */
+export class BuildOptions {
+    /**
+     * Commit pins the build-repo commit; empty means the latest commit
+     * touching the service folder.
+     */
+    "commit": string;
+
+    /**
+     * Branch requires the built commit to come from this branch. Without
+     * Commit, it builds that branch's latest commit for the service.
+     */
+    "branch": string;
+
+    /**
+     * BuildPaths are Dockerfile paths relative to the service folder. Empty
+     * lets the CLI auto-detect, which is the normal case.
+     */
+    "buildPaths": string[];
+
+    /**
+     * Retag retags the previous images instead of building, for changes that
+     * touch only deployment infrastructure.
+     */
+    "retag": boolean;
+
+    /**
+     * RetagPaths narrows what Retag applies to.
+     */
+    "retagPaths": string[];
+
+    /**
+     * ConfirmNoPaths acknowledges that the service has no images to build or
+     * retag. Without it such a build fails rather than silently doing nothing.
+     */
+    "confirmNoPaths": boolean;
+
+    /**
+     * Deploy chains a deploy onto a successful build.
+     */
+    "deploy": boolean;
+
+    /**
+     * Environments are the ids to deploy to when Deploy is set. They come from
+     * `alis context view`, never from guessing.
+     */
+    "environments": string[];
+
+    /**
+     * PlanOnly runs Terraform plan without applying. Not gated for production,
+     * so it is the safe way to preview one.
+     */
+    "planOnly": boolean;
+
+    /**
+     * AllowBranchMismatch proceeds when the built branch is not designated for
+     * a target environment (see `alis environment branches`).
+     */
+    "allowBranchMismatch": boolean;
+
+    /**
+     * ConfirmProduction lifts the production gate. Set it only after a human
+     * has explicitly approved this specific deploy.
+     */
+    "confirmProduction": boolean;
+
+    /** Creates a new BuildOptions instance. */
+    constructor($$source: Partial<BuildOptions> = {}) {
+        if (!("commit" in $$source)) {
+            this["commit"] = "";
+        }
+        if (!("branch" in $$source)) {
+            this["branch"] = "";
+        }
+        if (!("buildPaths" in $$source)) {
+            this["buildPaths"] = [];
+        }
+        if (!("retag" in $$source)) {
+            this["retag"] = false;
+        }
+        if (!("retagPaths" in $$source)) {
+            this["retagPaths"] = [];
+        }
+        if (!("confirmNoPaths" in $$source)) {
+            this["confirmNoPaths"] = false;
+        }
+        if (!("deploy" in $$source)) {
+            this["deploy"] = false;
+        }
+        if (!("environments" in $$source)) {
+            this["environments"] = [];
+        }
+        if (!("planOnly" in $$source)) {
+            this["planOnly"] = false;
+        }
+        if (!("allowBranchMismatch" in $$source)) {
+            this["allowBranchMismatch"] = false;
+        }
+        if (!("confirmProduction" in $$source)) {
+            this["confirmProduction"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new BuildOptions instance from a string or object.
+     */
+    static createFrom($$source: any = {}): BuildOptions {
+        const $$createField2_0 = $$createType4;
+        const $$createField4_0 = $$createType4;
+        const $$createField7_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("buildPaths" in $$parsedSource) {
+            $$parsedSource["buildPaths"] = $$createField2_0($$parsedSource["buildPaths"]);
+        }
+        if ("retagPaths" in $$parsedSource) {
+            $$parsedSource["retagPaths"] = $$createField4_0($$parsedSource["retagPaths"]);
+        }
+        if ("environments" in $$parsedSource) {
+            $$parsedSource["environments"] = $$createField7_0($$parsedSource["environments"]);
+        }
+        return new BuildOptions($$parsedSource as Partial<BuildOptions>);
+    }
+}
+
+/**
  * BuildSpecItem is a summary of a single build specification.
  */
 export class BuildSpecItem {
@@ -1122,6 +1250,59 @@ export class DefineCommit {
 }
 
 /**
+ * DefineOptions covers `alis define`.
+ */
+export class DefineOptions {
+    /**
+     * Commit pins the definitions-repo commit. Empty means the latest pushed
+     * commit, which is the normal case.
+     */
+    "commit": string;
+
+    /**
+     * Install chains `alis packages install` once the define succeeds, so
+     * generated packages are refreshed in the same operation.
+     */
+    "install": boolean;
+
+    /**
+     * InstallLanguage limits that install to one of go/node/python/dart.
+     */
+    "installLanguage": string;
+
+    /**
+     * ReleaseType has no CLI equivalent; setting it routes the call to gRPC.
+     */
+    "releaseType": string;
+
+    /** Creates a new DefineOptions instance. */
+    constructor($$source: Partial<DefineOptions> = {}) {
+        if (!("commit" in $$source)) {
+            this["commit"] = "";
+        }
+        if (!("install" in $$source)) {
+            this["install"] = false;
+        }
+        if (!("installLanguage" in $$source)) {
+            this["installLanguage"] = "";
+        }
+        if (!("releaseType" in $$source)) {
+            this["releaseType"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DefineOptions instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DefineOptions {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DefineOptions($$parsedSource as Partial<DefineOptions>);
+    }
+}
+
+/**
  * DeployItem is a single deployment entry returned from the backend.
  */
 export class DeployItem {
@@ -1142,6 +1323,71 @@ export class DeployItem {
     static createFrom($$source: any = {}): DeployItem {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new DeployItem($$parsedSource as Partial<DeployItem>);
+    }
+}
+
+/**
+ * DeployOptions covers `alis deploy`.
+ */
+export class DeployOptions {
+    /**
+     * Version selects a build version; empty deploys the latest.
+     */
+    "version": string;
+
+    /**
+     * Environments are the ids to deploy to. When empty and the product has
+     * exactly one environment, the CLI uses it; otherwise it errors and lists
+     * the ids rather than choosing.
+     */
+    "environments": string[];
+    "planOnly": boolean;
+    "allowBranchMismatch": boolean;
+
+    /**
+     * ConfirmProduction lifts the production gate — human approval only.
+     */
+    "confirmProduction": boolean;
+
+    /**
+     * Beta has no CLI equivalent; setting it routes the call to gRPC.
+     */
+    "beta": boolean;
+
+    /** Creates a new DeployOptions instance. */
+    constructor($$source: Partial<DeployOptions> = {}) {
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("environments" in $$source)) {
+            this["environments"] = [];
+        }
+        if (!("planOnly" in $$source)) {
+            this["planOnly"] = false;
+        }
+        if (!("allowBranchMismatch" in $$source)) {
+            this["allowBranchMismatch"] = false;
+        }
+        if (!("confirmProduction" in $$source)) {
+            this["confirmProduction"] = false;
+        }
+        if (!("beta" in $$source)) {
+            this["beta"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DeployOptions instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DeployOptions {
+        const $$createField1_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("environments" in $$parsedSource) {
+            $$parsedSource["environments"] = $$createField1_0($$parsedSource["environments"]);
+        }
+        return new DeployOptions($$parsedSource as Partial<DeployOptions>);
     }
 }
 

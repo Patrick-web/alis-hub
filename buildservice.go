@@ -278,9 +278,32 @@ func (s *BuildService) scanDockerfiles(neuron string) map[string]dbdv1.RunBuildA
 func (s *BuildService) RunBuild(neuron, commit string) (*RunBuildResult, error) {
 	log.Printf("[build] RunBuild: neuron=%s commit=%s backend=%T", neuron, commit, s.backend)
 	if s.backend != nil {
-		return s.backend.RunBuild(context.Background(), neuron, commit)
+		result, err := s.backend.RunBuild(context.Background(), neuron, commit)
+		if err == nil && result != nil {
+			dbdProgress.Follow(result.OperationName, "build")
+		}
+		return result, err
 	}
 	return s.runBuildGRPC(context.Background(), neuron, commit)
+}
+
+// RunBuildOptions starts a build with the full option set: commit or branch
+// pinning, explicit Dockerfile paths, retagging for infra-only changes, and a
+// chained deploy. Prefer it over RunBuild for new call sites.
+//
+// A chained build+deploy is a single operation, so the deploy cannot be lost
+// between two round trips the way the app's separate build and deploy pages
+// allow today.
+func (s *BuildService) RunBuildOptions(neuron string, opts BuildOptions) (*RunBuildResult, error) {
+	log.Printf("[build] RunBuildOptions: neuron=%s opts=%+v backend=%T", neuron, opts, s.backend)
+	if s.backend == nil {
+		return s.runBuildGRPC(context.Background(), neuron, opts.Commit)
+	}
+	result, err := s.backend.RunBuildOptions(context.Background(), neuron, opts)
+	if err == nil && result != nil {
+		dbdProgress.Follow(result.OperationName, "build")
+	}
+	return result, err
 }
 
 // runBuildGRPC is the original gRPC implementation of RunBuild.

@@ -113,9 +113,36 @@ func (s *DeployService) RunDeploy(neuron, version string, environments []string,
 		return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly, beta)
 	}
 	if s.backend != nil {
-		return s.backend.RunDeploy(context.Background(), neuron, version, environments, planOnly)
+		result, err := s.backend.RunDeploy(context.Background(), neuron, version, environments, planOnly)
+		if err == nil && result != nil {
+			dbdProgress.Follow(result.OperationName, "deploy")
+		}
+		return result, err
 	}
 	return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly, beta)
+}
+
+// RunDeployOptions starts a deploy with the full option set.
+//
+// Production deploys still come back as an exit-3 gate in Error with the retry
+// command in Notes; set ConfirmProduction only after the user has approved that
+// specific deploy. PlanOnly is never gated and is the right way to preview one.
+func (s *DeployService) RunDeployOptions(neuron string, opts DeployOptions) (*RunDeployResult, error) {
+	log.Printf("[deploy] RunDeployOptions: neuron=%s opts=%+v backend=%T", neuron, opts, s.backend)
+
+	// beta has no CLI flag, so route those calls to gRPC.
+	if _, isCLI := s.backend.(*CLIBackend); isCLI && opts.needsGRPC() {
+		log.Printf("[deploy] beta=true not expressible via alis CLI — using gRPC path")
+		return s.runDeployGRPC(context.Background(), neuron, opts.Version, opts.Environments, opts.PlanOnly, opts.Beta)
+	}
+	if s.backend == nil {
+		return s.runDeployGRPC(context.Background(), neuron, opts.Version, opts.Environments, opts.PlanOnly, opts.Beta)
+	}
+	result, err := s.backend.RunDeployOptions(context.Background(), neuron, opts)
+	if err == nil && result != nil {
+		dbdProgress.Follow(result.OperationName, "deploy")
+	}
+	return result, err
 }
 
 // runDeployGRPC is the original gRPC implementation of RunDeploy.

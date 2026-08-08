@@ -304,11 +304,21 @@ func (r *Runner) Describe(ctx context.Context, opName string) (*OperationState, 
 }
 
 // ProgressEvent is one NDJSON line from stderr during a streaming command.
+//
+// Fields are best-effort: the CLI emits whatever changed, so most lines carry
+// only a subset. The final line of a failed wait carries done and error, which
+// is why those are here and not only on OperationState.
+//
+// stderr also carries human-formatted blocks (a boxed ERROR summary, for
+// instance) interleaved with the NDJSON, so lines that fail to parse are
+// expected and must be skipped rather than treated as corruption.
 type ProgressEvent struct {
 	Version string `json:"version"`
 	Notes   string `json:"notes"`
 	State   string `json:"state"`
 	LogsURI string `json:"logsUri"`
+	Done    bool   `json:"done"`
+	Error   string `json:"error"`
 }
 
 // Wait re-attaches to an operation with `alis operations wait <name> --json`,

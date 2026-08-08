@@ -75,6 +75,9 @@ func main() {
 		defineSvc.setBackend(cli)
 		buildSvc.setBackend(cli)
 		deploySvc.setBackend(cli)
+		// Live operation progress rides on the same runner. Polling stays the
+		// source of truth; these events only fill the gaps between polls.
+		dbdProgress.setRunner(cli.Runner())
 		go reportCLIVersion(cli)
 	} else {
 		log.Printf("[main] alis CLI not found (%v) — falling back to gRPC backend", err)
@@ -227,6 +230,8 @@ func main() {
 	gitSvc.SetApp(app)
 	localAISvc.SetApp(app)
 	logSvc.SetApp(app)
+	// Lets the DBD services emit dbd:progress / dbd:done while an operation runs.
+	dbdProgress.setApp(app)
 	if !isDevelopment {
 		updater.BackgroundCheck(app, version, 30*time.Second)
 	}

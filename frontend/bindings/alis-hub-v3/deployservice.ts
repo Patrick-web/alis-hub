@@ -56,6 +56,19 @@ export function RunDeploy(neuron: string, version: string, environments: string[
     });
 }
 
+/**
+ * RunDeployOptions starts a deploy with the full option set.
+ * 
+ * Production deploys still come back as an exit-3 gate in Error with the retry
+ * command in Notes; set ConfirmProduction only after the user has approved that
+ * specific deploy. PlanOnly is never gated and is the right way to preview one.
+ */
+export function RunDeployOptions(neuron: string, opts: $models.DeployOptions): $CancellablePromise<$models.RunDeployResult | null> {
+    return $Call.ByID(3062391086, neuron, opts).then(($result: any) => {
+        return $$createType6($result);
+    });
+}
+
 // Private type creation functions
 const $$createType0 = $models.BuildLogsResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);

@@ -57,6 +57,17 @@ export function RunDefine(neuron: string, commit: string, releaseType: string): 
     });
 }
 
+/**
+ * RunDefineOptions starts a define with the full option set — commit pinning
+ * plus chained package install. Prefer it over RunDefine for new call sites;
+ * RunDefine remains for the existing UI.
+ */
+export function RunDefineOptions(neuron: string, opts: $models.DefineOptions): $CancellablePromise<$models.RunDefineResult | null> {
+    return $Call.ByID(3633324946, neuron, opts).then(($result: any) => {
+        return $$createType5($result);
+    });
+}
+
 export function ScanNeuronPackages(org: string, product: string, neuron: string, version: string): $CancellablePromise<$models.PackageInfo[]> {
     return $Call.ByID(3292503717, org, product, neuron, version).then(($result: any) => {
         return $$createType7($result);
