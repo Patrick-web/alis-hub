@@ -1,3 +1,8 @@
+//go:build alis_integration
+
+// Live probes against the real IAM/invites APIs. See the note in
+// productservice_test.go for why these sit behind the alis_integration tag.
+
 package main
 
 import (

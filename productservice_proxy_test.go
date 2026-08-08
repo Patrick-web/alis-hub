@@ -1,3 +1,9 @@
+//go:build alis_integration
+
+// Live test: starts the local reverse proxy against the real Forgejo instance.
+// See the note in productservice_test.go for why this sits behind the
+// alis_integration tag.
+
 package main
 
 import (

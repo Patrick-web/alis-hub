@@ -1,3 +1,9 @@
+//go:build alis_integration
+
+// Live tests against the DBD backend and the alisproxy log pages for
+// voyage/vp. Excluded from `go test ./...` by the alis_integration build tag —
+// they need credentials and network access.
+
 package main
 
 import (

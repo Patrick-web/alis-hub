@@ -1,3 +1,15 @@
+//go:build alis_integration
+
+// Live probes against the real Console/gRPC backend and the local credential
+// store. Excluded from `go test ./...` by the alis_integration build tag:
+// every test here needs valid credentials and network access, and
+// TestContributeBlock publishes a real code block version. Diagnostic by
+// nature — most exist to dump wire formats while reverse-engineering an API.
+//
+// Run deliberately with:
+//
+//	go test -tags alis_integration -run TestProbe -v .
+
 package main
 
 import (

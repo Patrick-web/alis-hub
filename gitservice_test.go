@@ -1,3 +1,10 @@
+//go:build alis_integration
+
+// Live tests against the real Forgejo instance and the local ~/alis.build
+// checkouts. Excluded from `go test ./...` by the alis_integration build tag:
+// TestForgejoCreatePR and TestForgejoPRCommitFiles open real pull requests and
+// push real commits.
+
 package main
 
 import (

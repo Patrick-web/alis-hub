@@ -1,3 +1,9 @@
+//go:build alis_integration
+
+// Live tests against the Glass and DBD backends for voyage/vp/bff-v1.
+// Excluded from `go test ./...` by the alis_integration build tag — they need
+// credentials and network access.
+
 package main
 
 import (
