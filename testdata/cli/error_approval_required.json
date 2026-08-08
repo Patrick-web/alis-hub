@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "APPROVAL_REQUIRED",
+    "message": "approval required under the user's automation tier (balanced): Remove NO_SUCH_VAR_ALIS_HUB_PROBE from voyage.zz 1y2ozw2i3fsru? The values are not recoverable. \u2014 re-run with --approve once the user has approved",
+    "retry": "alis environment unset voyage.zz.1y2ozw2i3fsru NO_SUCH_VAR_ALIS_HUB_PROBE --json --approve",
+    "agent": "Do not retry automatically. Tell the user what this command changes and ask for explicit approval, then run the retry command."
+  }
+}

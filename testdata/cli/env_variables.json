@@ -1,0 +1,10 @@
+{
+  "environments":  [
+    {
+      "environmentId":  "1y2ozw2i3fsru",
+      "displayName":  "Development",
+      "envs":  [],
+      "canUpdate":  true
+    }
+  ]
+}

@@ -275,6 +275,91 @@ func TestSandbox_ListBlockAccounts(t *testing.T) {
 	t.Logf("%d publishable account(s)", len(accounts))
 }
 
+// TestSandbox_EnvironmentVariables covers the read path and the canUpdate flag.
+func TestSandbox_EnvironmentVariables(t *testing.T) {
+	requireCLI(t)
+
+	svc := NewProductService()
+	if svc.alisCli == nil {
+		t.Skip("alis CLI not wired into ProductService")
+	}
+	envs, err := svc.ListEnvironmentVariablesCLI(sandboxOrg, sandboxProduct)
+	if err != nil {
+		t.Fatalf("ListEnvironmentVariablesCLI: %v", err)
+	}
+	if len(envs) == 0 {
+		t.Fatal("expected at least one environment")
+	}
+	for _, e := range envs {
+		if e.EnvironmentID == "" {
+			t.Error("environment id not populated")
+		}
+		t.Logf("env %s (%s): %d variable(s), canUpdate=%v",
+			e.EnvironmentID, e.DisplayName, len(e.Variables), e.CanUpdate)
+	}
+}
+
+// TestSandbox_EnvironmentBranches reads the deploy-branch designation — the
+// thing --allow-branch-mismatch overrides.
+func TestSandbox_EnvironmentBranches(t *testing.T) {
+	requireCLI(t)
+
+	svc := NewProductService()
+	if svc.alisCli == nil {
+		t.Skip("alis CLI not wired into ProductService")
+	}
+	branches, err := svc.GetEnvironmentBranchesCLI(sandboxOrg, sandboxProduct, sandboxEnvID)
+	if err != nil {
+		t.Fatalf("GetEnvironmentBranchesCLI: %v", err)
+	}
+	if branches.Environment != sandboxEnvID {
+		t.Errorf("environment = %q, want %q", branches.Environment, sandboxEnvID)
+	}
+	if branches.Updated {
+		t.Error("a read reported updated=true")
+	}
+	t.Logf("allowed branches: %v (unrestricted=%v)", branches.AllowedBranches, branches.Unrestricted())
+}
+
+// TestSandbox_ApprovalGateIsReportedNotSwallowed drives a genuinely gated
+// command and checks the result is a structured gate carrying a retry command,
+// rather than an opaque error.
+//
+// `environment unset` is destructive, so every automation tier except
+// "autonomous" gates it. The target variable does not exist, so nothing is
+// removed either way — the point is the exit-3 path, which is the common case
+// for this command rather than an edge case.
+func TestSandbox_ApprovalGateIsReportedNotSwallowed(t *testing.T) {
+	requireCLI(t)
+
+	svc := NewProductService()
+	if svc.alisCli == nil {
+		t.Skip("alis CLI not wired into ProductService")
+	}
+	res, err := svc.UnsetEnvironmentVariablesCLI(
+		sandboxOrg, sandboxProduct, sandboxEnvID,
+		[]string{"NO_SUCH_VAR_ALIS_HUB_PROBE"},
+		false, false,
+	)
+	if err != nil {
+		t.Fatalf("a gated command must not surface as an error: %v", err)
+	}
+	if !res.Gated {
+		// An "autonomous" tier would run it; nothing was removed either way.
+		t.Skipf("command was not gated on this automation tier (output: %s)", res.Output)
+	}
+	if res.Code != cliwrap.CodeApprovalRequired && res.Code != cliwrap.CodeProductionConfirmation {
+		t.Errorf("unexpected gate code %q", res.Code)
+	}
+	if res.RetryCmd == "" {
+		t.Error("gate carried no retry command — the user would have no way forward")
+	}
+	if res.Message == "" {
+		t.Error("gate carried no message explaining what would change")
+	}
+	t.Logf("gate=%s retry=%q", res.Code, res.RetryCmd)
+}
+
 func TestSandbox_VersionMeetsMinimum(t *testing.T) {
 	r := requireCLI(t)
 
