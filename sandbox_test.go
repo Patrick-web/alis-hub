@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -219,6 +220,59 @@ func TestSandbox_WaitOnFailedOperation(t *testing.T) {
 	if len(events) > 0 {
 		t.Log("progress events arrived but none carried an error field")
 	}
+}
+
+// TestSandbox_ListServiceBlocks covers the blocks read path against a service
+// that really has two installs, so the instance refs the mutating calls depend
+// on are exercised for real rather than only against a fixture.
+func TestSandbox_ListServiceBlocks(t *testing.T) {
+	requireCLI(t)
+
+	svc := NewProductService()
+	if svc.alisCli == nil {
+		t.Skip("alis CLI not wired into ProductService")
+	}
+	overview, err := svc.ListServiceBlocks(sandboxPkg)
+	if err != nil {
+		t.Fatalf("ListServiceBlocks: %v", err)
+	}
+	if len(overview.Available) == 0 {
+		t.Error("expected a non-empty block catalog")
+	}
+	for _, b := range overview.Installed {
+		if b.Instance == "" {
+			t.Errorf("install %s has no instance ref", b.BlockID)
+			continue
+		}
+		id, err := blockIDFromInstance(b.Instance)
+		if err != nil {
+			t.Errorf("install %s: unusable instance %q: %v", b.BlockID, b.Instance, err)
+		} else if id != b.BlockID {
+			t.Errorf("instance %q does not belong to block %q", b.Instance, b.BlockID)
+		}
+	}
+	t.Logf("%d installed, %d available", len(overview.Installed), len(overview.Available))
+}
+
+// TestSandbox_ListBlockAccounts checks the accounts that `blocks create`
+// requires for --account.
+func TestSandbox_ListBlockAccounts(t *testing.T) {
+	requireCLI(t)
+
+	svc := NewProductService()
+	if svc.alisCli == nil {
+		t.Skip("alis CLI not wired into ProductService")
+	}
+	accounts, err := svc.ListBlockAccounts()
+	if err != nil {
+		t.Fatalf("ListBlockAccounts: %v", err)
+	}
+	for _, a := range accounts {
+		if !strings.HasPrefix(a.Name, "accounts/") {
+			t.Errorf("unexpected account name format %q", a.Name)
+		}
+	}
+	t.Logf("%d publishable account(s)", len(accounts))
 }
 
 func TestSandbox_VersionMeetsMinimum(t *testing.T) {
