@@ -34,6 +34,19 @@ tasks:
     cmds:
       - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
 
+  dev:bridge:
+    summary: Runs the app with the browser dev bridge on http://127.0.0.1:34115
+    desc: |
+      Builds a dev binary and runs it with the browser bridge enabled, so the
+      running app can be driven from Chrome (CDP, Playwright, chrome-devtools
+      MCP) as a second client. See docs/AI_UI_AUTOMATION.md.
+      Set ALIS_HUB_DEV_BRIDGE_VERBOSE=1 to log event fan-out.
+    cmds:
+      - task: '{{OS}}:build'
+        vars:
+          DEV: "true"
+      - ALIS_HUB_DEV_BRIDGE=1 wails3 task run
+
   setup:docker:
     summary: Builds Docker image for cross-compilation (~800MB download)
     cmds:

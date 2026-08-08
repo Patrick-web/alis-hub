@@ -136,8 +136,10 @@ func main() {
 			application.NewService(cliSvc),
 		},
 		Assets: application.AssetOptions{
-			Handler: application.BundledAssetFileServer(assets),
+			Handler:    application.BundledAssetFileServer(assets),
+			Middleware: devBridgeMiddleware,
 		},
+		Transport: devBridgeTransport(func() *application.App { return app }),
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
