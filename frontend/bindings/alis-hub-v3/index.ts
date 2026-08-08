@@ -44,6 +44,7 @@ export {
     ARVersion,
     AccountUser,
     AheadBehind,
+    Approval,
     AskAnswer,
     AskCitation,
     BlockAccessData,

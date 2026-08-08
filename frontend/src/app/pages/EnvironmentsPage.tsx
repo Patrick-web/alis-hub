@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from "react";
 
+/** Last path segment of a resource name, e.g. ".../environments/abc" -> "abc". */
+function lastSegment(name: string): string {
+  const i = name.lastIndexOf("/");
+  return i === -1 ? name : name.slice(i + 1);
+}
+
 function parseError(err: unknown): string {
   const s = String(err);
   try {
@@ -25,6 +31,7 @@ import { notify } from "../lib/notify";
 import { useWorkspace } from "../stores/workspace";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import { Loader } from "../components/Loader";
+import { ApprovalGateDialog, useApprovalGate } from "../components/ApprovalGate";
 
 interface EnvVar {
   id: string;
@@ -160,11 +167,52 @@ export function EnvironmentsPage() {
     await persistVars(updated);
   };
 
+  // Deleting a variable goes through `alis environment unset` rather than the
+  // Console API's whole-array replace.
+  //
+  // That matters beyond tidiness: removing a variable is destructive, and the
+  // platform gates it on the default automation tier. Rewriting the array
+  // without the removed entry produces the same end state while bypassing that
+  // gate entirely — and bypasses the production gate too. Going through unset
+  // means the user sees what they are about to lose and approves it, which is
+  // what the gate is for.
+  //
+  // The Console path stays as the fallback for when the CLI is unavailable.
+  const envGate = useApprovalGate(() => {
+    if (!deleteVar) return;
+    setVars((prev) => prev.filter((v) => v.id !== deleteVar.id));
+    setDeleteVar(null);
+    notify.success(`Removed ${deleteVar.label}`);
+  });
+
   const handleDeleteVar = async () => {
     if (!deleteVar) return;
+    const target = deleteVar;
     setDeleteLoading(true);
+    setError(null);
     try {
-      const updated = vars.filter((v) => v.id !== deleteVar.id);
+      const envId = lastSegment(state.activeEnvName);
+      const canUseCLI = Boolean(state.organisation && state.product && envId);
+
+      if (canUseCLI) {
+        const result = await envGate.run(
+          (approval) =>
+            ProductService.UnsetEnvironmentVariablesCLI(
+              state.organisation,
+              state.product,
+              envId,
+              [target.label],
+              false,
+              approval,
+            ),
+          `Remove ${target.label} from ${envId}`,
+        );
+        // A gate leaves the dialog open; the row is removed once it clears.
+        if (!result) return;
+        return;
+      }
+
+      const updated = vars.filter((v) => v.id !== target.id);
       setVars(updated);
       await persistVars(updated);
       setDeleteVar(null);
@@ -347,6 +395,10 @@ export function EnvironmentsPage() {
         onConfirm={handleDeleteVar}
         requireText={deleteVar?.label}
       />
+
+      {/* Approval gate. `alis environment unset` is destructive, so the default
+          automation tier stops it and asks; production environments always do. */}
+      <ApprovalGateDialog {...envGate.dialogProps} />
 
       {/* View value modal */}
       <Dialog

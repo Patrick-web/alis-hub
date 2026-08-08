@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"alis-hub-v3/internal/cliwrap"
 )
 
 // CLI-backed implementations of the code block operations.
@@ -61,6 +63,37 @@ func (s *ProductService) runBlocksCLI(label string, args ...string) ([]byte, err
 		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	return result.Stdout, nil
+}
+
+// runBlocksGated is runBlocksCLI for the destructive subcommands, reporting an
+// exit-3 gate as a result rather than an error. `blocks uninstall` and
+// `blocks create` are gated on the default automation tier, so being stopped is
+// the common path, not an edge case.
+func (s *ProductService) runBlocksGated(label string, args ...string) (*EnvGateResult, error) {
+	if !s.blocksCLIAvailable() {
+		return nil, fmt.Errorf("alis CLI not available")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), blocksCLITimeout)
+	defer cancel()
+
+	result, err := s.alisCli.Run(ctx, args...)
+	if err != nil {
+		if cerr, ok := cliwrap.AsConfirmationRequired(err); ok {
+			code := cerr.Code
+			if code == "" {
+				code = cliwrap.CodeApprovalRequired
+			}
+			return &EnvGateResult{
+				Gated:    true,
+				Code:     code,
+				Message:  cerr.Message,
+				RetryCmd: cerr.RetryCmd,
+				Approval: approvalForGate(code),
+			}, nil
+		}
+		return nil, fmt.Errorf("%s: %w", label, err)
+	}
+	return &EnvGateResult{Output: string(result.Stdout)}, nil
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────
@@ -259,16 +292,15 @@ func (s *ProductService) UpgradeBlockInstanceCLI(instance, blockVersion string, 
 // Uninstall is classed as destructive, so every automation tier except
 // "autonomous" gates it: expect an exit-3 APPROVAL_REQUIRED envelope and show
 // the user its retry command rather than passing --approve.
-func (s *ProductService) UninstallBlockInstanceCLI(instance string) error {
+func (s *ProductService) UninstallBlockInstanceCLI(instance string, approval Approval) (*EnvGateResult, error) {
 	if !s.blocksCLIAvailable() {
-		return fmt.Errorf("alis CLI not available")
+		return nil, fmt.Errorf("alis CLI not available")
 	}
-	args, err := blocksInstanceArgs("uninstall", instance)
+	args, err := blocksInstanceArgs("uninstall", instance, approval.flags()...)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = s.runBlocksCLI("blocks uninstall", args...)
-	return err
+	return s.runBlocksGated("blocks uninstall", args...)
 }
 
 // MergeBlockInstanceCLI merges an install's block/* branch into the local build
@@ -311,23 +343,20 @@ func blocksCreateArgs(o BlockCreateOptions) []string {
 }
 
 // CreateBlockCLI creates a new code block from a service's existing code.
-func (s *ProductService) CreateBlockCLI(opts BlockCreateOptions) (string, error) {
+func (s *ProductService) CreateBlockCLI(opts BlockCreateOptions, approval Approval) (*EnvGateResult, error) {
 	if !s.blocksCLIAvailable() {
-		return "", fmt.Errorf("alis CLI not available")
+		return nil, fmt.Errorf("alis CLI not available")
 	}
 	switch {
 	case opts.BlockID == "":
-		return "", fmt.Errorf("blockId is required")
+		return nil, fmt.Errorf("blockId is required")
 	case opts.Account == "":
-		return "", fmt.Errorf("account is required (see ListBlockAccounts)")
+		return nil, fmt.Errorf("account is required (see ListBlockAccounts)")
 	case opts.DisplayName == "":
-		return "", fmt.Errorf("displayName is required")
+		return nil, fmt.Errorf("displayName is required")
 	}
-	stdout, err := s.runBlocksCLI("blocks create", blocksCreateArgs(opts)...)
-	if err != nil {
-		return "", err
-	}
-	return string(stdout), nil
+	args := append(blocksCreateArgs(opts), approval.flags()...)
+	return s.runBlocksGated("blocks create", args...)
 }
 
 // BlockPublishOptions covers `alis blocks publish`. Notes and ReleaseLevel are

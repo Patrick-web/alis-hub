@@ -10,7 +10,7 @@ func TestEnvSetArgs(t *testing.T) {
 		got := envSetArgs("voyage.zz.dev", []EnvVariable{
 			{Label: "A", Value: "1"},
 			{Label: "B", Value: "2"},
-		}, false, false)
+		}, false, Approval{})
 		want := "environment set voyage.zz.dev A=1 B=2 --json"
 		if strings.Join(got, " ") != want {
 			t.Errorf("got %q, want %q", strings.Join(got, " "), want)
@@ -22,7 +22,7 @@ func TestEnvSetArgs(t *testing.T) {
 		// passing name and value separately, would silently truncate it.
 		got := envSetArgs("ref", []EnvVariable{
 			{Label: "DSN", Value: "postgres://u:p@h/db?opt=1&x=2"},
-		}, false, false)
+		}, false, Approval{})
 		var found bool
 		for _, a := range got {
 			if a == "DSN=postgres://u:p@h/db?opt=1&x=2" {
@@ -35,7 +35,7 @@ func TestEnvSetArgs(t *testing.T) {
 	})
 
 	t.Run("deploy and production confirmation", func(t *testing.T) {
-		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: "1"}}, true, true)
+		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: "1"}}, true, Approval{ConfirmProduction: true})
 		if countFlag(got, "--deploy") != 1 {
 			t.Errorf("--deploy missing: %v", got)
 		}
@@ -45,14 +45,14 @@ func TestEnvSetArgs(t *testing.T) {
 	})
 
 	t.Run("no implicit production confirmation", func(t *testing.T) {
-		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: "1"}}, false, false)
+		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: "1"}}, false, Approval{})
 		if strings.Contains(strings.Join(got, " "), "--confirm-production") {
 			t.Errorf("--confirm-production added implicitly: %v", got)
 		}
 	})
 
 	t.Run("an empty value is still a set, not a removal", func(t *testing.T) {
-		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: ""}}, false, false)
+		got := envSetArgs("ref", []EnvVariable{{Label: "A", Value: ""}}, false, Approval{})
 		var found bool
 		for _, a := range got {
 			if a == "A=" {
@@ -66,7 +66,7 @@ func TestEnvSetArgs(t *testing.T) {
 }
 
 func TestEnvUnsetArgs(t *testing.T) {
-	got := envUnsetArgs("voyage.zz.dev", []string{"A", "B"}, true, false)
+	got := envUnsetArgs("voyage.zz.dev", []string{"A", "B"}, true, Approval{})
 	want := "environment unset voyage.zz.dev A B --json --deploy"
 	if strings.Join(got, " ") != want {
 		t.Errorf("got %q, want %q", strings.Join(got, " "), want)
@@ -75,7 +75,7 @@ func TestEnvUnsetArgs(t *testing.T) {
 
 func TestEnvBranchesArgs(t *testing.T) {
 	t.Run("allow is repeatable", func(t *testing.T) {
-		got := envBranchesArgs("ref", []string{"master", "release"}, false)
+		got := envBranchesArgs("ref", []string{"master", "release"}, false, Approval{})
 		if countFlag(got, "--allow") != 2 {
 			t.Errorf("expected two --allow flags: %v", got)
 		}
@@ -85,7 +85,7 @@ func TestEnvBranchesArgs(t *testing.T) {
 	})
 
 	t.Run("clear", func(t *testing.T) {
-		got := envBranchesArgs("ref", nil, true)
+		got := envBranchesArgs("ref", nil, true, Approval{})
 		if countFlag(got, "--clear") != 1 {
 			t.Errorf("--clear missing: %v", got)
 		}
@@ -97,17 +97,17 @@ func TestSetEnvironmentBranchesValidation(t *testing.T) {
 
 	// Neither a branch list nor clear: this would be a read, not a write, and
 	// silently doing nothing would look like success.
-	if _, err := svc.SetEnvironmentBranchesCLI("o", "p", "e", nil, false); err == nil {
+	if _, err := svc.SetEnvironmentBranchesCLI("o", "p", "e", nil, false, Approval{}); err == nil {
 		t.Error("expected an error when neither allow nor clear is given")
 	}
 	// Both together is contradictory.
-	if _, err := svc.SetEnvironmentBranchesCLI("o", "p", "e", []string{"main"}, true); err == nil {
+	if _, err := svc.SetEnvironmentBranchesCLI("o", "p", "e", []string{"main"}, true, Approval{}); err == nil {
 		t.Error("expected an error when clear and allow are combined")
 	}
 }
 
 func TestEnvNewArgs(t *testing.T) {
-	got := envNewArgs("voyage", "zz", "Staging", false)
+	got := envNewArgs("voyage", "zz", "Staging", false, Approval{})
 	if !hasFlagValue(got, "--display-name", "Staging") {
 		t.Errorf("display name not passed: %v", got)
 	}
@@ -116,7 +116,7 @@ func TestEnvNewArgs(t *testing.T) {
 		t.Errorf("--production inferred: %v", got)
 	}
 
-	got = envNewArgs("voyage", "zz", "Production", true)
+	got = envNewArgs("voyage", "zz", "Production", true, Approval{})
 	if countFlag(got, "--production") != 1 {
 		t.Errorf("--production missing when requested: %v", got)
 	}
@@ -229,5 +229,54 @@ func TestFixture_ApprovalRequiredEnvelope(t *testing.T) {
 	// retry string back to the user.
 	if env.Error.Agent == "" {
 		t.Error("agent instruction not decoded")
+	}
+}
+
+func TestApprovalFlags(t *testing.T) {
+	// The zero value must produce nothing: a first call always runs ungated so
+	// the CLI can report what it would change.
+	if got := (Approval{}).flags(); len(got) != 0 {
+		t.Errorf("zero Approval produced flags: %v", got)
+	}
+	if got := strings.Join((Approval{Approve: true}).flags(), " "); got != "--approve" {
+		t.Errorf("Approve = %q", got)
+	}
+	if got := strings.Join((Approval{ConfirmProduction: true}).flags(), " "); got != "--confirm-production" {
+		t.Errorf("ConfirmProduction = %q", got)
+	}
+}
+
+func TestApprovalForGate(t *testing.T) {
+	// The two gates are distinct and one does not satisfy the other: --approve
+	// never clears a production gate, so the mapping has to be exact.
+	prod := approvalForGate("PRODUCTION_CONFIRMATION_REQUIRED")
+	if !prod.ConfirmProduction || prod.Approve {
+		t.Errorf("production gate mapped to %+v", prod)
+	}
+	tier := approvalForGate("APPROVAL_REQUIRED")
+	if !tier.Approve || tier.ConfirmProduction {
+		t.Errorf("tier gate mapped to %+v", tier)
+	}
+	// An unrecognised code must not escalate to the production flag.
+	unknown := approvalForGate("SOMETHING_NEW")
+	if unknown.ConfirmProduction {
+		t.Error("unknown gate escalated to --confirm-production")
+	}
+}
+
+// TestApprovalNeverImplicit is the safety property the whole gate flow rests
+// on: without an explicit human decision, no approval flag reaches the CLI.
+func TestApprovalNeverImplicit(t *testing.T) {
+	cases := [][]string{
+		envSetArgs("ref", []EnvVariable{{Label: "A", Value: "1"}}, true, Approval{}),
+		envUnsetArgs("ref", []string{"A"}, true, Approval{}),
+		envBranchesArgs("ref", []string{"main"}, false, Approval{}),
+		envNewArgs("o", "p", "Production", true, Approval{}),
+	}
+	for i, args := range cases {
+		joined := strings.Join(args, " ")
+		if strings.Contains(joined, "--approve") || strings.Contains(joined, "--confirm-production") {
+			t.Errorf("case %d leaked an approval flag: %s", i, joined)
+		}
 	}
 }

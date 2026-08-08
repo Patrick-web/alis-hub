@@ -162,6 +162,51 @@ export class AheadBehind {
 }
 
 /**
+ * Approval carries a human's decision to let a gated command run.
+ * 
+ * The two gates are separate and one does not satisfy the other: --approve
+ * clears an automation-tier gate, while a production environment needs
+ * --confirm-production (or an interactive yes). Passing --approve to a
+ * production deploy does nothing.
+ * 
+ * The zero value means "not approved", so a first call always attempts the
+ * operation ungated and reports back what it would change. Only after the user
+ * has seen that and agreed should a caller retry with these set — which is what
+ * the ApprovalGate dialog does. Nothing may set them on the user's behalf.
+ */
+export class Approval {
+    /**
+     * Approve satisfies an APPROVAL_REQUIRED automation-tier gate.
+     */
+    "approve": boolean;
+
+    /**
+     * ConfirmProduction satisfies a PRODUCTION_CONFIRMATION_REQUIRED gate.
+     */
+    "confirmProduction": boolean;
+
+    /** Creates a new Approval instance. */
+    constructor($$source: Partial<Approval> = {}) {
+        if (!("approve" in $$source)) {
+            this["approve"] = false;
+        }
+        if (!("confirmProduction" in $$source)) {
+            this["confirmProduction"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Approval instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Approval {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Approval($$parsedSource as Partial<Approval>);
+    }
+}
+
+/**
  * AskAnswer is a cited answer over the caller's own platform content.
  */
 export class AskAnswer {
@@ -2174,6 +2219,11 @@ export class EnvGateResult {
      */
     "output"?: string;
 
+    /**
+     * Approval is what would clear this gate, ready to pass back on the retry.
+     */
+    "approval": Approval;
+
     /** Creates a new EnvGateResult instance. */
     constructor($$source: Partial<EnvGateResult> = {}) {
         if (!("gated" in $$source)) {
@@ -2188,6 +2238,9 @@ export class EnvGateResult {
         if (!("retryCmd" in $$source)) {
             this["retryCmd"] = "";
         }
+        if (!("approval" in $$source)) {
+            this["approval"] = (new Approval());
+        }
 
         Object.assign(this, $$source);
     }
@@ -2196,7 +2249,11 @@ export class EnvGateResult {
      * Creates a new EnvGateResult instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvGateResult {
+        const $$createField5_0 = $$createType28;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("approval" in $$parsedSource) {
+            $$parsedSource["approval"] = $$createField5_0($$parsedSource["approval"]);
+        }
         return new EnvGateResult($$parsedSource as Partial<EnvGateResult>);
     }
 }
@@ -2230,7 +2287,7 @@ export class EnvInfo {
      * Creates a new EnvInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvInfo {
-        const $$createField4_0 = $$createType29;
+        const $$createField4_0 = $$createType30;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("gcpProject" in $$parsedSource) {
             $$parsedSource["gcpProject"] = $$createField4_0($$parsedSource["gcpProject"]);
@@ -2354,7 +2411,7 @@ export class EnvironmentVariables {
      * Creates a new EnvironmentVariables instance from a string or object.
      */
     static createFrom($$source: any = {}): EnvironmentVariables {
-        const $$createField2_0 = $$createType31;
+        const $$createField2_0 = $$createType32;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("variables" in $$parsedSource) {
             $$parsedSource["variables"] = $$createField2_0($$parsedSource["variables"]);
@@ -2559,7 +2616,7 @@ export class GCSObjectList {
      */
     static createFrom($$source: any = {}): GCSObjectList {
         const $$createField0_0 = $$createType2;
-        const $$createField1_0 = $$createType33;
+        const $$createField1_0 = $$createType34;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("prefixes" in $$parsedSource) {
             $$parsedSource["prefixes"] = $$createField0_0($$parsedSource["prefixes"]);
@@ -2949,10 +3006,10 @@ export class GitStatus {
      * Creates a new GitStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): GitStatus {
-        const $$createField0_0 = $$createType35;
-        const $$createField1_0 = $$createType35;
+        const $$createField0_0 = $$createType36;
+        const $$createField1_0 = $$createType36;
         const $$createField2_0 = $$createType2;
-        const $$createField3_0 = $$createType35;
+        const $$createField3_0 = $$createType36;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("staged" in $$parsedSource) {
             $$parsedSource["staged"] = $$createField0_0($$parsedSource["staged"]);
@@ -3197,7 +3254,7 @@ export class InviteInfo {
      */
     static createFrom($$source: any = {}): InviteInfo {
         const $$createField4_0 = $$createType2;
-        const $$createField5_0 = $$createType37;
+        const $$createField5_0 = $$createType38;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("domains" in $$parsedSource) {
             $$parsedSource["domains"] = $$createField4_0($$parsedSource["domains"]);
@@ -3274,8 +3331,8 @@ export class LandingZonesData {
      * Creates a new LandingZonesData instance from a string or object.
      */
     static createFrom($$source: any = {}): LandingZonesData {
-        const $$createField0_0 = $$createType39;
-        const $$createField1_0 = $$createType39;
+        const $$createField0_0 = $$createType40;
+        const $$createField1_0 = $$createType40;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("own" in $$parsedSource) {
             $$parsedSource["own"] = $$createField0_0($$parsedSource["own"]);
@@ -3376,9 +3433,9 @@ export class LogEntry {
      * Creates a new LogEntry instance from a string or object.
      */
     static createFrom($$source: any = {}): LogEntry {
-        const $$createField5_0 = $$createType41;
+        const $$createField5_0 = $$createType42;
         const $$createField6_0 = $$createType25;
-        const $$createField7_0 = $$createType42;
+        const $$createField7_0 = $$createType43;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("resource" in $$parsedSource) {
             $$parsedSource["resource"] = $$createField5_0($$parsedSource["resource"]);
@@ -3445,7 +3502,7 @@ export class LogPage {
      * Creates a new LogPage instance from a string or object.
      */
     static createFrom($$source: any = {}): LogPage {
-        const $$createField0_0 = $$createType44;
+        const $$createField0_0 = $$createType45;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("entries" in $$parsedSource) {
             $$parsedSource["entries"] = $$createField0_0($$parsedSource["entries"]);
@@ -3790,7 +3847,7 @@ export class Organisation {
      * Creates a new Organisation instance from a string or object.
      */
     static createFrom($$source: any = {}): Organisation {
-        const $$createField5_0 = $$createType29;
+        const $$createField5_0 = $$createType30;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField5_0($$parsedSource["googleProject"]);
@@ -3964,9 +4021,9 @@ export class ProductOverview {
      * Creates a new ProductOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ProductOverview {
-        const $$createField3_0 = $$createType29;
-        const $$createField4_0 = $$createType46;
-        const $$createField5_0 = $$createType48;
+        const $$createField3_0 = $$createType30;
+        const $$createField4_0 = $$createType47;
+        const $$createField5_0 = $$createType49;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -4274,7 +4331,7 @@ export class RunDeployResult {
      * Creates a new RunDeployResult instance from a string or object.
      */
     static createFrom($$source: any = {}): RunDeployResult {
-        const $$createField2_0 = $$createType51;
+        const $$createField2_0 = $$createType52;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("deployments" in $$parsedSource) {
             $$parsedSource["deployments"] = $$createField2_0($$parsedSource["deployments"]);
@@ -4311,7 +4368,7 @@ export class RunLogChunk {
      * Creates a new RunLogChunk instance from a string or object.
      */
     static createFrom($$source: any = {}): RunLogChunk {
-        const $$createField0_0 = $$createType53;
+        const $$createField0_0 = $$createType54;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stepRuns" in $$parsedSource) {
             $$parsedSource["stepRuns"] = $$createField0_0($$parsedSource["stepRuns"]);
@@ -4476,8 +4533,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType55;
-        const $$createField1_0 = $$createType57;
+        const $$createField0_0 = $$createType56;
+        const $$createField1_0 = $$createType58;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -4572,9 +4629,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType59;
-        const $$createField1_0 = $$createType61;
-        const $$createField2_0 = $$createType61;
+        const $$createField0_0 = $$createType60;
+        const $$createField1_0 = $$createType62;
+        const $$createField2_0 = $$createType62;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -4946,7 +5003,7 @@ export class SpannerQueryResult {
         const $$createField0_0 = $$createType2;
         const $$createField1_0 = $$createType2;
         const $$createField2_0 = $$createType2;
-        const $$createField3_0 = $$createType62;
+        const $$createField3_0 = $$createType63;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -5178,8 +5235,8 @@ export class UpsertWorkflowParams {
      * Creates a new UpsertWorkflowParams instance from a string or object.
      */
     static createFrom($$source: any = {}): UpsertWorkflowParams {
-        const $$createField2_0 = $$createType64;
-        const $$createField3_0 = $$createType66;
+        const $$createField2_0 = $$createType65;
+        const $$createField3_0 = $$createType67;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField2_0($$parsedSource["steps"]);
@@ -5264,8 +5321,8 @@ export class Workflow {
      * Creates a new Workflow instance from a string or object.
      */
     static createFrom($$source: any = {}): Workflow {
-        const $$createField6_0 = $$createType68;
-        const $$createField7_0 = $$createType66;
+        const $$createField6_0 = $$createType69;
+        const $$createField7_0 = $$createType67;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField6_0($$parsedSource["steps"]);
@@ -5346,7 +5403,7 @@ export class WorkflowRun {
      * Creates a new WorkflowRun instance from a string or object.
      */
     static createFrom($$source: any = {}): WorkflowRun {
-        const $$createField6_0 = $$createType53;
+        const $$createField6_0 = $$createType54;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stepRuns" in $$parsedSource) {
             $$parsedSource["stepRuns"] = $$createField6_0($$parsedSource["stepRuns"]);
@@ -5486,44 +5543,45 @@ const $$createType24 = $Create.Array($$createType23);
 const $$createType25 = $Create.Map($Create.Any, $Create.Any);
 const $$createType26 = DeploymentItem.createFrom;
 const $$createType27 = $Create.Array($$createType26);
-const $$createType28 = GCPProject.createFrom;
-const $$createType29 = $Create.Nullable($$createType28);
-const $$createType30 = EnvVariable.createFrom;
-const $$createType31 = $Create.Array($$createType30);
-const $$createType32 = GCSObject.createFrom;
-const $$createType33 = $Create.Array($$createType32);
-const $$createType34 = GitFileStatus.createFrom;
-const $$createType35 = $Create.Array($$createType34);
-const $$createType36 = InviteUserInfo.createFrom;
-const $$createType37 = $Create.Array($$createType36);
-const $$createType38 = Organisation.createFrom;
-const $$createType39 = $Create.Array($$createType38);
-const $$createType40 = LogResource.createFrom;
-const $$createType41 = $Create.Nullable($$createType40);
-const $$createType42 = $Create.Map($Create.Any, $Create.Any);
-const $$createType43 = LogEntry.createFrom;
-const $$createType44 = $Create.Array($$createType43);
-const $$createType45 = GitRepoInfo.createFrom;
-const $$createType46 = $Create.Nullable($$createType45);
-const $$createType47 = PkgRegistries.createFrom;
-const $$createType48 = $Create.Nullable($$createType47);
-const $$createType49 = DeployItem.createFrom;
-const $$createType50 = $Create.Nullable($$createType49);
-const $$createType51 = $Create.Array($$createType50);
-const $$createType52 = StepRunStatus.createFrom;
-const $$createType53 = $Create.Array($$createType52);
-const $$createType54 = NeuronItem.createFrom;
-const $$createType55 = $Create.Array($$createType54);
-const $$createType56 = EnvDeployments.createFrom;
-const $$createType57 = $Create.Array($$createType56);
-const $$createType58 = SharePerson.createFrom;
-const $$createType59 = $Create.Array($$createType58);
-const $$createType60 = ShareAccount.createFrom;
-const $$createType61 = $Create.Array($$createType60);
-const $$createType62 = $Create.Array($$createType2);
-const $$createType63 = UpsertStepParams.createFrom;
-const $$createType64 = $Create.Array($$createType63);
-const $$createType65 = WorkflowArg.createFrom;
-const $$createType66 = $Create.Array($$createType65);
-const $$createType67 = WorkflowStep.createFrom;
-const $$createType68 = $Create.Array($$createType67);
+const $$createType28 = Approval.createFrom;
+const $$createType29 = GCPProject.createFrom;
+const $$createType30 = $Create.Nullable($$createType29);
+const $$createType31 = EnvVariable.createFrom;
+const $$createType32 = $Create.Array($$createType31);
+const $$createType33 = GCSObject.createFrom;
+const $$createType34 = $Create.Array($$createType33);
+const $$createType35 = GitFileStatus.createFrom;
+const $$createType36 = $Create.Array($$createType35);
+const $$createType37 = InviteUserInfo.createFrom;
+const $$createType38 = $Create.Array($$createType37);
+const $$createType39 = Organisation.createFrom;
+const $$createType40 = $Create.Array($$createType39);
+const $$createType41 = LogResource.createFrom;
+const $$createType42 = $Create.Nullable($$createType41);
+const $$createType43 = $Create.Map($Create.Any, $Create.Any);
+const $$createType44 = LogEntry.createFrom;
+const $$createType45 = $Create.Array($$createType44);
+const $$createType46 = GitRepoInfo.createFrom;
+const $$createType47 = $Create.Nullable($$createType46);
+const $$createType48 = PkgRegistries.createFrom;
+const $$createType49 = $Create.Nullable($$createType48);
+const $$createType50 = DeployItem.createFrom;
+const $$createType51 = $Create.Nullable($$createType50);
+const $$createType52 = $Create.Array($$createType51);
+const $$createType53 = StepRunStatus.createFrom;
+const $$createType54 = $Create.Array($$createType53);
+const $$createType55 = NeuronItem.createFrom;
+const $$createType56 = $Create.Array($$createType55);
+const $$createType57 = EnvDeployments.createFrom;
+const $$createType58 = $Create.Array($$createType57);
+const $$createType59 = SharePerson.createFrom;
+const $$createType60 = $Create.Array($$createType59);
+const $$createType61 = ShareAccount.createFrom;
+const $$createType62 = $Create.Array($$createType61);
+const $$createType63 = $Create.Array($$createType2);
+const $$createType64 = UpsertStepParams.createFrom;
+const $$createType65 = $Create.Array($$createType64);
+const $$createType66 = WorkflowArg.createFrom;
+const $$createType67 = $Create.Array($$createType66);
+const $$createType68 = WorkflowStep.createFrom;
+const $$createType69 = $Create.Array($$createType68);

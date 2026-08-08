@@ -24,6 +24,48 @@ import (
 
 const envCLITimeout = 3 * time.Minute
 
+// Approval carries a human's decision to let a gated command run.
+//
+// The two gates are separate and one does not satisfy the other: --approve
+// clears an automation-tier gate, while a production environment needs
+// --confirm-production (or an interactive yes). Passing --approve to a
+// production deploy does nothing.
+//
+// The zero value means "not approved", so a first call always attempts the
+// operation ungated and reports back what it would change. Only after the user
+// has seen that and agreed should a caller retry with these set — which is what
+// the ApprovalGate dialog does. Nothing may set them on the user's behalf.
+type Approval struct {
+	// Approve satisfies an APPROVAL_REQUIRED automation-tier gate.
+	Approve bool `json:"approve"`
+	// ConfirmProduction satisfies a PRODUCTION_CONFIRMATION_REQUIRED gate.
+	ConfirmProduction bool `json:"confirmProduction"`
+}
+
+// forGate returns the approval that clears the given gate code, so a caller can
+// turn a gate result straight into the retry without re-deriving which flag
+// applies.
+func approvalForGate(code string) Approval {
+	switch code {
+	case cliwrap.CodeProductionConfirmation:
+		return Approval{ConfirmProduction: true}
+	default:
+		return Approval{Approve: true}
+	}
+}
+
+// flags renders the approval as CLI flags.
+func (a Approval) flags() []string {
+	var out []string
+	if a.Approve {
+		out = append(out, "--approve")
+	}
+	if a.ConfirmProduction {
+		out = append(out, "--confirm-production")
+	}
+	return out
+}
+
 // EnvGateResult reports an operation that the CLI refused pending approval.
 //
 // Exit 3 covers two situations, and the UI must tell them apart: a production
@@ -42,6 +84,8 @@ type EnvGateResult struct {
 	RetryCmd string `json:"retryCmd"`
 	// Output is the CLI's stdout when the operation did run.
 	Output string `json:"output,omitempty"`
+	// Approval is what would clear this gate, ready to pass back on the retry.
+	Approval Approval `json:"approval"`
 }
 
 // runEnvCLI executes an environment command, turning an exit-3 gate into an
@@ -68,6 +112,7 @@ func (s *ProductService) runEnvCLI(label string, args ...string) (*EnvGateResult
 				Code:     code,
 				Message:  cerr.Message,
 				RetryCmd: cerr.RetryCmd,
+				Approval: approvalForGate(code),
 			}, nil
 		}
 		return nil, fmt.Errorf("%s: %w", label, err)
@@ -131,7 +176,7 @@ func (s *ProductService) ListEnvironmentVariablesCLI(org, product string) ([]Env
 //
 // Values may themselves contain '=', so each pair is passed as a single
 // argument and never re-split. Names are UPPER_SNAKE_CASE by convention.
-func envSetArgs(ref string, vars []EnvVariable, deploy, confirmProduction bool) []string {
+func envSetArgs(ref string, vars []EnvVariable, deploy bool, approval Approval) []string {
 	args := []string{"environment", "set", ref}
 	for _, v := range vars {
 		args = append(args, v.Label+"="+v.Value)
@@ -140,24 +185,18 @@ func envSetArgs(ref string, vars []EnvVariable, deploy, confirmProduction bool) 
 	if deploy {
 		args = append(args, "--deploy")
 	}
-	if confirmProduction {
-		args = append(args, "--confirm-production")
-	}
-	return args
+	return append(args, approval.flags()...)
 }
 
 // envUnsetArgs builds `alis environment unset <ref> NAME ... --json [...]`.
-func envUnsetArgs(ref string, names []string, deploy, confirmProduction bool) []string {
+func envUnsetArgs(ref string, names []string, deploy bool, approval Approval) []string {
 	args := []string{"environment", "unset", ref}
 	args = append(args, names...)
 	args = append(args, "--json")
 	if deploy {
 		args = append(args, "--deploy")
 	}
-	if confirmProduction {
-		args = append(args, "--confirm-production")
-	}
-	return args
+	return append(args, approval.flags()...)
 }
 
 // SetEnvironmentVariablesCLI sets one or more variables in a single call.
@@ -169,7 +208,7 @@ func envUnsetArgs(ref string, names []string, deploy, confirmProduction bool) []
 // user has approved this specific change. Concurrent edits (this app versus the
 // console) are last-writer-wins with no merge, so re-read after writing rather
 // than trusting the local view.
-func (s *ProductService) SetEnvironmentVariablesCLI(org, product, env string, vars []EnvVariable, deploy, confirmProduction bool) (*EnvGateResult, error) {
+func (s *ProductService) SetEnvironmentVariablesCLI(org, product, env string, vars []EnvVariable, deploy bool, approval Approval) (*EnvGateResult, error) {
 	if len(vars) == 0 {
 		return nil, fmt.Errorf("no variables to set")
 	}
@@ -178,18 +217,18 @@ func (s *ProductService) SetEnvironmentVariablesCLI(org, product, env string, va
 			return nil, fmt.Errorf("variable name cannot be empty")
 		}
 	}
-	args := envSetArgs(envRef(org, product, env), vars, deploy, confirmProduction)
+	args := envSetArgs(envRef(org, product, env), vars, deploy, approval)
 	return s.runEnvCLI("environment set", args...)
 }
 
 // UnsetEnvironmentVariablesCLI removes variables from an environment.
 // Unset is destructive and gated on the default automation tier, so a gated
 // result is the common case rather than an edge case.
-func (s *ProductService) UnsetEnvironmentVariablesCLI(org, product, env string, names []string, deploy, confirmProduction bool) (*EnvGateResult, error) {
+func (s *ProductService) UnsetEnvironmentVariablesCLI(org, product, env string, names []string, deploy bool, approval Approval) (*EnvGateResult, error) {
 	if len(names) == 0 {
 		return nil, fmt.Errorf("no variables to unset")
 	}
-	args := envUnsetArgs(envRef(org, product, env), names, deploy, confirmProduction)
+	args := envUnsetArgs(envRef(org, product, env), names, deploy, approval)
 	return s.runEnvCLI("environment unset", args...)
 }
 
@@ -258,7 +297,7 @@ func (s *ProductService) GetEnvironmentBranchesCLI(org, product, env string) (*E
 }
 
 // envBranchesArgs builds the mutating form of `alis environment branches`.
-func envBranchesArgs(ref string, allow []string, clear bool) []string {
+func envBranchesArgs(ref string, allow []string, clear bool, approval Approval) []string {
 	args := []string{"environment", "branches", ref, "--json"}
 	if clear {
 		args = append(args, "--clear")
@@ -266,7 +305,7 @@ func envBranchesArgs(ref string, allow []string, clear bool) []string {
 	for _, b := range allow {
 		args = append(args, "--allow", b)
 	}
-	return args
+	return append(args, approval.flags()...)
 }
 
 // SetEnvironmentBranchesCLI designates which branches may deploy to an
@@ -275,21 +314,21 @@ func envBranchesArgs(ref string, allow []string, clear bool) []string {
 // allow REPLACES the current designation rather than adding to it, so callers
 // must pass the complete list. clear removes the designation entirely, letting
 // any branch deploy.
-func (s *ProductService) SetEnvironmentBranchesCLI(org, product, env string, allow []string, clear bool) (*EnvGateResult, error) {
+func (s *ProductService) SetEnvironmentBranchesCLI(org, product, env string, allow []string, clear bool, approval Approval) (*EnvGateResult, error) {
 	if !clear && len(allow) == 0 {
 		return nil, fmt.Errorf("pass at least one branch to allow, or clear the designation")
 	}
 	if clear && len(allow) > 0 {
 		return nil, fmt.Errorf("clear and allow are mutually exclusive")
 	}
-	args := envBranchesArgs(envRef(org, product, env), allow, clear)
+	args := envBranchesArgs(envRef(org, product, env), allow, clear, approval)
 	return s.runEnvCLI("environment branches", args...)
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
 // envNewArgs builds `alis environment new <org>.<product> --json [...]`.
-func envNewArgs(org, product, displayName string, production bool) []string {
+func envNewArgs(org, product, displayName string, production bool, approval Approval) []string {
 	args := []string{"environment", "new", org + "." + product, "--json"}
 	if displayName != "" {
 		args = append(args, "--display-name", displayName)
@@ -297,7 +336,7 @@ func envNewArgs(org, product, displayName string, production bool) []string {
 	if production {
 		args = append(args, "--production")
 	}
-	return args
+	return append(args, approval.flags()...)
 }
 
 // CreateEnvironmentCLI creates an environment via `alis environment new`.
@@ -306,11 +345,11 @@ func envNewArgs(org, product, displayName string, production bool) []string {
 // every later deploy and variable write to the production gate. It cannot be
 // inferred from the display name — "Production" is just a label — so callers
 // must set it deliberately.
-func (s *ProductService) CreateEnvironmentCLI(org, product, displayName string, production bool) (*EnvGateResult, error) {
+func (s *ProductService) CreateEnvironmentCLI(org, product, displayName string, production bool, approval Approval) (*EnvGateResult, error) {
 	if org == "" || product == "" {
 		return nil, fmt.Errorf("org and product are required")
 	}
-	args := envNewArgs(org, product, displayName, production)
+	args := envNewArgs(org, product, displayName, production, approval)
 	return s.runEnvCLI("environment new", args...)
 }
 

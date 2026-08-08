@@ -58,8 +58,10 @@ export function ContributeBlockFromCommits(instanceName: string, defineCommitSha
 /**
  * CreateBlockCLI creates a new code block from a service's existing code.
  */
-export function CreateBlockCLI(opts: $models.BlockCreateOptions): $CancellablePromise<string> {
-    return $Call.ByID(3716921951, opts);
+export function CreateBlockCLI(opts: $models.BlockCreateOptions, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(3716921951, opts, approval).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -75,7 +77,7 @@ export function CreateCodeblock(params: $models.CreateCodeblockParams): $Cancell
  */
 export function CreateEnvironment(org: string, product: string, displayName: string, region: string, envType: number): $CancellablePromise<$models.EnvInfo | null> {
     return $Call.ByID(2295881451, org, product, displayName, region, envType).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -87,9 +89,9 @@ export function CreateEnvironment(org: string, product: string, displayName: str
  * inferred from the display name — "Production" is just a label — so callers
  * must set it deliberately.
  */
-export function CreateEnvironmentCLI(org: string, product: string, displayName: string, production: boolean): $CancellablePromise<$models.EnvGateResult | null> {
-    return $Call.ByID(3168419727, org, product, displayName, production).then(($result: any) => {
-        return $$createType3($result);
+export function CreateEnvironmentCLI(org: string, product: string, displayName: string, production: boolean, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(3168419727, org, product, displayName, production, approval).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -610,9 +612,9 @@ export function SetApp(app: application$0.App | null): $CancellablePromise<void>
  * must pass the complete list. clear removes the designation entirely, letting
  * any branch deploy.
  */
-export function SetEnvironmentBranchesCLI(org: string, product: string, env: string, allow: string[], clear: boolean): $CancellablePromise<$models.EnvGateResult | null> {
-    return $Call.ByID(1135047043, org, product, env, allow, clear).then(($result: any) => {
-        return $$createType3($result);
+export function SetEnvironmentBranchesCLI(org: string, product: string, env: string, allow: string[], clear: boolean, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(1135047043, org, product, env, allow, clear, approval).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -635,9 +637,9 @@ export function SetEnvironmentVariables(envName: string, vars: $models.EnvVariab
  * console) are last-writer-wins with no merge, so re-read after writing rather
  * than trusting the local view.
  */
-export function SetEnvironmentVariablesCLI(org: string, product: string, env: string, vars: $models.EnvVariable[], deploy: boolean, confirmProduction: boolean): $CancellablePromise<$models.EnvGateResult | null> {
-    return $Call.ByID(2099730570, org, product, env, vars, deploy, confirmProduction).then(($result: any) => {
-        return $$createType3($result);
+export function SetEnvironmentVariablesCLI(org: string, product: string, env: string, vars: $models.EnvVariable[], deploy: boolean, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(2099730570, org, product, env, vars, deploy, approval).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -663,8 +665,10 @@ export function SyncRepos(org: string, product: string): $CancellablePromise<$mo
  * "autonomous" gates it: expect an exit-3 APPROVAL_REQUIRED envelope and show
  * the user its retry command rather than passing --approve.
  */
-export function UninstallBlockInstanceCLI(instance: string): $CancellablePromise<void> {
-    return $Call.ByID(4177884300, instance);
+export function UninstallBlockInstanceCLI(instance: string, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(4177884300, instance, approval).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -681,9 +685,9 @@ export function UninstallCodeblockInstance(instanceName: string): $CancellablePr
  * Unset is destructive and gated on the default automation tier, so a gated
  * result is the common case rather than an edge case.
  */
-export function UnsetEnvironmentVariablesCLI(org: string, product: string, env: string, names: string[], deploy: boolean, confirmProduction: boolean): $CancellablePromise<$models.EnvGateResult | null> {
-    return $Call.ByID(960388773, org, product, env, names, deploy, confirmProduction).then(($result: any) => {
-        return $$createType3($result);
+export function UnsetEnvironmentVariablesCLI(org: string, product: string, env: string, names: string[], deploy: boolean, approval: $models.Approval): $CancellablePromise<$models.EnvGateResult | null> {
+    return $Call.ByID(960388773, org, product, env, names, deploy, approval).then(($result: any) => {
+        return $$createType1($result);
     });
 }
 
@@ -708,7 +712,7 @@ export function UpdateCodeblock(params: $models.CreateCodeblockParams): $Cancell
  */
 export function UpdateEnvironment(envName: string, displayName: string): $CancellablePromise<$models.EnvInfo | null> {
     return $Call.ByID(828266076, envName, displayName).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType3($result);
     });
 }
 
@@ -731,9 +735,9 @@ export function UpgradeCodeblockInstance(instanceName: string, blockVersionName:
 }
 
 // Private type creation functions
-const $$createType0 = $models.EnvInfo.createFrom;
+const $$createType0 = $models.EnvGateResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.EnvGateResult.createFrom;
+const $$createType2 = $models.EnvInfo.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = $models.NeuronItem.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
@@ -779,7 +783,7 @@ const $$createType44 = $Create.Array($$createType16);
 const $$createType45 = $Create.Array($$createType12);
 const $$createType46 = $models.EnvironmentVariables.createFrom;
 const $$createType47 = $Create.Array($$createType46);
-const $$createType48 = $Create.Array($$createType0);
+const $$createType48 = $Create.Array($$createType2);
 const $$createType49 = $models.InstallNeuron.createFrom;
 const $$createType50 = $Create.Array($$createType49);
 const $$createType51 = $models.Organisation.createFrom;

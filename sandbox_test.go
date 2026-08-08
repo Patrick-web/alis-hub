@@ -339,7 +339,7 @@ func TestSandbox_ApprovalGateIsReportedNotSwallowed(t *testing.T) {
 	res, err := svc.UnsetEnvironmentVariablesCLI(
 		sandboxOrg, sandboxProduct, sandboxEnvID,
 		[]string{"NO_SUCH_VAR_ALIS_HUB_PROBE"},
-		false, false,
+		false, Approval{},
 	)
 	if err != nil {
 		t.Fatalf("a gated command must not surface as an error: %v", err)
