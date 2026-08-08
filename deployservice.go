@@ -103,15 +103,23 @@ func (s *DeployService) ListNeuronVersions(neuron string) ([]*NeuronVersionSumma
 // neuron is the full neuron resource name. version is the neuron version to deploy.
 // planOnly runs terraform plan only; beta allows beta-state neurons to be deployed.
 func (s *DeployService) RunDeploy(neuron, version string, environments []string, planOnly, beta bool) (*RunDeployResult, error) {
-	log.Printf("[deploy] RunDeploy: neuron=%s version=%s envs=%v planOnly=%v backend=%T", neuron, version, environments, planOnly, s.backend)
+	log.Printf("[deploy] RunDeploy: neuron=%s version=%s envs=%v planOnly=%v beta=%v backend=%T", neuron, version, environments, planOnly, beta, s.backend)
+
+	// `alis deploy` has no beta flag, so a beta deploy cannot be expressed
+	// through the CLI. Route it to the gRPC path rather than dropping the
+	// caller's intent and deploying as if beta had not been requested.
+	if _, isCLI := s.backend.(*CLIBackend); isCLI && beta {
+		log.Printf("[deploy] beta=true not expressible via alis CLI — using gRPC path")
+		return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly, beta)
+	}
 	if s.backend != nil {
 		return s.backend.RunDeploy(context.Background(), neuron, version, environments, planOnly)
 	}
-	return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly)
+	return s.runDeployGRPC(context.Background(), neuron, version, environments, planOnly, beta)
 }
 
 // runDeployGRPC is the original gRPC implementation of RunDeploy.
-func (s *DeployService) runDeployGRPC(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error) {
+func (s *DeployService) runDeployGRPC(ctx context.Context, neuron, version string, environments []string, planOnly, beta bool) (*RunDeployResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
@@ -124,13 +132,14 @@ func (s *DeployService) runDeployGRPC(ctx context.Context, neuron, version strin
 		versionID = strings.ReplaceAll(version[idx+1:], "-", ".")
 	}
 
-	log.Printf("[deploy] RunDeploy: neuron=%s versionID=%s envs=%v planOnly=%v", neuron, versionID, environments, planOnly)
+	log.Printf("[deploy] RunDeploy: neuron=%s versionID=%s envs=%v planOnly=%v beta=%v", neuron, versionID, environments, planOnly, beta)
 
 	req := &dbdv1.RunDeployRequest{
 		Neuron:       neuron,
 		Version:      versionID,
 		Environments: environments,
 		PlanOnly:     planOnly,
+		Beta:         beta,
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)

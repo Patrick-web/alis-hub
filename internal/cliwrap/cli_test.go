@@ -106,12 +106,12 @@ func TestParseErrorEnvelope(t *testing.T) {
 		{
 			name:   "production confirmation",
 			stdout: `{"error":{"code":"PRODUCTION_CONFIRMATION_REQUIRED","message":"production deploy requires confirmation","retry":"alis deploy voyage.vp.asana.v1 --json -e prod --confirm-production","agent":"ask the user first"}}`,
-			want: &ErrorEnvelope{},
+			want:   &ErrorEnvelope{},
 		},
 		{
 			name:   "approval required",
 			stdout: `{"error":{"code":"APPROVAL_REQUIRED","message":"command requires approval","retry":"alis build voyage.vp.asana.v1 --json --approve","agent":""}}`,
-			want: &ErrorEnvelope{},
+			want:   &ErrorEnvelope{},
 		},
 		{
 			name:   "non-error json",

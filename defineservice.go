@@ -158,23 +158,33 @@ type RunDefineResult struct {
 // RunDefine starts a Define operation on the Alis backend.
 func (s *DefineService) RunDefine(neuron, commit, releaseType string) (*RunDefineResult, error) {
 	log.Printf("[define] RunDefine: neuron=%s commit=%s releaseType=%q backend=%T", neuron, commit, releaseType, s.backend)
+
+	// `alis define` has no --release-type flag. Rather than accept the
+	// parameter and silently drop it — leaving the UI control looking
+	// functional while doing nothing — route these calls to the gRPC path,
+	// which can express it.
+	if _, isCLI := s.backend.(*CLIBackend); isCLI && releaseType != "" {
+		log.Printf("[define] releaseType=%q not expressible via alis CLI — using gRPC path", releaseType)
+		return s.runDefineGRPC(context.Background(), neuron, commit, releaseType)
+	}
 	if s.backend != nil {
 		return s.backend.RunDefine(context.Background(), neuron, commit)
 	}
-	return s.runDefineGRPC(context.Background(), neuron, commit)
+	return s.runDefineGRPC(context.Background(), neuron, commit, releaseType)
 }
 
 // runDefineGRPC is the original gRPC implementation of RunDefine.
-func (s *DefineService) runDefineGRPC(ctx context.Context, neuron, commit string) (*RunDefineResult, error) {
+func (s *DefineService) runDefineGRPC(ctx context.Context, neuron, commit, releaseType string) (*RunDefineResult, error) {
 	if err := s.initClient(); err != nil {
 		return nil, err
 	}
 
-	log.Printf("[define] RunDefine: neuron=%s commit=%s", neuron, commit)
+	log.Printf("[define] RunDefine: neuron=%s commit=%s releaseType=%q", neuron, commit, releaseType)
 
 	req := &dbdv1.RunDefineRequest{
 		Neuron:      neuron,
 		Commit:      commit,
+		ReleaseType: releaseType,
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)

@@ -17,21 +17,41 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
+// ListLandingZones returns the caller's organisations, split into owned and
+// shared.
+//
+// gRPC is primary. `alis org list --json` returns a flat `landingZones` array
+// with no ownership information, so a CLI-first ordering would file every
+// shared organisation under "Own" — wrong data rendered confidently. The CLI
+// serves as a fallback that keeps the picker populated when the Console API is
+// unreachable, at the cost of that split.
 func (s *ProductService) ListLandingZones() (*LandingZonesData, error) {
-	// Try CLI first for fast basic listing.
-	if s.alisCli != nil {
-		if data, err := s.listZonesCLI(); err == nil {
-			return data, nil
-		} else {
-			log.Printf("[orgs] CLI org list failed, falling back to gRPC: %v", err)
-		}
+	data, err := s.listZonesGRPC()
+	if err == nil {
+		return data, nil
 	}
-	return s.listZonesGRPC()
+	if s.alisCli == nil {
+		return nil, err
+	}
+	log.Printf("[orgs] gRPC org list failed, falling back to alis org list: %v", err)
+	cliData, cliErr := s.listZonesCLI()
+	if cliErr != nil {
+		log.Printf("[orgs] alis org list fallback also failed: %v", cliErr)
+		return nil, err
+	}
+	return cliData, nil
 }
 
 // listZonesCLI builds LandingZonesData from alis org list --json.
+//
+// Every organisation lands in Own: the CLI response carries no owned/shared
+// distinction, and reporting them all as owned is the less misleading of the
+// two available guesses (the picker stays usable; no organisation disappears).
 func (s *ProductService) listZonesCLI() (*LandingZonesData, error) {
-	result, err := s.alisCli.Run(context.Background(), "org", "list", "--json")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	result, err := s.alisCli.Run(ctx, "org", "list", "--json")
 	if err != nil {
 		return nil, err
 	}
@@ -45,16 +65,14 @@ func (s *ProductService) listZonesCLI() (*LandingZonesData, error) {
 	if err := json.Unmarshal(result.Stdout, &v); err != nil {
 		return nil, fmt.Errorf("parse org list: %w", err)
 	}
-	result2 := &LandingZonesData{}
+	zones := &LandingZonesData{}
 	for _, z := range v.LandingZones {
-		org := Organisation{
+		zones.Own = append(zones.Own, Organisation{
 			Name:        "organisations/" + z.ID,
 			DisplayName: z.DisplayName,
-		}
-		// Without gRPC we can't classify Own/Shared, so put all in Own.
-		result2.Own = append(result2.Own, org)
+		})
 	}
-	return result2, nil
+	return zones, nil
 }
 
 func (s *ProductService) listZonesGRPC() (*LandingZonesData, error) {
@@ -109,21 +127,26 @@ func (s *ProductService) listZonesGRPC() (*LandingZonesData, error) {
 	return result, nil
 }
 
+// ListProducts returns an organisation's products. The CLI is tried first here
+// — unlike ListLandingZones, `alis org view` carries everything ProductSummary
+// needs, including a status this maps back onto the Product_State enum.
 func (s *ProductService) ListProducts(org string) ([]ProductSummary, error) {
-	// Try CLI first via alis product view --json.
 	if s.alisCli != nil {
 		if products, err := s.listProductsCLI(org); err == nil {
 			return products, nil
 		} else {
-			log.Printf("[orgs] CLI product view failed for %s, falling back to gRPC: %v", org, err)
+			log.Printf("[orgs] CLI org view failed for %s, falling back to gRPC: %v", org, err)
 		}
 	}
 	return s.listProductsGRPC(org)
 }
 
-// listProductsCLI builds ProductSummary list from alis org view --json.
+// listProductsCLI builds a ProductSummary list from alis org view --json.
 func (s *ProductService) listProductsCLI(org string) ([]ProductSummary, error) {
-	result, err := s.alisCli.Run(context.Background(), "org", "view", org, "--json")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	result, err := s.alisCli.Run(ctx, "org", "view", org, "--json")
 	if err != nil {
 		return nil, err
 	}
@@ -142,10 +165,21 @@ func (s *ProductService) listProductsCLI(org string) ([]ProductSummary, error) {
 		products = append(products, ProductSummary{
 			Name:        "organisations/" + org + "/products/" + p.ID,
 			DisplayName: p.DisplayName,
-			State:       1, // ACTIVE from CLI has no numeric mapping; 1 = ACTIVE
+			State:       productStateFromCLI(p.Status),
 		})
 	}
 	return products, nil
+}
+
+// productStateFromCLI maps the CLI's protojson enum string ("ACTIVE",
+// "CREATING", …) back onto the Product_State enum the frontend expects.
+// Hardcoding ACTIVE here would misreport products that are creating, updating
+// or failed as healthy. An unrecognised status maps to STATE_UNSPECIFIED (0).
+func productStateFromCLI(status string) int32 {
+	if v, ok := productsv1pb.Product_State_value[status]; ok {
+		return v
+	}
+	return int32(productsv1pb.Product_STATE_UNSPECIFIED)
 }
 
 func (s *ProductService) listProductsGRPC(org string) ([]ProductSummary, error) {

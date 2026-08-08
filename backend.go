@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"alis-hub-v3/internal/cliwrap"
 )
@@ -56,6 +58,52 @@ func NewCLIBackend() (*CLIBackend, error) {
 	return &CLIBackend{runner: runner}, nil
 }
 
+// Runner exposes the underlying CLI runner for callers that need to probe the
+// installed binary (version checks, diagnostics).
+func (b *CLIBackend) Runner() *cliwrap.Runner { return b.runner }
+
+// reportCLIVersion logs the installed CLI version and warns when it predates
+// the version this app is verified against. It runs off the startup path
+// because it costs a process spawn, and never blocks launch: an old CLI still
+// works for most flows, it just fails later on newer flags (block instances,
+// `environment branches`) with an opaque usage error unless we say so here.
+func reportCLIVersion(b *CLIBackend) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	version, ok, err := b.runner.CheckMinVersion(ctx)
+	switch {
+	case err != nil:
+		log.Printf("[main] could not determine alis CLI version: %v", err)
+	case !ok:
+		log.Printf("[main] WARNING: alis CLI %s is older than the verified minimum %s — "+
+			"run `alis upgrade`; some operations may fail with usage errors",
+			version, cliwrap.MinVersion)
+	default:
+		log.Printf("[main] alis CLI %s (verified minimum %s)", version, cliwrap.MinVersion)
+	}
+}
+
+// confirmationRequired converts an exit-3 error into the (code, retry) pair the
+// frontend renders as an approval prompt.
+//
+// Exit 3 covers both the production deploy gate and the caller's automation
+// tier gating a mutating command. A desktop app is not a harness with a
+// standing approval grant, so users on the "manual" tier hit this on every
+// define/build/deploy. In both cases the app must show the retry command and
+// let the user decide — never inject --approve or --confirm-production itself.
+func confirmationRequired(err error) (code, retry string, ok bool) {
+	cerr, ok := cliwrap.AsConfirmationRequired(err)
+	if !ok {
+		return "", "", false
+	}
+	code = cerr.Code
+	if code == "" {
+		code = cliwrap.CodeApprovalRequired
+	}
+	return code, cerr.RetryCmd, true
+}
+
 func (b *CLIBackend) RunDefine(ctx context.Context, neuron, commit string) (*RunDefineResult, error) {
 	pkg := cliwrap.NeuronToPackageID(neuron)
 	args := []string{"define", pkg, "--json"}
@@ -65,6 +113,9 @@ func (b *CLIBackend) RunDefine(ctx context.Context, neuron, commit string) (*Run
 
 	opName, err := b.runner.RunAsyncName(ctx, args...)
 	if err != nil {
+		if code, retry, ok := confirmationRequired(err); ok {
+			return &RunDefineResult{Error: code, Notes: retry}, nil
+		}
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
 	return &RunDefineResult{OperationName: opName, Done: false}, nil
@@ -98,6 +149,9 @@ func (b *CLIBackend) RunBuild(ctx context.Context, neuron, commit string) (*RunB
 
 	opName, err := b.runner.RunAsyncName(ctx, args...)
 	if err != nil {
+		if code, retry, ok := confirmationRequired(err); ok {
+			return &RunBuildResult{Error: code, Notes: retry}, nil
+		}
 		return nil, fmt.Errorf("RunBuild: %w", err)
 	}
 	return &RunBuildResult{OperationName: opName, Done: false}, nil
@@ -134,11 +188,10 @@ func (b *CLIBackend) RunDeploy(ctx context.Context, neuron, version string, envi
 
 	stdout, err := b.runner.RunAsync(ctx, args...)
 	if err != nil {
-		if cerr, ok := err.(*cliwrap.ErrConfirmationRequired); ok {
-			return &RunDeployResult{
-				Error: "PRODUCTION_CONFIRMATION_REQUIRED",
-				Notes: cerr.RetryCmd,
-			}, nil
+		// Exit 3 is either the production gate or an automation-tier gate;
+		// report whichever it actually was rather than assuming production.
+		if code, retry, ok := confirmationRequired(err); ok {
+			return &RunDeployResult{Error: code, Notes: retry}, nil
 		}
 		return nil, fmt.Errorf("RunDeploy: %w", err)
 	}
@@ -198,8 +251,12 @@ func NewGRPCBackend(defineSvc *DefineService, buildSvc *BuildService, deploySvc 
 	return &GRPCBackend{defineSvc: defineSvc, buildSvc: buildSvc, deploySvc: deploySvc}
 }
 
+// RunDefine defines with the server's default release type. Callers needing a
+// specific release type go through DefineService.RunDefine, which routes
+// straight to the gRPC implementation — the DBDBackend interface deliberately
+// stays at the intersection of what both backends can express.
 func (b *GRPCBackend) RunDefine(ctx context.Context, neuron, commit string) (*RunDefineResult, error) {
-	return b.defineSvc.runDefineGRPC(ctx, neuron, commit)
+	return b.defineSvc.runDefineGRPC(ctx, neuron, commit, "")
 }
 
 func (b *GRPCBackend) PollDefine(ctx context.Context, opName string) (*RunDefineResult, error) {
@@ -214,8 +271,10 @@ func (b *GRPCBackend) PollBuild(ctx context.Context, opName, neuron string) (*Ru
 	return b.buildSvc.pollBuildGRPC(ctx, opName, neuron)
 }
 
+// RunDeploy deploys without the beta flag. Beta deploys go through
+// DeployService.RunDeploy, which routes straight to the gRPC implementation.
 func (b *GRPCBackend) RunDeploy(ctx context.Context, neuron, version string, environments []string, planOnly bool) (*RunDeployResult, error) {
-	return b.deploySvc.runDeployGRPC(ctx, neuron, version, environments, planOnly)
+	return b.deploySvc.runDeployGRPC(ctx, neuron, version, environments, planOnly, false)
 }
 
 func (b *GRPCBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployResult, error) {

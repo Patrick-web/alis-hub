@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"alis-hub-v3/internal/cliwrap"
 
@@ -130,20 +131,20 @@ type InstallBlockResult struct {
 // ── Codeblocks ────────────────────────────────────────────────────────────────
 
 type Codeblock struct {
-	Name                  string             `json:"name"`
-	DisplayName           string             `json:"displayName"`
-	ReleaseLevel          int32              `json:"releaseLevel"`
-	Publisher             string             `json:"publisher"`
-	PublisherDisplayName  string             `json:"publisherDisplayName"`
-	LatestVersion         string             `json:"latestVersion"`
-	Tagline          string             `json:"tagline"`
-	Headline         string             `json:"headline"`
-	Description      string             `json:"description"`
-	BannerURL        string             `json:"bannerUrl"`
-	InstallCount     int32              `json:"installCount"`
-	Highlights       []string           `json:"highlights"`
-	KeyFeatures      []CodeblockFeature `json:"keyFeatures"`
-	CodeArchitecture []CodeblockLayer   `json:"codeArchitecture"`
+	Name                 string             `json:"name"`
+	DisplayName          string             `json:"displayName"`
+	ReleaseLevel         int32              `json:"releaseLevel"`
+	Publisher            string             `json:"publisher"`
+	PublisherDisplayName string             `json:"publisherDisplayName"`
+	LatestVersion        string             `json:"latestVersion"`
+	Tagline              string             `json:"tagline"`
+	Headline             string             `json:"headline"`
+	Description          string             `json:"description"`
+	BannerURL            string             `json:"bannerUrl"`
+	InstallCount         int32              `json:"installCount"`
+	Highlights           []string           `json:"highlights"`
+	KeyFeatures          []CodeblockFeature `json:"keyFeatures"`
+	CodeArchitecture     []CodeblockLayer   `json:"codeArchitecture"`
 }
 
 type CodeblockVersion struct {
@@ -250,9 +251,15 @@ type BootstrapBlockParams struct {
 }
 
 type ProductService struct {
-	tokens       *ConsoleTokenSource
-	mu           sync.Mutex
-	alisCli      *cliwrap.Runner
+	tokens *ConsoleTokenSource
+	mu     sync.Mutex
+	// alisCli is nil when the alis CLI is not on PATH; every CLI-backed path
+	// must degrade to its gRPC/Console equivalent rather than fail.
+	alisCli *cliwrap.Runner
+	// cliAuthOK/cliAuthAt memoise `alis whoami` for cliAuthTTL, keeping auth
+	// checks off the process-spawn path on hot UI routes.
+	cliAuthOK    bool
+	cliAuthAt    time.Time
 	app          *application.App
 	proxies      map[string]*authProxy
 	editorWindow *application.WebviewWindow

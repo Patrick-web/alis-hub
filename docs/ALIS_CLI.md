@@ -1,7 +1,8 @@
 # Alis CLI — current command reference (v1.54.0, superseded)
 
 > **This document has been superseded by [ALIS_CLI_FEATURES.md](./ALIS_CLI_FEATURES.md)**
-> which covers the latest CLI version (v1.64.4) with complete feature documentation.
+> which covers the latest CLI version (v1.69.7) with complete feature
+> documentation, including verified `--json` response shapes.
 > See also [ALIS_CLI_MIGRATION_ANALYSIS.md](./ALIS_CLI_MIGRATION_ANALYSIS.md) for
 > what this project can switch to using the CLI.
 

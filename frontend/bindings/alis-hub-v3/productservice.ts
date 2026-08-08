@@ -19,7 +19,13 @@ export function BootstrapBlock(params: $models.BootstrapBlockParams): $Cancellab
 
 /**
  * CheckAuth returns true when a valid, refreshable auth token can be obtained.
- * Tries CLI first, then the token source. Returns false if neither succeeds.
+ * 
+ * The Console token is authoritative here, not `alis whoami`. Large parts of
+ * the app still call the Console and gRPC APIs directly, so a working CLI
+ * session says nothing about whether those calls will succeed — treating it as
+ * sufficient lets the UI past the login gate and then fails every non-migrated
+ * request. The CLI check only stands in when no Console token source exists at
+ * all, which is the CLI-only sign-in case.
  */
 export function CheckAuth(): $CancellablePromise<boolean> {
     return $Call.ByID(2302560144);
@@ -198,6 +204,16 @@ export function GetProductOverview(org: string, product: string): $CancellablePr
     });
 }
 
+/**
+ * GetServicesOverview returns every service in a product plus the per-environment
+ * deployment state of each.
+ * 
+ * `alis product view --json` answers all of this in a single call — it returns
+ * the neuron list *and* an environments array whose `deployments` object is
+ * keyed by neuron id. The gRPC path below needs 2+N round trips for the same
+ * data (ListNeurons, ListEnvironments, then one ListDeployments per
+ * environment), so the CLI is tried first and gRPC is the fallback.
+ */
 export function GetServicesOverview(org: string, product: string): $CancellablePromise<$models.ServicesOverview | null> {
     return $Call.ByID(1035339913, org, product).then(($result: any) => {
         return $$createType23($result);
@@ -216,7 +232,12 @@ export function GetShareData(org: string, product: string): $CancellablePromise<
 
 /**
  * GetUserProfile fetches name and photo for the logged-in user.
- * Tries CLI first (alis whoami --json), falls back to gRPC.
+ * 
+ * gRPC is primary here, not the CLI: `alis whoami` returns an email and a build
+ * profile but carries no display name and no avatar, so preferring it would
+ * blank out both in the UI whenever it happened to succeed. The CLI is the
+ * fallback, yielding an email-only profile when the richer source is
+ * unreachable — degraded, but better than no identity at all.
  */
 export function GetUserProfile(): $CancellablePromise<$models.UserProfile | null> {
     return $Call.ByID(1754949162).then(($result: any) => {
@@ -233,7 +254,8 @@ export function GetWorkstationURI(): $CancellablePromise<string> {
 }
 
 /**
- * IsLoggedIn returns true when console credentials exist.
+ * IsLoggedIn returns true when console credentials exist, or when the alis CLI
+ * is signed in (covering a user who ran `alis login` outside the app).
  */
 export function IsLoggedIn(): $CancellablePromise<boolean> {
     return $Call.ByID(1203503551);
@@ -327,6 +349,16 @@ export function ListInvites(org: string, product: string): $CancellablePromise<$
     });
 }
 
+/**
+ * ListLandingZones returns the caller's organisations, split into owned and
+ * shared.
+ * 
+ * gRPC is primary. `alis org list --json` returns a flat `landingZones` array
+ * with no ownership information, so a CLI-first ordering would file every
+ * shared organisation under "Own" — wrong data rendered confidently. The CLI
+ * serves as a fallback that keeps the picker populated when the Console API is
+ * unreachable, at the cost of that split.
+ */
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
         return $$createType46($result);
@@ -342,6 +374,11 @@ export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     });
 }
 
+/**
+ * ListProducts returns an organisation's products. The CLI is tried first here
+ * — unlike ListLandingZones, `alis org view` carries everything ProductSummary
+ * needs, including a status this maps back onto the Product_State enum.
+ */
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
         return $$createType48($result);

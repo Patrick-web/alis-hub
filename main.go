@@ -75,6 +75,7 @@ func main() {
 		defineSvc.setBackend(cli)
 		buildSvc.setBackend(cli)
 		deploySvc.setBackend(cli)
+		go reportCLIVersion(cli)
 	} else {
 		log.Printf("[main] alis CLI not found (%v) — falling back to gRPC backend", err)
 		grpcBackend := NewGRPCBackend(defineSvc, buildSvc, deploySvc)

@@ -19,28 +19,40 @@ import * as alisclient$0 from "./internal/alisclient/models.js";
 import * as $models from "./models.js";
 
 /**
- * CLIDefineWithInstall runs `alis define <pkg> --json --install` — define + install in one call.
+ * CLIDefineWithInstall starts `alis define <pkg> --install` and returns the
+ * operation name immediately.
+ * 
+ * This runs --async deliberately. A define takes minutes, and a blocking
+ * invocation would hold the Wails call open for its whole duration with no
+ * progress and no way to cancel. Callers poll with
+ * DefineService.PollDefineOperation, exactly as the plain define flow does.
+ * The chained --install still runs CLI-side once the define succeeds.
  */
-export function CLIDefineWithInstall(org: string, product: string, neuron: string, version: string, commit: string): $CancellablePromise<$models.CLIPackageResult | null> {
-    return $Call.ByID(1483476993, org, product, neuron, version, commit).then(($result: any) => {
+export function CLIDefineWithInstall(org: string, product: string, neuron: string, version: string, commit: string, installLanguage: string): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(1483476993, org, product, neuron, version, commit, installLanguage).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 /**
  * CLIPackagesInstall runs `alis packages install <pkg> --json`.
+ * language, when set, limits the run to one of go/node/python/dart.
  */
-export function CLIPackagesInstall(org: string, product: string, neuron: string, version: string): $CancellablePromise<$models.CLIPackageResult | null> {
-    return $Call.ByID(1240612287, org, product, neuron, version).then(($result: any) => {
+export function CLIPackagesInstall(org: string, product: string, neuron: string, version: string, language: string): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(1240612287, org, product, neuron, version, language).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
 /**
  * CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
+ * 
+ * all also upgrades third-party packages. paths selects specific package
+ * folders or manifests relative to the service — required for nested modules,
+ * where the package id still names the owning service, not the dependency.
  */
-export function CLIPackagesUpgrade(org: string, product: string, neuron: string, version: string, all: boolean): $CancellablePromise<$models.CLIPackageResult | null> {
-    return $Call.ByID(465072776, org, product, neuron, version, all).then(($result: any) => {
+export function CLIPackagesUpgrade(org: string, product: string, neuron: string, version: string, all: boolean, language: string, paths: string[]): $CancellablePromise<$models.CLIPackageResult | null> {
+    return $Call.ByID(465072776, org, product, neuron, version, all, language, paths).then(($result: any) => {
         return $$createType1($result);
     });
 }

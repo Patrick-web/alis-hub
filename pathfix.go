@@ -57,6 +57,12 @@ func fixPathEnv() {
 	for _, dir := range []string{
 		"/usr/local/bin",
 		"/opt/homebrew/bin",
+		// The alis CLI installs here and is the app's execution plane for
+		// define/build/deploy. If the login-shell query above failed (slow
+		// dotfiles hitting the 2s timeout, an unusual $SHELL), missing this
+		// entry silently reverts every migrated path back to the gRPC
+		// fallback, so it must not depend on the shell query succeeding.
+		filepath.Join(home, ".alis", "bin"),
 		filepath.Join(home, ".docker", "bin"),
 		filepath.Join(home, ".local", "bin"),
 		filepath.Join(home, "bin"),

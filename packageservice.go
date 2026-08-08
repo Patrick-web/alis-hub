@@ -370,40 +370,74 @@ type CLIPackageResult struct {
 	Error  string `json:"error,omitempty"`
 }
 
-// CLIPackagesInstall runs `alis packages install <pkg> --json`.
-func (s *PackageService) CLIPackagesInstall(org, product, neuron, version string) (*CLIPackageResult, error) {
+// cliPackageTimeout bounds a package command. These run local package managers
+// (go/pnpm/pip/dart) after refreshing registry credentials, so they are slow
+// but not open-ended.
+const cliPackageTimeout = 10 * time.Minute
+
+// runCLIPackageCmd executes a package command with a bounded timeout and maps
+// an exit-3 gate into the result rather than an opaque error: `packages
+// install` is classed as mutating, so users on the "manual" automation tier are
+// gated on it and need to see the retry command.
+func (s *PackageService) runCLIPackageCmd(label string, args ...string) (*CLIPackageResult, error) {
 	if s.cliRunner == nil {
 		return nil, fmt.Errorf("alis CLI not available")
 	}
-	pkg := org + "." + product + "." + neuron + "." + version
-	log.Printf("[packages] CLI install: %s", pkg)
-	result, err := s.cliRunner.Run(context.Background(), "packages", "install", pkg, "--json")
+	ctx, cancel := context.WithTimeout(context.Background(), cliPackageTimeout)
+	defer cancel()
+
+	result, err := s.cliRunner.Run(ctx, args...)
 	if err != nil {
-		return nil, fmt.Errorf("packages install: %w", err)
+		if cerr, ok := cliwrap.AsConfirmationRequired(err); ok {
+			return &CLIPackageResult{Output: cerr.RetryCmd, Error: cerr.Code}, nil
+		}
+		return nil, fmt.Errorf("%s: %w", label, err)
 	}
 	return &CLIPackageResult{Output: string(result.Stdout)}, nil
 }
 
-// CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
-func (s *PackageService) CLIPackagesUpgrade(org, product, neuron, version string, all bool) (*CLIPackageResult, error) {
-	if s.cliRunner == nil {
-		return nil, fmt.Errorf("alis CLI not available")
+// CLIPackagesInstall runs `alis packages install <pkg> --json`.
+// language, when set, limits the run to one of go/node/python/dart.
+func (s *PackageService) CLIPackagesInstall(org, product, neuron, version, language string) (*CLIPackageResult, error) {
+	pkg := org + "." + product + "." + neuron + "." + version
+	args := []string{"packages", "install", pkg, "--json"}
+	if language != "" {
+		args = append(args, "--language", language)
 	}
+	log.Printf("[packages] CLI install: %s language=%q", pkg, language)
+	return s.runCLIPackageCmd("packages install", args...)
+}
+
+// CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
+//
+// all also upgrades third-party packages. paths selects specific package
+// folders or manifests relative to the service — required for nested modules,
+// where the package id still names the owning service, not the dependency.
+func (s *PackageService) CLIPackagesUpgrade(org, product, neuron, version string, all bool, language string, paths []string) (*CLIPackageResult, error) {
 	pkg := org + "." + product + "." + neuron + "." + version
 	args := []string{"packages", "upgrade", pkg, "--json"}
 	if all {
 		args = append(args, "--all")
 	}
-	log.Printf("[packages] CLI upgrade: %s all=%v", pkg, all)
-	result, err := s.cliRunner.Run(context.Background(), args...)
-	if err != nil {
-		return nil, fmt.Errorf("packages upgrade: %w", err)
+	if language != "" {
+		args = append(args, "--language", language)
 	}
-	return &CLIPackageResult{Output: string(result.Stdout)}, nil
+	for _, p := range paths {
+		args = append(args, "--path", p)
+	}
+	log.Printf("[packages] CLI upgrade: %s all=%v language=%q paths=%v", pkg, all, language, paths)
+	return s.runCLIPackageCmd("packages upgrade", args...)
 }
 
-// CLIDefineWithInstall runs `alis define <pkg> --json --install` — define + install in one call.
-func (s *PackageService) CLIDefineWithInstall(org, product, neuron, version string, commit string) (*CLIPackageResult, error) {
+// CLIDefineWithInstall starts `alis define <pkg> --install` and returns the
+// operation name immediately.
+//
+// This runs --async deliberately. A define takes minutes, and a blocking
+// invocation would hold the Wails call open for its whole duration with no
+// progress and no way to cancel. Callers poll with
+// DefineService.PollDefineOperation, exactly as the plain define flow does.
+// The chained --install still runs CLI-side once the define succeeds.
+func (s *PackageService) CLIDefineWithInstall(org, product, neuron, version, commit, installLanguage string) (*CLIPackageResult, error) {
 	if s.cliRunner == nil {
 		return nil, fmt.Errorf("alis CLI not available")
 	}
@@ -412,10 +446,20 @@ func (s *PackageService) CLIDefineWithInstall(org, product, neuron, version stri
 	if commit != "" {
 		args = append(args, "--commit", commit)
 	}
+	if installLanguage != "" {
+		args = append(args, "--install-language", installLanguage)
+	}
 	log.Printf("[packages] CLI define+install: %s", pkg)
-	result, err := s.cliRunner.Run(context.Background(), args...)
+
+	ctx, cancel := context.WithTimeout(context.Background(), cliwrap.DefaultTimeout)
+	defer cancel()
+
+	opName, err := s.cliRunner.RunAsyncName(ctx, args...)
 	if err != nil {
+		if cerr, ok := cliwrap.AsConfirmationRequired(err); ok {
+			return &CLIPackageResult{Output: cerr.RetryCmd, Error: cerr.Code}, nil
+		}
 		return nil, fmt.Errorf("define --install: %w", err)
 	}
-	return &CLIPackageResult{Output: string(result.Stdout)}, nil
+	return &CLIPackageResult{Output: opName}, nil
 }

@@ -5,6 +5,10 @@
  * CLIService provides CLI-backed operations for packages, code blocks, and
  * environment management. It is a Wails-bound service that can be called
  * from the frontend as an alternative to the gRPC/Console API paths.
+ * 
+ * Every method returns the CLI's raw JSON stdout as a string. Callers on the
+ * frontend parse it against the shapes recorded in
+ * docs/ALIS_CLI_FEATURES.md § Verified JSON Response Shapes.
  * @module
  */
 
@@ -22,37 +26,53 @@ export function CLIAuthorise(org: string, product: string): $CancellablePromise<
 
 /**
  * CLIBlocksInstall runs `alis blocks install <blockId> [<pkg>] --json`.
+ * 
+ * noMerge maps to --no-merge. Without it the CLI, after the server-side install
+ * completes, merges the generated block/* branch into main in *both* the
+ * product build repo and the org define repo and pushes. Those are the same
+ * working trees this app's git UI operates on, so callers that cannot
+ * guarantee a clean tree should pass noMerge and run CLIBlocksMerge later.
  */
-export function CLIBlocksInstall(blockID: string, pkg: string): $CancellablePromise<string> {
-    return $Call.ByID(3916844836, blockID, pkg);
+export function CLIBlocksInstall(blockID: string, pkg: string, version: string, buildFolder: string, noMerge: boolean): $CancellablePromise<string> {
+    return $Call.ByID(3916844836, blockID, pkg, version, buildFolder, noMerge);
 }
 
 /**
  * CLIBlocksList runs `alis blocks list [<pkg>] --json`.
+ * 
+ * The response splits into `installed` and `available`. Two flags on available
+ * blocks gate the UI: `agenticInstallOnly` blocks cannot be installed through a
+ * plain install action, and `deprecated` blocks should not be offered at all.
  */
 export function CLIBlocksList(pkg: string): $CancellablePromise<string> {
     return $Call.ByID(2198367741, pkg);
 }
 
 /**
- * CLIBlocksMerge runs `alis blocks merge <blockId> [<pkg>] --json`.
+ * CLIBlocksMerge runs `alis blocks merge <blockId> [<pkg>] --json`, merging an
+ * installed block's branch into the local build and define repos. This is the
+ * deferred half of an install or upgrade run with --no-merge.
  */
-export function CLIBlocksMerge(blockID: string, pkg: string): $CancellablePromise<string> {
-    return $Call.ByID(513037835, blockID, pkg);
+export function CLIBlocksMerge(blockID: string, pkg: string, instance: string): $CancellablePromise<string> {
+    return $Call.ByID(513037835, blockID, pkg, instance);
 }
 
 /**
  * CLIBlocksUninstall runs `alis blocks uninstall <blockId> [<pkg>] --json`.
+ * Uninstall is classed as destructive, so it is gated on every automation tier
+ * except "autonomous" — expect an exit-3 APPROVAL_REQUIRED envelope and show
+ * the user its retry command rather than passing --approve here.
  */
-export function CLIBlocksUninstall(blockID: string, pkg: string): $CancellablePromise<string> {
-    return $Call.ByID(254453117, blockID, pkg);
+export function CLIBlocksUninstall(blockID: string, pkg: string, instance: string): $CancellablePromise<string> {
+    return $Call.ByID(254453117, blockID, pkg, instance);
 }
 
 /**
  * CLIBlocksUpgrade runs `alis blocks upgrade <blockId> [<pkg>] --json`.
+ * See CLIBlocksInstall for the noMerge and instance semantics.
  */
-export function CLIBlocksUpgrade(blockID: string, pkg: string): $CancellablePromise<string> {
-    return $Call.ByID(2916780011, blockID, pkg);
+export function CLIBlocksUpgrade(blockID: string, pkg: string, instance: string, version: string, noMerge: boolean): $CancellablePromise<string> {
+    return $Call.ByID(2916780011, blockID, pkg, instance, version, noMerge);
 }
 
 /**
@@ -64,49 +84,96 @@ export function CLIBlocksVersions(blockID: string): $CancellablePromise<string> 
 
 /**
  * CLIContextView runs `alis context view [<ref>] --json`.
+ * 
+ * Which fields come back depends on the working directory: packageId and
+ * serviceFolder appear only when dir is inside a service folder, and the
+ * environments array only when it is not. Pass dir explicitly — the app's own
+ * cwd is "/" under a Finder launch, where nothing resolves.
  */
-export function CLIContextView(ref: string): $CancellablePromise<string> {
-    return $Call.ByID(720275183, ref);
+export function CLIContextView(ref: string, dir: string): $CancellablePromise<string> {
+    return $Call.ByID(720275183, ref, dir);
 }
 
 /**
- * CLIEnvBranches runs `alis environment branches [<org>.<product>.<env>] --json`.
+ * CLIDoctor runs `alis doctor --json --no-logs`, a local-only snapshot (nothing
+ * is uploaded without --ticket). Useful fields: cliVersion, auth.authorized,
+ * auth.buildAccount, settings.approvals (the automation tier; {} means the
+ * default "balanced") and settings.safeMode.allowedOrganisationIds.
  */
-export function CLIEnvBranches(ref: string): $CancellablePromise<string> {
-    return $Call.ByID(919447698, ref);
+export function CLIDoctor(): $CancellablePromise<string> {
+    return $Call.ByID(2264830692);
 }
 
 /**
- * CLIEnvRefresh runs `alis environment refresh <org>.<product>.<env> --json`.
+ * CLIEnvBranches runs `alis environment branches <ref> --json` to view the git
+ * branches an environment may deploy from. dir supplies the working directory
+ * used to resolve the target when ref is empty.
  */
-export function CLIEnvRefresh(org: string, product: string, env: string): $CancellablePromise<string> {
-    return $Call.ByID(4076239137, org, product, env);
+export function CLIEnvBranches(ref: string, dir: string): $CancellablePromise<string> {
+    return $Call.ByID(919447698, ref, dir);
+}
+
+/**
+ * CLIEnvRefresh runs `alis environment refresh <org>.<product>.<env> --json`,
+ * returning the environment's .env content. keyPath, when set, is where the
+ * service account key is written and becomes GOOGLE_APPLICATION_CREDENTIALS in
+ * the emitted .env.
+ */
+export function CLIEnvRefresh(org: string, product: string, env: string, keyPath: string): $CancellablePromise<string> {
+    return $Call.ByID(4076239137, org, product, env, keyPath);
 }
 
 /**
  * CLIEnvSet runs `alis environment set <org>.<product>.<env> KEY=VALUE --json`.
+ * 
+ * deploy maps to --deploy: without it the variable is stored immediately but
+ * running services keep the old value until their next deploy.
+ * 
+ * Writing to a production environment returns exit 3 with
+ * PRODUCTION_CONFIRMATION_REQUIRED. That is surfaced to the caller unchanged —
+ * --confirm-production is never added here.
+ * 
+ * Concurrent edits (this app vs. the console) are last-writer-wins with no
+ * merge, so callers should re-read after writing rather than assuming the
+ * local view is current.
  */
-export function CLIEnvSet(org: string, product: string, env: string, key: string, value: string): $CancellablePromise<string> {
-    return $Call.ByID(831421706, org, product, env, key, value);
+export function CLIEnvSet(org: string, product: string, env: string, key: string, value: string, deploy: boolean): $CancellablePromise<string> {
+    return $Call.ByID(831421706, org, product, env, key, value, deploy);
+}
+
+/**
+ * CLIEnvSetBranches designates which branches may deploy to an environment.
+ * allow replaces the current designation wholesale; an empty allow with
+ * clear=true removes the designation so any branch may deploy.
+ */
+export function CLIEnvSetBranches(ref: string, allow: string[], clear: boolean): $CancellablePromise<string> {
+    return $Call.ByID(583817842, ref, allow, clear);
 }
 
 /**
  * CLIEnvUnset runs `alis environment unset <org>.<product>.<env> KEY --json`.
+ * Unset is destructive, so it is gated at the "balanced" tier and above; see
+ * CLIEnvSet for the production and --deploy semantics.
  */
-export function CLIEnvUnset(org: string, product: string, env: string, key: string): $CancellablePromise<string> {
-    return $Call.ByID(3428595951, org, product, env, key);
+export function CLIEnvUnset(org: string, product: string, env: string, key: string, deploy: boolean): $CancellablePromise<string> {
+    return $Call.ByID(3428595951, org, product, env, key, deploy);
 }
 
 /**
  * CLIEnvVariables runs `alis environment variables <org>.<product> --json`.
+ * Each environment carries a canUpdate flag reporting whether the caller holds
+ * roles/environment.admin; use it to disable editing rather than letting the
+ * write fail.
  */
 export function CLIEnvVariables(org: string, product: string): $CancellablePromise<string> {
     return $Call.ByID(2865833575, org, product);
 }
 
 /**
- * CLIGitConfigure runs `alis git configure <org>.<product> --json` to show
- * git remote URLs, auth tokens, and user identity for the product repos.
+ * CLIGitConfigure runs `alis git configure <org>.<product> --json`.
+ * 
+ * The response contains live ID tokens (defineGitConfig.idToken,
+ * buildGitConfig.idToken). Callers must not log or persist it.
  */
 export function CLIGitConfigure(org: string, product: string): $CancellablePromise<string> {
     return $Call.ByID(4154096211, org, product);
@@ -114,14 +181,27 @@ export function CLIGitConfigure(org: string, product: string): $CancellablePromi
 
 /**
  * CLIPackagesInstall runs `alis packages install <pkg> --json`.
+ * language, when set, limits the run to one of go/node/python/dart.
  */
-export function CLIPackagesInstall(pkg: string): $CancellablePromise<string> {
-    return $Call.ByID(1524925609, pkg);
+export function CLIPackagesInstall(pkg: string, language: string, version: string): $CancellablePromise<string> {
+    return $Call.ByID(1524925609, pkg, language, version);
 }
 
 /**
- * CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json [--all]`.
+ * CLIPackagesUpgrade runs `alis packages upgrade <pkg> --json`.
+ * 
+ * all upgrades third-party packages too, not just alis.build ones. paths
+ * selects specific package folders or manifests relative to the service, which
+ * is how nested modules are addressed.
  */
-export function CLIPackagesUpgrade(pkg: string, all: boolean): $CancellablePromise<string> {
-    return $Call.ByID(3648102162, pkg, all);
+export function CLIPackagesUpgrade(pkg: string, all: boolean, language: string, paths: string[]): $CancellablePromise<string> {
+    return $Call.ByID(3648102162, pkg, all, language, paths);
+}
+
+/**
+ * CLIVersion returns the installed alis CLI version, or an empty string when
+ * the CLI is not available.
+ */
+export function CLIVersion(): $CancellablePromise<string> {
+    return $Call.ByID(1057680553);
 }
