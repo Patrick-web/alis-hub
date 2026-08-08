@@ -1,0 +1,362 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Icon } from "@iconify/react";
+import { Loader } from "../components/Loader";
+import { Button } from "../components/Button";
+import * as CLI from "../../../bindings/alis-hub-v3/cliservice";
+import type { SkillSummary, InstalledSkill } from "../../../bindings/alis-hub-v3/models";
+
+/**
+ * Browse the Alis Build skills registry and install skills into the local
+ * agent harness.
+ *
+ * Skills are curated instruction documents, one per task. The platform's own
+ * workflow is search -> load -> resource: search ranks the catalog
+ * semantically, load returns the markdown. Installing writes the skill into
+ * the user's Claude Code skills directory, which is the part that makes this
+ * worth having in a desktop app rather than only in a terminal.
+ */
+
+type Tab = "catalog" | "installed";
+
+/** Rows the list renders, from either search results or the full catalog. */
+interface SkillRow {
+  id: string;
+  displayName: string;
+  description: string;
+  loadCount: string;
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <span className="text-[9px] text-foreground/25 font-mono uppercase tracking-[0.12em]">
+      {children}
+    </span>
+  );
+}
+
+/** Renders skill markdown without pulling in a full markdown renderer. */
+function SkillMarkdown({ source }: { source: string }) {
+  // Skills open with YAML front matter, which is metadata rather than prose —
+  // the name and description are already shown in the header above.
+  const body = useMemo(() => {
+    const trimmed = source.trimStart();
+    if (!trimmed.startsWith("---")) return source;
+    const end = trimmed.indexOf("\n---", 3);
+    return end === -1 ? source : trimmed.slice(end + 4).trimStart();
+  }, [source]);
+
+  return (
+    <pre className="text-[11px] leading-[1.65] text-foreground/75 font-mono whitespace-pre-wrap break-words">
+      {body}
+    </pre>
+  );
+}
+
+export function SkillsPage() {
+  const [tab, setTab] = useState<Tab>("catalog");
+  const [query, setQuery] = useState("");
+  const [rows, setRows] = useState<SkillRow[]>([]);
+  const [installed, setInstalled] = useState<InstalledSkill[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [markdown, setMarkdown] = useState("");
+  const [loadingList, setLoadingList] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [busyAction, setBusyAction] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const installedIds = useMemo(
+    () => new Set(installed.map((s) => s.skillId)),
+    [installed],
+  );
+
+  const refreshInstalled = useCallback(async () => {
+    try {
+      setInstalled((await CLI.SkillsInstalled()) ?? []);
+    } catch (e) {
+      // A missing harness is normal — it just means nothing is installed here.
+      console.warn("skills installed:", e);
+      setInstalled([]);
+    }
+  }, []);
+
+  const loadCatalog = useCallback(async () => {
+    setLoadingList(true);
+    setError("");
+    try {
+      const skills = (await CLI.SkillsList()) ?? [];
+      setRows(
+        skills.map((s) => ({
+          id: s.id,
+          displayName: s.displayName || s.id,
+          description: s.description,
+          loadCount: s.loadCount,
+        })),
+      );
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  const runSearch = useCallback(async () => {
+    if (!query.trim()) {
+      void loadCatalog();
+      return;
+    }
+    setLoadingList(true);
+    setError("");
+    try {
+      const found: SkillSummary[] = (await CLI.SkillsSearch(query.trim())) ?? [];
+      setRows(
+        found.map((s) => ({
+          id: s.id,
+          displayName: s.displayName || s.id,
+          description: s.description,
+          loadCount: s.loadCount,
+        })),
+      );
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoadingList(false);
+    }
+  }, [query, loadCatalog]);
+
+  useEffect(() => {
+    void loadCatalog();
+    void refreshInstalled();
+  }, [loadCatalog, refreshInstalled]);
+
+  const openSkill = useCallback(async (id: string) => {
+    setSelected(id);
+    setMarkdown("");
+    setLoadingDetail(true);
+    setError("");
+    try {
+      setMarkdown(await CLI.SkillsLoad(id, ""));
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, []);
+
+  const install = useCallback(
+    async (id: string, project: boolean) => {
+      setBusyAction(true);
+      setError("");
+      setNotice("");
+      try {
+        // force is deliberately not offered: without it the CLI refuses to
+        // overwrite a folder it did not write, which is what protects a
+        // hand-authored skill of the same name.
+        await CLI.SkillsInstall(id, "claude", project, false);
+        setNotice(`Installed ${id}${project ? " into this project" : ""}`);
+        await refreshInstalled();
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setBusyAction(false);
+      }
+    },
+    [refreshInstalled],
+  );
+
+  const uninstall = useCallback(
+    async (id: string) => {
+      setBusyAction(true);
+      setError("");
+      setNotice("");
+      try {
+        await CLI.SkillsUninstall(id, "claude", false);
+        setNotice(`Removed ${id}`);
+        await refreshInstalled();
+      } catch (e) {
+        setError(String(e));
+      } finally {
+        setBusyAction(false);
+      }
+    },
+    [refreshInstalled],
+  );
+
+  const listed: SkillRow[] =
+    tab === "catalog"
+      ? rows
+      : installed.map((s) => ({
+          id: s.skillId,
+          displayName: s.skillId,
+          description: `${s.harness} · ${s.version || "unversioned"}`,
+          loadCount: "",
+        }));
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex items-center gap-[12px] px-[20px] py-[14px] border-b border-border shrink-0">
+        <Icon icon="solar:book-bookmark-linear" className="text-brand text-[20px]" />
+        <div className="flex flex-col">
+          <span className="text-[13px] text-foreground font-mono">Skills</span>
+          <span className="text-[10px] text-foreground/40 font-mono">
+            Platform instructions, installable into your local agent harness
+          </span>
+        </div>
+
+        <div className="flex-1" />
+
+        <div className="flex items-center gap-[2px] bg-card border border-border p-[2px]">
+          {(["catalog", "installed"] as Tab[]).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`text-[10px] font-mono px-[10px] py-[4px] transition-colors ${
+                tab === t
+                  ? "bg-brand-fill text-brand-foreground"
+                  : "text-foreground/50 hover:text-foreground"
+              }`}
+            >
+              {t === "catalog" ? "Catalog" : `Installed (${installed.length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "catalog" && (
+        <div className="flex items-center gap-[8px] px-[20px] py-[10px] border-b border-border shrink-0">
+          <Icon icon="solar:magnifer-linear" className="text-foreground/30 text-[14px]" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void runSearch();
+            }}
+            placeholder="Describe the task, e.g. deploy a service to production"
+            className="flex-1 bg-transparent text-[11px] text-foreground font-mono outline-none placeholder:text-foreground/25"
+          />
+          <Button variant="secondary" onClick={() => void runSearch()} className="text-[10px]">
+            Search
+          </Button>
+          {query && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setQuery("");
+                void loadCatalog();
+              }}
+              className="text-[10px]"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      )}
+
+      {(error || notice) && (
+        <div
+          className={`px-[20px] py-[8px] text-[10px] font-mono border-b border-border shrink-0 ${
+            error ? "text-red-400" : "text-brand"
+          }`}
+        >
+          {error || notice}
+        </div>
+      )}
+
+      <div className="flex flex-1 min-h-0">
+        <div className="w-[340px] border-r border-border overflow-y-auto shrink-0">
+          {loadingList ? (
+            <div className="flex justify-center py-[40px]">
+              <Loader size={28} />
+            </div>
+          ) : listed.length === 0 ? (
+            <div className="px-[20px] py-[30px] text-[10px] text-foreground/35 font-mono text-center">
+              {tab === "installed" ? "No skills installed yet" : "No skills found"}
+            </div>
+          ) : (
+            listed.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => void openSkill(s.id)}
+                className={`w-full text-left px-[16px] py-[11px] border-b border-border hover:bg-foreground/[3%] transition-colors ${
+                  selected === s.id ? "bg-brand-fill/8 border-l-2 border-l-brand" : ""
+                }`}
+              >
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[11px] text-foreground font-mono truncate">
+                    {s.displayName}
+                  </span>
+                  {installedIds.has(s.id) && (
+                    <span className="shrink-0" title="Installed locally">
+                      <Icon icon="solar:check-circle-bold" className="text-brand text-[12px]" />
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-foreground/40 font-mono mt-[3px] line-clamp-2 leading-[1.45]">
+                  {s.description}
+                </p>
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0 overflow-y-auto">
+          {!selected ? (
+            <div className="flex flex-col items-center justify-center h-full gap-[10px] text-foreground/25">
+              <Icon icon="solar:document-text-linear" className="text-[32px]" />
+              <span className="text-[10px] font-mono">Select a skill to read its instructions</span>
+            </div>
+          ) : (
+            <div className="flex flex-col h-full">
+              <div className="flex items-center gap-[10px] px-[20px] py-[12px] border-b border-border shrink-0">
+                <SectionLabel>SKILL</SectionLabel>
+                <span className="text-[11px] text-foreground font-mono truncate">{selected}</span>
+                <div className="flex-1" />
+                {installedIds.has(selected) ? (
+                  <Button
+                    variant="secondary"
+                    disabled={busyAction}
+                    onClick={() => void uninstall(selected)}
+                    className="text-[10px]"
+                  >
+                    Uninstall
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={busyAction}
+                      onClick={() => void install(selected, true)}
+                      className="text-[10px]"
+                      title="Install into this repository's .claude/skills"
+                    >
+                      Install to project
+                    </Button>
+                    <Button
+                      variant="primary"
+                      disabled={busyAction}
+                      onClick={() => void install(selected, false)}
+                      className="text-[10px]"
+                      title="Install into your user-scope Claude Code skills"
+                    >
+                      Install
+                    </Button>
+                  </>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-[20px] py-[16px]">
+                {loadingDetail ? (
+                  <div className="flex justify-center py-[40px]">
+                    <Loader size={28} />
+                  </div>
+                ) : (
+                  <SkillMarkdown source={markdown} />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -28,6 +28,18 @@ const standaloneTabs = [
     icon: <Icon icon="solar:code-linear" className="text-lg" />,
     route: "/codeblocks",
   },
+  {
+    id: "skills",
+    label: "Skills",
+    icon: <Icon icon="solar:book-bookmark-linear" className="text-lg" />,
+    route: "/skills",
+  },
+  {
+    id: "ask",
+    label: "Ask",
+    icon: <Icon icon="solar:chat-square-call-linear" className="text-lg" />,
+    route: "/ask",
+  },
 ];
 
 export function StandaloneTopNav() {
