@@ -77,7 +77,31 @@ with multi-turn sessions, doctor, accounts list/select, product and service
 creation, operation describe/follow, authorise, packages add, support
 send-message / send-session, CLI self-upgrade, and `alis docs`.
 
-UI at `/skills`, `/ask` and `/diagnostics`.
+### UI
+
+| Page / pane | Route | What the CLI gives it |
+|---|---|---|
+| Skills | `/skills` | browse or search the registry, read instructions, install into the local Claude Code harness |
+| Ask | `/ask` | multi-turn Q&A with clickable SKILL citations |
+| Diagnostics | `/diagnostics` | `alis doctor`, incl. automation tier and safe-mode allowlist |
+| Service blocks | `/services/:neuronId/blocks` | per-service installs with instance refs, `upgradeAvailable`, `gitBranch`, and `agenticInstallOnly`/`deprecated` gating |
+| Environments | `/environments` | deploy-branch designation, `canUpdate` permission gating, gated variable deletion |
+| Define / Build panes | Develop | live `dbd:progress`; retag for infra-only builds |
+| Deploy pane | Develop | production gate handling, live progress |
+
+20 of the 56 new methods have a UI call site. The remaining 36 are reachable
+from Go and covered by tests, but have no screen yet — mostly skill authoring
+(create/edit/publish/share/delete), support, accounts selection, and resource
+creation.
+
+### Approval gates in the UI
+
+`ApprovalGate.tsx` renders both gate kinds. The flow is two-pass: the first
+call runs ungated so the CLI itself reports what would change, and that message
+is shown verbatim because it is what the user approves. Only then does the
+retry carry the approval — as a typed `Approval` struct matched to the gate
+code, never by replaying the envelope's command string, so a tier approval
+cannot escalate into a production confirmation.
 
 ---
 
@@ -124,6 +148,7 @@ previewing a deploy and applying it.
 | Environment update / delete | No CLI subcommand | Stays on the Console API |
 | Codeblock docs, members, IAM | No CLI subcommand | Stays on the Console API |
 | Block install returning worktree paths | The CLI merges into main instead | `DoInstallBlock` keeps the Console path; see below |
+| "which services have this block?" | `blocks list` is per-service, not per-block | `ListCodeblockInstances` stays on the Console API — the two work on different axes and are not interchangeable |
 
 Conversely, the gRPC fallback refuses CLI-only options (`branch`,
 `confirmNoPaths`, `allowBranchMismatch`, `confirmProduction`, `planOnly` with
@@ -204,6 +229,13 @@ Each of these was found the hard way and is now pinned by a test.
    under a running command. `cliwrap` survives that rather than panicking.
 10. **`alis docs codeblocks` documents `blocks install` argument order
     backwards.** `--help` is authoritative: block id first, package id second.
+11. **A gated deploy is not a started deploy.** RunDeploy reports a production
+    gate in-band (`error` = the gate code, `notes` = the retry command) and
+    still returns without throwing. Treating any non-throwing result as a
+    successful start leaves the UI polling an operation that was never created.
+12. **The app's "protected environments" list is not the platform's production
+    flag.** It is a local, user-maintained list, so the platform gate can fire
+    for an environment the app never warned about.
 
 ---
 
