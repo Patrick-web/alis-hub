@@ -65,6 +65,21 @@ export function EnvironmentsPage() {
   // Labels present in each other environment: envName → Set<label>
   const [otherEnvLabels, setOtherEnvLabels] = useState<Record<string, Set<string>>>({});
 
+  // Whether this caller holds roles/environment.admin on the active
+  // environment. Only `alis environment variables` reports it; without it the
+  // edit controls stay enabled and a write fails server-side instead.
+  // Defaults to true so a missing CLI never locks a working page.
+  const [canUpdate, setCanUpdate] = useState(true);
+
+  // Which git branches may deploy to the active environment. Empty means no
+  // designation, i.e. any branch — the state --allow-branch-mismatch overrides.
+  const [branches, setBranches] = useState<string[] | null>(null);
+  const [branchesOpen, setBranchesOpen] = useState(false);
+  const [branchesDraft, setBranchesDraft] = useState("");
+
+  const envId = lastSegment(state.activeEnvName);
+  const cliReady = Boolean(state.organisation && state.product && envId);
+
   useEffect(() => {
     const others = state.loadedEnvs.filter((e) => e.name !== state.activeEnvName);
     if (others.length === 0) {
@@ -108,6 +123,39 @@ export function EnvironmentsPage() {
       loadVariables(state.activeEnvName);
     }
   }, [state.activeEnvName, loadVariables]);
+
+  // Permission and branch designation come from the CLI; both are additive, so
+  // a failure leaves the page exactly as it was before.
+  const loadBranches = useCallback(async () => {
+    if (!cliReady) return;
+    try {
+      const b = await ProductService.GetEnvironmentBranchesCLI(
+        state.organisation,
+        state.product,
+        envId,
+      );
+      setBranches(b?.allowedBranches ?? []);
+    } catch {
+      setBranches(null);
+    }
+  }, [cliReady, state.organisation, state.product, envId]);
+
+  useEffect(() => {
+    if (!cliReady) return;
+    // Only ever set from an async result. The no-CLI case is handled by
+    // deriving at render instead, so nothing is set synchronously here.
+    ProductService.ListEnvironmentVariablesCLI(state.organisation, state.product)
+      .then((envs) => {
+        const match = (envs ?? []).find((e) => e.environmentId === envId);
+        setCanUpdate(match ? match.canUpdate : true);
+      })
+      .catch(() => setCanUpdate(true));
+    void loadBranches();
+  }, [cliReady, state.organisation, state.product, envId, loadBranches]);
+
+  // Without a CLI context there is no permission signal, so the page stays
+  // fully editable rather than locking on a value it never received.
+  const editable = !cliReady || canUpdate;
 
   // Persist vars array to API
   const persistVars = useCallback(
@@ -178,12 +226,42 @@ export function EnvironmentsPage() {
   // what the gate is for.
   //
   // The Console path stays as the fallback for when the CLI is unavailable.
-  const envGate = useApprovalGate(() => {
+  const deleteGate = useApprovalGate(() => {
     if (!deleteVar) return;
     setVars((prev) => prev.filter((v) => v.id !== deleteVar.id));
     setDeleteVar(null);
     notify.success(`Removed ${deleteVar.label}`);
   });
+
+  const branchGate = useApprovalGate(() => {
+    notify.success("Deploy branches updated");
+  });
+
+  // Saving a designation is gated like other environment writes, so it goes
+  // through the same approval flow rather than a bare call.
+  const saveBranches = async () => {
+    const allow = branchesDraft
+      .split(",")
+      .map((b) => b.trim())
+      .filter(Boolean);
+    setBranchesOpen(false);
+    const clear = allow.length === 0;
+    await branchGate.run(
+      (approval) =>
+        ProductService.SetEnvironmentBranchesCLI(
+          state.organisation,
+          state.product,
+          envId,
+          allow,
+          clear,
+          approval,
+        ),
+      clear
+        ? `Allow any branch to deploy to ${envId}`
+        : `Restrict ${envId} to ${allow.join(", ")}`,
+    );
+    await loadBranches();
+  };
 
   const handleDeleteVar = async () => {
     if (!deleteVar) return;
@@ -195,7 +273,7 @@ export function EnvironmentsPage() {
       const canUseCLI = Boolean(state.organisation && state.product && envId);
 
       if (canUseCLI) {
-        const result = await envGate.run(
+        const result = await deleteGate.run(
           (approval) =>
             ProductService.UnsetEnvironmentVariablesCLI(
               state.organisation,
@@ -339,6 +417,8 @@ export function EnvironmentsPage() {
             variant="secondary"
             className="px-[12px] py-[6px] h-[34px] uppercase text-[10px] font-bold"
             icon={<Icon icon="solar:add-circle-linear" className="text-xl" />}
+            disabled={!editable}
+            title={editable ? undefined : "You need roles/environment.admin to change variables"}
             onClick={() => {
               setVarSheetMode("create");
               setEditVar(null);
@@ -349,6 +429,51 @@ export function EnvironmentsPage() {
           </Button>
         </div>
       </Toolbar>
+
+      {/* Deploy-branch designation. No Console API equivalent — this is what a
+          build or deploy is checked against, and what --allow-branch-mismatch
+          overrides. */}
+      {cliReady && branches !== null && (
+        <div className="flex items-center gap-[10px] px-[20px] py-[7px] border-b border-border bg-card/40">
+          <Icon icon="solar:branch-linear" className="text-foreground/30 text-[13px]" />
+          <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-[0.1em]">
+            Deploys from
+          </span>
+          {branches.length === 0 ? (
+            <span className="text-[10px] text-foreground/45 font-mono">any branch</span>
+          ) : (
+            <div className="flex items-center gap-[5px] flex-wrap">
+              {branches.map((b) => (
+                <span
+                  key={b}
+                  className="text-[9px] font-mono px-[6px] py-[1px] bg-card border border-border text-foreground/70"
+                >
+                  {b}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex-1" />
+          <button
+            onClick={() => {
+              setBranchesDraft(branches.join(", "));
+              setBranchesOpen(true);
+            }}
+            className="text-[9px] text-foreground/35 hover:text-brand font-mono transition-colors"
+          >
+            Edit
+          </button>
+        </div>
+      )}
+
+      {!editable && (
+        <div className="flex items-center gap-[7px] px-[20px] py-[7px] border-b border-border bg-amber-400/5">
+          <Icon icon="solar:lock-keyhole-linear" className="text-amber-400 text-[12px]" />
+          <span className="text-[10px] text-amber-300/80 font-mono">
+            Read-only — changing variables needs roles/environment.admin
+          </span>
+        </div>
+      )}
 
       {/* Table Content */}
       <div className="flex-1 overflow-hidden">
@@ -396,9 +521,52 @@ export function EnvironmentsPage() {
         requireText={deleteVar?.label}
       />
 
+      {/* Branch designation editor. Setting a designation REPLACES the list
+          rather than adding to it, so the dialog always submits the complete
+          set — which is why it edits the whole list as text. */}
+      <Dialog open={branchesOpen} onOpenChange={setBranchesOpen}>
+        <DialogContent className="text-foreground p-0 gap-0 sm:max-w-[480px]">
+          <DialogHeader className="px-[20px] py-[14px] border-b border-border">
+            <div className="flex items-center gap-[10px]">
+              <Icon icon="solar:branch-linear" className="text-brand text-xl" />
+              <DialogTitle className="text-foreground font-mono text-[13px] font-bold">
+                Deploy Branches
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          <div className="px-[20px] py-[16px] flex flex-col gap-[10px]">
+            <p className="text-[10px] leading-[1.6] text-foreground/50 font-mono">
+              Only these branches may deploy to this environment. Leave empty to allow any
+              branch. A deploy from another branch fails unless it is run with
+              --allow-branch-mismatch.
+            </p>
+            <input
+              value={branchesDraft}
+              onChange={(e) => setBranchesDraft(e.target.value)}
+              placeholder="master, release"
+              className="bg-card border border-border px-[10px] py-[7px] text-[11px] text-foreground font-mono outline-none focus:border-brand-fill/40 placeholder:text-foreground/25"
+            />
+            <span className="text-[9px] text-foreground/25 font-mono">
+              Comma-separated. This replaces the current designation.
+            </span>
+          </div>
+
+          <div className="flex items-center justify-end gap-[8px] px-[20px] py-[12px] border-t border-border">
+            <Button variant="ghost" onClick={() => setBranchesOpen(false)} className="text-[10px]">
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={() => void saveBranches()} className="text-[10px]">
+              Save
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Approval gate. `alis environment unset` is destructive, so the default
           automation tier stops it and asks; production environments always do. */}
-      <ApprovalGateDialog {...envGate.dialogProps} />
+      <ApprovalGateDialog {...deleteGate.dialogProps} />
+      <ApprovalGateDialog {...branchGate.dialogProps} />
 
       {/* View value modal */}
       <Dialog
