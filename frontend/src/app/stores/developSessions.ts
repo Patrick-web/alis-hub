@@ -49,6 +49,12 @@ export interface BuildSession {
   branch: string;
   branches: string[];
   buildMode: BuildMode;
+  /**
+   * Retag the previous images instead of building the detected Dockerfiles.
+   * The documented path for a change that touches only deployment
+   * infrastructure, where rebuilding would produce identical images.
+   */
+  retag: boolean;
   localBuildId: string | null;
   deployEnvs: DeployEnv[];
   selectedDeployEnvs: string[];
@@ -119,6 +125,7 @@ export function initialBuildSession(tabId: string, neuron: string): BuildSession
     branch: "master",
     branches: ["master"],
     buildMode: "cloud",
+    retag: false,
     localBuildId: null,
     deployEnvs: [],
     selectedDeployEnvs: [],

@@ -32,6 +32,47 @@ import type { Approval, EnvGateResult } from "../../../bindings/alis-hub-v3/mode
  * tier approval into a production confirmation by accident.
  */
 
+/**
+ * Gate codes the CLI returns on exit 3.
+ */
+export const GATE_PRODUCTION = "PRODUCTION_CONFIRMATION_REQUIRED";
+export const GATE_APPROVAL = "APPROVAL_REQUIRED";
+
+/**
+ * Adapts a DBD result into the gate shape.
+ *
+ * RunDefine/RunBuild/RunDeploy report a gate in-band — `error` carries the gate
+ * code and `notes` the retry command — rather than as an EnvGateResult, because
+ * those result types predate the gate work and are what the panes already poll
+ * against. Returns null when the result is not a gate, so a caller can treat
+ * "gated" and "started" as distinct outcomes.
+ *
+ * Without this, a gated deploy looks like a successful start with an empty
+ * operation name, and the pane waits on an operation that was never created.
+ */
+export function gateFromDbdResult(
+  result: { error?: string; notes?: string } | null | undefined,
+): EnvGateResult | null {
+  const code = result?.error;
+  if (code !== GATE_PRODUCTION && code !== GATE_APPROVAL) return null;
+  return {
+    gated: true,
+    code,
+    // The CLI's own message is not carried on these result types, so describe
+    // the gate rather than inventing detail the caller does not have.
+    message:
+      code === GATE_PRODUCTION
+        ? "This targets a production environment and needs explicit confirmation before it runs."
+        : "Your automation tier requires approval before this command runs.",
+    retryCmd: result?.notes ?? "",
+    output: "",
+    approval:
+      code === GATE_PRODUCTION
+        ? { approve: false, confirmProduction: true }
+        : { approve: true, confirmProduction: false },
+  };
+}
+
 /** A gated operation: run it with the given approval and report the outcome. */
 export type GatedCall = (approval: Approval) => Promise<EnvGateResult | null>;
 

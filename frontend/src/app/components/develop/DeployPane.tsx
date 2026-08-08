@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { Button } from "../Button";
@@ -26,6 +26,8 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { EnvRunView } from "./shared/EnvRunView";
 import * as DeployService from "../../../../bindings/alis-hub-v3/deployservice";
 import * as ProductService from "../../../../bindings/alis-hub-v3/productservice";
+import { ApprovalGateDialog, gateFromDbdResult } from "../ApprovalGate";
+import { useOperationProgress, progressLabel } from "../../stores/dbdProgress";
 
 interface DeployPaneProps {
   tabId: string;
@@ -43,7 +45,26 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   const session = useDevelopSessions((s) => s.sessions[tabId]) as DeploySession | undefined;
   const patch = (p: Partial<DeploySession>) => patchSession<DeploySession>(tabId, p);
 
+  // A deploy is one operation across every selected environment, so a single
+  // stream feeds all of its rows. Purely additive: the poll below still owns
+  // per-environment state, and this only fills the gap between ticks.
+  const deployOperation = session?.envRuns?.find((r) => r.operationName)?.operationName;
+  const liveDeployMsg = progressLabel(useOperationProgress(deployOperation));
+  const liveRuns = useMemo(
+    () =>
+      (session?.envRuns ?? []).map((r) =>
+        !r.done && liveDeployMsg ? { ...r, progressMsg: liveDeployMsg } : r,
+      ),
+    [session?.envRuns, liveDeployMsg],
+  );
+
   const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
+
+  // A production deploy comes back gated rather than started. Before this the
+  // pane treated the gate as a successful start with an empty operation name
+  // and then polled forever on an operation that was never created.
+  const [deployGate, setDeployGate] = useState<ReturnType<typeof gateFromDbdResult>>(null);
+  const [gateBusy, setGateBusy] = useState(false);
 
   const logOffsetRefs = useRef<Record<string, number>>({});
   const taskIdRef = useRef<string | null>(null);
@@ -160,7 +181,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     runDeployNow();
   }
 
-  async function runDeployNow() {
+  async function runDeployNow(confirmProduction = false) {
     const current = getSession<DeploySession>(tabId);
     if (!current) return;
     const neuronResource = `organisations/${orgRef.current}/products/${productRef.current}/neurons/${neuron}`;
@@ -211,16 +232,34 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
 
     // Start a single deploy for all environments
     let startError: string | null = null;
-    const deployResult = await DeployService.RunDeploy(
-      neuronResource,
-      current.version,
-      current.selectedEnvs,
-      current.planOnly,
-      current.beta,
-    ).catch((e: unknown) => {
+    const deployResult = await DeployService.RunDeployOptions(neuronResource, {
+      version: current.version,
+      environments: current.selectedEnvs,
+      planOnly: current.planOnly,
+      allowBranchMismatch: false,
+      confirmProduction,
+      beta: current.beta,
+    }).catch((e: unknown) => {
       startError = e instanceof Error ? e.message : String(e);
       return null;
     });
+
+    // The platform decides what is production, not the app's local protected-
+    // environments list, so this can fire for an environment the pane did not
+    // warn about. Nothing was started; the retry carries the confirmation.
+    const gate = gateFromDbdResult(deployResult);
+    if (gate) {
+      setDeployGate(gate);
+      setGateBusy(false);
+      patchSession<DeploySession>(tabId, { step: "confirm" });
+      updateNotification(taskId, {
+        severity: "warning",
+        title: "Deploy needs confirmation",
+        body: neuron,
+        task: { status: "error", step: "confirm" },
+      });
+      return;
+    }
 
     const updatedRuns: EnvRunState[] = initialRuns.map((run, i) => {
       if (deployResult) {
@@ -582,7 +621,7 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       {/* Steps: running + result — one terminal per env */}
       {(session.step === "running" || session.step === "result") && (
         <EnvRunView
-          runs={session.envRuns}
+          runs={liveRuns}
           activeEnv={session.activeRunEnv}
           onSelectEnv={(env) => patch({ activeRunEnv: env })}
           step={session.step}
@@ -592,6 +631,21 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
           onRerun={session.step === "result" ? loadDeployInfo : undefined}
         />
       )}
+
+      {/* Platform production gate. Distinct from the protected-environment
+          confirm above, which is a local user-maintained list — this one comes
+          from the platform and actually blocks the deploy. */}
+      <ApprovalGateDialog
+        gate={deployGate}
+        action={`Deploy ${neuron} to ${session.selectedEnvs.length} environment(s)`}
+        busy={gateBusy}
+        onApprove={() => {
+          setGateBusy(true);
+          setDeployGate(null);
+          void runDeployNow(true);
+        }}
+        onCancel={() => setDeployGate(null)}
+      />
 
       <ConfirmDialog
         open={protectedConfirmOpen}

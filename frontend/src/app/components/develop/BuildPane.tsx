@@ -137,6 +137,7 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       selectedCommit: null,
       buildResult: null,
       buildMode: "cloud",
+      retag: false,
       branch: b,
       localBuildId: null,
       buildPhase: "build",
@@ -307,7 +308,23 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     taskIdRef.current = taskId;
     setTabNotificationId(tabId, taskId);
     try {
-      const result = await BuildService.RunBuild(neuronResource, selectedCommit.sha);
+      // Retag is only expressible through the options API; everything else
+      // keeps the narrow call it has always used.
+      const result = current.retag
+        ? await BuildService.RunBuildOptions(neuronResource, {
+            commit: selectedCommit.sha,
+            branch: "",
+            buildPaths: [],
+            retag: true,
+            retagPaths: [],
+            confirmNoPaths: false,
+            deploy: false,
+            environments: [],
+            planOnly: false,
+            allowBranchMismatch: false,
+            confirmProduction: false,
+          })
+        : await BuildService.RunBuild(neuronResource, selectedCommit.sha);
       patchSession<BuildSession>(tabId, { buildResult: result as BuildResult });
       updateNotification(taskId, {
         task: {
@@ -803,6 +820,24 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
                 <span className="text-[11px] font-medium flex-1">{label}</span>
               </button>
             ))}
+
+            {/* Retag is a modifier on a cloud build rather than a mode: it
+                reuses the previous images instead of building the detected
+                Dockerfiles, which is what you want when only infrastructure
+                changed and a rebuild would produce identical images. */}
+            {session.buildMode !== "local" && (
+              <label className="flex items-center gap-[10px] px-[12px] py-[9px] mt-[6px] rounded-[6px] border border-border bg-background cursor-pointer hover:border-brand-fill/25 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={session.retag}
+                  onChange={(e) => patch({ retag: e.target.checked })}
+                  className="accent-[var(--brand)]"
+                />
+                <Icon icon="solar:refresh-square-linear" className="text-sm shrink-0" />
+                <span className="text-[11px] text-foreground/70 flex-1">Retag previous images</span>
+                <span className="text-[9px] text-foreground/30 font-mono">infra-only</span>
+              </label>
+            )}
           </div>
 
           {/* Environment picker — shown only for Build and Deploy mode */}
