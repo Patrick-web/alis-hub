@@ -36,6 +36,21 @@ export function Ask(question: string, session: string): $CancellablePromise<$mod
 }
 
 /**
+ * Authorise configures the git credential helper for a product's define and
+ * build repos and refreshes package registry credentials.
+ * 
+ * This is a repair and setup step, not something to run before every git
+ * command: once the helper is installed it refreshes the access token on
+ * demand. Run it for a repo cloned outside the CLI, when git starts prompting
+ * for a password, or when a stale http.extraHeader is still configured.
+ * 
+ * Exit 4 means the user is signed out and must run `alis login` first.
+ */
+export function Authorise(org: string, product: string): $CancellablePromise<string> {
+    return $Call.ByID(3201472195, org, product);
+}
+
+/**
  * CLIContextView runs `alis context view [<ref>] --json`.
  * 
  * Which fields come back depends on the working directory: packageId and
@@ -82,6 +97,17 @@ export function DescribeOperation(name: string): $CancellablePromise<$models.Ope
     return $Call.ByID(335300835, name).then(($result: any) => {
         return $$createType3($result);
     });
+}
+
+/**
+ * Docs returns the CLI's operating manual, or one topic of it.
+ * 
+ * Topics: overview, dbd, output, exit-codes, safety, context, skills, ask,
+ * workflows, codeblocks. An empty topic returns the whole manual. This is the
+ * platform's own documentation, so it stays correct as the CLI changes.
+ */
+export function Docs(topic: string): $CancellablePromise<string> {
+    return $Call.ByID(1634596620, topic);
 }
 
 /**
@@ -157,6 +183,15 @@ export function NewProduct(org: string, product: string, displayName: string): $
  */
 export function NewService(packageID: string): $CancellablePromise<string> {
     return $Call.ByID(524433830, packageID);
+}
+
+/**
+ * PackagesAdd adds a service's Alis-defined package to a project, via
+ * `alis packages add`. Unlike install, this does not pull the latest defined
+ * version of everything — it adds the one package.
+ */
+export function PackagesAdd(pkg: string, language: string): $CancellablePromise<string> {
+    return $Call.ByID(4074394389, pkg, language);
 }
 
 /**
@@ -318,6 +353,37 @@ export function SkillsUninstall(id: string, harness: string, project: boolean): 
  */
 export function SkillsUpgrade(ids: string[], all: boolean): $CancellablePromise<string> {
     return $Call.ByID(1856380051, ids, all);
+}
+
+/**
+ * SupportSendMessage posts a message on a support conversation.
+ * ticket accepts either "tickets/ID" or a bare id.
+ */
+export function SupportSendMessage(ticket: string, message: string): $CancellablePromise<string> {
+    return $Call.ByID(2503323107, ticket, message);
+}
+
+/**
+ * SupportSendSession shares a local coding-agent session transcript on a
+ * support conversation.
+ * 
+ * This uploads a full transcript, which can contain source code and command
+ * output, so it must only ever be called from an explicit user action — never
+ * automatically alongside an error report.
+ */
+export function SupportSendSession(ticket: string, session: string, harness: string): $CancellablePromise<string> {
+    return $Call.ByID(2280289024, ticket, session, harness);
+}
+
+/**
+ * UpgradeCLI updates the alis CLI itself to the latest release.
+ * 
+ * The binary is replaced in place, so any command already running through it
+ * can fail mid-flight — cliwrap survives that rather than panicking, but
+ * callers should avoid upgrading while an operation is being followed.
+ */
+export function UpgradeCLI(): $CancellablePromise<string> {
+    return $Call.ByID(522943565);
 }
 
 // Private type creation functions

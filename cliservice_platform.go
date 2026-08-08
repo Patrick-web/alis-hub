@@ -405,6 +405,127 @@ func (s *CLIService) GitRemotesForProduct(org, product string) (*GitRemotes, err
 	}, nil
 }
 
+// Authorise configures the git credential helper for a product's define and
+// build repos and refreshes package registry credentials.
+//
+// This is a repair and setup step, not something to run before every git
+// command: once the helper is installed it refreshes the access token on
+// demand. Run it for a repo cloned outside the CLI, when git starts prompting
+// for a password, or when a stale http.extraHeader is still configured.
+//
+// Exit 4 means the user is signed out and must run `alis login` first.
+func (s *CLIService) Authorise(org, product string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	if org == "" || product == "" {
+		return "", fmt.Errorf("org and product are required")
+	}
+	return s.runPlatform("authorise", "authorise", org+"."+product, "--json")
+}
+
+// PackagesAdd adds a service's Alis-defined package to a project, via
+// `alis packages add`. Unlike install, this does not pull the latest defined
+// version of everything — it adds the one package.
+func (s *CLIService) PackagesAdd(pkg, language string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	if pkg == "" {
+		return "", fmt.Errorf("package id is required")
+	}
+	args := []string{"packages", "add", pkg, "--json"}
+	if language != "" {
+		args = append(args, "--language", language)
+	}
+	return s.runPlatform("packages add", args...)
+}
+
+// UpgradeCLI updates the alis CLI itself to the latest release.
+//
+// The binary is replaced in place, so any command already running through it
+// can fail mid-flight — cliwrap survives that rather than panicking, but
+// callers should avoid upgrading while an operation is being followed.
+func (s *CLIService) UpgradeCLI() (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	result, err := s.runner.Run(ctx, "upgrade", "--json")
+	if err != nil {
+		return "", fmt.Errorf("upgrade: %w", err)
+	}
+	return string(result.Stdout), nil
+}
+
+// Docs returns the CLI's operating manual, or one topic of it.
+//
+// Topics: overview, dbd, output, exit-codes, safety, context, skills, ask,
+// workflows, codeblocks. An empty topic returns the whole manual. This is the
+// platform's own documentation, so it stays correct as the CLI changes.
+func (s *CLIService) Docs(topic string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), platformTimeout)
+	defer cancel()
+
+	// Deliberately not --json: docs are markdown, and the JSON form just wraps
+	// the same text in an envelope.
+	args := []string{"docs"}
+	if topic != "" {
+		args = append(args, topic)
+	}
+	result, err := s.runner.Run(ctx, args...)
+	if err != nil {
+		return "", fmt.Errorf("docs: %w", err)
+	}
+	return string(result.Stdout), nil
+}
+
+// ── Support ───────────────────────────────────────────────────────────────────
+
+// SupportSendMessage posts a message on a support conversation.
+// ticket accepts either "tickets/ID" or a bare id.
+func (s *CLIService) SupportSendMessage(ticket, message string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	if ticket == "" || message == "" {
+		return "", fmt.Errorf("ticket and message are required")
+	}
+	// --yes is passed because the caller reached this through an explicit "send"
+	// action in the UI; the confirmation prompt would have nothing to add, and
+	// this is not a gated command class.
+	return s.runPlatform("support send-message",
+		"support", "send-message", "--json", "--ticket", ticket, "--message", message, "--yes")
+}
+
+// SupportSendSession shares a local coding-agent session transcript on a
+// support conversation.
+//
+// This uploads a full transcript, which can contain source code and command
+// output, so it must only ever be called from an explicit user action — never
+// automatically alongside an error report.
+func (s *CLIService) SupportSendSession(ticket, session, harness string) (string, error) {
+	if !s.available() {
+		return "", fmt.Errorf("alis CLI not available")
+	}
+	if ticket == "" {
+		return "", fmt.Errorf("ticket is required")
+	}
+	args := []string{"support", "send-session", "--json", "--ticket", ticket, "--yes"}
+	if session != "" {
+		args = append(args, "--session", session)
+	}
+	if harness != "" {
+		args = append(args, "--harness", harness)
+	}
+	return s.runPlatform("support send-session", args...)
+}
+
 // ── Context telemetry ─────────────────────────────────────────────────────────
 
 // PushSession saves a local coding-agent session transcript to Alis history.

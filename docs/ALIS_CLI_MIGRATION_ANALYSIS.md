@@ -1,425 +1,220 @@
-# Alis CLI Migration Analysis — What alis-hub-v3 Can Switch to the CLI
+# Alis CLI Migration — Delivered State and Parity Audit
 
-> This document maps where alis-hub-v3 reimplements platform functionality
-> that could instead shell out to the `alis` CLI. The CLI is the canonical,
-> supported interface to the Alis Build platform and has been observed to be
-> more reliable than direct gRPC calls (particularly for build/deploy
-> operations). See `ALIS_CLI_FEATURES.md` for the full CLI feature reference.
+> This document records what the `alis` CLI now backs in alis-hub-v3, what
+> deliberately still does not, and where the CLI cannot reach parity with the
+> gRPC/Console paths it replaces. It supersedes the pre-migration plan of the
+> same name.
+>
+> Verified against `alis` v1.69.7. Response shapes and flags:
+> [ALIS_CLI_FEATURES.md](./ALIS_CLI_FEATURES.md).
 
 ## Summary
 
-alis-hub-v3 reimplements 12+ areas of platform interaction via a combination of
-reverse-engineered gRPC-web-text calls to `console.alisx.com` and direct gRPC
-calls to `auth.alis.build`. Of these, **6 areas are high-value candidates** for
-immediate replacement with CLI calls, **3 are viable as complements**, and
-**the rest are unique to the app or better kept as-is**.
+Every top-level `alis` command is reachable from Go. The surface is:
+
+| Layer | Where | Count |
+|---|---|---|
+| CLI-native capability (skills, ask, doctor, accounts, support, …) | `cliservice*.go` | 37 methods |
+| Code blocks and environments | `product_blocks_cli.go`, `product_envs_cli.go` | 16 methods |
+| Define / Build / Deploy with full flag coverage | `backend.go`, `dbdoptions.go` | 3 `Run*Options` + narrow forms |
+
+Backed by 171 unit tests (no credentials or network), 16 live sandbox tests
+behind the `alis_integration` tag, and 19 captured response fixtures.
+
+```
+go test ./...                          # unit + fixtures, hermetic
+go test -tags alis_integration ./...   # live, needs credentials
+```
 
 ---
 
-## High-Value Candidates — Switch to CLI
+## What the CLI now backs
 
-These are areas where the app's current implementation is complex, fragile
-(reverse-engineered protos/APIs), or known to have reliability issues, and
-where the CLI provides a more stable, supported alternative.
+### Define, Build, Deploy
 
-### 1. Define — Proto Compilation Pipeline
+`DefineOptions` / `BuildOptions` / `DeployOptions` cover every flag the CLI
+exposes: commit and branch pinning, explicit Dockerfile build/retag paths,
+`--retag` for infra-only changes, `--confirm-no-paths`, chained build+deploy,
+`--plan-only`, `--allow-branch-mismatch`, `--confirm-production`, and define's
+`--install` / `--install-language`.
 
-**Current implementation:** `defineservice.go` — calls `alis.os.dbd.v1.DbdService/RunDefine` via direct gRPC/HTTP2 (`internal/alisclient/client.go`), then polls `google.longrunning.Operations/GetOperation` in a loop, parses operation results, and calls Glass AI for explanations.
+The zero value of each option set reproduces the original narrow calls exactly,
+which is why the existing Develop/Builds/Deployments UI works unchanged.
+
+Operations are followed with `alis operations wait`, streaming the CLI's stderr
+NDJSON to the frontend as `dbd:progress` / `dbd:done`. This runs *alongside* the
+existing poll loop rather than replacing it — polling stays the source of truth,
+so a dropped stream degrades to the previous behaviour instead of breaking.
+
+### Code blocks
+
+`ListServiceBlocks`, `InstallBlockCLI`, `UpgradeBlockInstanceCLI`,
+`UninstallBlockInstanceCLI`, `MergeBlockInstanceCLI`, `CreateBlockCLI`,
+`PublishBlockCLI`, `ListBlockAccounts`, `ListBlockVersionsCLI`.
+
+The CLI reaches things the Console path never exposed: instance addressing for
+multi-install services, per-install state (`installedVersion`, `state`,
+`buildFolder`, `gitBranch`, `upgradeAvailable`), the `agenticInstallOnly` and
+`deprecated` catalog flags, publishable accounts, and `blocks publish`.
+
+### Environments
+
+`ListEnvironmentVariablesCLI`, `SetEnvironmentVariablesCLI`,
+`UnsetEnvironmentVariablesCLI`, `RefreshEnvironmentCLI`,
+`GetEnvironmentBranchesCLI`, `SetEnvironmentBranchesCLI`,
+`CreateEnvironmentCLI`.
+
+New capability: branch designation (no Console equivalent, and precisely what
+`--allow-branch-mismatch` overrides), the `canUpdate` permission flag,
+`--deploy` on variable writes, `--key-path` on refresh, and `--production` on
+create.
+
+### CLI-only capability
+
+Skills (search / load / resource / list / installed / install / uninstall /
+upgrade / create / edit / publish / delete / share / feedback / request), ask
+with multi-turn sessions, doctor, accounts list/select, product and service
+creation, operation describe/follow, authorise, packages add, support
+send-message / send-session, CLI self-upgrade, and `alis docs`.
+
+UI at `/skills`, `/ask` and `/diagnostics`.
+
+---
+
+## Approval gates are results, not errors
+
+Exit 3 is a normal outcome for a large part of this surface, not an edge case:
+
+- `environment unset`, `blocks uninstall`, `blocks create` and `skills delete`
+  are destructive, so they are gated on the **default** "balanced" tier.
+- On the "manual" tier, `define`, `build`, `deploy`, `packages install` and
+  `blocks install` are gated too.
+- Every write to a production environment is gated at **every** tier.
+
+A desktop GUI is not a harness with a standing approval grant, so these reach
+the user. Gated calls return a structured result carrying the code, a message
+describing what would change, and the CLI's exact retry command:
 
 ```go
-// Current: ~400 lines of manual gRPC wire encoding + polling + error handling
-func (d *DefineService) RunDefine(...) (*alis_os_dbd_v1.Define, error)
-func (d *DefineService) PollDefineOperation(...) (*alis_os_dbd_v1.Define, error)
-func (d *DefineService) ExplainDefine(...) (*alis_os_glass_v1.ExplainDefineResponse, error)
+res, err := svc.UnsetEnvironmentVariablesCLI(org, product, env, names, false, false)
+// err == nil, res.Gated == true, res.RetryCmd == "alis environment unset … --approve"
 ```
 
-**CLI replacement:**
-
-```
-alis define <pkg> --json --install
-```
-
-- `--json` gives machine-readable operation result on stdout
-- `--install` chains package install automatically (removes the need for the separate package step)
-- `--async` + `alis operations wait <name>` replaces manual polling with a ~20-line blocking call
-- The CLI handles all the gRPC wire encoding, operation polling, error envelopes, and exit codes
-- Glass AI explanations would still need to be called separately if needed
-
-**Benefits:**
-- Eliminates ~400 lines of fragile manual proto wire encoding
-- No need to maintain reverse-engineered DBD proto types
-- Built-in safety gates (production deploy confirmation, automation tier checks)
-- Proper error handling via structured error envelopes
-- Logs URI included in operation result
-
-**Effort:** Medium — replace direct gRPC calls with `exec.Command("alis", "define", ...)` and parse JSON stdout
+**Nothing in the app adds `--approve` or `--confirm-production` on the user's
+behalf.** The retry string is echoed back for them to approve. The one place
+`--yes` is passed is `support send-message`/`send-session`, where the user has
+already clicked an explicit "send" action and the command is not gated.
 
 ---
 
-### 2. Build — Docker Image Building
+## Where the CLI cannot reach parity
 
-**Current implementation:** `buildservice.go` — calls `alis.os.dbd.v1.DbdService/RunBuild` via direct gRPC, polls operations, fetches build logs, plus a separate local `docker build` path.
+These are the cases where the CLI has no equivalent. Each keeps its gRPC or
+Console path, and the option that cannot be expressed is **refused rather than
+ignored** — a silently dropped `--plan-only` is the difference between
+previewing a deploy and applying it.
 
-```go
-func (b *BuildService) RunBuild(...) (*build.CloudBuildResponse, error)
-func (b *BuildService) StartLocalBuild(...) error
-func (b *BuildService) PollBuildOperation(...) (*build.PollResponse, error)
-func (b *BuildService) FetchBuildLogs(...) ([]build.LogEntry, error)
-```
+| Capability | Why the CLI cannot do it | What happens |
+|---|---|---|
+| `releaseType` on define | No `--release-type` flag | `RunDefineOptions` routes to gRPC |
+| `beta` on deploy | No beta flag | `RunDeployOptions` routes to gRPC |
+| Owned vs shared organisations | `alis org list` returns a flat list with no ownership | gRPC is primary; CLI is a fallback that files everything under "Own" |
+| User display name and avatar | `alis whoami` returns neither | gRPC is primary; CLI fallback yields an email-only profile |
+| Glass AI define explanations | Not exposed by the CLI | Stays on `alis.os.glass.v1` |
+| Environment update / delete | No CLI subcommand | Stays on the Console API |
+| Codeblock docs, members, IAM | No CLI subcommand | Stays on the Console API |
+| Block install returning worktree paths | The CLI merges into main instead | `DoInstallBlock` keeps the Console path; see below |
 
-**CLI replacement:**
-
-```
-alis build <pkg> --json [--deploy -e <env>] [--branch <branch>] [--commit <sha>]
-```
-
-- `--json` gives the final build result with `version` and `logsUri`
-- `--deploy -e <env>` chains deploy onto build (combines two app pages into one CLI call)
-- `--async` + `alis operations wait <name>` replaces polling
-- `--retag` handles infra-only changes
-- `--build-path` / `--retag-path` replace Dockerfile auto-detection
-
-**Benefits:**
-- Eliminates manual gRPC wire encoding (~500 lines)
-- CLI's blocking wait is more reliable than manual polling (MCP server's `RunBuild` has been observed to report false-positive success)
-- `--retag` path covers a use case the app currently handles separately
-- Combines build + deploy into one atomic call (currently two separate app pages)
-
-**Effort:** Medium — replace gRPC calls with `exec.Command("alis", "build", ...)`; keep local `docker build` path as it's unique
+Conversely, the gRPC fallback refuses CLI-only options (`branch`,
+`confirmNoPaths`, `allowBranchMismatch`, `confirmProduction`, `planOnly` with
+build, deploy chaining, retag/path selection, define `--install`) with a clear
+error naming the option.
 
 ---
 
-### 3. Deploy — Terraform Provisioning
+## Deliberate non-migrations
 
-**Current implementation:** `deployservice.go` — calls `alis.os.dbd.v1.DbdService/RunDeploy` via direct gRPC, polls operations, fetches deploy logs.
+**Block install/upgrade defaults.** `InstallBlockCLI` exists and is fully
+wired, but `DoInstallBlock` still runs the Console path by default. The CLI does
+strictly more: after the server-side install it merges the `block/*` branch into
+`main` in **both** the product build repo and the org define repo and pushes.
+Those are the same working trees this app's own git UI operates on, so switching
+the default silently changes what lands in the user's tree. `NoMerge` exposes
+the choice and `MergeBlockInstanceCLI` is the deferred half — adopting the CLI
+path is a UI decision about what to do with a dirty working tree, not a
+mechanical swap.
 
-```go
-func (d *DeployService) RunDeploy(...) (*alis_os_dbd_v1.DeployResponse, error)
-func (d *DeployService) PollDeployOperation(...) (*DeployPollResponse, error)
-func (d *DeployService) FetchDeployLogs(...) ([]DeployLogEntry, error)
-```
+**Authentication.** The app keeps its own PKCE flow. `CheckAuth` deliberately
+treats the Console token as authoritative rather than `alis whoami`: large parts
+of the app still call the Console and gRPC APIs directly, so a working CLI
+session says nothing about whether those calls will succeed. Treating it as
+sufficient would let the UI past the login gate and then fail every
+non-migrated request.
 
-**CLI replacement:**
-
-```
-alis deploy <pkg> --json -e <env-id> [--version <v>] [--plan-only]
-```
-
-- `--plan-only` gives Terraform plan without apply (not gated for production)
-- `-e` is repeatable for multi-environment deploys
-- Production gate: exit code 3 with `PRODUCTION_CONFIRMATION_REQUIRED` — the app can detect this and show its own confirmation UI, then re-run with `--confirm-production`
-- `--allow-branch-mismatch` for branch mismatch scenarios
-
-**Benefits:**
-- Eliminates manual gRPC wire encoding (~300 lines)
-- Built-in production safety gates (the CLI properly enforces them, unlike the app which would need to implement its own checks)
-- `--plan-only` is not gated — safer preview workflow
-- Proper error envelopes with `retry` commands
-
-**Effort:** Medium — replace gRPC calls with `exec.Command("alis", "deploy", ...)`
+**Everything with no CLI counterpart** stays as-is: the git GUI, the GCP tools
+(Spanner, Cloud Logging, Artifact Registry, Cloud Run), the workflow engine,
+proto decoding, LocalAI, settings and the changelog.
 
 ---
 
-### 4. Operation Polling — Long-Running Operations
+## Sandbox limitations
 
-**Current implementation:** Every DBD service has its own polling loop — `PollDefineOperation`, `PollBuildOperation`, `PollDeployOperation` — each with custom timeout logic, progress parsing, and error handling. Combined ~200 lines of polling infrastructure.
+`voyage.zz` is the sandbox product. Its build repo **404s** both from a local
+`git ls-remote` and server-side, so `alis define` fails with
+`downloading proto files: api returned status: 404 Not Found` — define, build
+and deploy cannot complete there. `demo-v1` has no files; `dummy-v1` has
+committed protos and two installed blocks, so it is the fixture service.
 
-**CLI replacement:**
+Live tests therefore cover read-only commands and failure paths. That
+constraint turned out to be productive: the sandbox's failing define is what
+exposed the already-done-and-failed async envelope, and its gated
+`environment unset` is what verifies exit-3 handling end to end.
 
-```
-alis <cmd> --async              # start + return operation name
-alis operations wait <name> --json   # re-attach + stream to completion
-alis operations describe <name> --json   # one-shot state poll
-```
-
-- `--async` returns immediately with the operation name
-- `operations wait` blocks efficiently (no sleep loops) and streams progress to stderr
-- `operations describe` gives a snapshot without blocking
-- `--timeout <dur>` controls client-side wait without cancelling the server-side operation
-- Ctrl-C / SIGTERM never cancels the operation — re-attach with `operations wait`
-
-**Benefits:**
-- Replaces 3 separate polling implementations with one uniform pattern
-- No sleep-loop polling (the CLI uses efficient server-side wait)
-- Proper interrupt handling (Ctrl-C doesn't abort server-side work)
-- Progress events already parsed into NDJSON on stderr
-
-**Effort:** Low — uniform pattern across all DBD commands
+Parsing and argument construction are covered by the fixture-backed unit tests
+instead, which run everywhere without credentials.
 
 ---
 
-### 5. Package Management
+## Traps worth knowing
 
-**Current implementation:** `packageservice.go` — scans neuron builds for Go/Node/Python/Dart manifests, calls `alis.os.vscode.v2.VscodeService/GeneratePackageScripts` (another reverse-engineered gRPC), generates shell scripts, and runs them in an embedded PTY terminal.
+Each of these was found the hard way and is now pinned by a test.
 
-```go
-func (p *PackageService) ScanNeuronBuilds(...) ([]PackageScanResult, error)
-func (p *PackageService) GenerateUpgradeScript(...) (string, error)
-func (p *PackageService) GenerateInstallScript(...) (string, error)
-func (p *PackageService) RunScriptInTerminal(...) error
-```
-
-**CLI replacement:**
-
-```
-alis packages install <pkg> --json       # install all packages + pull latest defined package
-alis packages upgrade <pkg> --json       # upgrade alis.build packages
-alis packages upgrade <pkg> --json --all # upgrade everything including third-party
-alis packages add <pkg> --json           # add the service's Alis-defined package
-```
-
-- Credentials are refreshed automatically (no separate auth step needed)
-- The CLI calls the same VS Code service internally but handles the scripting
-- `--install` on `alis define` chains package install after define success
-
-**Benefits:**
-- Eliminates the reverse-engineered `VscodeService` gRPC call
-- No need to generate and execute scripts in PTY
-- Credential refresh is automatic
-- Language filtering via `--install-language` on `alis define --install`
-
-**Effort:** Medium — replace script generation + PTY execution with direct CLI calls
+1. **`operations describe` flattens `error` to a string; the `--async` envelope
+   returns it as an object.** The two shapes cannot share a decoder. A define
+   that fails before `--async` returns arrives as `done: true` with exit code 0
+   and the failure only in the envelope — reading just `name` reports it as
+   still running and polls forever.
+2. **`operations wait` exits 1 on a failed operation but still prints a valid
+   operation on stdout.** Treating a non-zero exit as a CLI-level failure
+   discards the operation's own error.
+3. **stderr mixes NDJSON progress with human-formatted error blocks**, so
+   unparseable lines must be skipped rather than treated as corruption.
+4. **`environments[].deployments` is an object keyed by neuron id, not an
+   array.** Decoding it as a list yields nothing and reports no error.
+5. **`blocks list` installed and available entries have different shapes** —
+   installed uses `installedVersion`, not `version`.
+6. **`skills installed` returns a bare JSON array**, unlike every other skills
+   command.
+7. **`accounts list` returns `display_name` in snake_case**, alone among all
+   commands.
+8. **`context view` fields depend on the working directory.** `packageId` and
+   `serviceFolder` appear only inside a service folder. A GUI launched from
+   Finder has cwd `/`, where nothing resolves — hence `RunIn`.
+9. **`alis upgrade` replaces the binary in place**, which can pull it out from
+   under a running command. `cliwrap` survives that rather than panicking.
+10. **`alis docs codeblocks` documents `blocks install` argument order
+    backwards.** `--help` is authoritative: block id first, package id second.
 
 ---
 
-### 6. Code Blocks — Catalog, Install, Upgrade, Uninstall
+## Build environment
 
-**Current implementation:** `product_blocks.go` + `product_codeblocks.go` — calls `alis.bl.blocks.v1.BlocksService` via the Console API (gRPC-web-text + session cookies), handles entitlements and plans.
-
-```go
-func (p *ProductService) ListBlocks(...) ([]*alis_bl_blocks_v1.Block, error)
-func (p *ProductService) GetBlock(...) (*alis_bl_blocks_v1.Block, error)
-func (p *ProductService) InstallBlock(...) error
-func (p *ProductService) UpdateBlock(...) error
-func (p *ProductService) CreateBlock(...) error
-func (p *ProductService) CreateBlockVersion(...) error
-func (p *ProductService) MergeBlockBranches(...) error
-```
-
-**CLI replacement:**
+`go env GOFLAGS` is set to an invalid value (`somehing`) and the private Go
+proxy returns 401 for public modules, so builds need:
 
 ```
-alis blocks list [<pkg>] --json                    # installed + available blocks
-alis blocks install <block-id> [<pkg>] --json       # install a block
-alis blocks upgrade <block-id> [<pkg>] --json       # upgrade installed block
-alis blocks uninstall <block-id> [<pkg>] --json     # uninstall a block
-alis blocks versions <block-id> --json              # list block versions
-alis blocks create <block-id> [<pkg>] --json        # create from existing code
-alis blocks publish <block-id> [<pkg>] --json       # publish new version
-alis blocks merge <block-id> [<pkg>] --json         # merge block git branch
-alis blocks accounts --json                         # list publish-eligible accounts
+GOFLAGS= GOPROXY='https://proxy.golang.org,direct' go build ./...
 ```
 
-**Benefits:**
-- Eliminates Console API dependency for blocks (session cookies, gRPC-web-text encoding)
-- `merge` handles the git merge step the app currently does manually
-- `publish` handles version creation end-to-end
-- `accounts` shows which accounts can publish — currently not easily surfaced in the app
-
-**Effort:** Medium — replace Console API calls with CLI calls; keep the block catalog browsing UI but back it with `alis blocks list --json`
-
----
-
-## Viable Complements — Use CLI Alongside Existing Code
-
-These are areas where the app has its own implementation, but the CLI can
-augment or simplify some operations.
-
-### 7. Environment Management
-
-**Current implementation:** `product_envs.go` — calls Console API (`EnvironmentsService`) for CRUD, environment variables, and activation (writes `.alis/.env`).
-
-**CLI complement:**
-
-```
-alis environment new <org>.<product> --json         # create environment
-alis environment variables <org>.<product> --json   # list all variables
-alis environment set <org>.<product>.<env> KEY=VAL --json  # set variables
-alis environment unset <org>.<product>.<env> KEY --json    # unset variables
-alis environment refresh <org>.<product>.<env> --json      # print .env file
-alis environment branches <org>.<product>.<env> --json     # view/set designated branches
-```
-
-**Recommendation:** Use CLI for `set`/`unset`/`refresh`/`branches` (production safety gates apply to variable changes on production environments). Keep the Console API for `new`/list/delete if the CLI doesn't support delete, and keep the app's environment activation logic (writing `.alis/.env`).
-
-**Benefits:**
-- Production safety gates on `environment set`/`unset` for production envs
-- `refresh` handles `.env` generation (the CLI version may differ from the app's)
-- `branches` for branch designation — no Console API equivalent
-
----
-
-### 8. Context Resolution
-
-**Current implementation:** Various Zustand stores (`workspace`, `platform`) track the current org, product, service, and environment. Context is inferred from the working directory and user selection.
-
-**CLI complement:**
-
-```
-alis context view [<org>.<product>] --json
-```
-
-Returns: organisation, product, service (package ID), local folders, and **all product environments** with id, display name, status, and production flag. Environment IDs for `-e` come from here — never from guessing.
-
-**Recommendation:** Use `alis context view --json` as the canonical source of truth for environment IDs and production flags. Keep the app's own workspace state for UI purposes, but source environment data from the CLI rather than the Console API.
-
-**Benefits:**
-- Environment IDs are guaranteed correct (no guessing)
-- Production flag is authoritative (used for safety gates)
-- Service/package ID resolution from cwd — less fragile than path parsing
-
----
-
-### 9. Skills Discovery and Installation
-
-**Current implementation:** `buildkitservice.go` — lists build specs from `BuildSpecsService`, including skills. A "BuildKit" page shows agent configuration. No skill loading/installation workflow.
-
-**CLI complement:**
-
-```
-alis skills search "<query>" --json       # semantic skill search
-alis skills load <id> --json             # load skill instructions (markdown)
-alis skills resource <id> <path> --json   # fetch skill resource file
-alis skills install <id> [--project] --json  # install into local agent harness
-alis skills installed --json             # list installed skills
-alis skills upgrade --all --json         # upgrade all installed skills
-alis skills uninstall <id> --json        # remove installed skill
-```
-
-**Recommendation:** Add a skills browser/search page backed by `alis skills search` and `alis skills load`. This would provide the actual skill content (markdown instructions) that the current BuildKit page lacks. `alis skills install` would enable local agent integration (Claude Code, etc.) that isn't currently possible.
-
-**Benefits:**
-- Actual skill content (markdown) vs. just metadata from BuildSpecs
-- Skills agent workflow: search → load → resource
-- Local harness installation for AI coding agents
-- Skill authoring pipeline (`create → edit → publish`)
-
----
-
-## Not Recommended for CLI Migration
-
-These are areas where the app's implementation is either better than the CLI's,
-unique to the desktop use case, or complementary rather than overlapping.
-
-| Area | Reason to Keep |
-|---|---|
-| **Git source control** (`gitservice.go`) | The app has a full git GUI (staging, diffs, branches, merge, stash, bisect). `alis git configure` only provides repo config. The app's git implementation is a major feature, not a CLI wrapper. |
-| **GCloud tools** (`gcloudservice.go`) | The app has Spanner explorer, Cloud Logging, Artifact Registry, Cloud Storage, Secret Manager, Cloud Run. `alis gcloud auth` only provides auth tokens. The app's tools are a desktop-native GCP console. |
-| **Workflows** (`workflowservice.go`) | Custom workflow engine with DAG steps (shell, define, build, deploy, git, wait). No CLI equivalent. The CLI's `build --deploy` chains build+deploy but doesn't do multi-step DAGs. |
-| **ProtoDecode** (`protodecodeservice.go`) | Protobuf compilation and Spanner column decoding. No CLI equivalent. This is a unique debugging tool. |
-| **LocalAI** (`localaiservice.go`) | Ollama integration for local AI (commit message generation, etc.). No CLI equivalent. Complementary to `alis ask` which queries platform content. |
-| **Changelog** (`changelogservice.go`) | App-specific release notes from embedded CHANGELOG.md. No CLI equivalent. |
-| **Auth** (`alisauth.go`, `alisclient_bridge.go`) | OAuth2 PKCE flow, token management, git credential helper. The app needs its own auth for identity and for the Console API calls it will keep. `alis login` could be an alternative entry point, but the app needs tokens for non-CLI API calls. |
-| **Glass AI Explanations** (`defineservice.go`) | `ExplainDefine` calls `alis.os.glass.v1.GlassService` for natural-language explanations of define results. The CLI doesn't expose this. If the app switches to `alis define`, it could still call Glass AI separately. |
-| **Build Kit** (`buildkitservice.go`) | Build specs for agents, tools, MCP servers, etc. The CLI doesn't expose build spec management. Keep this as-is, supplement with skills from the CLI. |
-| **Dashboard / Home** | The app's home page, product overview, org listings, etc. The CLI provides `org list/view`, `product view`, `context view` but not a rich dashboard. Keep the app's UI. |
-| **Settings** (`settingsservice.go`) | App-specific key/value settings in SQLite. No CLI equivalent. |
-| **Logs** (`logservice.go`) | App-specific log viewing. No CLI equivalent. |
-
----
-
-## Migration Roadmap
-
-### Phase 1 — DBD Pipeline (highest impact)
-Switch Define, Build, Deploy, and operations polling to the CLI. This is the
-core loop that currently relies on the most fragile reverse-engineering.
-
-1. Replace `RunDefine` + `PollDefineOperation` with `alis define --json [--install]`
-2. Replace `RunBuild` + `PollBuildOperation` + `FetchBuildLogs` with `alis build --json`
-3. Replace `RunDeploy` + `PollDeployOperation` + `FetchDeployLogs` with `alis deploy --json -e <env>`
-4. Unify operation polling behind `alis operations wait --json`
-
-### Phase 2 — Package Management
-Replace script generation + PTY execution with direct CLI calls.
-
-1. Replace `GenerateInstallScript` + `RunScriptInTerminal` with `alis packages install --json`
-2. Replace `GenerateUpgradeScript` + `RunScriptInTerminal` with `alis packages upgrade --json`
-3. Chain install into define via `alis define --json --install`
-
-### Phase 3 — Code Blocks
-Replace Console API calls with CLI for blocks operations.
-
-1. Replace `ListBlocks` / `GetBlock` with `alis blocks list --json`
-2. Replace `InstallBlock` with `alis blocks install --json`
-3. Replace `UpdateBlock` with `alis blocks upgrade --json`
-4. Replace `CreateBlock` / `CreateBlockVersion` with `alis blocks create --json` + `alis blocks publish --json`
-
-### Phase 4 — Environment Management (partial)
-Supplement Console API calls with CLI for variable management and branch designation.
-
-1. Add `alis environment set/unset --json` for variable changes
-2. Add `alis environment branches --json` for branch designation
-3. Consider `alis context view --json` as canonical environment data source
-
-### Phase 5 — Skills & Context
-Add new features powered by the CLI.
-
-1. Add a skills browser/search using `alis skills search/load/resource --json`
-2. Add skill installation via `alis skills install --json`
-3. Use `alis context view --json` as the canonical environment data provider
-4. Consider `alis ask --json` for AI-powered Q&A over platform content
-5. Consider `alis doctor --json` for diagnostics
-
----
-
-## Implementation Pattern
-
-For all CLI integrations, use a consistent Go wrapper:
-
-```go
-type CLIRunner struct{}
-
-func (c *CLIRunner) Run(ctx context.Context, args ...string) (*CLIResult, error) {
-    cmd := exec.CommandContext(ctx, "alis", args...)
-    var stdout, stderr bytes.Buffer
-    cmd.Stdout = &stdout
-    cmd.Stderr = &stderr
-    err := cmd.Run()
-
-    result := &CLIResult{
-        ExitCode: cmd.ProcessState.ExitCode(),
-        Stdout:   stdout.Bytes(),
-        Stderr:   stderr.Bytes(),
-    }
-
-    if err != nil {
-        // Parse error envelope from stdout if --json was used
-        if env := parseErrorEnvelope(result.Stdout); env != nil {
-            result.Error = env
-        }
-    }
-
-    return result, err
-}
-```
-
-Key handling rules:
-- Exit code 0: parse JSON result from stdout
-- Exit code 1: parse error envelope from stdout, diagnose from stderr
-- Exit code 3: prompt user for confirmation, re-run with `retry` command
-- Exit code 4: user must run `alis login`
-- Never parse stderr for results (it carries progress/NDJSON)
-- Use `--json` on every call
-- Stream progress from stderr (NDJSON) to the app's progress UI
-
-### Progress Streaming
-
-For long-running operations where the app wants to show progress, either:
-1. Use `--async` + poll `alis operations describe <name> --json` periodically (for simple status bars)
-2. Capture stderr NDJSON stream and parse `state` transitions (for rich progress UIs)
-
----
-
-## Risks & Considerations
-
-1. **CLI must be installed** — The app currently has no dependency on the `alis` CLI. Migration would require it to be present. Could bundle or install it as part of the app setup, or fall back to the current gRPC implementation if not found.
-
-2. **Version compatibility** — The CLI evolves. The app should check `alis version` and warn if the installed version is below a known minimum.
-
-3. **Auth state sharing** — The CLI uses the same `~/.alis` directory for auth state. If the app and CLI share auth, `alis login` / `alis authorise` may interact with the app's own auth. This is likely fine since both use OAuth2 with `~/.alis`.
-
-4. **Latency** — Spawning a process (`exec.Command`) has more overhead than an in-process gRPC call. For the DBD pipeline (which takes minutes), this is negligible. For fast queries (context view, blocks list), measure and decide.
-
-5. **Error surface** — The CLI's error envelopes are richer than what the app currently handles (structured `code`, `message`, `retry`, `agent` fields). The app should fully embrace this pattern for better error UX.
-
-6. **Testability** — Direct gRPC calls are easier to mock in tests. CLI calls require either a test wrapper or integration tests against a real `alis` installation. Consider an interface-based abstraction.
+`alis authorise <org>.<product>` refreshes package registry credentials when
+they expire.
