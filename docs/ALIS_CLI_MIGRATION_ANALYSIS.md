@@ -18,7 +18,7 @@ Every top-level `alis` command is reachable from Go. The surface is:
 | Code blocks and environments | `product_blocks_cli.go`, `product_envs_cli.go` | 16 methods |
 | Define / Build / Deploy with full flag coverage | `backend.go`, `dbdoptions.go` | 3 `Run*Options` + narrow forms |
 
-Backed by 171 unit tests (no credentials or network), 16 live sandbox tests
+Backed by 168 unit tests (no credentials or network), 17 live sandbox tests
 behind the `alis_integration` tag, and 19 captured response fixtures.
 
 ```
@@ -120,8 +120,11 @@ the user. Gated calls return a structured result carrying the code, a message
 describing what would change, and the CLI's exact retry command:
 
 ```go
-res, err := svc.UnsetEnvironmentVariablesCLI(org, product, env, names, false, false)
+// First pass: no approval, so the CLI reports what it would change.
+res, err := svc.UnsetEnvironmentVariablesCLI(org, product, env, names, false, Approval{})
 // err == nil, res.Gated == true, res.RetryCmd == "alis environment unset … --approve"
+// Second pass, only after the user agrees, carrying exactly what the gate asked:
+res, err = svc.UnsetEnvironmentVariablesCLI(org, product, env, names, false, res.Approval)
 ```
 
 **Nothing in the app adds `--approve` or `--confirm-production` on the user's
