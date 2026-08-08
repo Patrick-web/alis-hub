@@ -95,28 +95,8 @@ func (s *ProductService) GetServicesOverview(org, product string) (*ServicesOver
 	return s.servicesOverviewGRPC(org, product)
 }
 
-// productViewResponse is the verified shape of `alis product view --json`.
-// See docs/ALIS_CLI_FEATURES.md § Verified JSON Response Shapes.
-type productViewResponse struct {
-	Neurons []struct {
-		ID      string `json:"id"`
-		Version string `json:"version"`
-		Status  string `json:"status"`
-	} `json:"neurons"`
-	Environments []struct {
-		ID          string `json:"id"`
-		DisplayName string `json:"displayName"`
-		// deployments is a JSON object keyed by neuron id, not an array.
-		Deployments map[string]struct {
-			ID      string `json:"id"`
-			Version string `json:"version"`
-			Status  string `json:"status"`
-			LogsURI string `json:"logsUri"`
-		} `json:"deployments"`
-	} `json:"environments"`
-}
-
 // servicesOverviewCLI builds the whole overview from one `alis product view`.
+// The response type lives in cliviews.go with the rest of the CLI's shapes.
 func (s *ProductService) servicesOverviewCLI(org, product string) (*ServicesOverview, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

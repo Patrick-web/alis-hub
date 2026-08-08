@@ -1,0 +1,33 @@
+{
+  "id": "100000000000000000000",
+  "email": "developer@example.com",
+  "buildProfile": {
+    "preferredHarness": "HARNESS_CLAUDE_CLI",
+    "experienceLevel": "EXPERIENCE_LEVEL_BEGINNER",
+    "preferredIde": "IDE_VS_CODE",
+    "defaultTerminalApp": "TERMINAL_APP_APPLE_TERMINAL",
+    "harnesses": [
+      {
+        "harness": "HARNESS_CLAUDE_CLI",
+        "accessMethod": "ACCESS_METHOD_SUBSCRIPTION",
+        "pluginVersion": ""
+      }
+    ],
+    "localEnvironmentSetupComplete": true,
+    "os": "OPERATING_SYSTEM_MAC",
+    "environments": [
+      "ENVIRONMENT_REMOTE_WORKSTATION",
+      "ENVIRONMENT_LOCAL"
+    ],
+    "localPolicyRestricted": false,
+    "ides": [
+      "IDE_VS_CODE"
+    ],
+    "tuiOnboarded": true,
+    "subscribeToReleaseNotes": false,
+    "automationTier": "AUTOMATION_TIER_UNSPECIFIED",
+    "sessionCapture": "DISABLED"
+  },
+  "supportStaff": false,
+  "latestRelease": null
+}

@@ -1,0 +1,24 @@
+{
+  "displayName":  "Voyage Charters",
+  "description":  "",
+  "products":  [
+    {
+      "id":  "vp",
+      "status":  "ACTIVE",
+      "latestDefinitionVersion":  "",
+      "latestDefinitionStatus":  "",
+      "displayName":  "Voyage Portal",
+      "gitRemoteUrl":  "https://forgejo-231410899422.us-east4.run.app/voyage/vp.git",
+      "googleProjectId":  "voyage-vp-product-pi4"
+    },
+    {
+      "id":  "zz",
+      "status":  "ACTIVE",
+      "latestDefinitionVersion":  "",
+      "latestDefinitionStatus":  "",
+      "displayName":  "Sandbox",
+      "gitRemoteUrl":  "https://forgejo-231410899422.us-east4.run.app/voyage/zz.git",
+      "googleProjectId":  "voyage-zz-product-w43"
+    }
+  ]
+}

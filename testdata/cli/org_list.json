@@ -1,0 +1,24 @@
+{
+  "landingZones":  [
+    {
+      "id":  "rezco",
+      "status":  "ACTIVE",
+      "displayName":  "Rezco Asset Management"
+    },
+    {
+      "id":  "standards",
+      "status":  "ACTIVE",
+      "displayName":  "STANDARDS"
+    },
+    {
+      "id":  "techbridge",
+      "status":  "ACTIVE",
+      "displayName":  "Techbridge"
+    },
+    {
+      "id":  "voyage",
+      "status":  "ACTIVE",
+      "displayName":  "Voyage Charters"
+    }
+  ]
+}

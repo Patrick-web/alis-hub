@@ -1,0 +1,144 @@
+{
+  "queriedSkills":  [
+    {
+      "id":  "getting-started",
+      "description":  "Use this skill when the user is new to Alis Build, asks how the platform works, wants onboarding, wants to understand the Define, Build, Deploy (DBD) workflow, or wants to create and deploy a first custom API with blocks/simpleapi. Orients new builders through the DBD workflow and optionally guides a first Simple API quickstart.",
+      "displayName":  "getting-started",
+      "version":  "",
+      "loadCount":  "9"
+    },
+    {
+      "id":  "dbd-add-protos",
+      "description":  "Use this skill when the user wants to author new protocol buffer definitions for a service in the Define repo — for example \"add protos\", \"define a new service\", \"scaffold a .proto\", or \"create the API contract for X\". This is the Define stage only: it asks what the service is about (to name it and write clear comments) and what initial custom methods are needed, then generates an AIP-compliant `.proto` with a service, RPCs, and messages. It does not run Define, and does not write any Go/build code. Pairs with review-define (review) and dbd-add-grpc-go-server (build).",
+      "displayName":  "dbd-add-protos",
+      "version":  "",
+      "loadCount":  "4"
+    },
+    {
+      "id":  "adk-new-agent",
+      "description":  "Use this skill when the user wants to create, scaffold, or deploy a new ADK-Go agent neuron with blocks/agent, set up Agent Engine and the ADK launcher foundation, or start from scratch before other ADK extensions — even if they do not say agent.v1 or Build Kit. Guides the full setup journey through define, build, and deploy, then routes to other ADK-Go skills. Not for extending an existing agent with tools, AG-UI, or LRO only.",
+      "displayName":  "adk-new-agent",
+      "version":  "",
+      "loadCount":  "4"
+    },
+    {
+      "id":  "dbd-add-grpc-go-server",
+      "description":  "Use this skill when the user wants to stand up a new gRPC Go server (neuron) from protocol buffers that were already locked in during Define — generating server.go, one Go file per service with method stubs, go.mod, Dockerfile, and infra. Go only. Assumes Define is complete; if the protos/packages are missing, it stops and routes the user to Define. Not for other languages and not for editing the proto contract itself.",
+      "displayName":  "dbd-add-grpc-go-server",
+      "version":  "",
+      "loadCount":  "9"
+    },
+    {
+      "id":  "google-cloud-run-basics",
+      "description":  "Manages Cloud Run services, jobs, and worker pools. Use when you need to deploy applications responding to HTTP requests (services), run event-triggered or scheduled tasks (jobs), or handle always-on pull-based background processing (worker pools).",
+      "displayName":  "google-cloud-run-basics",
+      "version":  "1",
+      "loadCount":  "0"
+    },
+    {
+      "id":  "block-arenaagent",
+      "description":  "Deploys the arena agent. Use whenever the user expresses intent to \"install an agent\", \"create an agent\", \"add an agent to my service\". Handles establishing the target package context, installing the required agent CodeBlock and deploying the agent.",
+      "displayName":  "Arena Agent",
+      "version":  "1.4.0",
+      "loadCount":  "4"
+    },
+    {
+      "id":  "dbd-add-tracing-grpc-go",
+      "description":  "Use this skill when the user wants to add Google Cloud distributed tracing to an existing Go gRPC neuron or Go service that calls gRPC backends, especially on Cloud Run. It implements the Build-stage code changes for go.alis.build/trace, Cloud Trace export, gRPC server/client instrumentation, protobuf package naming, and explicit startup ordering. Go only. Not for authoring protos, non-Go services, or generic OpenTelemetry collector deployments.",
+      "displayName":  "dbd-add-tracing-grpc-go",
+      "version":  "",
+      "loadCount":  "5"
+    },
+    {
+      "id":  "product-orientation",
+      "description":  "Use this skill when a developer wants to get orientated on an existing Alis Build product — \"orientate me\", \"what is this product\", \"give me a tour\", \"what are all these neurons\", \"walk me through the services\", \"what does each microservice do\", or \"how is this product deployed\". Use it before starting work on an unfamiliar product, when someone needs the lay of the land rather than a single answer. Produces a staged orientation: first a brief product summary, environment/deployment picture, compact neuron grouping, and a short \"what matters next\" prompt; then, only if requested, a fuller neuron table and selective deep dives. It is strictly read-only — it explores and explains, it never changes anything. Not for authoring or reviewing protos — use review-define. Not for the hands-on first-API onboarding walkthrough that creates a neuron and runs Define, Build, Deploy — use getting-started.",
+      "displayName":  "product-orientation",
+      "version":  "",
+      "loadCount":  "6"
+    },
+    {
+      "id":  "block-mcp",
+      "description":  "Creates an MCP Server. Use whenever the user expresses intent to \"install an MCP server\", \"create an MCP server\", \"add an MCP server to my service\". Handles establishing the target package context and installing the MCP CodeBlock.",
+      "displayName":  "MCP Server",
+      "version":  "1.0.0-rc2",
+      "loadCount":  "4"
+    },
+    {
+      "id":  "adk-add-scheduler",
+      "description":  "Use this skill when the user wants scheduled or recurring agent runs, A2A scheduler extension, cron jobs, webscheduler launcher, or Cloud Tasks delivery for the agent — even if they do not say scheduler extension. Wires scheduler service, Spanner tables, IAM gRPC interceptors, and webscheduler.NewLauncher with WithGRPCRegistrar. Not for sync tools (add-tool), LRO (add-lro), AG-UI (add-agui), or embedded runtime skills (add-agent-skills).",
+      "displayName":  "adk-add-scheduler",
+      "version":  "",
+      "loadCount":  "7"
+    },
+    {
+      "id":  "adk-add-console",
+      "description":  "Use this skill when the user wants a browser chat UI, operator console, custom frontend, agentsui, or agent branding — even if they do not say console. Default path installs the agentsui CodeBlock (Vue BFF + SPA) via InstallBlock and wires the agent as a backend. Requires add-agui and add-scheduler on the agent. Bundled console.NewLauncher is a fallback only. Not for LRO (add-lro), sync tools (add-tool), or embedded runtime skills (add-agent-skills).",
+      "displayName":  "adk-add-console",
+      "version":  "",
+      "loadCount":  "3"
+    },
+    {
+      "id":  "dbd-migrate-to-neuron-protos",
+      "description":  "Use this skill when a service still consumes legacy product-level protobuf packages and should migrate to per-neuron packages generated by protos.v2. Go signals: import of \"internal.os.alis.services/protobuf/alis/os/mcp/v1\" or a go.mod require of \"internal.<product>.<domain>/protobuf\". JavaScript signals: dependency on \"@internal.<product>.<domain>/protobuf\", \"google-protobuf\", \"grpc-web\", or migration from grpc-web to protoc-gen-es / Protobuf-ES (\"@bufbuild/protobuf\", \"@connectrpc/connect\", \"@alis.build/*\"). Target Go modules: \"alis.build/...\"; target npm packages: \"@alis.build/<package-id-dashed>\". Also covers the companion public-stubs upgrade: Go \"github.com/alis-build/public-go/...\" to \"go.alis.build/common/...\"; JavaScript legacy \"@alis-build/google-common-protos\", \"@alis-build/common\", or \"@alis-build/common-es\" to individual \"@alis-build/<proto-package-dashed>\" packages on public npm. Triggers: \"migrate to neuron protos\", \"migrate to alis.build packages\", \"migrate to protobuf-es\", the migration hint after `alis packages upgrade` or the 'u' key, build failures resolving legacy modules, startup/test panic \"proto: file ... is already registered\", handler \"does not implement\" have/want mismatches between old and new stub paths, or \"module declares its path as\" errors. Read SKILL.md first, then the language reference for your migration root. Go: rewrites go.mod, imports, and Dockerfile GOPROXY/GONOSUMDB, then `alis packages install`. JavaScript: manual, fully documented in references. Python: not yet automated. Package plumbing only — no business logic. Public-stub migration may require re-running Define (no proto edits) when generated packages still import old paths.",
+      "displayName":  "dbd-migrate-to-neuron-protos",
+      "version":  "5",
+      "loadCount":  "32"
+    },
+    {
+      "id":  "dbd-add-event-handler",
+      "description":  "Use this skill when the user wants a neuron to react to Pub/Sub events — for example \"add an events handler\", \"subscribe to <X>Event\", \"handle pubsub messages\", or \"react to domain events\". It generates a dedicated Cloud Run service named `{neuron-id}-events`: an HTTP `/HandleEvent` endpoint that receives Pub/Sub **push** messages and fans out by subscription name, plus `infra/events.tf` with the push subscriptions and the Cloud Run service. This is the Build stage and is Go only; it assumes the event protos are already defined and published. Not for the main gRPC server (dbd-add-grpc-go-server), authoring proto contracts (dbd-add-protos), or ADK scheduler/cron (adk-add-scheduler).",
+      "displayName":  "dbd-add-event-handler",
+      "version":  "",
+      "loadCount":  "9"
+    },
+    {
+      "id":  "adk-add-tool",
+      "description":  "Use this skill when the user wants to add a synchronous ADK tool, bootstrap tools.proto, wire ToolsService RPCs, or expose a capability to the model via functiontool — even if they do not say proto or define. Proto-first tools with define-generated stubs and MyTools wiring. Not for LRO/async tools (add-lro), AG-UI (add-agui), or embedded markdown skills (add-agent-skills).",
+      "displayName":  "adk-add-tool",
+      "version":  "",
+      "loadCount":  "5"
+    },
+    {
+      "id":  "review-define",
+      "description":  "Use this skill when the user wants to review, audit, or lint the protocol buffer definitions in a neuron's define tree — for example \"review my protos\", \"check my define\", \"are my .proto files AIP-compliant\", \"review the API contract before I run Define\", or any request to verify proto consistency, naming, structure, or documentation quality. Reviews every `.proto` file in the focused neuron's define repo for consistency with the Google API Improvement Proposals (https://google.aip.dev/general) and ensures every service and message carries clear, well-worded comments, asking the user for clarification where intent is unclear.",
+      "displayName":  "review-define",
+      "version":  "",
+      "loadCount":  "4"
+    },
+    {
+      "id":  "dbd-add-resources",
+      "description":  "Use this skill when the user wants to scaffold a complete, AIP-compliant \"Resources\" backend into a neuron from a resource tree — for example \"add a resources block\", \"scaffold CRUD for Books and Authors\", \"generate the resources server for these resources\", or \"implement AIP resources with Spanner\". Go + Spanner only. It writes the `.proto` contract into the define tree and `server.go`, per-service service files, `go.mod`, `Dockerfile`, `internal/{database,db,namers,regex,roles}`, and `infra/*.tf` into the build tree, deriving every value from the resource tree, and interviews the user to build the tree when one is not supplied. Not for: non-Go languages or non-Spanner databases, or editing the business logic of an already-scaffolded service. Pairs with review-define (review the generated protos before Define) and dbd-add-grpc-go-server (generic, non-AIP Go server).",
+      "displayName":  "dbd-add-resources",
+      "version":  "",
+      "loadCount":  "16"
+    },
+    {
+      "id":  "google-cloud-logging-query-generation",
+      "description":  "Generates Logging Query Language (LQL) queries for Google Cloud Logging from natural language. Use this skill when you need to query log data or when you are debugging issues. You can filter log data by Google Cloud service. Don't use this skill to query other databases, such as SQL or Cloud Spanner.",
+      "displayName":  "google-cloud-logging-query-generation",
+      "version":  "1",
+      "loadCount":  "0"
+    },
+    {
+      "id":  "google-spanner-basics",
+      "description":  "Assists in provisioning instances and databases, designing performant schemas, and querying data in Spanner. Use when designing primary keys, writing SQL queries or client library code, or diagnosing performance issues.",
+      "displayName":  "google-spanner-basics",
+      "version":  "1",
+      "loadCount":  "0"
+    },
+    {
+      "id":  "google-cloud-monitoring-metric-selection",
+      "description":  "Retrieve, query, and identify relevant Google Cloud Monitoring metric descriptors for a GCP service or resource (such as Compute Engine, Spanner, BigQuery, Cloud Run, Cloud SQL, Pub/Sub, Cloud Storage, etc.). Use when asked to find, list, search, or discover GCP metric types, names, kind/value schemas, or descriptors.",
+      "displayName":  "google-cloud-monitoring-metric-selection",
+      "version":  "1",
+      "loadCount":  "0"
+    },
+    {
+      "id":  "google-google-cloud-storage-basics",
+      "description":  "Stores, retrieves, and manages data as objects in Cloud Storage (Google Cloud Storage, or GCS) buckets. Use when you need to interact with Cloud Storage — create or configure buckets, upload, download, stream, or transfer data, organize objects with folders, generate signed URLs, control access (IAM, ACLs, public access prevention), set storage classes and tiering (Standard, Nearline, Coldline, Archive), manage cost and lifecycle, protect data (versioning, encryption/CMEK, retention and Bucket Lock, object holds, soft delete), host static websites, trigger Pub/Sub notifications on object changes, mount buckets as a file system (gcsfuse), or optimize storage performance at any scale. Covers the gcloud storage / gsutil CLI, JSON and XML APIs, client libraries, Terraform, and Cloud Storage MCP servers. Don't use for block storage (Persistent Disk), data warehousing/analytics (BigQuery), or databases (Cloud SQL, Spanner, Bigtable, Firestore).",
+      "displayName":  "google-google-cloud-storage-basics",
+      "version":  "1",
+      "loadCount":  "0"
+    }
+  ]
+}

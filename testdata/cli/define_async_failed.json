@@ -1,0 +1,17 @@
+{
+  "name":  "operations/59b166d7-e5a9-4c12-9037-587a7f8172d6",
+  "metadata":  {
+    "@type":  "type.googleapis.com/alis.os.dbd.v1.RunDefineMetadata",
+    "definition":  "",
+    "version":  "",
+    "notes":  "",
+    "definitionArtifacts":  [],
+    "protoArtifacts":  []
+  },
+  "done":  true,
+  "error":  {
+    "code":  0,
+    "message":  "rpc error: code = Unknown desc = defining neuron: rpc error: code = Unknown desc = downloading proto files: api returned status: 404 Not Found",
+    "details":  []
+  }
+}

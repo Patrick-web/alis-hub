@@ -275,6 +275,18 @@ func (r *Runner) RunAsyncName(ctx context.Context, args ...string) (string, erro
 	return parseAsyncName(stdout)
 }
 
+// RunAsyncOperation runs a command with --async and returns the decoded
+// envelope, so callers can see an operation that already finished. Exit code is
+// still 0 when the server-side operation failed this way, so the failure is
+// only visible in the envelope.
+func (r *Runner) RunAsyncOperation(ctx context.Context, args ...string) (*AsyncOperation, error) {
+	stdout, err := r.RunAsync(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	return parseAsyncOperation(stdout)
+}
+
 // Describe calls `alis operations describe <opName> --json` and returns the parsed state.
 func (r *Runner) Describe(ctx context.Context, opName string) (*OperationState, error) {
 	if err := ValidateOperationName(opName); err != nil {
@@ -459,19 +471,49 @@ func ValidateOperationName(name string) error {
 	return nil
 }
 
-// parseAsyncName extracts the operation name from `alis <cmd> --json --async` output.
-// Output format: {"name":"operations/..."}
+// AsyncOperation is the envelope `alis <cmd> --json --async` prints.
+//
+// This is the raw google.longrunning.Operation, which is NOT the same shape as
+// `alis operations describe`: here `error` is a Status object, while describe
+// flattens it to a plain string. An operation can also come back already
+// finished — a define whose protos cannot be fetched fails server-side before
+// the CLI returns, arriving as done=true with a populated error.
+type AsyncOperation struct {
+	Name  string `json:"name"`
+	Done  bool   `json:"done"`
+	Error *struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+// ErrorMessage returns the failure message, or "" when the operation has none.
+func (o *AsyncOperation) ErrorMessage() string {
+	if o.Error == nil {
+		return ""
+	}
+	return o.Error.Message
+}
+
+// parseAsyncOperation decodes the --async envelope.
+func parseAsyncOperation(stdout json.RawMessage) (*AsyncOperation, error) {
+	var op AsyncOperation
+	if err := json.Unmarshal(stdout, &op); err != nil {
+		return nil, fmt.Errorf("parse async output: %w (raw: %s)", err, string(stdout))
+	}
+	if op.Name == "" {
+		return nil, fmt.Errorf("empty operation name in async output: %s", string(stdout))
+	}
+	return &op, nil
+}
+
+// parseAsyncName extracts just the operation name from `alis <cmd> --json --async`.
 func parseAsyncName(stdout json.RawMessage) (string, error) {
-	var v struct {
-		Name string `json:"name"`
+	op, err := parseAsyncOperation(stdout)
+	if err != nil {
+		return "", err
 	}
-	if err := json.Unmarshal(stdout, &v); err != nil {
-		return "", fmt.Errorf("parse async output: %w (raw: %s)", err, string(stdout))
-	}
-	if v.Name == "" {
-		return "", fmt.Errorf("empty operation name in async output: %s", string(stdout))
-	}
-	return v.Name, nil
+	return op.Name, nil
 }
 
 // parseErrorEnvelope tries to parse a structured error envelope from stdout.

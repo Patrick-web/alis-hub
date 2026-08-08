@@ -1,0 +1,64 @@
+{
+  "displayName":  "Sandbox",
+  "description":  "",
+  "projectId":  "voyage-zz-product-w43",
+  "gitRemoteUrl":  "https://forgejo-231410899422.us-east4.run.app/voyage/zz.git",
+  "neurons":  [
+    {
+      "id":  "demo-v1",
+      "version":  "",
+      "status":  "UNSPECIFIED",
+      "logsUri":  "",
+      "type":  "",
+      "source":  "",
+      "releaseTargetOrganisations":  [],
+      "buildTime":  null,
+      "builtBy":  "",
+      "autoDeployEnvironments":  [],
+      "installedBlocks":  [],
+      "definedVersion":  "",
+      "releaseEnvs":  []
+    },
+    {
+      "id":  "dummy-two-v1",
+      "version":  "",
+      "status":  "UNSPECIFIED",
+      "logsUri":  "",
+      "type":  "",
+      "source":  "",
+      "releaseTargetOrganisations":  [],
+      "buildTime":  null,
+      "builtBy":  "",
+      "autoDeployEnvironments":  [],
+      "installedBlocks":  [],
+      "definedVersion":  "",
+      "releaseEnvs":  []
+    },
+    {
+      "id":  "dummy-v1",
+      "version":  "",
+      "status":  "UNSPECIFIED",
+      "logsUri":  "",
+      "type":  "",
+      "source":  "",
+      "releaseTargetOrganisations":  [],
+      "buildTime":  null,
+      "builtBy":  "",
+      "autoDeployEnvironments":  [],
+      "installedBlocks":  [],
+      "definedVersion":  "",
+      "releaseEnvs":  []
+    }
+  ],
+  "environments":  [
+    {
+      "id":  "1y2ozw2i3fsru",
+      "displayName":  "Development",
+      "projectId":  "voyage-zz-dev-0fw",
+      "status":  "ACTIVE",
+      "deployments":  {},
+      "production":  false,
+      "allowedBranches":  []
+    }
+  ]
+}

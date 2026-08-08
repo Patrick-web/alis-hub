@@ -32,9 +32,16 @@ type CLIBackend struct {
 }
 
 // deployAsyncMeta holds the metadata from `alis deploy --json --async` output.
+// This is the raw longrunning.Operation envelope, so error is a Status object —
+// unlike `alis operations describe`, which flattens it to a string.
 type deployAsyncMeta struct {
 	Name     string              `json:"name"`
+	Done     bool                `json:"done"`
 	Metadata deployAsyncMetadata `json:"metadata"`
+	Error    *struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
 }
 
 type deployAsyncMetadata struct {
@@ -111,14 +118,22 @@ func (b *CLIBackend) RunDefine(ctx context.Context, neuron, commit string) (*Run
 		args = append(args, "--commit", commit)
 	}
 
-	opName, err := b.runner.RunAsyncName(ctx, args...)
+	op, err := b.runner.RunAsyncOperation(ctx, args...)
 	if err != nil {
 		if code, retry, ok := confirmationRequired(err); ok {
 			return &RunDefineResult{Error: code, Notes: retry}, nil
 		}
 		return nil, fmt.Errorf("RunDefine: %w", err)
 	}
-	return &RunDefineResult{OperationName: opName, Done: false}, nil
+	// A define can fail server-side before --async returns — unreachable proto
+	// files, for instance — arriving already done, with the failure only in the
+	// envelope and an exit code of 0. Report it now instead of handing the
+	// caller an operation to poll that will never change.
+	return &RunDefineResult{
+		OperationName: op.Name,
+		Done:          op.Done,
+		Error:         op.ErrorMessage(),
+	}, nil
 }
 
 func (b *CLIBackend) PollDefine(ctx context.Context, opName string) (*RunDefineResult, error) {
@@ -147,14 +162,19 @@ func (b *CLIBackend) RunBuild(ctx context.Context, neuron, commit string) (*RunB
 		args = append(args, "--commit", commit)
 	}
 
-	opName, err := b.runner.RunAsyncName(ctx, args...)
+	op, err := b.runner.RunAsyncOperation(ctx, args...)
 	if err != nil {
 		if code, retry, ok := confirmationRequired(err); ok {
 			return &RunBuildResult{Error: code, Notes: retry}, nil
 		}
 		return nil, fmt.Errorf("RunBuild: %w", err)
 	}
-	return &RunBuildResult{OperationName: opName, Done: false}, nil
+	// See RunDefine: a build can arrive already failed with exit code 0.
+	return &RunBuildResult{
+		OperationName: op.Name,
+		Done:          op.Done,
+		Error:         op.ErrorMessage(),
+	}, nil
 }
 
 func (b *CLIBackend) PollBuild(ctx context.Context, opName, neuron string) (*RunBuildResult, error) {
@@ -204,9 +224,14 @@ func (b *CLIBackend) RunDeploy(ctx context.Context, neuron, version string, envi
 
 	result := &RunDeployResult{
 		OperationName: meta.Name,
-		Done:          false,
-		Version:       meta.Metadata.Version,
-		Notes:         meta.Metadata.Notes,
+		// See RunDefine: a deploy can arrive already failed with exit code 0,
+		// its failure carried only in the envelope's error object.
+		Done:    meta.Done,
+		Version: meta.Metadata.Version,
+		Notes:   meta.Metadata.Notes,
+	}
+	if meta.Error != nil {
+		result.Error = meta.Error.Message
 	}
 	for _, d := range meta.Metadata.Deployments {
 		result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})

@@ -1,0 +1,292 @@
+{
+  "installed":  [
+    {
+      "blockId":  "demogreeter",
+      "displayName":  "Demo greeter agent",
+      "tagline":  "The essential blueprint for basic greeter AI agent on Google Cloud.",
+      "instance":  "blocks/demogreeter/instances/959",
+      "installedVersion":  "1.3.0",
+      "latestVersion":  "1.3.0",
+      "state":  "ACTIVE",
+      "buildFolder":  "./",
+      "gitBranch":  "block/demogreeter/voyage.zz.dummy.v1/959",
+      "upgradeAvailable":  false,
+      "agenticInstallOnly":  false
+    },
+    {
+      "blockId":  "resources",
+      "displayName":  "Backend Resource APIs",
+      "tagline":  "Go from data model to live backend in minutes",
+      "instance":  "blocks/resources/instances/f0f",
+      "installedVersion":  "1.3.0",
+      "latestVersion":  "1.3.0",
+      "state":  "ACTIVE",
+      "buildFolder":  "./",
+      "gitBranch":  "block/resources/voyage.zz.dummy.v1/f0f",
+      "upgradeAvailable":  false,
+      "agenticInstallOnly":  true
+    }
+  ],
+  "available":  [
+    {
+      "blockId":  "simpleapi",
+      "displayName":  "A Super Simple API Sample",
+      "tagline":  "Your simple, scalable gRPC API, deployed in a flash.",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental5",
+      "totalInstalls":  52,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "bff",
+      "displayName":  "Backend for frontend",
+      "tagline":  "Hosts backend for frontend like Vue or Htmx",
+      "releaseLevel":  "BETA",
+      "latestVersion":  "1.0.0-beta2",
+      "totalInstalls":  43,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "agent",
+      "displayName":  "Agent Base",
+      "tagline":  "Empower your applications with intelligent, secure, and scalable AI agents.",
+      "releaseLevel":  "BETA",
+      "latestVersion":  "1.0.0-beta5",
+      "totalInstalls":  43,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "users",
+      "displayName":  "Users",
+      "tagline":  "Master User Identity. Accelerate Development. Secure Your Ecosystem.",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.18.0-rc2",
+      "totalInstalls":  41,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "arenaagent",
+      "displayName":  "Arena Agent",
+      "tagline":  "Intelligent Agents, Effortlessly Deployed on Google Cloud.",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.4.0",
+      "totalInstalls":  22,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "oidc",
+      "displayName":  "OIDC Provider",
+      "tagline":  "Empower Your Applications with a Secure, Scalable, and Seamless OIDC Identity Provider.",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.7.0",
+      "totalInstalls":  21,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "lro",
+      "displayName":  "Long-running Operations",
+      "tagline":  "A block for managing long-running operations in Grpc Service methods.",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  16,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "apigateway",
+      "displayName":  "API Gateway",
+      "tagline":  "Effortless API Gateway for gRPC Services",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.2.0",
+      "totalInstalls":  14,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "reportsexchange",
+      "displayName":  "Reports Exchange",
+      "tagline":  "Secure reporting at scale - supporting interactive, json, protobuf, excel, and pdf reports",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.1.0",
+      "totalInstalls":  12,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "mcp",
+      "displayName":  "MCP Server",
+      "tagline":  "Remote tools for your agents",
+      "releaseLevel":  "RC",
+      "latestVersion":  "1.0.0-rc2",
+      "totalInstalls":  10,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "sendgrid",
+      "displayName":  "Sendgrid Email Sender",
+      "tagline":  "Send Sendgrid Template emails",
+      "releaseLevel":  "RC",
+      "latestVersion":  "1.0.0-rc3",
+      "totalInstalls":  9,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "hello",
+      "displayName":  "Generative AI Hello World",
+      "tagline":  "Hello, AI Humor: Building Your First Go + Gemini Tech Joke Generator",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.12.0",
+      "totalInstalls":  7,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "files",
+      "displayName":  "Files Exchange Backend",
+      "tagline":  "Files Exchange Backend — The engine for secure, scalable data exchange governance and ingestion.",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.7.0",
+      "totalInstalls":  6,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "fxconsole",
+      "displayName":  "Files Exchange Frontend",
+      "tagline":  "Files Exchange Frontend — Visualize and manage your data exchange counterparties and pipelines",
+      "releaseLevel":  "GA",
+      "latestVersion":  "1.3.0",
+      "totalInstalls":  5,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "iap",
+      "displayName":  "Identity Aware Proxy",
+      "tagline":  "A proxy to deploy as a sidecar in front of any website/console that you need to add authentication to",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  4,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "738f",
+      "displayName":  "Cloud Storage",
+      "tagline":  "A frictionless interaction with Google Cloud's robust object storage solution",
+      "releaseLevel":  "BETA",
+      "latestVersion":  "1.0.0-beta2",
+      "totalInstalls":  3,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "auditlog",
+      "displayName":  "AuditLog Collector",
+      "tagline":  "Reliably collect SOC2 compliant logs",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  2,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "geminienterprise",
+      "displayName":  "Gemini Enterprise",
+      "tagline":  "Creates a Gemini Enterprise App and provides RPCs to manage agents for it",
+      "releaseLevel":  "ALPHA",
+      "latestVersion":  "1.0.0-alpha1",
+      "totalInstalls":  2,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "filesconnector",
+      "displayName":  "Gemini Enterprise Files Data Connector",
+      "tagline":  "Your universal gateway to seamless, multi-cloud file management.",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  1,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "telemetry",
+      "displayName":  "AI Telemetry and Usage",
+      "tagline":  "Per-user AI usage tracking, token budgets, model pricing, and cloud cost visibility for multi-tenant platforms",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  1,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "twilioverify",
+      "displayName":  "Twilio Verify",
+      "tagline":  "For twilio verify based authentication",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  1,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "bb6b",
+      "displayName":  "Site Status",
+      "tagline":  "Site Status",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  1,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "gcsfrontend",
+      "displayName":  "Cloud Storage Frontend",
+      "tagline":  "From drag to done - Effortless GCS uploads for every Vue app",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  1,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "evals",
+      "displayName":  "Testing and Evaluation Framework",
+      "tagline":  "Post-deploy testing and evaluation for your service — integration, load, agent, and infra eval runs with a ready-made console.",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  0,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "skills",
+      "displayName":  "Skills Registry",
+      "tagline":  "Your centralized, Git-powered hub for Vertex AI Skill management.",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  0,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    },
+    {
+      "blockId":  "experiences",
+      "displayName":  "Experiences",
+      "tagline":  "qui ex consequat qui excepteur",
+      "releaseLevel":  "EXPERIMENTAL",
+      "latestVersion":  "1.0.0-experimental1",
+      "totalInstalls":  0,
+      "agenticInstallOnly":  false,
+      "deprecated":  false
+    }
+  ]
+}

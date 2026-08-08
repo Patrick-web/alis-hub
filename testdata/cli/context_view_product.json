@@ -1,0 +1,13 @@
+{
+  "organisation": "voyage",
+  "product": "zz",
+  "defineFolder": "/Users/jp/alis.build/voyage/define/voyage/zz",
+  "environments": [
+    {
+      "id": "1y2ozw2i3fsru",
+      "displayName": "Development",
+      "status": "ACTIVE",
+      "production": false
+    }
+  ]
+}

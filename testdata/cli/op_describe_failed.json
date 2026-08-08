@@ -1,0 +1,7 @@
+{
+  "done":  true,
+  "version":  "",
+  "notes":  "",
+  "artifacts":  [],
+  "error":  "rpc error: code = Unknown desc = defining neuron: rpc error: code = Unknown desc = downloading proto files: api returned status: 404 Not Found"
+}
