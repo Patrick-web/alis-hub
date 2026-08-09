@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Icon } from "@iconify/react";
+import { marked } from "marked";
 import { Loader } from "../components/Loader";
 import { Button } from "../components/Button";
+import { copyToClipboard } from "../lib/clipboard";
 import * as CLI from "../../../bindings/alis-hub-v3/cliservice";
 import type { SkillSummary, InstalledSkill } from "../../../bindings/alis-hub-v3/models";
 
@@ -35,21 +37,50 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-/** Renders skill markdown without pulling in a full markdown renderer. */
+/**
+ * Skills open with YAML front matter, which is metadata rather than prose. The
+ * name and description are already shown in the header above, so strip it.
+ */
+function stripFrontMatter(source: string): string {
+  const trimmed = source.trimStart();
+  if (!trimmed.startsWith("---")) return source;
+  const end = trimmed.indexOf("\n---", 3);
+  return end === -1 ? source : trimmed.slice(end + 4).trimStart();
+}
+
+/**
+ * Skills are written as markdown, so render them as markdown. They lean on
+ * headings, tables and fenced code, none of which reads well as raw text.
+ */
 function SkillMarkdown({ source }: { source: string }) {
-  // Skills open with YAML front matter, which is metadata rather than prose —
-  // the name and description are already shown in the header above.
-  const body = useMemo(() => {
-    const trimmed = source.trimStart();
-    if (!trimmed.startsWith("---")) return source;
-    const end = trimmed.indexOf("\n---", 3);
-    return end === -1 ? source : trimmed.slice(end + 4).trimStart();
+  const html = useMemo(() => {
+    const body = stripFrontMatter(source);
+    return body ? (marked.parse(body) as string) : "";
   }, [source]);
 
   return (
-    <pre className="text-[11px] leading-[1.65] text-foreground/75 font-mono whitespace-pre-wrap break-words">
-      {body}
-    </pre>
+    <div
+      className="prose prose-invert prose-sm max-w-none break-words
+        text-[12px] leading-[1.7] text-foreground/75
+        [&_h1]:font-mono [&_h1]:text-[15px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-foreground [&_h1]:mb-[12px]
+        [&_h2]:font-mono [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-foreground [&_h2]:mt-[20px] [&_h2]:mb-[8px]
+        [&_h3]:font-mono [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-[16px] [&_h3]:mb-[6px]
+        [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:mb-[4px]
+        [&_p]:text-foreground/70 [&_p]:mb-[10px]
+        [&_code]:text-brand [&_code]:bg-foreground/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
+        [&_pre]:bg-card [&_pre]:border [&_pre]:border-border [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
+        [&_pre_code]:bg-transparent [&_pre_code]:text-foreground/80 [&_pre_code]:p-0
+        [&_a]:text-brand [&_a]:no-underline hover:[&_a]:underline
+        [&_strong]:text-foreground
+        [&_li]:text-foreground/70 [&_li]:mb-[4px]
+        [&_ul]:mb-[10px] [&_ol]:mb-[10px]
+        [&_table]:w-full [&_table]:border-collapse [&_table]:mb-[12px] [&_table]:block [&_table]:overflow-x-auto
+        [&_th]:border [&_th]:border-border [&_th]:bg-card [&_th]:px-[8px] [&_th]:py-[5px] [&_th]:text-left [&_th]:text-[10px] [&_th]:font-mono [&_th]:uppercase [&_th]:text-foreground/60
+        [&_td]:border [&_td]:border-border [&_td]:px-[8px] [&_td]:py-[5px] [&_td]:text-[11px] [&_td]:align-top
+        [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-[10px] [&_blockquote]:text-foreground/50
+        [&_hr]:border-border [&_hr]:my-[20px]"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }
 
@@ -66,6 +97,7 @@ export function SkillsPage() {
   const [busyAction, setBusyAction] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const installedIds = useMemo(
     () => new Set(installed.map((s) => s.skillId)),
@@ -136,6 +168,7 @@ export function SkillsPage() {
     setMarkdown("");
     setLoadingDetail(true);
     setError("");
+    setCopied(false);
     try {
       setMarkdown(await CLI.SkillsLoad(id, ""));
     } catch (e) {
@@ -155,6 +188,24 @@ export function SkillsPage() {
     void openSkill(openParam);
     setSearchParams({}, { replace: true });
   }, [openParam, openSkill, setSearchParams]);
+
+  // The raw document is what gets copied, front matter included, since that is
+  // the form a harness expects when the text is pasted back into one.
+  const copyMarkdown = useCallback(async () => {
+    if (!markdown) return;
+    try {
+      await copyToClipboard(markdown);
+      setCopied(true);
+    } catch (e) {
+      setError(String(e));
+    }
+  }, [markdown]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 1500);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
   const install = useCallback(
     async (id: string, project: boolean) => {
@@ -206,7 +257,7 @@ export function SkillsPage() {
         }));
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-1 flex-col h-full min-w-0 min-h-0">
       <div className="flex items-center gap-[12px] px-[20px] py-[14px] border-b border-border shrink-0">
         <Icon icon="solar:book-bookmark-linear" className="text-brand text-[20px]" />
         <div className="flex flex-col">
@@ -276,7 +327,11 @@ export function SkillsPage() {
       )}
 
       <div className="flex flex-1 min-h-0">
-        <div className="w-[340px] border-r border-border overflow-y-auto shrink-0">
+        {/* A flex column, because the rows are <button> elements: left as
+            inline-block they sit on a text baseline and inherit the
+            container's line-height strut, which shows up as unexplained
+            vertical space between rows. Flex items are blockified. */}
+        <div className="w-[340px] border-r border-border overflow-y-auto shrink-0 flex flex-col">
           {loadingList ? (
             <div className="flex justify-center py-[40px]">
               <Loader size={28} />
@@ -290,7 +345,7 @@ export function SkillsPage() {
               <button
                 key={s.id}
                 onClick={() => void openSkill(s.id)}
-                className={`w-full text-left px-[16px] py-[11px] border-b border-border hover:bg-foreground/[3%] transition-colors ${
+                className={`w-full shrink-0 text-left px-[16px] py-[11px] border-b border-border hover:bg-foreground/[3%] transition-colors ${
                   selected === s.id ? "bg-brand-fill/8 border-l-2 border-l-brand" : ""
                 }`}
               >
@@ -324,6 +379,16 @@ export function SkillsPage() {
                 <SectionLabel>SKILL</SectionLabel>
                 <span className="text-[11px] text-foreground font-mono truncate">{selected}</span>
                 <div className="flex-1" />
+                <Button
+                  variant="ghost"
+                  disabled={!markdown || loadingDetail}
+                  onClick={() => void copyMarkdown()}
+                  className="text-[10px]"
+                  icon={<Icon icon="solar:copy-linear" className="text-sm" />}
+                  title="Copy the skill markdown"
+                >
+                  {copied ? "Copied" : "Copy"}
+                </Button>
                 {installedIds.has(selected) ? (
                   <Button
                     variant="secondary"

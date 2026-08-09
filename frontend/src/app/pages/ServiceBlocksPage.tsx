@@ -313,7 +313,7 @@ export function ServiceBlocksPage() {
   );
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-1 flex-col h-full min-w-0 min-h-0">
       <div className="flex items-center gap-[12px] px-[20px] py-[14px] border-b border-border shrink-0">
         <button
           onClick={() => navigate("/services")}

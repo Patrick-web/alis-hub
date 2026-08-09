@@ -26,15 +26,42 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-function Row({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
+function Row({
+  label,
+  value,
+  tone,
+  stacked,
+}: {
+  label: string;
+  value: string;
+  tone?: "good" | "warn";
+  /** Put the label on its own line, for values that read as a sentence. */
+  stacked?: boolean;
+}) {
   const color =
     tone === "good" ? "text-brand" : tone === "warn" ? "text-amber-400" : "text-foreground/80";
   return (
-    <div className="flex items-center gap-[12px] px-[16px] py-[8px] border-b border-border last:border-b-0">
-      <span className="text-[9px] text-foreground/30 font-mono uppercase tracking-[0.1em] shrink-0 w-[150px]">
+    <div
+      className={`flex px-[16px] py-[8px] border-b border-border last:border-b-0 ${
+        stacked ? "flex-col gap-[3px]" : "items-start gap-[12px]"
+      }`}
+    >
+      <span
+        className={`text-[9px] text-foreground/30 font-mono uppercase tracking-[0.1em] ${
+          stacked ? "" : "shrink-0 w-[150px] pt-[2px]"
+        }`}
+      >
         {label}
       </span>
-      <span className={`text-[11px] font-mono flex-1 truncate min-w-0 ${color}`}>
+      {/* Values wrap rather than truncate: a tier explanation or a binary path
+          is worth reading in full, and the columns are narrower than the
+          single-column layout this replaced. */}
+      <span
+        className={`text-[11px] font-mono min-w-0 break-words [overflow-wrap:anywhere] ${
+          stacked ? "" : "flex-1"
+        } ${color}`}
+        title={value || undefined}
+      >
         {value || "—"}
       </span>
     </div>
@@ -43,7 +70,10 @@ function Row({ label, value, tone }: { label: string; value: string; tone?: "goo
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-[18px]">
+    // Vertical spacing in a multi-column flow comes from margin rather than a
+    // gap. The -webkit- variant is kept because the app runs in a WKWebView,
+    // where break-inside on multi-column has historically been unreliable.
+    <div className="mb-[18px] break-inside-avoid [-webkit-column-break-inside:avoid]">
       <div className="mb-[6px]">
         <SectionLabel>{title}</SectionLabel>
       </div>
@@ -88,7 +118,7 @@ export function DiagnosticsPage() {
   }, [load]);
 
   return (
-    <div className="flex flex-col h-full min-h-0">
+    <div className="flex flex-1 flex-col h-full min-w-0 min-h-0">
       <div className="flex items-center gap-[12px] px-[20px] py-[14px] border-b border-border shrink-0">
         <Icon icon="solar:health-linear" className="text-brand text-[20px]" />
         <div className="flex flex-col">
@@ -111,7 +141,12 @@ export function DiagnosticsPage() {
         ) : error ? (
           <div className="text-[10px] text-red-400 font-mono">{error}</div>
         ) : !data ? null : (
-          <>
+          // The cards carry different numbers of rows, so a grid leaves holes
+          // under the short ones. A multi-column flow packs them instead and
+          // balances the columns, which keeps the bottom edges roughly level.
+          // The trade is reading order: sections run down a column rather than
+          // across, which costs nothing here because they are unordered.
+          <div className="columns-1 lg:columns-2 gap-[18px]">
             <Card title="CLI">
               <Row label="Version" value={data.cliVersion} />
               <Row
@@ -125,17 +160,14 @@ export function DiagnosticsPage() {
 
             <Card title="Approvals">
               <Row label="Automation tier" value={data.automationTier} />
-              <Row label="Effect" value={tierExplanation(data.automationTier)} />
+              <Row label="Effect" value={tierExplanation(data.automationTier)} stacked />
               <Row
                 label="Safe mode"
                 value={data.safeModeEnabled ? "enabled" : "off"}
                 tone={data.safeModeEnabled ? "warn" : undefined}
               />
               {data.safeModeEnabled && (
-                <Row
-                  label="Allowed orgs"
-                  value={(data.safeModeOrganisations ?? []).join(", ")}
-                />
+                <Row label="Allowed orgs" value={(data.safeModeOrganisations ?? []).join(", ")} />
               )}
             </Card>
 
@@ -183,7 +215,7 @@ export function DiagnosticsPage() {
                 ))}
               </Card>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
