@@ -43,6 +43,15 @@ export function HubPage() {
   };
 
   const shortcuts = [
+    // Landing Zones leads: picking an organisation and product is the way into
+    // the actual work, and everything below it is a side trip.
+    {
+      id: "landing-zones",
+      label: "Landing Zones",
+      description: "Select an organisation and product to work in",
+      icon: "solar:buildings-2-linear",
+      action: () => setPhase("picking-org"),
+    },
     {
       id: "buildkit",
       label: "Build Kit",
@@ -84,13 +93,6 @@ export function HubPage() {
       description: "Check your local CLI, tools and approval settings",
       icon: "solar:stethoscope-linear",
       action: () => goStandalone("/diagnostics"),
-    },
-    {
-      id: "landing-zones",
-      label: "Landing Zones",
-      description: "Select an organisation and product to work in",
-      icon: "solar:buildings-2-linear",
-      action: () => setPhase("picking-org"),
     },
   ];
 
@@ -222,10 +224,11 @@ export function HubPage() {
                 <button
                   key={s.id}
                   onClick={s.action}
-                  // An odd number of cards would leave a hole in the last row,
-                  // so the final one spans the width instead.
+                  // The lead card spans the width: it is the primary action,
+                  // and with an odd number of cards it also keeps the rows
+                  // below it paired rather than leaving a hole at the end.
                   className={`text-left bg-card border border-border hover:border-brand-fill rounded-[10px] p-[16px] transition-all group ${
-                    shortcuts.length % 2 === 1 && i === shortcuts.length - 1 ? "col-span-2" : ""
+                    shortcuts.length % 2 === 1 && i === 0 ? "col-span-2" : ""
                   }`}
                 >
                   <div
