@@ -28,7 +28,7 @@ type GitService struct {
 	watcher         *fsnotify.Watcher
 	pathToRepo      map[string]string // watched fs path → repoPath
 	debounceTimers  map[string]*time.Timer
-	configFixTimers map[string]*time.Timer // debounced SyncGitAuth reruns on .git/config writes
+	configFixTimers map[string]*time.Timer // debounced stale-include strips on .git/config writes
 }
 
 func NewGitService() *GitService {
@@ -66,19 +66,19 @@ func (g *GitService) watchLoop() {
 					g.emitChanged(rp)
 				})
 			}
-			// .git/config itself changed — an external tool (e.g. the old VS
-			// Code "alis-build" extension) may have just reintroduced its own
-			// git-auth include. Re-run SyncGitAuth so it gets stripped right
-			// away instead of waiting for this app's own next credential-helper
-			// invocation, which could be minutes away or never (if the next git
-			// command also happens to come from that same external tool).
+			// .git/config itself changed. An external tool (the old VS Code
+			// "alis-build" extension, or an older build of this app) may have
+			// just reintroduced a managed git-auth [include], whose baked-in
+			// token nothing refreshes any more. Strip it right away rather than
+			// leaving a dead extraHeader to fail the next push.
 			if found && filepath.Base(event.Name) == "config" && filepath.Dir(event.Name) == filepath.Join(repoPath, ".git") {
 				if t, exists := g.configFixTimers[repoPath]; exists {
 					t.Stop()
 				}
+				cfgPath := event.Name
 				g.configFixTimers[repoPath] = time.AfterFunc(300*time.Millisecond, func() {
-					if err := SyncGitAuth(); err != nil {
-						fmt.Fprintf(os.Stderr, "alis-hub: re-sync git auth after external .git/config change: %v\n", err)
+					if err := StripLegacyIncludeFromConfig(cfgPath); err != nil {
+						fmt.Fprintf(os.Stderr, "alis-hub: strip stale git-auth include after external .git/config change: %v\n", err)
 					}
 				})
 			}
@@ -474,26 +474,20 @@ func noPromptEnv() []string {
 }
 
 // gitCmd runs a git command in the given directory and returns combined output.
-// The first element of args must be "git". Any inherited credential.helper is
-// cleared so a command that turns out to need auth fails fast instead of
-// falling through to an interactive system credential prompt.
+// The first element of args must be "git".
+//
+// Auth comes from the alis CLI's credential helper, injected per-command rather
+// than read from the repo config, so a repo that has never had `alis authorise`
+// run against it still authenticates. The app deliberately holds no git
+// credentials of its own; see gitcredential.go for why.
 func gitCmd(dir string, args ...string) (string, error) {
-	return gitCmdAuthToken(dir, "", args...)
-}
-
-// gitCmdAuthToken runs a git command with a Bearer token injected via
-// http.extraHeader (when provided) and clears any inherited credential.helper
-// so a failed/expired token fails fast instead of falling through to an
-// interactive system credential prompt (e.g. Windows' Git Credential Manager).
-func gitCmdAuthToken(dir, token string, args ...string) (string, error) {
 	if len(args) == 0 || args[0] != "git" {
-		return "", fmt.Errorf("gitCmdAuthToken: first arg must be 'git'")
+		return "", fmt.Errorf("gitCmd: first arg must be 'git'")
 	}
-	fullArgs := make([]string, 0, len(args)+5)
-	fullArgs = append(fullArgs, "git", "-c", "credential.helper=")
-	if token != "" {
-		fullArgs = append(fullArgs, "-c", "http.extraHeader=", "-c", "http.extraHeader=Authorization: Bearer "+token)
-	}
+	credArgs := gitCredentialArgs()
+	fullArgs := make([]string, 0, len(args)+len(credArgs))
+	fullArgs = append(fullArgs, "git")
+	fullArgs = append(fullArgs, credArgs...)
 	fullArgs = append(fullArgs, args[1:]...)
 	cmd := exec.Command(fullArgs[0], fullArgs[1:]...)
 	cmd.Dir = dir
@@ -520,11 +514,7 @@ func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 		return "", fmt.Errorf("gitCmdAuth: first arg must be 'git'")
 	}
 	remoteURL := gitRemoteURL(dir)
-	token, err := g.tokens.AccessToken()
-	if err != nil {
-		token = ""
-	}
-	authArgs := append([]string{"git"}, gitHostAuthArgs(remoteURL, token)...)
+	authArgs := append([]string{"git"}, gitHostAuthArgs(remoteURL)...)
 	authArgs = append(authArgs, args[1:]...)
 	cmd := exec.Command(authArgs[0], authArgs[1:]...)
 	cmd.Dir = dir
@@ -1027,48 +1017,18 @@ func (g *GitService) ClearIndexLock(repoPath string) error {
 }
 
 // authedGitCmd builds a git command with GIT_TERMINAL_PROMPT=0, authenticated
-// against repoPath's origin remote — the system credential helper for GitHub,
-// or a Bearer token injected via -c http.extraHeader for everything else (see
-// gitHostAuthArgs), with any inherited credential.helper cleared so a
-// rejected/expired token fails fast instead of falling through to an
-// interactive system credential prompt (e.g. Windows' Git Credential
-// Manager). If a Bearer token is needed but can't be obtained, an
-// auth:expired event is emitted so the frontend can prompt the user to sign
-// in again immediately.
+// against repoPath's origin remote: the system credential helper for GitHub, the
+// alis CLI's helper for everything else (see gitHostAuthArgs).
+//
+// This no longer pre-checks the Console token or emits auth:expired up front.
+// The CLI owns git credentials now, so the Console session says nothing about
+// whether a push will authenticate, and a signed-out CLI is a different failure
+// than an expired Console token. A genuine auth failure still surfaces:
+// classifyGitOutput maps git's own 401/403 output to "auth_error", which is the
+// accurate signal because it reflects what the remote actually said.
 func (g *GitService) authedGitCmd(repoPath string, args ...string) *exec.Cmd {
 	remoteURL := gitRemoteURL(repoPath)
-	var cmdArgs []string
-
-	if strings.Contains(remoteURL, "github.com") {
-		cmdArgs = append(cmdArgs, gitHostAuthArgs(remoteURL, "")...)
-	} else {
-		if g.tokens == nil {
-			g.tokens, _ = NewConsoleTokenSource()
-		}
-		if g.tokens != nil {
-			token, err := g.tokens.AccessToken()
-			if err != nil {
-				// One short retry before concluding the session is dead: this call
-				// runs on whatever fired the git op (including the periodic
-				// background fetch), and a single transient blip here — e.g. the
-				// network still reconnecting right as the laptop wakes, the exact
-				// moment the fetch poll timer happens to fire — would otherwise pop
-				// the re-login modal even though the token is fine a moment later.
-				time.Sleep(300 * time.Millisecond)
-				token, err = g.tokens.AccessToken()
-			}
-			if err == nil && token != "" {
-				cmdArgs = append(cmdArgs, gitHostAuthArgs(remoteURL, token)...)
-			} else if err != nil {
-				g.mu.Lock()
-				app := g.app
-				g.mu.Unlock()
-				if app != nil {
-					app.Event.Emit("auth:expired")
-				}
-			}
-		}
-	}
+	cmdArgs := gitHostAuthArgs(remoteURL)
 	cmdArgs = append(cmdArgs, args...)
 	cmd := exec.Command("git", cmdArgs...)
 	cmd.Dir = repoPath
@@ -1388,8 +1348,8 @@ func (g *GitService) GetPRCommits(repoPath string, number int) ([]PRCommit, erro
 	var raw []struct {
 		SHA    string `json:"sha"`
 		Commit struct {
-			Message   string `json:"message"`
-			Author    struct {
+			Message string `json:"message"`
+			Author  struct {
 				Name string `json:"name"`
 				Date string `json:"date"`
 			} `json:"author"`

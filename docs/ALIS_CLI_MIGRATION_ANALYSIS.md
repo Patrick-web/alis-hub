@@ -172,12 +172,39 @@ the choice and `MergeBlockInstanceCLI` is the deferred half — adopting the CLI
 path is a UI decision about what to do with a dirty working tree, not a
 mechanical swap.
 
-**Authentication.** The app keeps its own PKCE flow. `CheckAuth` deliberately
-treats the Console token as authoritative rather than `alis whoami`: large parts
-of the app still call the Console and gRPC APIs directly, so a working CLI
-session says nothing about whether those calls will succeed. Treating it as
-sufficient would let the UI past the login gate and then fail every
-non-migrated request.
+**Authentication** splits in two, and the split is deliberate.
+
+*Git credentials are the CLI's.* The app holds none of its own. `gitCmd` puts
+every git command it runs on `!alis git credential` via `-c` flags, so auth works
+even in a repo `alis authorise` has never touched. `CleanupLegacyGitAuth` runs at
+startup to undo the scheme this app used to install: a symlink of its own binary
+over `~/.alis/bin/git-credential-alis`, a *global* `credential.helper` pointing at
+that symlink (which made this app answer every git credential request on the
+machine, for any host), and a Console access token baked into
+`~/.alis/git-auth.gitconfig` that each repo `[include]`d as an `http.extraHeader`.
+That scheme and the CLI's raced per-repo on last-writer-wins, and carried
+different tokens: the CLI's is Forgejo-scoped (`email`/`exp`/`sub`/`uid`), the
+app's was the full Console identity token.
+
+*Console and gRPC credentials cannot move,* so `alisauth.go` still owns the PKCE
+flow, `~/.alis/console-credentials.json`, and refresh. Two things block it. The
+CLI keeps its own credentials in an AES-256-GCM envelope
+(`~/.alis/credentials.json` + `credentials.key`) that does not decrypt with the
+key file alone, so the app can neither read nor write it. And no CLI command
+returns a Console-scoped token: `alis git credential` and `alis git configure`
+return Forgejo-scoped ones, `alis gcloud auth` returns GCP/registry ones, and
+none of them carry the `policy`, `scopes`, `groups` and `active_build_account`
+claims that console.alisx.com and the gRPC services authorise against. Closing
+this needs a token command from the platform team.
+
+Consequently `CheckAuth` still treats the Console token as authoritative rather
+than `alis whoami`: large parts of the app call the Console and gRPC APIs
+directly, so a working CLI session says nothing about whether those calls will
+succeed. Treating it as sufficient would let the UI past the login gate and then
+fail every non-migrated request. The two PKCE grants are independent at the
+identity server (both stores were observed refreshing minutes apart with both
+remaining valid), so the duplication costs a second sign-in but does not
+invalidate either session.
 
 **Everything with no CLI counterpart** stays as-is: the git GUI, the GCP tools
 (Spanner, Cloud Logging, Artifact Registry, Cloud Run), the workflow engine,

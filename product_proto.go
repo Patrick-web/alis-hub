@@ -152,32 +152,27 @@ func systemCredentialHelper() string {
 
 // gitHostAuthArgs returns the "-c" flag pairs to authenticate git commands
 // against remoteURL: the system credential helper for GitHub (which won't
-// accept an Alis Bearer token as a git credential), or an Authorization
-// header carrying token for every other host (e.g. Forgejo), with any
-// inherited credential.helper cleared so a rejected/expired token fails
-// fast instead of falling through to an interactive system credential
-// prompt (e.g. Windows' Git Credential Manager). The leading empty
-// http.extraHeader= clears any value inherited from an include.path set
-// by the VS Code extension, preventing duplicate headers.
-func gitHostAuthArgs(remoteURL, token string) []string {
+// accept an Alis credential), or the alis CLI's credential helper for every
+// other host (e.g. Forgejo).
+//
+// The empty http.extraHeader= clears any value inherited from an include.path,
+// left by the old VS Code extension or by a build of this app that predates the
+// CLI cutover. Those includes carry a token nothing refreshes any more, and git
+// sends every matching header, so leaving one attached makes the server reject
+// the request over the dead header even though the helper supplied a good
+// credential.
+func gitHostAuthArgs(remoteURL string) []string {
 	if strings.Contains(remoteURL, "github.com") {
 		return []string{"-c", "credential.helper=" + systemCredentialHelper()}
 	}
-	if token == "" {
-		return []string{"-c", "credential.helper="}
-	}
-	return []string{
-		"-c", "credential.helper=",
-		"-c", "http.extraHeader=",
-		"-c", "http.extraHeader=Authorization: Bearer " + token,
-	}
+	return append([]string{"-c", "http.extraHeader="}, gitCredentialArgs()...)
 }
 
-func syncOneRepo(dir, remoteURL, token string, emit func(string)) (string, error) {
+func syncOneRepo(dir, remoteURL string, emit func(string)) (string, error) {
 	gitEnv := noPromptEnv()
 	ew := &emitWriter{emit: emit}
 
-	baseArgs := gitHostAuthArgs(remoteURL, token)
+	baseArgs := gitHostAuthArgs(remoteURL)
 
 	runGit := func(subcmd ...string) error {
 		args := append(baseArgs, subcmd...)

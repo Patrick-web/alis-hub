@@ -3,8 +3,6 @@ package main
 import (
 	"embed"
 	"log"
-	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -31,27 +29,21 @@ var appIcon []byte
 func main() {
 	SetupLogging()
 
-	// Multi-call binary: act as git credential helper when invoked under that name.
-	if base := filepath.Base(os.Args[0]); strings.Contains(base, "git-credential-alis") {
-		RunAsCredentialHelper()
-		return
-	}
-
 	// Widen PATH before anything shells out: GUI launches inherit a minimal
 	// PATH missing /usr/local/bin, /opt/homebrew/bin, ~/.docker/bin, etc., so
-	// installed tools like docker would otherwise report "not found".
+	// installed tools like docker would otherwise report "not found". This also
+	// has to happen before any git command, since the CLI credential helper is
+	// resolved off PATH.
 	fixPathEnv()
 
-	// Best-effort: install the legacy credential helper as a fallback for
-	// repos cloned before the alis CLI was available. Once the user selects
-	// a product, alis authorise configures the CLI's auto-refreshing helper
-	// which is preferred going forward.
+	// Git credentials belong to the alis CLI. Undo the app's old parallel
+	// scheme (helper symlink, global credential.helper, baked-in token file)
+	// wherever it is still installed. Best-effort: a failure here leaves stale
+	// config behind but does not stop the app, since git auth itself now comes
+	// from the CLI helper injected per-command.
 	go func() {
-		if err := installCredentialHelper(); err != nil {
-			log.Printf("credential helper install: %v", err)
-		}
-		if err := configureGlobalCredentialHelper(); err != nil {
-			log.Printf("credential helper config: %v", err)
+		if err := CleanupLegacyGitAuth(); err != nil {
+			log.Printf("legacy git auth cleanup: %v", err)
 		}
 	}()
 

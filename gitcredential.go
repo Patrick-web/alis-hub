@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -13,52 +12,261 @@ import (
 	"strings"
 )
 
+// Git authentication is owned by the alis CLI.
+//
+// The app used to run a second, parallel credential lifecycle beside the CLI's:
+// it symlinked its own binary over ~/.alis/bin/git-credential-alis, pointed the
+// *global* credential.helper at that symlink (so every git credential request on
+// the machine, for any host, was answered by this app), and baked a static
+// Console access token into ~/.alis/git-auth.gitconfig which each alis repo then
+// [include]d as an http.extraHeader.
+//
+// The CLI configures the same repos its own way — `credential.helper = !alis git
+// credential`, a helper that mints a Forgejo-scoped token on demand — so which
+// mechanism a given repo used came down to whichever tool touched it last. The
+// two also carry different tokens: the CLI's is Forgejo-scoped (email/exp/sub/uid),
+// the app's was the full Console identity token.
+//
+// Now the app never issues git credentials itself. It borrows the CLI's helper
+// for its own git commands (see gitCredentialArgs) and undoes the old scheme
+// where it finds it (see CleanupLegacyGitAuth).
+
 var forgejoHostRe = regexp.MustCompile(`^forgejo-\d+\.[a-z0-9-]+\.run\.app$`)
 
-// SyncGitAuth discovers Forgejo repos under ~/alis.build/, writes
-// ~/.alis/git-auth.gitconfig with a fresh Bearer token for each host,
-// migrates existing repo configs away from the VS Code extension paths,
-// and installs the credential helper symlink. Safe to call on every startup.
-func SyncGitAuth() error {
-	ts, err := NewConsoleTokenSource()
-	if err != nil {
-		return nil // not logged in yet
+// alisCredentialHelper returns the value for credential.helper that delegates to
+// the CLI, matching what `alis authorise` writes into a repo config.
+//
+// The absolute path is preferred over a bare "alis": git runs a "!"-prefixed
+// helper through the shell, which does not inherit the PATH widening fixPathEnv
+// applies to this process, so a GUI launch would otherwise fail to find the CLI.
+func alisCredentialHelper() string {
+	return "!" + shellQuote(alisBinaryPath()) + " git credential"
+}
+
+// alisBinaryPath resolves the alis CLI, falling back to its default install
+// location so a PATH that has not been widened yet still produces a usable
+// helper rather than a silently broken one.
+func alisBinaryPath() string {
+	if p, err := exec.LookPath("alis"); err == nil {
+		if abs, err := filepath.Abs(p); err == nil {
+			return abs
+		}
+		return p
 	}
-	token, err := ts.AccessToken()
+	if home, err := os.UserHomeDir(); err == nil {
+		name := "alis"
+		if runtime.GOOS == "windows" {
+			name += ".exe"
+		}
+		return filepath.Join(home, ".alis", "bin", name)
+	}
+	return "alis"
+}
+
+// shellQuote wraps s for the shell git uses to run "!" helpers. Home directories
+// with spaces are the common case this protects against.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// gitCredentialArgs are the -c flags that put a git command on the CLI's
+// credential helper, regardless of what the repo config happens to say.
+//
+// All three matter. The empty helper first resets any helper inherited from
+// global or repo config (git appends rather than replaces, so without the reset
+// a stale helper would still be consulted first).
+//
+// useHttpPath tells git to send the URL path, which is how `alis git credential`
+// identifies the Forgejo repository it is minting a token for. Git omits the
+// path by default, and the helper then falls back to resolving the repository
+// from context; that fallback was observed working from a normal repo and from
+// a worktree under os.TempDir(), but it fails outright ("invalid Forgejo
+// repository path") when invoked somewhere with no repository context at all.
+// Sending the path removes the dependency on that fallback, and matches what
+// `alis authorise` writes into repo config.
+func gitCredentialArgs() []string {
+	return []string{
+		"-c", "credential.helper=",
+		"-c", "credential.helper=" + alisCredentialHelper(),
+		"-c", "credential.useHttpPath=true",
+	}
+}
+
+// legacyGitAuthConfigPath is the file the old scheme wrote its Bearer token into.
+func legacyGitAuthConfigPath() (string, error) {
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("get access token: %w", err)
+		return "", err
+	}
+	return filepath.Join(home, ".alis", "git-auth.gitconfig"), nil
+}
+
+// legacyHelperPath is where the old scheme symlinked (or, on Windows, copied)
+// this binary so git would invoke it as a credential helper.
+func legacyHelperPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	name := "git-credential-alis"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	return filepath.Join(home, ".alis", "bin", name), nil
+}
+
+// CleanupLegacyGitAuth removes every trace of the app-owned credential scheme:
+// the helper binary, the global credential.helper pointing at it, the token file,
+// and the [include] each repo carried for that file. Safe to call on every
+// startup and a no-op once there is nothing left to clean.
+//
+// This runs unconditionally rather than behind a "migrated" flag: the old scheme
+// reinstalled itself on every launch, so a user who downgrades and relaunches
+// gets it back, and an [include] can also be reintroduced by other tooling.
+func CleanupLegacyGitAuth() error {
+	var errs []string
+
+	if err := removeLegacyHelper(); err != nil {
+		errs = append(errs, fmt.Sprintf("helper binary: %v", err))
+	}
+	if err := unsetLegacyGlobalHelper(); err != nil {
+		errs = append(errs, fmt.Sprintf("global credential.helper: %v", err))
+	}
+	if err := stripLegacyIncludes(); err != nil {
+		errs = append(errs, fmt.Sprintf("repo includes: %v", err))
+	}
+	if err := removeLegacyAuthConfig(); err != nil {
+		errs = append(errs, fmt.Sprintf("git-auth.gitconfig: %v", err))
 	}
 
-	// Always install and configure the credential helper, even on a fresh install
-	// where no repos have been cloned yet. This ensures it's available as a
-	// fallback the first time a private Forgejo repo is cloned.
-	if err := installCredentialHelper(); err != nil {
-		fmt.Fprintf(os.Stderr, "alis-hub: install credential helper: %v\n", err)
+	if len(errs) > 0 {
+		return fmt.Errorf("cleanup legacy git auth: %s", strings.Join(errs, "; "))
 	}
-	if err := configureGlobalCredentialHelper(); err != nil {
-		fmt.Fprintf(os.Stderr, "alis-hub: configure credential helper: %v\n", err)
-	}
+	return nil
+}
 
-	repos, err := discoverForgejoRepos()
+func removeLegacyHelper() error {
+	path, err := legacyHelperPath()
 	if err != nil {
-		return fmt.Errorf("discover repos: %w", err)
+		return err
 	}
-	if len(repos) == 0 {
+	// Only remove what this app installed. A future CLI could legitimately ship
+	// its own binary under this name, and deleting that would break git for the
+	// user rather than fixing anything.
+	target, err := os.Readlink(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		// Not a symlink (Windows installs a copy). Fall back to identifying it
+		// by name, which on Windows is all we have.
+		if runtime.GOOS != "windows" {
+			return nil
+		}
+		return removeIfExists(path)
+	}
+	if !strings.Contains(filepath.Base(target), "alis-hub") {
+		log.Printf("[gitcred] leaving %s alone: points at %s, not this app", path, target)
 		return nil
 	}
+	return removeIfExists(path)
+}
 
-	authConfigPath, err := writeGitAuthConfig(token, repos)
-	if err != nil {
-		return fmt.Errorf("write git-auth.gitconfig: %w", err)
+func removeIfExists(path string) error {
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
 	}
+	log.Printf("[gitcred] removed legacy credential helper %s", path)
+	return nil
+}
 
+// unsetLegacyGlobalHelper clears the global credential.helper only when it still
+// points at the app's helper. A helper the user set themselves (or one the CLI
+// installs) is left untouched.
+func unsetLegacyGlobalHelper() error {
+	helperPath, err := legacyHelperPath()
+	if err != nil {
+		return err
+	}
+	getCmd := exec.Command("git", "config", "--global", "--get-all", "credential.helper")
+	hideWindow(getCmd)
+	out, _ := getCmd.Output()
+	if !strings.Contains(string(out), helperPath) {
+		return nil
+	}
+	unsetCmd := exec.Command("git", "config", "--global", "--unset-all", "credential.helper", regexp.QuoteMeta(helperPath))
+	hideWindow(unsetCmd)
+	if err := unsetCmd.Run(); err != nil {
+		return err
+	}
+	log.Printf("[gitcred] unset global credential.helper (was %s)", helperPath)
+	return nil
+}
+
+func removeLegacyAuthConfig() error {
+	path, err := legacyGitAuthConfigPath()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	log.Printf("[gitcred] removed %s", path)
+	return nil
+}
+
+// staleIncludeRe matches an [include] block pointing at a managed git-auth
+// config, whether written by this app (~/.alis/git-auth.gitconfig) or by the old
+// VS Code "alis-build" extension, which wrote its own under the extension's
+// globalStorage directory.
+//
+// Both are worth stripping for the same reason: git sends http.extraHeader from
+// every matching [include], so a leftover block keeps attaching a token nothing
+// refreshes any more. Once its embedded token is signed by a key the identity
+// server has rotated out, the server can reject the whole request over the dead
+// header even when the CLI helper supplied a perfectly good credential.
+var staleIncludeRe = regexp.MustCompile(`(?m)^\[include\]\n\s*path\s*=.*(?:alisexchange\.alis-build|git-auth\.gitconfig).*\n?`)
+
+// stripLegacyIncludes removes those blocks from every alis repo on disk.
+func stripLegacyIncludes() error {
+	repos, err := discoverForgejoRepos()
+	if err != nil {
+		return err
+	}
+	var errs []string
 	for _, r := range repos {
-		if err := migrateRepoConfig(r.configPath, authConfigPath); err != nil {
-			// Non-fatal: log and continue.
-			fmt.Fprintf(os.Stderr, "alis-hub: migrate %s: %v\n", r.configPath, err)
+		if err := StripLegacyIncludeFromConfig(r.configPath); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", r.configPath, err))
 		}
 	}
+	if len(errs) > 0 {
+		return fmt.Errorf("%s", strings.Join(errs, "; "))
+	}
+	return nil
+}
 
+// StripLegacyIncludeFromConfig rewrites one .git/config without its managed
+// git-auth [include]. It is also called when the file changes on disk, since an
+// external tool can reintroduce the block at any time.
+func StripLegacyIncludeFromConfig(configPath string) error {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	cleaned := staleIncludeRe.ReplaceAllString(string(data), "")
+	if cleaned == string(data) {
+		return nil
+	}
+	if err := os.WriteFile(configPath, []byte(cleaned), 0600); err != nil {
+		return err
+	}
+	log.Printf("[gitcred] stripped stale git-auth include from %s", configPath)
 	return nil
 }
 
@@ -143,208 +351,4 @@ func parseForgejoHost(configPath string) (string, error) {
 		}
 	}
 	return "", scanner.Err()
-}
-
-func writeGitAuthConfig(token string, repos []forgejoRepo) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".alis")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
-	}
-
-	seen := map[string]bool{}
-	var sb strings.Builder
-	sb.WriteString("# Managed by alis-hub. Do not edit manually.\n")
-	for _, r := range repos {
-		if seen[r.host] {
-			continue
-		}
-		seen[r.host] = true
-		fmt.Fprintf(&sb, "[http \"https://%s/\"]\n\textraHeader = Authorization: Bearer %s\n", r.host, token)
-	}
-
-	authPath := filepath.Join(dir, "git-auth.gitconfig")
-	if err := os.WriteFile(authPath, []byte(sb.String()), 0600); err != nil {
-		return "", err
-	}
-	return authPath, nil
-}
-
-// staleVSCodeIncludeRe matches an [include] block left behind by the old VS
-// Code "alis-build" extension, which wrote its own per-repo git-auth config
-// under the extension's globalStorage directory. That file is never touched
-// again once a repo has moved to Alis Hub, so its embedded Bearer token
-// eventually gets signed by a key the identity server has since rotated out.
-// Git sends http.extraHeader from every matching [include], so as long as
-// this stale block stays in the repo config, the request carries both the
-// extension's dead token and this app's current one — and the server can
-// reject the whole request over the dead one even though the live token is
-// fine.
-var staleVSCodeIncludeRe = regexp.MustCompile(`(?m)^\[include\]\n\s*path\s*=.*alisexchange\.alis-build.*\n?`)
-
-// migrateRepoConfig ensures the hub's authConfigPath is included in the repo's
-// .git/config, removing any stale [include] left by the old VS Code extension
-// (see staleVSCodeIncludeRe) so it can't keep shadowing the current token with
-// a dead one.
-func migrateRepoConfig(configPath, authConfigPath string) error {
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return err
-	}
-
-	cleaned := staleVSCodeIncludeRe.ReplaceAllString(string(data), "")
-
-	// Git requires forward slashes in [include] path values on all platforms.
-	gitConfigPath := filepath.ToSlash(authConfigPath)
-
-	if strings.Contains(cleaned, gitConfigPath) || strings.Contains(cleaned, authConfigPath) {
-		if cleaned == string(data) {
-			return nil
-		}
-		return os.WriteFile(configPath, []byte(cleaned), 0600)
-	}
-
-	appended := cleaned
-	if !strings.HasSuffix(appended, "\n") {
-		appended += "\n"
-	}
-	appended += "[include]\n\tpath = " + gitConfigPath + "\n"
-	return os.WriteFile(configPath, []byte(appended), 0600)
-}
-
-// installCredentialHelper installs git-credential-alis into ~/.alis/bin/.
-// On Windows, os.Symlink requires elevated privileges, so we copy the exe instead.
-func installCredentialHelper() error {
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	// Resolve symlinks so we point to the real binary.
-	exe, err = filepath.EvalSymlinks(exe)
-	if err != nil {
-		return err
-	}
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	binDir := filepath.Join(home, ".alis", "bin")
-	if err := os.MkdirAll(binDir, 0755); err != nil {
-		return err
-	}
-
-	helperName := "git-credential-alis"
-	if runtime.GOOS == "windows" {
-		helperName += ".exe"
-	}
-	helperPath := filepath.Join(binDir, helperName)
-	// Always recreate so path stays current after updates.
-	_ = os.Remove(helperPath)
-	if runtime.GOOS == "windows" {
-		return copyExe(exe, helperPath)
-	}
-	return os.Symlink(exe, helperPath)
-}
-
-func copyExe(src, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
-}
-
-// RunAsCredentialHelper implements the git credential helper protocol.
-// Called when os.Args[0] is "git-credential-alis".
-// It refreshes the auth config as a side effect, then exits.
-func RunAsCredentialHelper() {
-	if len(os.Args) < 2 {
-		os.Exit(1)
-	}
-	action := os.Args[1]
-
-	switch action {
-	case "get":
-		credentialGet()
-	default:
-		// store / erase: no-op
-		os.Exit(0)
-	}
-}
-
-func credentialGet() {
-	// Parse git's stdin (key=value pairs terminated by blank line).
-	var host string
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			break
-		}
-		if strings.HasPrefix(line, "host=") {
-			host = strings.TrimPrefix(line, "host=")
-		}
-	}
-
-	if !forgejoHostRe.MatchString(host) {
-		os.Exit(1)
-	}
-
-	log.Printf("[gitcred] credential helper invoked for host=%s (pid=%d)", host, os.Getpid())
-
-	ts, err := NewConsoleTokenSource()
-	if err != nil {
-		log.Printf("[gitcred] no console token source: %v", err)
-		os.Exit(1)
-	}
-	token, err := ts.AccessToken()
-	if err != nil {
-		log.Printf("[gitcred] could not obtain access token: %v", err)
-		os.Exit(1)
-	}
-
-	// Refresh the on-disk gitconfig so the extraHeader stays current.
-	// Errors here are non-fatal; the credential output below is the fallback.
-	_ = SyncGitAuth()
-
-	// Output credentials for git (Basic auth fallback).
-	fmt.Printf("username=alis\npassword=%s\n", token)
-}
-
-// configureGlobalCredentialHelper adds the alis credential helper to ~/.gitconfig
-// under a [credential] block scoped to forgejo hosts. Safe to call repeatedly.
-func configureGlobalCredentialHelper() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	helperName := "git-credential-alis"
-	if runtime.GOOS == "windows" {
-		helperName += ".exe"
-	}
-	helperPath := filepath.Join(home, ".alis", "bin", helperName)
-
-	// git config --global credential.https://forgejo-*.run.app.helper <path>
-	// Unfortunately git doesn't support wildcards in credential URLs, so we set
-	// the global default helper instead, guarded by the helper's own host check.
-	getCmd := exec.Command("git", "config", "--global", "--get", "credential.helper")
-	hideWindow(getCmd)
-	out, _ := getCmd.Output()
-	if strings.TrimSpace(string(out)) == helperPath {
-		return nil
-	}
-	setCmd := exec.Command("git", "config", "--global", "credential.helper", helperPath)
-	hideWindow(setCmd)
-	return setCmd.Run()
 }

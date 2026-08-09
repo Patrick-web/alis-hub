@@ -472,21 +472,20 @@ func (s *ProductService) SyncRepos(org, product string) (*SyncReposResult, error
 	defineDir := filepath.Join(home, "alis.build", org, "define")
 	buildDir := filepath.Join(home, "alis.build", org, "build", product)
 
-	gitToken, err := s.tokens.AccessToken()
-	if err != nil {
-		return &SyncReposResult{Error: fmt.Sprintf("get git token: %s", err)}, nil
-	}
 	emit := func(text string) { s.emitSyncLog(text) }
 
 	result := &SyncReposResult{DefineDir: defineDir, BuildDir: buildDir}
 
-	result.DefineAction, err = syncOneRepo(defineDir, defineRepoURL, gitToken, emit)
+	// No token is fetched here: syncOneRepo authenticates through the alis CLI
+	// credential helper, which also covers the clone case where the target
+	// directory does not exist yet.
+	result.DefineAction, err = syncOneRepo(defineDir, defineRepoURL, emit)
 	if err != nil {
 		result.Error = fmt.Sprintf("define repo: %s", err)
 		return result, nil
 	}
 
-	result.BuildAction, err = syncOneRepo(buildDir, buildRepoURL, gitToken, emit)
+	result.BuildAction, err = syncOneRepo(buildDir, buildRepoURL, emit)
 	if err != nil {
 		result.Error = fmt.Sprintf("build repo: %s", err)
 		return result, nil
