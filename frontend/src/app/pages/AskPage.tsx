@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { Loader } from "../components/Loader";
 import { Button } from "../components/Button";
+import { Markdown } from "../components/Markdown";
 import { useNavigate } from "react-router";
 import * as CLI from "../../../bindings/alis-hub-v3/cliservice";
 import type { AskCitation } from "../../../bindings/alis-hub-v3/models";
@@ -153,9 +154,11 @@ export function AskPage() {
             </div>
 
             <div className="pl-[22px]">
-              <pre className="text-[11px] leading-[1.7] text-foreground/80 font-mono whitespace-pre-wrap break-words">
-                {turn.answer}
-              </pre>
+              {/* Answers come back as markdown: emphasis, inline code for
+                  identifiers, and the occasional list. Rendered raw, the
+                  asterisks and backticks land on exactly the words they were
+                  meant to mark up. */}
+              <Markdown source={turn.answer} compact />
 
               {turn.citations.length > 0 && (
                 <div className="mt-[12px]">

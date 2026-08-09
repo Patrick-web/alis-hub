@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Icon } from "@iconify/react";
-import { marked } from "marked";
 import { Loader } from "../components/Loader";
 import { Button } from "../components/Button";
+import { Markdown } from "../components/Markdown";
 import { copyToClipboard } from "../lib/clipboard";
 import * as CLI from "../../../bindings/alis-hub-v3/cliservice";
 import type { SkillSummary, InstalledSkill } from "../../../bindings/alis-hub-v3/models";
@@ -38,8 +38,8 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 /**
- * Skills open with YAML front matter, which is metadata rather than prose. The
- * name and description are already shown in the header above, so strip it.
+ * Skill documents open with YAML front matter, which is metadata rather than
+ * prose. The name and description are already shown in the header above.
  */
 function stripFrontMatter(source: string): string {
   const trimmed = source.trimStart();
@@ -48,40 +48,9 @@ function stripFrontMatter(source: string): string {
   return end === -1 ? source : trimmed.slice(end + 4).trimStart();
 }
 
-/**
- * Skills are written as markdown, so render them as markdown. They lean on
- * headings, tables and fenced code, none of which reads well as raw text.
- */
+/** Skills are documents, so they render at full document scale. */
 function SkillMarkdown({ source }: { source: string }) {
-  const html = useMemo(() => {
-    const body = stripFrontMatter(source);
-    return body ? (marked.parse(body) as string) : "";
-  }, [source]);
-
-  return (
-    <div
-      className="prose prose-invert prose-sm max-w-none break-words
-        text-[12px] leading-[1.7] text-foreground/75
-        [&_h1]:font-mono [&_h1]:text-[15px] [&_h1]:font-bold [&_h1]:uppercase [&_h1]:text-foreground [&_h1]:mb-[12px]
-        [&_h2]:font-mono [&_h2]:text-[13px] [&_h2]:font-bold [&_h2]:uppercase [&_h2]:text-foreground [&_h2]:mt-[20px] [&_h2]:mb-[8px]
-        [&_h3]:font-mono [&_h3]:text-[12px] [&_h3]:font-bold [&_h3]:text-foreground [&_h3]:mt-[16px] [&_h3]:mb-[6px]
-        [&_h4]:text-[12px] [&_h4]:font-semibold [&_h4]:text-foreground [&_h4]:mb-[4px]
-        [&_p]:text-foreground/70 [&_p]:mb-[10px]
-        [&_code]:text-brand [&_code]:bg-foreground/5 [&_code]:px-[4px] [&_code]:py-[1px] [&_code]:rounded [&_code]:text-[11px]
-        [&_pre]:bg-card [&_pre]:border [&_pre]:border-border [&_pre]:rounded-[4px] [&_pre]:text-[11px] [&_pre]:p-[12px] [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words
-        [&_pre_code]:bg-transparent [&_pre_code]:text-foreground/80 [&_pre_code]:p-0
-        [&_a]:text-brand [&_a]:no-underline hover:[&_a]:underline
-        [&_strong]:text-foreground
-        [&_li]:text-foreground/70 [&_li]:mb-[4px]
-        [&_ul]:mb-[10px] [&_ol]:mb-[10px]
-        [&_table]:w-full [&_table]:border-collapse [&_table]:mb-[12px] [&_table]:block [&_table]:overflow-x-auto
-        [&_th]:border [&_th]:border-border [&_th]:bg-card [&_th]:px-[8px] [&_th]:py-[5px] [&_th]:text-left [&_th]:text-[10px] [&_th]:font-mono [&_th]:uppercase [&_th]:text-foreground/60
-        [&_td]:border [&_td]:border-border [&_td]:px-[8px] [&_td]:py-[5px] [&_td]:text-[11px] [&_td]:align-top
-        [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-[10px] [&_blockquote]:text-foreground/50
-        [&_hr]:border-border [&_hr]:my-[20px]"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
+  return <Markdown source={stripFrontMatter(source)} />;
 }
 
 export function SkillsPage() {
