@@ -185,9 +185,18 @@ export function EnvironmentsPage() {
       throw new Error(`Variable "${label}" already exists`);
     }
     const newId = String(Date.now());
+    const previous = vars;
     const updated = [...vars, { id: newId, label, value }];
     setVars(updated);
-    await persistVars(updated);
+    try {
+      await persistVars(updated);
+    } catch (err) {
+      // The platform rejected the write, so drop the optimistic row. Keeping it
+      // would leave a variable on screen that does not exist in the
+      // environment, and it survives until the page is reloaded.
+      setVars(previous);
+      throw err;
+    }
 
     // Propagate to other environments
     if (propagations && propagations.length > 0) {
@@ -210,9 +219,17 @@ export function EnvironmentsPage() {
 
   const handleEditVar = async (_label: string, value: string) => {
     if (!editVar) return;
+    const previous = vars;
     const updated = vars.map((v) => (v.id === editVar.id ? { ...v, value } : v));
     setVars(updated);
-    await persistVars(updated);
+    try {
+      await persistVars(updated);
+    } catch (err) {
+      // Same rollback as create: a rejected write must not leave the new value
+      // showing as though it had been saved.
+      setVars(previous);
+      throw err;
+    }
   };
 
   // Deleting a variable goes through `alis environment unset` rather than the

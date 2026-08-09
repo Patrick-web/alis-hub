@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router";
 import { Icon } from "@iconify/react";
 import { Loader } from "../components/Loader";
 import { Button } from "../components/Button";
@@ -53,6 +54,7 @@ function SkillMarkdown({ source }: { source: string }) {
 }
 
 export function SkillsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>("catalog");
   const [query, setQuery] = useState("");
   const [rows, setRows] = useState<SkillRow[]>([]);
@@ -142,6 +144,17 @@ export function SkillsPage() {
       setLoadingDetail(false);
     }
   }, []);
+
+  // Ask cites the skills an answer came from and links here as
+  // `/skills?open=<id>`. Consume the parameter and clear it, so that opening a
+  // citation lands on the instructions rather than an empty detail pane, and a
+  // later manual selection is not overridden by a stale deep link.
+  const openParam = searchParams.get("open");
+  useEffect(() => {
+    if (!openParam) return;
+    void openSkill(openParam);
+    setSearchParams({}, { replace: true });
+  }, [openParam, openSkill, setSearchParams]);
 
   const install = useCallback(
     async (id: string, project: boolean) => {
