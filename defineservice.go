@@ -151,8 +151,21 @@ type RunDefineResult struct {
 	Version             string   `json:"version"`
 	Notes               string   `json:"notes"`
 	DefinitionArtifacts []string `json:"definitionArtifacts"`
-	Done                bool     `json:"done"`
-	Error               string   `json:"error,omitempty"`
+	// Artifacts carries the per-artifact outcome. A define has no logs page —
+	// the CLI documents logsUri as build-and-deploy only — so when one of four
+	// artifacts fails to generate, this is the only place that says which one
+	// and why. DefinitionArtifacts stays as the names alone because callers
+	// pass it on to ExplainDefine.
+	Artifacts []DefineArtifact `json:"artifacts"`
+	Done      bool             `json:"done"`
+	Error     string           `json:"error,omitempty"`
+}
+
+// DefineArtifact is one generated artifact and how it turned out.
+type DefineArtifact struct {
+	Name         string `json:"name"`
+	State        string `json:"state"`
+	ErrorDetails string `json:"errorDetails,omitempty"`
 }
 
 // RunDefine starts a Define operation on the Alis backend.

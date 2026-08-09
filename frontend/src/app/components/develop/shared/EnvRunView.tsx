@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { Browser } from "@wailsio/runtime";
 import { Loader } from "../../Loader";
 import { LogBusTerminal } from "./LogBusTerminal";
+import { copyToClipboard } from "../../../lib/clipboard";
 import type { LogBus } from "../../../lib/logBus";
 import type { EnvRunState } from "../types";
 
@@ -36,7 +37,9 @@ export function EnvRunView({
 }: EnvRunViewProps) {
   const [copiedEnv, setCopiedEnv] = useState<string | null>(null);
   function copyLog(env: string) {
-    navigator.clipboard.writeText(busFor(env).getSnapshot().join(""));
+    // Via the Wails runtime: navigator.clipboard throws NotAllowedError in the
+    // webview, and this handler ignored the rejection, so Copy log did nothing.
+    void copyToClipboard(busFor(env).getSnapshot().join(""));
     setCopiedEnv(env);
     setTimeout(() => setCopiedEnv((cur) => (cur === env ? null : cur)), 1500);
   }

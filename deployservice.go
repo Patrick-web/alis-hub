@@ -15,6 +15,7 @@ import (
 type DeployService struct {
 	alisClient *alisclient.AlisClient
 	backend    DBDBackend
+	logCache   logTextCache
 }
 
 func NewDeployService() *DeployService {
@@ -260,33 +261,20 @@ func (s *DeployService) FetchDeployLogs(logsUrl string, textOffset int64) (*Buil
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// The alisproxy deploy page defaults to the "Deploy" tab. The raw logs
-	// are on the "Logs" tab, so append ?tab=logs if not already present.
-	url := logsUrl
-	if !strings.Contains(url, "?tab=") {
-		if strings.Contains(url, "?") {
-			url += "&tab=logs"
-		} else {
-			url += "?tab=logs"
-		}
-	}
-
-	body, _, err := s.alisClient.FetchURL(ctx, url, 0)
+	// No ?tab=logs: the page ignores the tab query entirely and serves the
+	// structured view whatever it says — verified against a real deploy and a
+	// real build execution, five query variants each, byte-identical responses.
+	// The raw command output is embedded in that view's step blocks, which is
+	// what extractBuildLogText pulls out.
+	body, _, err := s.alisClient.FetchURL(ctx, logsUrl, 0)
 	if err != nil {
 		return nil, fmt.Errorf("fetch deploy logs: %w", err)
 	}
 
 	text := extractBuildLogText(string(body))
-	newContent := ""
-	nextOffset := textOffset
-	if int64(len(text)) > textOffset {
-		newContent = text[textOffset:]
-		nextOffset = int64(len(text))
-	}
+	result := s.logCache.diff(logsUrl, text, textOffset)
 
-	log.Printf("[deploy] FetchDeployLogs: textLen=%d offset=%d new=%d", len(text), textOffset, len(newContent))
-	return &BuildLogsResult{
-		Content:    newContent,
-		NextOffset: nextOffset,
-	}, nil
+	log.Printf("[deploy] FetchDeployLogs: textLen=%d offset=%d new=%d reset=%v",
+		len(text), textOffset, len(result.Content), result.Reset)
+	return result, nil
 }

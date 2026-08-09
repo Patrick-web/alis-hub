@@ -49,7 +49,8 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
   // stream feeds all of its rows. Purely additive: the poll below still owns
   // per-environment state, and this only fills the gap between ticks.
   const deployOperation = session?.envRuns?.find((r) => r.operationName)?.operationName;
-  const liveDeployMsg = progressLabel(useOperationProgress(deployOperation));
+  const deployProgress = useOperationProgress(deployOperation);
+  const liveDeployMsg = progressLabel(deployProgress);
   const liveRuns = useMemo(
     () =>
       (session?.envRuns ?? []).map((r) =>
@@ -57,6 +58,20 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
       ),
     [session?.envRuns, liveDeployMsg],
   );
+
+  // The progress stream carries the log link as soon as the operation has one.
+  // Waiting for the poll to report the same thing costs up to a full interval,
+  // and leaves the terminal with nothing to stream if the poll's copy of the
+  // link is ever missing — which is exactly how deploy logs went blank before.
+  const streamedLogsUri = deployProgress?.logsUri ?? "";
+  useEffect(() => {
+    if (!streamedLogsUri) return;
+    const runs = getSession<DeploySession>(tabId)?.envRuns ?? [];
+    if (runs.length === 0 || runs.every((r) => r.logsUrl)) return;
+    patchSession<DeploySession>(tabId, {
+      envRuns: runs.map((r) => (r.logsUrl ? r : { ...r, logsUrl: streamedLogsUri })),
+    });
+  }, [streamedLogsUri, tabId]);
 
   const [protectedConfirmOpen, setProtectedConfirmOpen] = useState(false);
 
@@ -418,7 +433,11 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
             logOffsetRefs.current[run.env] ?? 0,
           );
           if (chunk?.content) {
-            getLogBus(tabId, run.env).write(chunk.content);
+            // reset means the page rewrote text we already showed, so there is
+            // no safe place to append: replace what is there instead of
+            // splicing two unrelated points in the output together.
+            if (chunk.reset) getLogBus(tabId, run.env).replace(chunk.content);
+            else getLogBus(tabId, run.env).write(chunk.content);
             logOffsetRefs.current[run.env] = chunk.nextOffset;
             if (taskIdRef.current) {
               const currentRuns = getSession<DeploySession>(tabId)?.envRuns ?? [];

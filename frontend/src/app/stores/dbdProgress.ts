@@ -36,7 +36,19 @@ export interface DbdProgressEvent {
 
 interface DbdProgressState {
   byOperation: Record<string, DbdProgressEvent>;
+  /**
+   * Every distinct line an operation has reported, in order.
+   *
+   * The CLI emits one event per state change precisely so a caller can follow
+   * the run; keeping only the latest throws that away. Define has no logs page
+   * at all — the CLI documents logsUri as build-and-deploy only — so this
+   * transcript is the only running account of a define that exists.
+   */
+  transcriptByOperation: Record<string, string[]>;
 }
+
+/** Cap per operation, so a chatty run cannot grow without bound. */
+const MAX_TRANSCRIPT_LINES = 2000;
 
 interface DbdProgressStore {
   state: DbdProgressState;
@@ -47,16 +59,30 @@ interface DbdProgressStore {
 }
 
 export const useDbdProgress = create<DbdProgressStore>((set) => ({
-  state: { byOperation: {} },
+  state: { byOperation: {}, transcriptByOperation: {} },
   clear: (operation) =>
     set((s) => {
       if (!s.state.byOperation[operation]) return s;
       const next = { ...s.state.byOperation };
       delete next[operation];
-      return { state: { byOperation: next } };
+      const nextTranscripts = { ...s.state.transcriptByOperation };
+      delete nextTranscripts[operation];
+      return { state: { byOperation: next, transcriptByOperation: nextTranscripts } };
     }),
-  clearAll: () => set({ state: { byOperation: {} } }),
+  clearAll: () => set({ state: { byOperation: {}, transcriptByOperation: {} } }),
 }));
+
+/**
+ * The line an event contributes to the transcript, or "" for one that says
+ * nothing new. Errors and notes are the CLI's own words; a bare state change
+ * is humanised from its protobuf enum name.
+ */
+function transcriptLine(ev: Partial<DbdProgressEvent>): string {
+  if (ev.error) return `error: ${ev.error}`;
+  if (ev.notes) return ev.notes;
+  if (ev.state) return ev.state.toLowerCase().replace(/_/g, " ");
+  return "";
+}
 
 function record(ev: unknown, done: boolean) {
   // Wails delivers the payload as either the event or its `data` field
@@ -67,8 +93,22 @@ function record(ev: unknown, done: boolean) {
 
   useDbdProgress.setState((s) => {
     const prev = s.state.byOperation[operation];
+
+    // Repeated identical lines are noise, not progress: the CLI re-sends the
+    // current note alongside whichever field actually changed.
+    const transcript = s.state.transcriptByOperation[operation] ?? [];
+    const line = transcriptLine(d ?? {});
+    const nextTranscript =
+      line && line !== transcript[transcript.length - 1]
+        ? [...transcript, line].slice(-MAX_TRANSCRIPT_LINES)
+        : transcript;
+
     return {
       state: {
+        transcriptByOperation:
+          nextTranscript === transcript
+            ? s.state.transcriptByOperation
+            : { ...s.state.transcriptByOperation, [operation]: nextTranscript },
         byOperation: {
           ...s.state.byOperation,
           [operation]: {
@@ -103,6 +143,17 @@ wireOnce("dbd:events", () => {
  */
 export function useOperationProgress(operation: string | undefined | null) {
   return useDbdProgress((s) => (operation ? (s.state.byOperation[operation] ?? null) : null));
+}
+
+/** A stable empty array, so an operation with no transcript yet does not
+ *  hand the selector a fresh reference on every render. */
+const NO_LINES: string[] = [];
+
+/** Every line an operation has reported so far, oldest first. */
+export function useOperationTranscript(operation: string | undefined | null) {
+  return useDbdProgress((s) =>
+    operation ? (s.state.transcriptByOperation[operation] ?? NO_LINES) : NO_LINES,
+  );
 }
 
 /**

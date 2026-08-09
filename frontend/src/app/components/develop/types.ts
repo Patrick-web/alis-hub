@@ -21,12 +21,21 @@ export interface GlassResult {
   artifacts: GlassArtifact[];
 }
 
+export interface DefineArtifact {
+  name: string;
+  state: string;
+  errorDetails?: string;
+}
+
 export interface DefineResult {
   operationName: string;
   definition: string;
   version: string;
   notes: string;
   definitionArtifacts: string[];
+  /** Per-artifact outcome. A define has no logs page, so a failed artifact's
+   *  errorDetails is the only account of why the define failed. */
+  artifacts?: DefineArtifact[];
   done: boolean;
   error?: string;
 }

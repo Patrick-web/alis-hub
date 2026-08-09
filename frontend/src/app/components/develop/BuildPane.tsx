@@ -63,6 +63,8 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
 
   const buildBus = getLogBus(tabId, "build");
   const logOffsetRef = useRef<number>(0);
+  // Reported once per build, so a flaky fetch cannot bury the logs it interrupts.
+  const buildLogErrorRef = useRef(false);
   const taskIdRef = useRef<string | null>(null);
   const cloudBuildPollFailuresRef = useRef(0);
   const localBuildPollFailuresRef = useRef(0);
@@ -515,14 +517,22 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       try {
         const chunk = await BuildService.FetchBuildLogs(buildResult.logsUrl, logOffsetRef.current);
         if (chunk?.content) {
-          buildBus.write(chunk.content);
+          // See DeployPane: reset means the page rewrote text we already
+          // showed, so replace rather than splice.
+          if (chunk.reset) buildBus.replace(chunk.content);
+          else buildBus.write(chunk.content);
           logOffsetRef.current = chunk.nextOffset;
           if (taskIdRef.current)
             updateNotification(taskIdRef.current, {
               task: { logBuffer: [...buildBus.getSnapshot()] },
             });
         }
-      } catch {}
+      } catch (e) {
+        if (!buildLogErrorRef.current) {
+          buildLogErrorRef.current = true;
+          buildBus.write(`\nCould not fetch build logs: ${String(e)}\n`);
+        }
+      }
     };
     if (buildResult.done) {
       fetchLogs();
@@ -691,7 +701,9 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
             deployLogOffsets.current[run.env] ?? 0,
           );
           if (chunk?.content) {
-            getLogBus(tabId, run.env).write(chunk.content);
+            // See DeployPane: reset means replace, not append.
+            if (chunk.reset) getLogBus(tabId, run.env).replace(chunk.content);
+            else getLogBus(tabId, run.env).write(chunk.content);
             deployLogOffsets.current[run.env] = chunk.nextOffset;
           }
         } catch (e) {

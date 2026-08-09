@@ -2,7 +2,11 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { Button } from "../Button";
-import { useOperationProgress, progressLabel } from "../../stores/dbdProgress";
+import {
+  useOperationProgress,
+  useOperationTranscript,
+  progressLabel,
+} from "../../stores/dbdProgress";
 import { useWorkspace } from "../../stores/workspace";
 import { useNotifications } from "../../stores/notifications";
 import { useDevelopTabs } from "../../stores/developTabs";
@@ -45,6 +49,7 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
   // the poll below still drives every step transition, so this only fills the
   // gap between ticks and is empty when no CLI stream is running.
   const liveProgress = progressLabel(useOperationProgress(session?.defineResult?.operationName));
+  const liveTranscript = useOperationTranscript(session?.defineResult?.operationName);
 
   const taskIdRef = useRef<string | null>(null);
   const definePollFailuresRef = useRef(0);
@@ -340,6 +345,10 @@ export function DefinePane({ tabId, neuron, restore }: DefinePaneProps) {
           // the session value remains the fallback.
           progressMsg={liveProgress || session.progressMsg}
           version={session.defineResult?.version}
+          // A define has no logs page, so the event transcript and the
+          // per-artifact outcomes are the whole account of the run.
+          transcript={liveTranscript}
+          artifacts={session.defineResult?.artifacts ?? []}
           onRetry={loadCommits}
         />
       )}

@@ -3,6 +3,7 @@ import { Icon } from "@iconify/react";
 import { Browser } from "@wailsio/runtime";
 import { Loader } from "../../Loader";
 import { LogBusTerminal } from "./LogBusTerminal";
+import { copyToClipboard } from "../../../lib/clipboard";
 import type { LogBus } from "../../../lib/logBus";
 import type { BuildResult } from "../types";
 
@@ -18,7 +19,9 @@ interface BuildRunViewProps {
 export function BuildRunView({ step, progressMsg, buildResult, bus, onRerun }: BuildRunViewProps) {
   const [copied, setCopied] = useState(false);
   function copyLog() {
-    navigator.clipboard.writeText(bus.getSnapshot().join(""));
+    // Via the Wails runtime: navigator.clipboard throws NotAllowedError in the
+    // webview, and this handler ignored the rejection, so Copy log did nothing.
+    void copyToClipboard(bus.getSnapshot().join(""));
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }

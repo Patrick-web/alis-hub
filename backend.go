@@ -181,6 +181,11 @@ func (b *CLIBackend) PollDefine(ctx context.Context, opName string) (*RunDefineR
 	}
 	for _, a := range state.Artifacts {
 		result.DefinitionArtifacts = append(result.DefinitionArtifacts, a.Name)
+		result.Artifacts = append(result.Artifacts, DefineArtifact{
+			Name:         a.Name,
+			State:        a.State,
+			ErrorDetails: a.ErrorDetails,
+		})
 	}
 	return result, nil
 }

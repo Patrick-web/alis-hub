@@ -24,6 +24,7 @@ type BuildService struct {
 	backend     DBDBackend
 	productSvc  *ProductService
 	localBuilds sync.Map // map[string]*localBuildState
+	logCache    logTextCache
 }
 
 // localBuildState holds output from a running docker build.
@@ -355,15 +356,71 @@ func (s *BuildService) runBuildGRPC(ctx context.Context, neuron, commit string) 
 type BuildLogsResult struct {
 	Content    string `json:"content"`
 	NextOffset int64  `json:"nextOffset"`
+	// Reset tells the caller that Content is the whole log rather than an
+	// addition to it, so the terminal must be cleared before writing.
+	//
+	// The offset scheme assumes the page's text only ever grows, and the
+	// alisproxy page is a structured view that rewrites in place — a step's
+	// duration lands, a status flips to Completed — so the text the caller
+	// already holds can stop being a prefix of the current text. Splicing at
+	// the old offset then joins two unrelated points in the output.
+	Reset bool `json:"reset"`
 }
 
-var htmlTagRe = regexp.MustCompile(`<[^>]+>`)
+// htmlTagRe matches an HTML tag, allowing `>` inside quoted attribute values.
+//
+// The naive `<[^>]+>` ends at the first `>` in the source, which lands inside
+// attributes like class="[&>svg]:size-4" — the alisproxy pages are full of
+// those Tailwind arbitrary variants — and leaks the rest of the attribute into
+// the log as if it were output. That accounted for 22% of the text on a real
+// build page.
+var htmlTagRe = regexp.MustCompile(`<[a-zA-Z/!?][^>"']*(?:"[^"]*"[^>"']*|'[^']*'[^>"']*)*>`)
+
+// blockTagRe matches the tags that end a visual line. The pages carry no
+// newlines of their own, so without this every step, timing and log line
+// concatenates into one enormous row.
+var blockTagRe = regexp.MustCompile(`(?i)</?(?:div|p|li|tr|section|article|header|footer|h[1-6]|pre|details|summary)\b[^>]*>|<br\s*/?>`)
+
+// scriptStyleRe matches script and style elements including their contents,
+// which are not visible text and must not reach the terminal.
+var scriptStyleRe = regexp.MustCompile(`(?is)<(script|style)\b[^>]*>.*?</(?:script|style)>`)
+
+// spaceRunRe collapses the whitespace left behind by stripped inline markup.
+var spaceRunRe = regexp.MustCompile(`[ \t]+`)
+
+// htmlToText renders an HTML fragment as the plain text a reader would see:
+// block tags become line breaks, everything else is dropped, entities are
+// decoded, and blank lines are removed.
+func htmlToText(fragment string) string {
+	s := scriptStyleRe.ReplaceAllString(fragment, "")
+	s = blockTagRe.ReplaceAllString(s, "\n")
+	s = htmlTagRe.ReplaceAllString(s, " ")
+	s = htmlpkg.UnescapeString(s)
+
+	var buf strings.Builder
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(spaceRunRe.ReplaceAllString(line, " "))
+		if line == "" {
+			continue
+		}
+		buf.WriteString(line)
+		buf.WriteString("\n")
+	}
+	return strings.TrimRight(buf.String(), "\n")
+}
 
 // extractBuildLogText pulls the plain-text log out of the alisproxy HTML page.
-// Build pages use <span class="log-line"> elements with <br> tags for line breaks.
-// Deploy pages use a tabbed interface; we extract visible text from the rightPanel.
+//
+// Older pages wrapped each line in <span class="log-line">. Current pages do
+// not — a build and a deploy page both come back with none — and instead render
+// a structured view whose expandable steps carry the raw command output. The
+// span path is kept for pages that still use it; everything else falls through
+// to the rightPanel, which is the panel the tab strip swaps.
+//
+// Note that ?tab=logs does nothing: the page serves the structured tab whatever
+// the query says, so this is scraping that view, not a raw log endpoint.
 func extractBuildLogText(pageHTML string) string {
-	// Try log-line spans first (build pages).
+	// Try log-line spans first (older build pages).
 	marker := `<span class="log-line">`
 	if strings.Contains(pageHTML, marker) {
 		var buf strings.Builder
@@ -378,22 +435,16 @@ func extractBuildLogText(pageHTML string) string {
 			if end == -1 {
 				break
 			}
-			text := pageHTML[start : start+end]
-			text = strings.ReplaceAll(text, "<br>", "\n")
-			text = strings.ReplaceAll(text, "<br/>", "\n")
-			text = strings.ReplaceAll(text, "<br />", "\n")
-			text = htmlTagRe.ReplaceAllString(text, "")
-			text = htmlpkg.UnescapeString(text)
 			if buf.Len() > 0 {
 				buf.WriteString("\n")
 			}
-			buf.WriteString(text)
+			buf.WriteString(htmlToText(pageHTML[start : start+end]))
 			searchFrom = start + end + len("</span>")
 		}
 		return buf.String()
 	}
 
-	// Fallback for deploy pages: extract visible text from the rightPanel div.
+	// Fallback for the structured build and deploy pages.
 	panelStart := strings.Index(pageHTML, `id="rightPanel"`)
 	if panelStart == -1 {
 		return ""
@@ -422,22 +473,44 @@ func extractBuildLogText(pageHTML string) string {
 	if contentEnd == -1 {
 		return ""
 	}
-	inner := pageHTML[contentStart:contentEnd]
+	return htmlToText(pageHTML[contentStart:contentEnd])
+}
 
-	// Strip HTML tags and decode entities.
-	text := htmlTagRe.ReplaceAllString(inner, " ")
-	text = htmlpkg.UnescapeString(text)
+// logTextCache remembers the last text extracted from each log page, which is
+// what lets a re-render be told apart from an append.
+type logTextCache struct {
+	mu   sync.Mutex
+	last map[string]string
+}
 
-	// Collapse whitespace but preserve line structure.
-	var buf strings.Builder
-	for _, line := range strings.Split(text, "\n") {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			buf.WriteString(trimmed)
-			buf.WriteString("\n")
-		}
+// logTextCacheMax bounds the cache. A session holds one entry per log page it
+// has followed — a handful — so reaching this means something is generating
+// URLs, and dropping the lot costs only one extra Reset each.
+const logTextCacheMax = 64
+
+// diff works out what to send for a log page that was just re-fetched, and
+// remembers the text for next time.
+//
+// Normally the text has grown and only the tail is new. When the page instead
+// rewrote something the caller already holds, there is no safe splice point, so
+// the whole text goes back with Reset set. A cold cache cannot tell the two
+// apart and assumes an append, which is no worse than having no cache at all.
+func (c *logTextCache) diff(url, text string, seen int64) *BuildLogsResult {
+	c.mu.Lock()
+	if c.last == nil || len(c.last) >= logTextCacheMax {
+		c.last = make(map[string]string, logTextCacheMax)
 	}
-	return strings.TrimSpace(buf.String())
+	prev, known := c.last[url]
+	c.last[url] = text
+	c.mu.Unlock()
+
+	if seen < 0 || seen > int64(len(text)) || (known && !strings.HasPrefix(text, prev)) {
+		return &BuildLogsResult{Content: text, NextOffset: int64(len(text)), Reset: true}
+	}
+	if seen == int64(len(text)) {
+		return &BuildLogsResult{NextOffset: seen}
+	}
+	return &BuildLogsResult{Content: text[seen:], NextOffset: int64(len(text))}
 }
 
 // FetchBuildLogs fetches the current log page from the alisproxy, extracts plain text,
@@ -457,18 +530,11 @@ func (s *BuildService) FetchBuildLogs(logsUrl string, textOffset int64) (*BuildL
 	}
 
 	text := extractBuildLogText(string(body))
-	newContent := ""
-	nextOffset := textOffset
-	if int64(len(text)) > textOffset {
-		newContent = text[textOffset:]
-		nextOffset = int64(len(text))
-	}
+	result := s.logCache.diff(logsUrl, text, textOffset)
 
-	log.Printf("[build] FetchBuildLogs: textLen=%d offset=%d new=%d", len(text), textOffset, len(newContent))
-	return &BuildLogsResult{
-		Content:    newContent,
-		NextOffset: nextOffset,
-	}, nil
+	log.Printf("[build] FetchBuildLogs: textLen=%d offset=%d new=%d reset=%v",
+		len(text), textOffset, len(result.Content), result.Reset)
+	return result, nil
 }
 
 // PollBuildOperation checks the status of a running Build operation.

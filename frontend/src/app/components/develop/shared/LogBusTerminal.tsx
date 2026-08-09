@@ -12,12 +12,22 @@ export function LogBusTerminal({ bus, className }: { bus: LogBus; className?: st
   const writtenRef = useRef(0);
 
   useEffect(() => {
+    // Counted over the whole stream rather than the current array: the bus
+    // trims old chunks off the front, which shifts every array index.
     writtenRef.current = 0;
-    const writeFrom = (chunks: string[]) => {
-      while (writtenRef.current < chunks.length) {
-        termRef.current?.write(chunks[writtenRef.current]);
-        writtenRef.current++;
+    const writeFrom = (chunks: string[], replaced = false) => {
+      // A replace discards what the terminal is showing, so start over rather
+      // than appending the resent log underneath the stale copy.
+      if (replaced) {
+        termRef.current?.clear();
+        writtenRef.current = 0;
       }
+      const dropped = bus.dropped;
+      let i = Math.max(writtenRef.current - dropped, 0);
+      for (; i < chunks.length; i++) {
+        termRef.current?.write(chunks[i]);
+      }
+      writtenRef.current = dropped + chunks.length;
     };
     termRef.current?.clear();
     writeFrom(bus.getSnapshot());
