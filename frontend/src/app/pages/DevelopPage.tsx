@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
 import { Icon } from "@iconify/react";
 import { Button } from "../components/Button";
 import { FilterInput } from "../components/FilterInput";
@@ -13,6 +14,7 @@ import { useDevelopSettings } from "../stores/developSettings";
 import { Loader } from "../components/Loader";
 
 export function DevelopPage() {
+  const navigate = useNavigate();
   const { state, setNeurons } = useWorkspace();
   const {
     focusTaskId,
@@ -393,9 +395,21 @@ export function DevelopPage() {
                         <div
                           className={`size-[7px] rounded-full shrink-0 ${neuron.state === 1 ? "bg-success" : neuron.state === 4 ? "bg-warning" : "bg-destructive"}`}
                         />
-                        <span className="text-[12px] font-bold font-mono text-foreground">
-                          {name}
-                        </span>
+                        {/* Drill-down to this service's code blocks. Without it
+                            the blocks page has no entry point in the UI. */}
+                        <button
+                          onClick={() => navigate(`/services/${name}/blocks`)}
+                          title="View this service's code blocks"
+                          className="group/name flex items-center gap-[6px] text-left"
+                        >
+                          <span className="text-[12px] font-bold font-mono text-foreground group-hover/name:text-brand transition-colors">
+                            {name}
+                          </span>
+                          <Icon
+                            icon="solar:box-linear"
+                            className="text-foreground/0 group-hover/name:text-foreground/35 text-[13px] transition-colors"
+                          />
+                        </button>
                       </div>
                     </td>
                     <td className="px-[16px] py-[10px]">

@@ -40,6 +40,14 @@ const standaloneTabs = [
     icon: <Icon icon="solar:chat-square-call-linear" className="text-lg" />,
     route: "/ask",
   },
+  // Diagnostics reports on this machine rather than on a product, so it belongs
+  // with the standalone shortcuts rather than in the per-product tab bar.
+  {
+    id: "diagnostics",
+    label: "Diagnostics",
+    icon: <Icon icon="solar:stethoscope-linear" className="text-lg" />,
+    route: "/diagnostics",
+  },
 ];
 
 export function StandaloneTopNav() {

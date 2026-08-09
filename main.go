@@ -350,6 +350,12 @@ func installHelpMenu(app *application.App, menu *application.Menu, updaterSvc *u
 		}
 	})
 	help.AddSeparator()
+	// Diagnostics is machine-scoped, so the standalone shortcuts are its home in
+	// the UI. Repeating it here keeps it reachable from inside a product
+	// workspace, where that nav is not rendered.
+	help.Add("Diagnostics").OnClick(func(_ *application.Context) {
+		app.Event.Emit("menu:navigate", "/diagnostics")
+	})
 	help.Add("View Logs").OnClick(func(_ *application.Context) {
 		app.Event.Emit("menu:view-logs", nil)
 	})

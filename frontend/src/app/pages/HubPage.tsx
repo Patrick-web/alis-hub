@@ -65,6 +65,27 @@ export function HubPage() {
       action: () => goStandalone("/codeblocks"),
     },
     {
+      id: "skills",
+      label: "Skills",
+      description: "Platform instructions for your local agent harness",
+      icon: "solar:book-bookmark-linear",
+      action: () => goStandalone("/skills"),
+    },
+    {
+      id: "ask",
+      label: "Ask",
+      description: "Answers from your sessions and support history",
+      icon: "solar:chat-square-call-linear",
+      action: () => goStandalone("/ask"),
+    },
+    {
+      id: "diagnostics",
+      label: "Diagnostics",
+      description: "Check your local CLI, tools and approval settings",
+      icon: "solar:stethoscope-linear",
+      action: () => goStandalone("/diagnostics"),
+    },
+    {
       id: "landing-zones",
       label: "Landing Zones",
       description: "Select an organisation and product to work in",
@@ -197,11 +218,15 @@ export function HubPage() {
               </p>
             )}
             <div className="grid grid-cols-2 gap-[10px]">
-              {shortcuts.map((s) => (
+              {shortcuts.map((s, i) => (
                 <button
                   key={s.id}
                   onClick={s.action}
-                  className="text-left bg-card border border-border hover:border-brand-fill rounded-[10px] p-[16px] transition-all group"
+                  // An odd number of cards would leave a hole in the last row,
+                  // so the final one spans the width instead.
+                  className={`text-left bg-card border border-border hover:border-brand-fill rounded-[10px] p-[16px] transition-all group ${
+                    shortcuts.length % 2 === 1 && i === shortcuts.length - 1 ? "col-span-2" : ""
+                  }`}
                 >
                   <div
                     className="size-[32px] rounded-[8px] flex items-center justify-center mb-[12px]"
