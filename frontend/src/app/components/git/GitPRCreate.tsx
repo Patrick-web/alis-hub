@@ -9,7 +9,10 @@ interface Props {
   branches: GitBranch[];
   currentBranch: string;
   aheadCount: number;
+  /** The repo's own default branch, which is what a PR should target. */
+  defaultBranch: string;
   creating: boolean;
+  error: string;
   onCreate: (title: string, body: string, head: string, base: string) => Promise<void>;
   onCancel: () => void;
 }
@@ -19,21 +22,43 @@ export function GitPRCreate({
   branches,
   currentBranch,
   aheadCount,
+  defaultBranch,
   creating,
+  error,
   onCreate,
   onCancel,
 }: Props) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [head, setHead] = useState(currentBranch);
-  const [base, setBase] = useState("main");
+  // Null means "follow the repo's default branch", which arrives asynchronously.
+  // Seeding state from the prop instead would need an effect to catch up, and
+  // that effect would re-render the form with the wrong base first. Hardcoding
+  // "main" was the original bug: these repos use master and staging.
+  const [baseChoice, setBaseChoice] = useState<string | null>(null);
+  const base = baseChoice ?? defaultBranch;
   const [commitCount, setCommitCount] = useState<number | null>(null);
   const [countLoading, setCountLoading] = useState(false);
 
-  const remoteBranches = branches
-    .filter((b) => b.isRemote)
-    .map((b) => b.name.replace(/^origin\//, ""))
-    .filter((v, i, a) => a.indexOf(v) === i);
+  // Remote branches are what a PR can be built from, but the branch you are on
+  // belongs in the list too: an unpushed branch would otherwise be selected and
+  // absent from its own dropdown.
+  const headOptions = [
+    ...new Set(
+      [
+        ...branches.filter((b) => b.isRemote).map((b) => b.name.replace(/^origin\//, "")),
+        currentBranch,
+      ].filter(Boolean),
+    ),
+  ];
+  const baseOptions = [
+    ...new Set(
+      [
+        ...branches.filter((b) => b.isRemote).map((b) => b.name.replace(/^origin\//, "")),
+        defaultBranch,
+      ].filter(Boolean),
+    ),
+  ];
 
   const sameBranch = head === base;
   const hasUnpushed = head === currentBranch && aheadCount > 0;
@@ -120,7 +145,7 @@ export function GitPRCreate({
             <SearchableSelect
               label="From"
               value={head}
-              options={remoteBranches}
+              options={headOptions}
               onChange={setHead}
               className="flex-1 min-w-0"
             />
@@ -128,8 +153,8 @@ export function GitPRCreate({
             <SearchableSelect
               label="Into"
               value={base}
-              options={remoteBranches}
-              onChange={setBase}
+              options={baseOptions}
+              onChange={setBaseChoice}
               className="flex-1 min-w-0"
             />
           </div>
@@ -151,6 +176,11 @@ export function GitPRCreate({
       </div>
 
       {/* Footer */}
+      {error && (
+        <div className="shrink-0 mx-3 mb-2 px-3 py-2 rounded bg-red-500/10 border border-red-500/20 text-[11px] text-red-400 break-words">
+          {error}
+        </div>
+      )}
       <div className="shrink-0 flex items-center gap-1.5 justify-end px-3 py-2.5 border-t border-foreground/10">
         <button
           onClick={onCancel}

@@ -243,6 +243,10 @@ func TestFixture_BlocksList(t *testing.T) {
 }
 
 // `alis blocks versions twilioverify --json`
+//
+// Also covers the adapter ListCodeblockVersions applies on top: the frontend
+// keys off Name and renders VersionTag and the numeric ReleaseLevel, so all
+// three have to survive the mapping.
 func TestFixture_BlocksVersions(t *testing.T) {
 	var v blocksVersionsResponse
 	loadFixture(t, "blocks_versions", &v)
@@ -253,6 +257,24 @@ func TestFixture_BlocksVersions(t *testing.T) {
 	for _, ver := range v.Versions {
 		if ver.Version == "" {
 			t.Error("version not decoded")
+		}
+
+		mapped := CodeblockVersion{
+			Name:         ver.Name,
+			VersionTag:   ver.Version,
+			ReleaseLevel: releaseLevelValue(ver.ReleaseLevel),
+			CreateTime:   ver.CreateTime,
+		}
+		// Name is what GetCodeblockDoc and GetCodeblockVersion are called with,
+		// so a version row is useless without it.
+		if !strings.HasPrefix(mapped.Name, "blocks/") {
+			t.Errorf("unexpected version name format %q", mapped.Name)
+		}
+		if mapped.VersionTag == "" {
+			t.Error("versionTag lost in mapping")
+		}
+		if ver.ReleaseLevel != "" && mapped.ReleaseLevel == 0 {
+			t.Errorf("release level %q did not map to a known value", ver.ReleaseLevel)
 		}
 	}
 }

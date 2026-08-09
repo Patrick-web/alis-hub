@@ -17,7 +17,7 @@ import { useGitStore, gitActions, EMPTY_REPO, type GitTab } from "../stores/git"
 import { Loader } from "../components/Loader";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useKeyboardShortcuts } from "../lib/keyboardShortcuts";
-import { GitPullRequest, GitCommitVertical, Undo2 } from "lucide-react";
+import { GitPullRequest, GitCommitVertical, Loader2, Undo2 } from "lucide-react";
 
 // ─── RepoSection ────────────────────────────────────────────────────────────
 
@@ -247,15 +247,43 @@ export function GitPage() {
       })),
     );
 
-  const { prRepo, prs, loadingPRs, creatingPR, mergingPR, selectedPR, showCreatePR } = useGitStore(
+  const {
+    prRepo,
+    prs,
+    prTotal,
+    prTruncated,
+    loadingPRs,
+    prError,
+    creatingPR,
+    createPRError,
+    mergingPR,
+    settingReady,
+    selectedPR,
+    showCreatePR,
+    prsAvailable,
+    prRepoInfo,
+    prUser,
+    prAuthorFilter,
+    prAssigneeFilter,
+  } = useGitStore(
     useShallow((s) => ({
       prRepo: s.prRepo,
       prs: s.prs,
+      prTotal: s.prTotal,
+      prTruncated: s.prTruncated,
       loadingPRs: s.loadingPRs,
+      prError: s.prError,
       creatingPR: s.creatingPR,
+      createPRError: s.createPRError,
       mergingPR: s.mergingPR,
+      settingReady: s.settingReady,
       selectedPR: s.selectedPR,
       showCreatePR: s.showCreatePR,
+      prsAvailable: s.prsAvailable,
+      prRepoInfo: s.prRepoInfo,
+      prUser: s.prUser,
+      prAuthorFilter: s.prAuthorFilter,
+      prAssigneeFilter: s.prAssigneeFilter,
     })),
   );
 
@@ -270,9 +298,6 @@ export function GitPage() {
         .ahead,
   );
 
-  const prIsForgejo = useGitStore((s) =>
-    s.prRepo === "build" ? s.buildIsForgejo : s.defineIsForgejo,
-  );
   const prRepoState =
     useGitStore((s) => s.repos[s.prRepo === "build" ? s.buildPath : s.definePath]) ?? EMPTY_REPO;
   const prRepoPath = prRepo === "build" ? buildPath : definePath;
@@ -478,12 +503,30 @@ export function GitPage() {
             </div>
           </div>
 
-          {!prIsForgejo ? (
+          {/* Failures here used to be swallowed, so an expired session read as
+              "No open PRs". The banner carries the retry and sign-in actions. */}
+          <GitOperationBanner
+            result={prError}
+            onRetry={() => void gitActions.openPRTab()}
+            onDismiss={() => gitActions.dismissPRError()}
+          />
+
+          {prsAvailable === false ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-2">
               <GitPullRequest size={24} className="text-foreground/15" />
               <p className="text-sm text-foreground/30">
-                Pull requests not available for this repo.
+                Pull requests are not available for this repo.
               </p>
+              <button
+                onClick={() => void gitActions.openPRTab()}
+                className="text-[11px] px-2.5 py-1 rounded border border-foreground/15 text-foreground/50 hover:text-foreground/80 hover:border-foreground/30 transition-colors"
+              >
+                Check again
+              </button>
+            </div>
+          ) : prsAvailable === null && loadingPRs ? (
+            <div className="flex-1 flex items-center justify-center text-foreground/30">
+              <Loader2 size={16} className="animate-spin" />
             </div>
           ) : (
             <ResizablePanelGroup direction="horizontal" className="flex-1">
@@ -493,8 +536,21 @@ export function GitPage() {
                   prs={prs}
                   selectedPR={selectedPR}
                   loading={loadingPRs}
-                  onSelect={(pr) => useGitStore.setState({ selectedPR: pr, showCreatePR: false })}
-                  onNewPR={() => useGitStore.setState({ showCreatePR: true, selectedPR: null })}
+                  total={prTotal}
+                  truncated={prTruncated}
+                  currentUser={prUser}
+                  authorFilter={prAuthorFilter}
+                  assigneeFilter={prAssigneeFilter}
+                  onChangeAuthorFilter={gitActions.setPRAuthorFilter}
+                  onChangeAssigneeFilter={gitActions.setPRAssigneeFilter}
+                  onSelect={(pr) => gitActions.selectPR(pr)}
+                  onNewPR={() =>
+                    useGitStore.setState({
+                      showCreatePR: true,
+                      selectedPR: null,
+                      createPRError: "",
+                    })
+                  }
                   onRefresh={() => void gitActions.fetchPRs()}
                 />
               </ResizablePanel>
@@ -509,18 +565,35 @@ export function GitPage() {
                     branches={prRepoState.branches}
                     currentBranch={prRepoState.currentBranch}
                     aheadCount={prRepoState.ahead}
+                    defaultBranch={prRepoInfo?.defaultBranch ?? ""}
                     creating={creatingPR}
+                    error={createPRError}
                     onCreate={(title, body, head, base) =>
                       gitActions.createPR(title, body, head, base)
                     }
-                    onCancel={() => useGitStore.setState({ showCreatePR: false })}
+                    onCancel={() =>
+                      useGitStore.setState({ showCreatePR: false, createPRError: "" })
+                    }
                   />
                 ) : selectedPR ? (
                   <GitPRDetail
+                    // Identity, not just data: a different PR is a different
+                    // subject, so remounting drops the previous one's tab,
+                    // selection and draft review rather than clearing them by hand.
+                    key={`${prRepo}:${selectedPR.number}`}
                     pr={selectedPR}
-                    repoPath={prRepoPath}
+                    org={organisation}
+                    product={product}
+                    repo={prRepo}
+                    repoInfo={prRepoInfo}
+                    currentUser={prUser}
                     merging={mergingPR}
-                    onMerge={(number, style) => gitActions.mergePR(number, style)}
+                    settingReady={settingReady}
+                    onMerge={(number, style, deleteBranch) =>
+                      gitActions.mergePR(number, style, deleteBranch)
+                    }
+                    onSetReady={(number) => gitActions.setPRReady(number)}
+                    onRefresh={() => void gitActions.fetchPRs()}
                     onClose={() => useGitStore.setState({ selectedPR: null })}
                   />
                 ) : (

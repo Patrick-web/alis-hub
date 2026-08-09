@@ -81,6 +81,10 @@ func main() {
 
 	cliSvc := NewCLIService()
 
+	// Pull requests resolve their remote and their token through the CLI, so the
+	// service needs it rather than a local clone.
+	prSvc := NewPRService(cliSvc)
+
 	hubDB, err := OpenHubDB()
 	if err != nil {
 		log.Fatal("hub db:", err)
@@ -126,6 +130,7 @@ func main() {
 			application.NewService(settingsSvc),
 			application.NewService(logSvc),
 			application.NewService(cliSvc),
+			application.NewService(prSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler:    application.BundledAssetFileServer(assets),
@@ -222,6 +227,7 @@ func main() {
 	updaterSvc.SetApp(app)
 	productSvc.SetApp(app)
 	gitSvc.SetApp(app)
+	prSvc.SetApp(app)
 	localAISvc.SetApp(app)
 	logSvc.SetApp(app)
 	// Lets the DBD services emit dbd:progress / dbd:done while an operation runs.

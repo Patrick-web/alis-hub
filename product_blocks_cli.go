@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"alis-hub-v3/internal/cliwrap"
+
+	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
 )
 
 // CLI-backed implementations of the code block operations.
@@ -50,8 +52,40 @@ func blockVersionTag(blockVersion string) string {
 	return blockVersion
 }
 
+// cliPackageID strips the resource prefix from a package name: the CLI takes
+// the bare dotted id ("voyage.zz.dummy.v1"), while the Console API and the
+// frontend both carry it as "packages/voyage.zz.dummy.v1".
+func cliPackageID(pkg string) string { return strings.TrimPrefix(pkg, "packages/") }
+
+// Release levels. The CLI speaks the enum's string form on both the read side
+// (`blocks versions`) and the write side (`--release-level`); the Console path
+// and the frontend both carry the numeric BlockVersion_ReleaseLevel. Note this
+// is *not* Block_ReleaseLevel, which numbers the same names 1..5.
+
+// releaseLevelCode turns a numeric BlockVersion_ReleaseLevel into the string the
+// CLI's --release-level flag takes. UNSPECIFIED is rejected rather than passed
+// through: the flag is required, so a zero here means the caller never set it.
+func releaseLevelCode(level int32) (string, error) {
+	name, ok := blocksv1pb.BlockVersion_ReleaseLevel_name[level]
+	if !ok || level == 0 {
+		return "", fmt.Errorf("unknown release level %d (want 3, 6, 9, 12 or 99)", level)
+	}
+	return name, nil
+}
+
+// releaseLevelValue is the inverse, for decoding what the CLI reports. An
+// unrecognised code yields 0, which the UI already renders as "Not Specified".
+func releaseLevelValue(code string) int32 {
+	return blocksv1pb.BlockVersion_ReleaseLevel_value[strings.ToUpper(strings.TrimSpace(code))]
+}
+
 // blocksCLIAvailable reports whether the CLI path can be used.
 func (s *ProductService) blocksCLIAvailable() bool { return s.alisCli != nil }
+
+// CLIAvailable is blocksCLIAvailable exposed to the frontend, so a page whose
+// only path is the CLI can render a setup prompt on mount rather than letting
+// the user fill in a form and fail on submit.
+func (s *ProductService) CLIAvailable() bool { return s.blocksCLIAvailable() }
 
 // runBlocksCLI executes a blocks subcommand and returns raw stdout.
 func (s *ProductService) runBlocksCLI(label string, args ...string) ([]byte, error) {
@@ -217,8 +251,8 @@ type BlockInstallOptions struct {
 // but `alis blocks install --help` is authoritative.
 func blocksInstallArgs(o BlockInstallOptions) []string {
 	args := []string{"blocks", "install", o.BlockID}
-	if o.Package != "" {
-		args = append(args, o.Package)
+	if pkg := cliPackageID(o.Package); pkg != "" {
+		args = append(args, pkg)
 	}
 	args = append(args, "--json")
 	if o.Version != "" {
@@ -332,8 +366,8 @@ type BlockCreateOptions struct {
 
 func blocksCreateArgs(o BlockCreateOptions) []string {
 	args := []string{"blocks", "create", o.BlockID}
-	if o.Package != "" {
-		args = append(args, o.Package)
+	if pkg := cliPackageID(o.Package); pkg != "" {
+		args = append(args, pkg)
 	}
 	args = append(args, "--json", "--account", o.Account, "--display-name", o.DisplayName)
 	if o.Tagline != "" {
@@ -379,8 +413,8 @@ type BlockPublishOptions struct {
 
 func blocksPublishArgs(o BlockPublishOptions) []string {
 	args := []string{"blocks", "publish", o.BlockID}
-	if o.Package != "" {
-		args = append(args, o.Package)
+	if pkg := cliPackageID(o.Package); pkg != "" {
+		args = append(args, pkg)
 	}
 	args = append(args, "--json", "--release-level", o.ReleaseLevel, "--notes", o.Notes)
 	if o.Instance != "" {
@@ -395,34 +429,63 @@ func blocksPublishArgs(o BlockPublishOptions) []string {
 	return args
 }
 
+// BlockPublishResult is what `alis blocks publish --json` leaves on stdout: the
+// final operation object, per the CLI's output contract. The shape is decoded
+// leniently and Raw always carries the original payload, so a field the CLI
+// adds or renames costs a nicer UI message, never the result itself.
+type BlockPublishResult struct {
+	// Version is the published version tag, when the CLI reports one.
+	Version string `json:"version"`
+	Done    bool   `json:"done"`
+	Error   string `json:"error,omitempty"`
+	Raw     string `json:"raw"`
+}
+
 // PublishBlockCLI publishes a new block version from commits on the block's
 // branch, via `alis blocks publish`.
-func (s *ProductService) PublishBlockCLI(opts BlockPublishOptions) (string, error) {
+//
+// Unlike the Console path this can name which install to publish from, which is
+// the whole point: a block installed into a service more than once cannot be
+// published unambiguously without --instance.
+func (s *ProductService) PublishBlockCLI(opts BlockPublishOptions) (*BlockPublishResult, error) {
 	if !s.blocksCLIAvailable() {
-		return "", fmt.Errorf("alis CLI not available")
+		return nil, fmt.Errorf("alis CLI not available")
 	}
 	// The block id can be recovered from the instance ref, sparing callers from
 	// having to pass both.
 	if opts.BlockID == "" && opts.Instance != "" {
 		id, err := blockIDFromInstance(opts.Instance)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 		opts.BlockID = id
 	}
 	switch {
 	case opts.BlockID == "":
-		return "", fmt.Errorf("blockId or instance is required")
+		return nil, fmt.Errorf("blockId or instance is required")
 	case opts.ReleaseLevel == "":
-		return "", fmt.Errorf("releaseLevel is required (GA, RC, BETA, ALPHA or EXPERIMENTAL)")
+		return nil, fmt.Errorf("releaseLevel is required (GA, RC, BETA, ALPHA or EXPERIMENTAL)")
 	case opts.Notes == "":
-		return "", fmt.Errorf("notes are required")
+		return nil, fmt.Errorf("notes are required")
+	}
+	// Catch a bad level here rather than letting the CLI reject it after the
+	// user has already picked commits.
+	if releaseLevelValue(opts.ReleaseLevel) == 0 {
+		return nil, fmt.Errorf("unknown release level %q (want GA, RC, BETA, ALPHA or EXPERIMENTAL)", opts.ReleaseLevel)
 	}
 	stdout, err := s.runBlocksCLI("blocks publish", blocksPublishArgs(opts)...)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return string(stdout), nil
+	out := &BlockPublishResult{Raw: string(stdout)}
+	// A decode failure is not fatal: the operation already ran, and Raw still
+	// holds whatever the CLI said.
+	_ = json.Unmarshal(stdout, out)
+	out.Raw = string(stdout)
+	if out.Error != "" {
+		return out, fmt.Errorf("blocks publish: %s", out.Error)
+	}
+	return out, nil
 }
 
 // BlockAccount is an account eligible to own a published block.
@@ -450,18 +513,18 @@ func (s *ProductService) ListBlockAccounts() ([]BlockAccount, error) {
 	return v.Accounts, nil
 }
 
-// BlockVersionInfo is one published version of a block.
-type BlockVersionInfo struct {
-	Name         string `json:"name"`
-	Version      string `json:"version"`
-	ReleaseLevel string `json:"releaseLevel"`
-	CreateTime   string `json:"createTime"`
-}
-
-// ListBlockVersionsCLI lists a block's versions, newest first.
-func (s *ProductService) ListBlockVersionsCLI(blockID string) ([]BlockVersionInfo, error) {
+// ListCodeblockVersions lists a block's versions, newest first, via
+// `alis blocks versions <block-id> --json`.
+//
+// The CLI reports the identity of each version but not its body: ReleaseNotes
+// and Files stay empty here and come from GetCodeblockVersion, which is still
+// the Console path because the CLI has no per-version read.
+func (s *ProductService) ListCodeblockVersions(blockID string) ([]CodeblockVersion, error) {
 	if !s.blocksCLIAvailable() {
 		return nil, fmt.Errorf("alis CLI not available")
+	}
+	if blockID == "" {
+		return nil, fmt.Errorf("blockId is required")
 	}
 	stdout, err := s.runBlocksCLI("blocks versions", "blocks", "versions", blockID, "--json")
 	if err != nil {
@@ -471,9 +534,14 @@ func (s *ProductService) ListBlockVersionsCLI(blockID string) ([]BlockVersionInf
 	if err := json.Unmarshal(stdout, &v); err != nil {
 		return nil, fmt.Errorf("parse blocks versions: %w", err)
 	}
-	out := make([]BlockVersionInfo, 0, len(v.Versions))
+	out := make([]CodeblockVersion, 0, len(v.Versions))
 	for _, ver := range v.Versions {
-		out = append(out, BlockVersionInfo(ver))
+		out = append(out, CodeblockVersion{
+			Name:         ver.Name,
+			VersionTag:   ver.Version,
+			ReleaseLevel: releaseLevelValue(ver.ReleaseLevel),
+			CreateTime:   ver.CreateTime,
+		})
 	}
 	return out, nil
 }

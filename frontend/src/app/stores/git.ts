@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { Events } from "@wailsio/runtime";
 import * as GitService from "../../../bindings/alis-hub-v3/gitservice";
+import * as PRService from "../../../bindings/alis-hub-v3/prservice";
 import type {
   GitBranch,
   GitCommit,
   GitFileDiff,
   GitStatus,
   ForgejoPR,
+  PRRepoInfo,
 } from "../components/git/types";
 import { useLabs } from "./labs";
 import { useSuggestions } from "./suggestions";
@@ -127,13 +129,30 @@ interface GitStoreState {
   undoing: boolean;
   undoError: string;
   // Forgejo / PRs
-  buildIsForgejo: boolean;
-  defineIsForgejo: boolean;
+  //
+  // Keyed on organisation and product rather than on a repo path: the remote and
+  // the token both come from the alis CLI now, so none of this needs a clone.
+  prOrg: string;
+  prProduct: string;
   prRepo: PrRepo;
+  // null while unknown. Re-probed on every visit rather than latched, so a repo
+  // that was not ready a moment ago is not written off for the session.
+  prsAvailable: boolean | null;
+  prRepoInfo: PRRepoInfo | null;
+  prUser: string;
   prs: ForgejoPR[];
+  prTotal: number;
+  prTruncated: boolean;
+  // Filters apply to the loaded list rather than the query: every page is already
+  // fetched, so narrowing is instant and needs no round trip. "" means no filter.
+  prAuthorFilter: string;
+  prAssigneeFilter: string;
   loadingPRs: boolean;
+  prError: GitSyncResult | null;
   creatingPR: boolean;
+  createPRError: string;
   mergingPR: boolean;
+  settingReady: boolean;
   selectedPR: ForgejoPR | null;
   showCreatePR: boolean;
 }
@@ -158,13 +177,23 @@ export const useGitStore = create<GitStoreState>(() => ({
   undoPending: false,
   undoing: false,
   undoError: "",
-  buildIsForgejo: false,
-  defineIsForgejo: false,
+  prOrg: "",
+  prProduct: "",
   prRepo: "build",
+  prsAvailable: null,
+  prRepoInfo: null,
+  prUser: "",
   prs: [],
+  prTotal: 0,
+  prTruncated: false,
+  prAuthorFilter: "",
+  prAssigneeFilter: "",
   loadingPRs: false,
+  prError: null,
   creatingPR: false,
+  createPRError: "",
   mergingPR: false,
+  settingReady: false,
   selectedPR: null,
   showCreatePR: false,
 }));
@@ -584,22 +613,26 @@ async function loadPaths(organisation: string, product: string): Promise<void> {
         activeGraphRepoPath: "",
         graphSelectedHash: null,
         undoError: "",
-        buildIsForgejo: false,
-        defineIsForgejo: false,
+        // PR state belongs to the product, so it resets with it. Availability
+        // goes back to unknown rather than false: the tab re-probes when opened.
+        prOrg: organisation,
+        prProduct: product,
+        prsAvailable: null,
+        prRepoInfo: null,
+        prUser: "",
         prs: [],
+        prTotal: 0,
+        prTruncated: false,
+        prAuthorFilter: "",
+        prAssigneeFilter: "",
+        prError: null,
+        createPRError: "",
         selectedPR: null,
         showCreatePR: false,
       });
-      if (paths.buildDir) {
-        GitService.IsForgejo(paths.buildDir)
-          .then((r) => useGitStore.setState({ buildIsForgejo: r ?? false }))
-          .catch(() => useGitStore.setState({ buildIsForgejo: false }));
-      }
-      if (paths.defineDir) {
-        GitService.IsForgejo(paths.defineDir)
-          .then((r) => useGitStore.setState({ defineIsForgejo: r ?? false }))
-          .catch(() => useGitStore.setState({ defineIsForgejo: false }));
-      }
+      // Drop the cached remote so a re-pointed repo is not served from cache.
+      void PRService.InvalidateProduct(organisation, product).catch(() => {});
+      if (useGitStore.getState().activeTab === "prs") void openPRTab();
     }
   } catch {
     // keep previous paths on failure
@@ -672,67 +705,199 @@ function selectGraphCommit(hash: string): void {
 
 function setActiveTab(tab: GitTab): void {
   useGitStore.setState({ activeTab: tab });
-  if (tab === "prs") {
-    useGitStore.setState({ prs: [], selectedPR: null, showCreatePR: false });
-    void fetchPRs();
-  }
+  if (tab === "prs") void openPRTab();
 }
 
 function setPrRepo(prRepo: PrRepo): void {
   useGitStore.setState({ prRepo });
-  if (useGitStore.getState().activeTab === "prs") {
-    useGitStore.setState({ prs: [], selectedPR: null, showCreatePR: false });
-    void fetchPRs();
+  if (useGitStore.getState().activeTab === "prs") void openPRTab();
+}
+
+/**
+ * Turns a rejected PR call into the shape GitOperationBanner renders, so the PR
+ * tab gets the same retry and sign-in affordances as push and pull instead of
+ * failing silently. The backend formats API failures as "forgejo <status>: …",
+ * which is what the status match reads.
+ */
+function toPRBanner(e: unknown): GitSyncResult {
+  const message = String((e as Error)?.message ?? e ?? "").replace(/^Error:\s*/, "");
+  const status = Number(/forgejo (\d{3}):/.exec(message)?.[1] ?? 0);
+  // Either side can mean "sign in again": Forgejo rejects a dead token with 401,
+  // and the CLI refuses to mint one when the alis session itself has gone.
+  if (status === 401 || status === 403 || /not authenticated|alis login/i.test(message)) {
+    return { kind: "auth_error", message };
   }
+  if (
+    status === 0 &&
+    /timeout|deadline|connection refused|network|EOF|no such host/i.test(message)
+  ) {
+    return { kind: "network_error", message };
+  }
+  return { kind: "other_error", message };
 }
 
-function prRepoPath(): string {
-  const s = useGitStore.getState();
-  return s.prRepo === "build" ? s.buildPath : s.definePath;
+/** prTarget is the (org, product, repo) triple the PR calls are keyed on. */
+function prTarget(): { org: string; product: string; repo: PrRepo } | null {
+  const { prOrg, prProduct, prRepo } = useGitStore.getState();
+  if (!prOrg || !prProduct) return null;
+  return { org: prOrg, product: prProduct, repo: prRepo };
 }
 
-async function fetchPRs(path?: string): Promise<void> {
-  const repoPath = path ?? prRepoPath();
-  if (!repoPath) return;
+/**
+ * Loads everything the PR tab needs: whether the repo has pull requests at all,
+ * its merge settings and default branch, the signed-in identity, and the list.
+ */
+async function openPRTab(): Promise<void> {
+  useGitStore.setState({
+    prs: [],
+    prTotal: 0,
+    prTruncated: false,
+    selectedPR: null,
+    showCreatePR: false,
+    prError: null,
+    createPRError: "",
+  });
+
+  const t = prTarget();
+  if (!t) return;
+
   useGitStore.setState({ loadingPRs: true });
   try {
-    const result = await GitService.ListPRs(repoPath, "open");
-    useGitStore.setState({ prs: (result as unknown as ForgejoPR[]) ?? [] });
-  } catch {
-    // ignore
+    const available = await PRService.PRsAvailable(t.org, t.product, t.repo);
+    useGitStore.setState({ prsAvailable: available ?? false });
+    if (!available) return;
+  } catch (e) {
+    useGitStore.setState({ prsAvailable: false, prError: toPRBanner(e) });
+    return;
+  } finally {
+    useGitStore.setState({ loadingPRs: false });
+  }
+
+  // Repo settings and identity are only needed to render, so a failure here
+  // must not take the list down with it.
+  void PRService.RepoInfo(t.org, t.product, t.repo)
+    .then((info) => useGitStore.setState({ prRepoInfo: info ?? null }))
+    .catch(() => {});
+  void PRService.CurrentUser(t.org, t.product, t.repo)
+    .then((user) => useGitStore.setState({ prUser: user?.login ?? "" }))
+    .catch(() => {});
+
+  await fetchPRs();
+}
+
+async function fetchPRs(): Promise<void> {
+  const t = prTarget();
+  if (!t) return;
+  useGitStore.setState({ loadingPRs: true, prError: null });
+  try {
+    const result = await PRService.ListPRs(t.org, t.product, t.repo, "open");
+    useGitStore.setState({
+      prs: result?.prs ?? [],
+      prTotal: result?.total ?? 0,
+      prTruncated: result?.truncated ?? false,
+    });
+  } catch (e) {
+    useGitStore.setState({ prs: [], prError: toPRBanner(e) });
   } finally {
     useGitStore.setState({ loadingPRs: false });
   }
 }
 
+/**
+ * Selects a PR and refetches it. The list's view of mergeability and counts is
+ * a snapshot from whenever the list was loaded, so acting on it (the merge
+ * button in particular) means acting on possibly stale state.
+ */
+function selectPR(pr: ForgejoPR): void {
+  useGitStore.setState({ selectedPR: pr, showCreatePR: false, prError: null });
+  const t = prTarget();
+  if (!t) return;
+  void PRService.GetPR(t.org, t.product, t.repo, pr.number)
+    .then((fresh) => {
+      if (!fresh) return;
+      const current = useGitStore.getState().selectedPR;
+      if (current?.number !== pr.number) return; // selection moved on
+      useGitStore.setState({ selectedPR: fresh });
+    })
+    .catch(() => {
+      // Keep the list's version: it is stale, not wrong, and the detail view is
+      // still usable.
+    });
+}
+
 async function createPR(title: string, body: string, head: string, base: string): Promise<void> {
-  const repoPath = prRepoPath();
-  if (!repoPath) return;
-  useGitStore.setState({ creatingPR: true });
+  const t = prTarget();
+  if (!t) return;
+  useGitStore.setState({ creatingPR: true, createPRError: "" });
   try {
-    await GitService.CreatePR(repoPath, title, body, head, base);
+    const created = await PRService.CreatePR(t.org, t.product, t.repo, title, body, head, base);
     useGitStore.setState({ showCreatePR: false });
     await fetchPRs();
-  } catch {
-    // ignore
+    // Land on the new PR rather than making the user find it in the list.
+    if (created) selectPR(created);
+  } catch (e) {
+    useGitStore.setState({ createPRError: toPRBanner(e).message });
   } finally {
     useGitStore.setState({ creatingPR: false });
   }
 }
 
-async function mergePR(number: number, style: "merge" | "rebase" | "squash"): Promise<void> {
-  const repoPath = prRepoPath();
-  if (!repoPath) return;
-  useGitStore.setState({ mergingPR: true });
+async function mergePR(
+  number: number,
+  style: "merge" | "rebase" | "squash",
+  deleteBranch = false,
+): Promise<void> {
+  const t = prTarget();
+  if (!t) return;
+  useGitStore.setState({ mergingPR: true, prError: null });
   try {
-    await GitService.MergePR(repoPath, number, style);
+    await PRService.MergePR(t.org, t.product, t.repo, number, style, deleteBranch);
     useGitStore.setState({ selectedPR: null });
     await fetchPRs();
-  } catch {
-    // ignore
+    // The merge changed the remote, so local ahead/behind and the branch list
+    // are now stale for whichever repo this was.
+    const repoPath = useGitStore.getState()[t.repo === "build" ? "buildPath" : "definePath"];
+    if (repoPath && useGitStore.getState().repos[repoPath]) void refreshRepo(repoPath);
+  } catch (e) {
+    useGitStore.setState({ prError: toPRBanner(e) });
+    // Refetch so the footer reflects why it failed rather than what the list
+    // believed before the attempt.
+    void PRService.GetPR(t.org, t.product, t.repo, number)
+      .then((fresh) => fresh && useGitStore.setState({ selectedPR: fresh }))
+      .catch(() => {});
   } finally {
     useGitStore.setState({ mergingPR: false });
   }
+}
+
+/** Takes a draft out of draft by stripping its WIP title marker. */
+async function setPRReady(number: number): Promise<void> {
+  const t = prTarget();
+  if (!t) return;
+  useGitStore.setState({ settingReady: true, prError: null });
+  try {
+    const updated = await PRService.SetPRReady(t.org, t.product, t.repo, number);
+    if (updated) useGitStore.setState({ selectedPR: updated });
+    await fetchPRs();
+  } catch (e) {
+    useGitStore.setState({ prError: toPRBanner(e) });
+  } finally {
+    useGitStore.setState({ settingReady: false });
+  }
+}
+
+function dismissPRError(): void {
+  useGitStore.setState({ prError: null });
+}
+
+/** Narrows the list to one author. "" clears the filter. */
+function setPRAuthorFilter(prAuthorFilter: string): void {
+  useGitStore.setState({ prAuthorFilter });
+}
+
+/** Narrows the list to one assignee, or to unassigned via UNASSIGNED. */
+function setPRAssigneeFilter(prAssigneeFilter: string): void {
+  useGitStore.setState({ prAssigneeFilter });
 }
 
 async function confirmUndo(): Promise<void> {
@@ -788,9 +953,15 @@ export const gitActions = {
   selectGraphCommit,
   setActiveTab,
   setPrRepo,
+  openPRTab,
   fetchPRs,
+  selectPR,
   createPR,
   mergePR,
+  setPRReady,
+  dismissPRError,
+  setPRAuthorFilter,
+  setPRAssigneeFilter,
   confirmUndo,
 };
 

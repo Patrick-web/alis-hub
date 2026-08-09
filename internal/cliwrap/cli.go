@@ -200,6 +200,22 @@ func (r *Runner) Run(ctx context.Context, args ...string) (*Result, error) {
 // reference, `environment branches` with no reference, `blocks list` with no
 // package id). An empty dir inherits the process's cwd.
 func (r *Runner) RunIn(ctx context.Context, dir string, args ...string) (*Result, error) {
+	return r.run(ctx, dir, nil, args...)
+}
+
+// RunWithStdin is Run with bytes fed to the command's stdin, for the commands
+// that read a request from it rather than from arguments. `git credential get`
+// is the only one so far: it speaks git's credential protocol, a block of
+// key=value lines terminated by a blank line.
+//
+// Its stdout is not JSON, so the caller reads Result.Stdout as raw bytes. The
+// exit code mapping still applies, which is the point of routing this through
+// the Runner instead of exec'ing directly: exit 4 becomes ErrUnauthenticated.
+func (r *Runner) RunWithStdin(ctx context.Context, stdin []byte, args ...string) (*Result, error) {
+	return r.run(ctx, r.Dir, stdin, args...)
+}
+
+func (r *Runner) run(ctx context.Context, dir string, stdin []byte, args ...string) (*Result, error) {
 	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, DefaultTimeout)
@@ -208,6 +224,9 @@ func (r *Runner) RunIn(ctx context.Context, dir string, args ...string) (*Result
 
 	cmd := exec.CommandContext(ctx, r.AlisPath, args...)
 	cmd.Dir = dir
+	if stdin != nil {
+		cmd.Stdin = bytes.NewReader(stdin)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

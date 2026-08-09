@@ -932,62 +932,6 @@ func (s *ProductService) GetBlockCommits(instanceName, repoType string, limit in
 	return commits, nil
 }
 
-// ContributeBlockFromCommits publishes a new block version using define and build commit SHAs.
-// This is the production path that matches the VSCode extension's worktree-based flow.
-func (s *ProductService) ContributeBlockFromCommits(instanceName, defineCommitSha, buildCommitSha string, releaseLevel int32, releaseNotes string) (string, error) {
-	if err := s.initTokens(); err != nil {
-		return "", err
-	}
-
-	// Derive blockId from instanceName: "blocks/{blockId}/instances/{instanceId}"
-	parts := strings.Split(instanceName, "/")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("ContributeBlockFromCommits: unexpected instance name: %s", instanceName)
-	}
-	blockID := parts[1]
-
-	bv := &blocksv1pb.BlockVersion{
-		ReleaseNotes: releaseNotes,
-		ReleaseLevel: blocksv1pb.BlockVersion_ReleaseLevel(releaseLevel),
-	}
-	if defineCommitSha != "" {
-		bv.DefineSource = &blocksv1pb.BlockVersion_Source{Instance: instanceName, CommitSha: defineCommitSha}
-	}
-	if buildCommitSha != "" {
-		bv.BuildSource = &blocksv1pb.BlockVersion_Source{Instance: instanceName, CommitSha: buildCommitSha}
-	}
-
-	req := &blocksv1pb.CreateBlockVersionRequest{Parent: "blocks/" + blockID, BlockVersion: bv}
-	buf, err := proto.Marshal(req)
-	if err != nil {
-		return "", fmt.Errorf("ContributeBlockFromCommits: marshal request: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/CreateBlockVersion", buf)
-	if err != nil {
-		return "", fmt.Errorf("ContributeBlockFromCommits: %w", err)
-	}
-	if grpcStatus != 0 {
-		return "", fmt.Errorf("ContributeBlockFromCommits: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return "", fmt.Errorf("ContributeBlockFromCommits: response too short (%d bytes)", len(body))
-	}
-	op := &longrunningpb.Operation{}
-	if err := proto.Unmarshal(body[5:], op); err != nil {
-		return "", fmt.Errorf("ContributeBlockFromCommits: unmarshal response: %w", err)
-	}
-	if op.GetName() == "" {
-		return "", fmt.Errorf("ContributeBlockFromCommits: empty operation name in response")
-	}
-	if _, err := s.pollOperation(ctx, "alis.bl.blocks.v1.BlocksService/GetOperation", op.GetName()); err != nil {
-		return "", fmt.Errorf("ContributeBlockFromCommits: operation failed: %w", err)
-	}
-	return "blocks/" + blockID, nil
-}
-
 // OpenWorktreeInFinder opens the given directory in the system file manager.
 func (s *ProductService) OpenWorktreeInFinder(path string) error {
 	var cmd *exec.Cmd

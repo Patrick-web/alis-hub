@@ -8,3 +8,5 @@ build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
 
 # Proto reverse-engineering scratch (raw JS bundle + extraction scripts); ./protos is the deliverable
 .proto-extraction/
+
+frontend/tsconfig.tsbuildinfo

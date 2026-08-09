@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -173,6 +174,72 @@ func TestBlocksPublishArgs(t *testing.T) {
 	}
 	if !hasFlagValue(got, "--build-commit", "abc") || !hasFlagValue(got, "--define-commit", "def") {
 		t.Errorf("commit pins not passed: %v", got)
+	}
+}
+
+// TestCliPackageID covers both forms callers hold: ServiceBlocksPage builds the
+// bare dotted id itself, while the Console-derived pages carry the resource
+// name. Only the bare form is a valid positional argument.
+func TestCliPackageID(t *testing.T) {
+	cases := map[string]string{
+		"packages/voyage.zz.dummy.v1": "voyage.zz.dummy.v1",
+		"voyage.zz.dummy.v1":          "voyage.zz.dummy.v1",
+		"":                            "",
+	}
+	for in, want := range cases {
+		if got := cliPackageID(in); got != want {
+			t.Errorf("cliPackageID(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestReleaseLevelRoundTrip pins the numeric BlockVersion_ReleaseLevel against
+// the string vocabulary the CLI uses. These are not the Block_ReleaseLevel
+// numbers, which name the same levels 1..5.
+func TestReleaseLevelRoundTrip(t *testing.T) {
+	want := map[int32]string{3: "EXPERIMENTAL", 6: "ALPHA", 9: "BETA", 12: "RC", 99: "GA"}
+	for level, code := range want {
+		got, err := releaseLevelCode(level)
+		if err != nil || got != code {
+			t.Errorf("releaseLevelCode(%d) = %q, %v; want %q", level, got, err, code)
+		}
+		if back := releaseLevelValue(code); back != level {
+			t.Errorf("releaseLevelValue(%q) = %d, want %d", code, back, level)
+		}
+	}
+
+	// UNSPECIFIED is a real enum member but never a valid --release-level.
+	if _, err := releaseLevelCode(0); err == nil {
+		t.Error("expected release level 0 to be rejected")
+	}
+	if _, err := releaseLevelCode(7); err == nil {
+		t.Error("expected an unknown release level to be rejected")
+	}
+	// An unrecognised code degrades to 0, which the UI shows as "Not Specified"
+	// rather than mislabelling the version.
+	if got := releaseLevelValue("PREVIEW"); got != 0 {
+		t.Errorf("releaseLevelValue(\"PREVIEW\") = %d, want 0", got)
+	}
+}
+
+// TestBlocksArgsStripPackagePrefix guards the three builders that take a
+// package positionally: passing the resource name through would make the CLI
+// reject the command.
+func TestBlocksArgsStripPackagePrefix(t *testing.T) {
+	const pkg = "packages/voyage.zz.dummy.v1"
+	const bare = "voyage.zz.dummy.v1"
+
+	install := blocksInstallArgs(BlockInstallOptions{BlockID: "b", Package: pkg})
+	create := blocksCreateArgs(BlockCreateOptions{BlockID: "b", Package: pkg, Account: "accounts/a", DisplayName: "B"})
+	publish := blocksPublishArgs(BlockPublishOptions{BlockID: "b", Package: pkg, ReleaseLevel: "GA", Notes: "n"})
+
+	for name, args := range map[string][]string{"install": install, "create": create, "publish": publish} {
+		if !slices.Contains(args, bare) {
+			t.Errorf("%s: bare package id missing: %v", name, args)
+		}
+		if slices.Contains(args, pkg) {
+			t.Errorf("%s: resource prefix leaked through: %v", name, args)
+		}
 	}
 }
 

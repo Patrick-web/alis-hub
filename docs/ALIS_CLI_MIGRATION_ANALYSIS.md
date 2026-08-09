@@ -50,12 +50,27 @@ so a dropped stream degrades to the previous behaviour instead of breaking.
 
 `ListServiceBlocks`, `InstallBlockCLI`, `UpgradeBlockInstanceCLI`,
 `UninstallBlockInstanceCLI`, `MergeBlockInstanceCLI`, `CreateBlockCLI`,
-`PublishBlockCLI`, `ListBlockAccounts`, `ListBlockVersionsCLI`.
+`PublishBlockCLI`, `ListBlockAccounts`, `ListCodeblockVersions`.
 
 The CLI reaches things the Console path never exposed: instance addressing for
 multi-install services, per-install state (`installedVersion`, `state`,
 `buildFolder`, `gitBranch`, `upgradeAvailable`), the `agenticInstallOnly` and
 `deprecated` catalog flags, publishable accounts, and `blocks publish`.
+
+Three Console methods were replaced outright rather than shadowed, and their
+gRPC-web implementations are gone:
+
+| Removed | Replaced by | Note |
+|---|---|---|
+| `ContributeBlockFromCommits` | `PublishBlockCLI` | Adds `--instance`, so a block installed into one service twice can now be published unambiguously. Release notes are required by the CLI where the Console path allowed them to be empty. |
+| `BootstrapBlock` | `CreateBlockCLI` | Costs the per-file cherry-pick: `blocks create` takes the service's whole build folder and its define protos server-side, so the create page's Files tab is gone. Gains an explicit `--account` (the Console path took the first key of a Go map, so a multi-account user got an arbitrary owner) and the real approval gate. |
+| `ListCodeblockVersions` (gRPC-web) | `ListCodeblockVersions` (`blocks versions`) | Same name and return type. The CLI reports each version's identity but not its body, so `ReleaseNotes` and `Files` are empty and `CodeblockUpdatePage` reads them via `GetCodeblockVersion` instead. |
+
+Release levels cross a vocabulary boundary here. The CLI speaks the enum's
+string form on both sides while the Console path and the frontend carry the
+number, so `releaseLevelCode` / `releaseLevelValue` convert between them. Note
+these are `BlockVersion_ReleaseLevel` (3/6/9/12/99), not `Block_ReleaseLevel`,
+which numbers the same five names 1..5.
 
 ### Environments
 
@@ -85,14 +100,19 @@ send-message / send-session, CLI self-upgrade, and `alis docs`.
 | Ask | `/ask` | multi-turn Q&A with clickable SKILL citations |
 | Diagnostics | `/diagnostics` | `alis doctor`, incl. automation tier and safe-mode allowlist |
 | Service blocks | `/services/:neuronId/blocks` | per-service installs with instance refs, `upgradeAvailable`, `gitBranch`, and `agenticInstallOnly`/`deprecated` gating |
+| Block contribute | `/codeblocks/:id/contribute` | publishes from a named instance, so a block installed twice into one service is no longer ambiguous; instance cards show `buildFolder` and the `block/*` branch |
+| Block create | `/codeblocks/create` | explicit publishing account from `blocks accounts`, and the approval gate the destructive tier requires |
 | Environments | `/environments` | deploy-branch designation, `canUpdate` permission gating, gated variable deletion |
 | Define / Build panes | Develop | live `dbd:progress`; retag for infra-only builds |
 | Deploy pane | Develop | production gate handling, live progress |
 
-20 of the 56 new methods have a UI call site. The remaining 36 are reachable
+24 of the 56 new methods have a UI call site. The remaining 32 are reachable
 from Go and covered by tests, but have no screen yet — mostly skill authoring
-(create/edit/publish/share/delete), support, accounts selection, and resource
-creation.
+(create/edit/publish/share/delete), support, and resource creation.
+
+Pages that call a CLI-only method probe `CLIAvailable()` on mount and render a
+setup prompt when it is false, rather than letting the user fill in a form and
+fail on submit.
 
 ### Approval gates in the UI
 
@@ -152,6 +172,10 @@ previewing a deploy and applying it.
 | Codeblock docs, members, IAM | No CLI subcommand | Stays on the Console API |
 | Block install returning worktree paths | The CLI merges into main instead | `DoInstallBlock` keeps the Console path; see below |
 | "which services have this block?" | `blocks list` is per-service, not per-block | `ListCodeblockInstances` stays on the Console API — the two work on different axes and are not interchangeable |
+| Block catalog browse and metadata | No `blocks get`; `blocks list` reports only id, name, tagline, release level, latest version, install count and the two gating flags | `ListCodeblocks`, `ListMyCodeblocks` and `GetCodeblock` stay on the Console API — publisher, headline, description, banner, highlights, key features and code architecture are never emitted by the CLI |
+| A single version's content | No `blocks versions <id> <version>` | `GetCodeblockVersion` stays on the Console API and is what supplies release notes and the file tree |
+| Block delete and metadata edit | No `blocks delete` / `blocks update`; display name and tagline are settable only at `blocks create` | `DeleteCodeblock` and `UpdateCodeblock` stay on the Console API |
+| Contribute by uploading files directly | `blocks publish` only publishes commits already pushed to the block's branch | `ContributeBlock` and `CodeblockUpdatePage` stay on the Console API |
 
 Conversely, the gRPC fallback refuses CLI-only options (`branch`,
 `confirmNoPaths`, `allowBranchMismatch`, `confirmProduction`, `planOnly` with

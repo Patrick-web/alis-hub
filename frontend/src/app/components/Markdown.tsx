@@ -1,19 +1,105 @@
 import { useMemo } from "react";
-import { marked } from "marked";
+import { Marked, marked } from "marked";
+
+function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * safeUrl passes through the schemes a link in a comment can legitimately use,
+ * and rejects everything else. Relative and anchor targets are kept.
+ *
+ * `javascript:` is the reason this exists: marked does not filter it, so
+ * `[click](javascript:…)` in a comment would otherwise become a working link that
+ * runs in the webview when clicked.
+ */
+function safeUrl(href: string | null | undefined, allowDataImage = false): string | null {
+  if (!href) return null;
+  const trimmed = href.trim();
+  // Only printable ASCII is kept for scheme detection, so whitespace, control
+  // characters and unicode lookalikes cannot hide the scheme: a browser reads
+  // "java\tscript:alert(1)" as javascript:, while a naive prefix check does not.
+  // Only `bare` is inspected; the value returned is always the original.
+  const bare = trimmed.replace(/[^!-~]/g, "");
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(bare)?.[1]?.toLowerCase();
+  if (!scheme) return trimmed; // relative path, anchor, or query
+  if (scheme === "data") {
+    // Inline images are useful; data: documents are a script vector.
+    return allowDataImage && /^data:image\//i.test(bare) ? trimmed : null;
+  }
+  return ["http", "https", "mailto"].includes(scheme) ? trimmed : null;
+}
+
+/**
+ * Parser for markdown written by other people, which escapes embedded raw HTML
+ * instead of passing it through.
+ *
+ * This component's output goes to dangerouslySetInnerHTML inside the app's
+ * webview, and that webview holds the Wails bridge, so an `<img onerror=…>` in a
+ * pull request comment would run with access to every bound Go method. Forgejo
+ * sanitises this text before rendering it in its own UI; nothing sanitises it on
+ * the way to us. marked has no `sanitize` option any more, but overriding the
+ * html renderer covers raw HTML in both block and inline position, and fenced
+ * code goes through a different renderer so it is unaffected.
+ *
+ * A dedicated instance rather than global options, so trusted callers keep the
+ * default behaviour.
+ */
+const untrustedMarked = new Marked({
+  renderer: {
+    html({ text }) {
+      return escapeHtml(text);
+    },
+    link({ href, title, tokens }) {
+      const text = this.parser.parseInline(tokens);
+      const safe = safeUrl(href);
+      // Keep the words when the target is refused: dropping them would hide that
+      // the author wrote a link at all.
+      if (!safe) return text;
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+      return `<a href="${escapeHtml(safe)}"${titleAttr}>${text}</a>`;
+    },
+    image({ href, title, text }) {
+      const safe = safeUrl(href, true);
+      if (!safe) return escapeHtml(text);
+      const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+      return `<img src="${escapeHtml(safe)}" alt="${escapeHtml(text)}"${titleAttr}>`;
+    },
+  },
+});
 
 /**
  * Renders markdown with the app's own typography rather than the browser's.
  *
  * Platform text arrives as markdown from several sources: skill documents, Ask
- * answers, codeblock docs. Shown raw it reads as noise, with literal asterisks
- * and backticks around the very words the author meant to emphasise, so it is
- * parsed and styled to match the surrounding UI.
+ * answers, codeblock docs, pull request bodies and review comments. Shown raw it
+ * reads as noise, with literal asterisks and backticks around the very words the
+ * author meant to emphasise, so it is parsed and styled to match the surrounding
+ * UI.
  *
  * `compact` drops the heading sizes down for places where the markdown is a
  * short answer inside a larger page rather than a document in its own right.
+ *
+ * `untrusted` escapes embedded raw HTML. Set it for anything a person other than
+ * the platform wrote, which is every piece of text that arrives from Forgejo.
  */
-export function Markdown({ source, compact }: { source: string; compact?: boolean }) {
-  const html = useMemo(() => (source ? (marked.parse(source) as string) : ""), [source]);
+export function Markdown({
+  source,
+  compact,
+  untrusted,
+}: {
+  source: string;
+  compact?: boolean;
+  untrusted?: boolean;
+}) {
+  const html = useMemo(() => {
+    if (!source) return "";
+    return (untrusted ? untrustedMarked.parse(source) : marked.parse(source)) as string;
+  }, [source, untrusted]);
 
   if (!html) return null;
 

@@ -242,14 +242,6 @@ type NeuronFileContents struct {
 	ProtoFiles []CodeblockFileItem `json:"protoFiles"`
 }
 
-type BootstrapBlockParams struct {
-	BlockID     string              `json:"blockId"`
-	DisplayName string              `json:"displayName"`
-	Tagline     string              `json:"tagline"`
-	Package     string              `json:"package"` // e.g. "packages/myorg.myproduct.my-service.v1"
-	Files       []ScannedNeuronFile `json:"files"`
-}
-
 type ProductService struct {
 	tokens *ConsoleTokenSource
 	mu     sync.Mutex

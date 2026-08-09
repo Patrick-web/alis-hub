@@ -6,9 +6,11 @@ import { Button } from "../components/Button";
 import { Loader } from "../components/Loader";
 import { EmptyState } from "../components/EmptyState";
 import { FilterSelect } from "../components/FilterSelect";
+import { ApprovalGateDialog, useApprovalGate } from "../components/ApprovalGate";
 import * as ProductService from "../../../bindings/alis-hub-v3/productservice";
 import * as models from "../../../bindings/alis-hub-v3/models";
 import { useBlockPermission } from "../lib/useBlockPermission";
+import { notify } from "../lib/notify";
 
 interface Feature {
   title: string;
@@ -34,7 +36,7 @@ interface InstallNeuron {
   package: string;
 }
 
-type Tab = "overview" | "features" | "architecture" | "files";
+type Tab = "overview" | "features" | "architecture";
 
 const BLOCK_ID_REGEX = /^[a-z0-9]{2,20}$/;
 
@@ -49,10 +51,9 @@ const TAB_LABEL: Record<Tab, string> = {
   overview: "Overview",
   features: "Features",
   architecture: "Architecture",
-  files: "Files",
 };
 
-const CATEGORY_LABEL: Record<string, string> = { build: "Build", infra: "Infra", proto: "Proto" };
+const TABS: Tab[] = ["overview", "features", "architecture"];
 
 const labelClass = "text-[10px] font-bold uppercase text-foreground/40 mb-[2px]";
 const textareaClass =
@@ -99,10 +100,16 @@ export function CodeblockCreatePage() {
   const [neuronsLoading, setNeuronsLoading] = useState(false);
   const [selectedNeuron, setSelectedNeuron] = useState<InstallNeuron | null>(null);
 
-  // Scanned files state
-  const [scannedFiles, setScannedFiles] = useState<models.ScannedNeuronFile[]>([]);
-  const [scanLoading, setScanLoading] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
+  // Publishing account. `alis blocks create` requires one explicitly, which is
+  // an improvement on the Console path: that derived it from the first key of a
+  // Go map, so a user with several accounts got an arbitrary one.
+  const [accounts, setAccounts] = useState<models.BlockAccount[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState("");
+
+  // Create runs entirely through the CLI, so probe for it up front rather than
+  // letting the user fill in the whole form and fail on submit.
+  const [cliAvailable, setCliAvailable] = useState<boolean | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,9 +124,7 @@ export function CodeblockCreatePage() {
       : null;
   const blockIdInvalid = !isEditing && !BLOCK_ID_REGEX.test(blockId);
 
-  const tabs: Tab[] = isEditing
-    ? ["overview", "features", "architecture"]
-    : ["overview", "features", "architecture", "files"];
+  const tabs = TABS;
 
   // Pre-fill in edit mode
   useEffect(() => {
@@ -171,8 +176,6 @@ export function CodeblockCreatePage() {
     setSelectedProduct("");
     setSelectedNeuron(null);
     setNeurons([]);
-    setScannedFiles([]);
-    setScanError(null);
     setActiveTab("overview");
     setProductsLoading(true);
     const orgId = selectedOrg.replace("organisations/", "");
@@ -186,8 +189,6 @@ export function CodeblockCreatePage() {
   useEffect(() => {
     if (!selectedOrg || !selectedProduct) return;
     setSelectedNeuron(null);
-    setScannedFiles([]);
-    setScanError(null);
     setActiveTab("overview");
     setNeuronsLoading(true);
     const orgId = selectedOrg.replace("organisations/", "");
@@ -203,37 +204,32 @@ export function CodeblockCreatePage() {
       .finally(() => setNeuronsLoading(false));
   }, [selectedOrg, selectedProduct]);
 
-  // Scan files when neuron selected
+  // Load the publishable accounts (create mode only)
   useEffect(() => {
-    if (!selectedNeuron) return;
-    setScanLoading(true);
-    setScanError(null);
-    setScannedFiles([]);
-    (ProductService.ScanNeuronFiles as (pkg: string) => Promise<models.NeuronScanResult | null>)(
-      selectedNeuron.package,
-    )
-      .then((result) => {
-        if (!result) return;
-        if (result.error) {
-          setScanError(result.error);
-        } else {
-          setScannedFiles(result.files ?? []);
-          setActiveTab("files");
-        }
+    if (isEditing) return;
+    let cancelled = false;
+    setAccountsLoading(true);
+    ProductService.ListBlockAccounts()
+      .then((list) => {
+        if (cancelled) return;
+        const found = list ?? [];
+        setAccounts(found);
+        // One account is the common case, and picking it is not a decision.
+        if (found.length === 1) setSelectedAccount(found[0].name);
       })
-      .catch((e) => setScanError(String(e)))
-      .finally(() => setScanLoading(false));
-  }, [selectedNeuron]);
+      .catch((e) => !cancelled && setError(String(e)))
+      .finally(() => !cancelled && setAccountsLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditing]);
 
-  function toggleFile(idx: number) {
-    setScannedFiles((prev) =>
-      prev.map((f, i) => (i === idx ? { ...f, selected: !f.selected } : f)),
-    );
-  }
-
-  function selectAllFiles(selected: boolean) {
-    setScannedFiles((prev) => prev.map((f) => ({ ...f, selected })));
-  }
+  useEffect(() => {
+    if (isEditing) return;
+    ProductService.CLIAvailable()
+      .then(setCliAvailable)
+      .catch(() => setCliAvailable(false));
+  }, [isEditing]);
 
   function addHighlight(value: string) {
     const trimmed = value.trim();
@@ -272,6 +268,36 @@ export function CodeblockCreatePage() {
     });
   }
 
+  /**
+   * The overview, features and architecture tabs have no `blocks create` flag,
+   * so they are saved in a second call. They were dropped entirely before, since
+   * BootstrapBlock never carried them either — this at least keeps the input the
+   * form collects. A failure here is not fatal: the block already exists.
+   */
+  async function saveOverviewDetails(id: string) {
+    const hasDetails =
+      heroStatement.trim() ||
+      description.trim() ||
+      highlights.length > 0 ||
+      keyFeatures.some((f) => f.title || f.description) ||
+      codeArchitecture.some((l) => l.title || l.description);
+    if (!hasDetails) return;
+    try {
+      const params = buildUpdateParams();
+      await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
+    } catch (e) {
+      notify.error(`Created ${id}, but its overview details did not save: ${String(e)}`);
+    }
+  }
+
+  // `alis blocks create` is gated on the default automation tier, so exit 3 is
+  // the expected first response, not an edge case.
+  const gate = useApprovalGate(async () => {
+    await saveOverviewDetails(blockId);
+    notify.success(`Created ${blockId}`);
+    navigate(`/codeblocks/${blockId}`);
+  });
+
   async function handleSubmit() {
     setError(null);
     if (!isEditing && !BLOCK_ID_REGEX.test(blockId)) {
@@ -279,26 +305,30 @@ export function CodeblockCreatePage() {
       setError("Block ID must be 2–20 lowercase letters and numbers only (a-z, 0-9)");
       return;
     }
+
+    if (!isEditing) {
+      void gate.run(
+        (approval) =>
+          ProductService.CreateBlockCLI(
+            {
+              blockId,
+              package: selectedNeuron!.package,
+              account: selectedAccount,
+              displayName,
+              tagline,
+            },
+            approval,
+          ),
+        `Create code block ${blockId} from ${selectedNeuron!.package}`,
+      );
+      return;
+    }
+
     setLoading(true);
     try {
-      if (isEditing) {
-        const params = buildUpdateParams();
-        await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
-        navigate(`/codeblocks/${editId}`);
-      } else {
-        const bParams = models.BootstrapBlockParams.createFrom({
-          blockId,
-          displayName,
-          tagline,
-          package: selectedNeuron!.package,
-          files: scannedFiles,
-        });
-        const name = await (
-          ProductService.BootstrapBlock as (p: typeof bParams) => Promise<string>
-        )(bParams);
-        const id = name.replace("blocks/", "");
-        navigate(id ? `/codeblocks/${id}` : "/codeblocks");
-      }
+      const params = buildUpdateParams();
+      await (ProductService.UpdateCodeblock as (p: typeof params) => Promise<void>)(params);
+      navigate(`/codeblocks/${editId}`);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -314,20 +344,19 @@ export function CodeblockCreatePage() {
     }
   }
 
-  const selectedFileCount = scannedFiles.filter((f) => f.selected).length;
-  const bootstrapSubmitDisabled =
-    !isEditing && (!selectedNeuron || scanLoading || selectedFileCount === 0);
-  const submitDisabled = loading || initLoading || bootstrapSubmitDisabled || blockIdInvalid;
+  const busy = loading || gate.busy;
+  const createSubmitDisabled = !isEditing && (!selectedNeuron || !selectedAccount);
+  const submitDisabled = busy || initLoading || createSubmitDisabled || blockIdInvalid;
 
-  const submitLabel = loading
+  const submitLabel = busy
     ? isEditing
       ? "Saving..."
-      : "Bootstrapping..."
+      : "Creating..."
     : isEditing
       ? "Save Changes"
-      : "Bootstrap Block";
+      : "Create Block";
 
-  const submitIcon = loading
+  const submitIcon = busy
     ? "solar:spinner-linear"
     : isEditing
       ? "solar:pen-linear"
@@ -341,6 +370,19 @@ export function CodeblockCreatePage() {
           title="You don't have access to edit this block"
           description="Only contributors and admins can edit a block's metadata."
           action={{ label: "Back to Block", onClick: () => navigate(`/codeblocks/${editId}`) }}
+        />
+      </div>
+    );
+  }
+
+  if (!isEditing && cliAvailable === false) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <EmptyState
+          icon="solar:programming-linear"
+          title="Creating a block needs the alis CLI"
+          description="Install the alis CLI and sign in with `alis login`, then reopen this page."
+          action={{ label: "All Blocks", onClick: () => navigate("/codeblocks") }}
         />
       </div>
     );
@@ -421,23 +463,29 @@ export function CodeblockCreatePage() {
                       emptyLabel="No neurons"
                       options={neurons.map((n) => ({ value: n.name, label: n.displayName }))}
                     />
-                    {selectedNeuron && !scanLoading && !scanError && (
+                    {selectedNeuron && (
                       <p className="mt-[6px] text-[10px] font-mono text-foreground/30">
                         {selectedNeuron.package}
                       </p>
                     )}
-                    {scanLoading && (
-                      <div className="flex items-center gap-[6px] mt-[6px]">
-                        <Icon
-                          icon="solar:spinner-linear"
-                          className="text-[10px] text-foreground/40 animate-spin"
-                        />
-                        <span className="text-[10px] text-foreground/40">Scanning files…</span>
-                      </div>
-                    )}
-                    {scanError && (
-                      <p className="mt-[6px] text-[10px] text-destructive">{scanError}</p>
-                    )}
+                  </div>
+                  <div>
+                    <p className={labelClass}>Account</p>
+                    <FilterSelect
+                      size="sm"
+                      value={selectedAccount}
+                      onChange={setSelectedAccount}
+                      loading={accountsLoading}
+                      placeholder="Select account…"
+                      emptyLabel="No publishable accounts"
+                      options={accounts.map((a) => ({
+                        value: a.name,
+                        label: a.displayName || a.name.replace("accounts/", ""),
+                      }))}
+                    />
+                    <p className="text-[10px] text-foreground/30 mt-[6px]">
+                      The account that will own the published block.
+                    </p>
                   </div>
                 </div>
               )}
@@ -504,18 +552,18 @@ export function CodeblockCreatePage() {
 
         {/* Footer */}
         <div className="p-[10px] border-t border-border flex flex-col gap-[8px]">
-          {error && (
+          {(error || gate.error) && (
             <div className="text-[11px] text-destructive bg-[rgba(255,107,107,0.08)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[10px]">
-              {error}
+              {error || gate.error}
             </div>
           )}
-          <Button variant="secondary" className="w-full" onClick={handleCancel} disabled={loading}>
+          <Button variant="secondary" className="w-full" onClick={handleCancel} disabled={busy}>
             Cancel
           </Button>
           <Button
             variant="primary"
             className="w-full"
-            icon={<Icon icon={submitIcon} className={loading ? "animate-spin" : ""} />}
+            icon={<Icon icon={submitIcon} className={busy ? "animate-spin" : ""} />}
             onClick={handleSubmit}
             disabled={submitDisabled}
           >
@@ -537,11 +585,6 @@ export function CodeblockCreatePage() {
               }`}
             >
               {TAB_LABEL[t]}
-              {t === "files" && selectedFileCount > 0 && (
-                <span className="ml-[6px] text-[9px] bg-brand-fill/20 text-brand rounded-full px-[5px] py-[1px]">
-                  {selectedFileCount}
-                </span>
-              )}
               {activeTab === t && (
                 <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-fill" />
               )}
@@ -554,6 +597,28 @@ export function CodeblockCreatePage() {
           <div className="max-w-[800px] flex flex-col gap-[20px]">
             {activeTab === "overview" && (
               <>
+                {!isEditing && (
+                  <div className="border border-border rounded-[4px] p-[12px] flex gap-[10px]">
+                    <Icon
+                      icon="solar:info-circle-linear"
+                      className="text-foreground/30 shrink-0 mt-[1px]"
+                    />
+                    <div className="flex flex-col gap-[4px]">
+                      <p className="text-[11px] text-foreground/70">
+                        The block is created from the service's existing code.
+                      </p>
+                      <p className="text-[10px] text-foreground/40 leading-[1.5]">
+                        Its build folder (with <span className="font-mono">infra/</span> split out)
+                        and its define-folder protos become the first contributed content. Local
+                        environment files (<span className="font-mono">.alis</span>,{" "}
+                        <span className="font-mono">.env*</span>,{" "}
+                        <span className="font-mono">key.json</span>) and tooling folders are never
+                        uploaded.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <p className={labelClass}>Hero Statement</p>
                   <textarea
@@ -717,94 +782,11 @@ export function CodeblockCreatePage() {
               </>
             )}
 
-            {activeTab === "files" && (
-              <div className="flex flex-col gap-[16px]">
-                {!selectedNeuron ? (
-                  <p className="text-[12px] text-foreground/40">
-                    Select a neuron in the sidebar to scan its local files.
-                  </p>
-                ) : scanLoading ? (
-                  <div className="flex items-center gap-[10px] py-[20px]">
-                    <Loader />
-                    <span className="text-[12px] text-foreground/40">Scanning neuron files…</span>
-                  </div>
-                ) : scanError ? (
-                  <div className="text-[12px] text-destructive bg-[rgba(255,107,107,0.06)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[12px]">
-                    {scanError}
-                  </div>
-                ) : scannedFiles.length === 0 ? (
-                  <p className="text-[12px] text-foreground/40">No files found in this neuron.</p>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-[12px]">
-                      <button
-                        onClick={() => selectAllFiles(true)}
-                        className="text-[10px] font-bold uppercase text-foreground/50 hover:text-foreground/80 tracking-wider transition-colors"
-                      >
-                        Select All
-                      </button>
-                      <span className="text-foreground/20">·</span>
-                      <button
-                        onClick={() => selectAllFiles(false)}
-                        className="text-[10px] font-bold uppercase text-foreground/50 hover:text-foreground/80 tracking-wider transition-colors"
-                      >
-                        Deselect All
-                      </button>
-                      <span className="ml-auto text-[10px] text-foreground/30">
-                        {selectedFileCount} / {scannedFiles.length} selected
-                      </span>
-                    </div>
-
-                    {(Object.keys(CATEGORY_LABEL) as Array<keyof typeof CATEGORY_LABEL>).map(
-                      (cat) => {
-                        const catFiles = scannedFiles
-                          .map((f, idx) => ({ ...f, idx }))
-                          .filter((f) => f.category === cat);
-                        if (catFiles.length === 0) return null;
-                        return (
-                          <div key={cat}>
-                            <p className="text-[10px] font-bold uppercase text-foreground/40 mb-[8px] tracking-wider">
-                              {CATEGORY_LABEL[cat]}
-                            </p>
-                            <div className="border border-border rounded-[4px] overflow-hidden">
-                              {catFiles.map((file, i) => (
-                                <label
-                                  key={file.idx}
-                                  className={`flex items-center gap-[10px] px-[12px] py-[8px] cursor-pointer hover:bg-foreground/[3%] transition-colors ${
-                                    i > 0 ? "border-t border-border" : ""
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={file.selected}
-                                    onChange={() => toggleFile(file.idx)}
-                                    className="accent-brand shrink-0"
-                                  />
-                                  <Icon
-                                    icon="solar:file-code-linear"
-                                    className="text-foreground/30 shrink-0 text-sm"
-                                  />
-                                  <span
-                                    className={`text-[11px] font-mono truncate ${
-                                      file.selected ? "text-foreground/80" : "text-foreground/30"
-                                    }`}
-                                  >
-                                    {file.path}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      },
-                    )}
-                  </>
-                )}
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      <ApprovalGateDialog {...gate.dialogProps} />
     </div>
   );
 }

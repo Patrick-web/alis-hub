@@ -2,12 +2,8 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,8 +17,11 @@ import (
 )
 
 // GitService provides local git operations for the block merge flow.
+//
+// It holds no credentials. Git auth comes from the alis CLI's helper, injected
+// per command (see gitCredentialArgs), and the pull request API, which was the
+// last thing here to mint a token of its own, now lives in PRService.
 type GitService struct {
-	tokens          *ConsoleTokenSource
 	mu              sync.Mutex
 	app             *application.App
 	watcher         *fsnotify.Watcher
@@ -33,9 +32,7 @@ type GitService struct {
 
 func NewGitService() *GitService {
 	w, _ := fsnotify.NewWatcher()
-	tokens, _ := NewConsoleTokenSource() // nil if not logged in yet
 	svc := &GitService{
-		tokens:          tokens,
 		watcher:         w,
 		pathToRepo:      make(map[string]string),
 		debounceTimers:  make(map[string]*time.Timer),
@@ -224,6 +221,7 @@ func (g *GitService) gitCmdStream(dir string, args ...string) (string, error) {
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	hideWindow(cmd)
 
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
@@ -446,6 +444,7 @@ func (g *GitService) CompleteMerge(repoPath string) error {
 	cmd := exec.Command("git", "-c", "core.editor=true", "merge", "--continue")
 	cmd.Dir = repoPath
 	cmd.Env = append(os.Environ(), "GIT_EDITOR=true")
+	hideWindow(cmd)
 	out, err := cmd.CombinedOutput()
 	for _, line := range strings.Split(string(out), "\n") {
 		if line != "" {
@@ -492,6 +491,10 @@ func gitCmd(dir string, args ...string) (string, error) {
 	cmd := exec.Command(fullArgs[0], fullArgs[1:]...)
 	cmd.Dir = dir
 	cmd.Env = noPromptEnv()
+	// Without this, every git call flashes a console window on Windows. These run
+	// constantly in the background (status polling, the fs watcher's refreshes),
+	// so the flicker is continuous rather than occasional.
+	hideWindow(cmd)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -519,6 +522,7 @@ func (g *GitService) gitCmdAuth(dir string, args ...string) (string, error) {
 	cmd := exec.Command(authArgs[0], authArgs[1:]...)
 	cmd.Dir = dir
 	cmd.Env = noPromptEnv()
+	hideWindow(cmd)
 	out, cerr := cmd.CombinedOutput()
 	return string(out), cerr
 }
@@ -1033,6 +1037,7 @@ func (g *GitService) authedGitCmd(repoPath string, args ...string) *exec.Cmd {
 	cmd := exec.Command("git", cmdArgs...)
 	cmd.Dir = repoPath
 	cmd.Env = noPromptEnv()
+	hideWindow(cmd)
 	return cmd
 }
 
@@ -1103,413 +1108,6 @@ func (g *GitService) streamScm(cmd *exec.Cmd, repoPath string) (string, error) {
 	go func() { defer wg.Done(); forward(stderr) }()
 	wg.Wait()
 	return combined.String(), cmd.Wait()
-}
-
-// --- Forgejo Pull Request API ---
-
-// ForgejoPR represents a pull request on a Forgejo-hosted repository.
-type ForgejoPR struct {
-	Number     int    `json:"number"`
-	Title      string `json:"title"`
-	Body       string `json:"body"`
-	State      string `json:"state"`
-	HeadBranch string `json:"headBranch"`
-	BaseBranch string `json:"baseBranch"`
-	Author     string `json:"author"`
-	HTMLURL    string `json:"htmlUrl"`
-	CreatedAt  string `json:"createdAt"`
-	Mergeable  bool   `json:"mergeable"`
-}
-
-// parseForgejoRemote reads the origin remote URL and returns the Forgejo base URL,
-// owner, and repo name. Returns an error if the remote is not a Forgejo host.
-func (g *GitService) parseForgejoRemote(repoPath string) (baseURL, owner, repoName string, err error) {
-	out, err := gitCmd(repoPath, "git", "remote", "get-url", "origin")
-	if err != nil {
-		return "", "", "", fmt.Errorf("get remote url: %w", err)
-	}
-	u, err := url.Parse(strings.TrimSpace(out))
-	if err != nil {
-		return "", "", "", fmt.Errorf("parse remote url: %w", err)
-	}
-	if !forgejoHostRe.MatchString(u.Host) {
-		return "", "", "", fmt.Errorf("not a forgejo host: %s", u.Host)
-	}
-	parts := strings.SplitN(strings.Trim(u.Path, "/"), "/", 2)
-	if len(parts) != 2 {
-		return "", "", "", fmt.Errorf("unexpected path: %s", u.Path)
-	}
-	return u.Scheme + "://" + u.Host, parts[0], strings.TrimSuffix(parts[1], ".git"), nil
-}
-
-// forgejoAPI makes an authenticated request to the Forgejo REST API.
-func (g *GitService) forgejoAPI(baseURL, method, path string, body []byte) ([]byte, error) {
-	if g.tokens == nil {
-		var err error
-		g.tokens, err = NewConsoleTokenSource()
-		if err != nil {
-			return nil, fmt.Errorf("not logged in")
-		}
-	}
-	token, err := g.tokens.AccessToken()
-	if err != nil {
-		return nil, fmt.Errorf("get token: %w", err)
-	}
-	var reqBody io.Reader
-	if body != nil {
-		reqBody = bytes.NewReader(body)
-	}
-	req, err := http.NewRequest(method, baseURL+"/api/v1/"+path, reqBody)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("forgejo %s: %s", resp.Status, strings.TrimSpace(string(data)))
-	}
-	return data, nil
-}
-
-// parsePRResponse converts the Forgejo API response into a ForgejoPR.
-func parsePRResponse(raw struct {
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	Body   string `json:"body"`
-	State  string `json:"state"`
-	Head   struct {
-		Ref string `json:"ref"`
-	} `json:"head"`
-	Base struct {
-		Ref string `json:"ref"`
-	} `json:"base"`
-	User struct {
-		Login string `json:"login"`
-	} `json:"user"`
-	HTMLURL   string `json:"html_url"`
-	CreatedAt string `json:"created_at"`
-	Mergeable bool   `json:"mergeable"`
-}) ForgejoPR {
-	return ForgejoPR{
-		Number:     raw.Number,
-		Title:      raw.Title,
-		Body:       raw.Body,
-		State:      raw.State,
-		HeadBranch: raw.Head.Ref,
-		BaseBranch: raw.Base.Ref,
-		Author:     raw.User.Login,
-		HTMLURL:    raw.HTMLURL,
-		CreatedAt:  raw.CreatedAt,
-		Mergeable:  raw.Mergeable,
-	}
-}
-
-// IsForgejo returns true if the repo's origin remote is a Forgejo host.
-func (g *GitService) IsForgejo(repoPath string) (bool, error) {
-	_, _, _, err := g.parseForgejoRemote(repoPath)
-	return err == nil, nil
-}
-
-// PRCommit is a commit included in a pull request.
-type PRCommit struct {
-	SHA       string `json:"sha"`
-	Message   string `json:"message"`
-	Author    string `json:"author"`
-	Timestamp string `json:"timestamp"`
-}
-
-// PRComment is a conversation comment on a pull request.
-type PRComment struct {
-	ID        int    `json:"id"`
-	Body      string `json:"body"`
-	Author    string `json:"author"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
-}
-
-// ListPRs returns pull requests for the given repo. state is "open", "closed", or "all".
-func (g *GitService) ListPRs(repoPath, state string) ([]ForgejoPR, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	if state == "" {
-		state = "open"
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/pulls?state=%s&limit=50", owner, repo, state), nil)
-	if err != nil {
-		return nil, err
-	}
-	type rawPR struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
-		Body   string `json:"body"`
-		State  string `json:"state"`
-		Head   struct {
-			Ref string `json:"ref"`
-		} `json:"head"`
-		Base struct {
-			Ref string `json:"ref"`
-		} `json:"base"`
-		User struct {
-			Login string `json:"login"`
-		} `json:"user"`
-		HTMLURL   string `json:"html_url"`
-		CreatedAt string `json:"created_at"`
-		Mergeable bool   `json:"mergeable"`
-	}
-	var raws []rawPR
-	if err := json.Unmarshal(data, &raws); err != nil {
-		return nil, fmt.Errorf("parse prs: %w", err)
-	}
-	prs := make([]ForgejoPR, len(raws))
-	for i, r := range raws {
-		prs[i] = parsePRResponse(r)
-	}
-	return prs, nil
-}
-
-// CreatePR creates a new pull request. head and base are branch names.
-func (g *GitService) CreatePR(repoPath, title, body, head, base string) (*ForgejoPR, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(map[string]string{"title": title, "body": body, "head": head, "base": base})
-	if err != nil {
-		return nil, err
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodPost,
-		fmt.Sprintf("repos/%s/%s/pulls", owner, repo), payload)
-	if err != nil {
-		return nil, err
-	}
-	var raw struct {
-		Number int    `json:"number"`
-		Title  string `json:"title"`
-		Body   string `json:"body"`
-		State  string `json:"state"`
-		Head   struct {
-			Ref string `json:"ref"`
-		} `json:"head"`
-		Base struct {
-			Ref string `json:"ref"`
-		} `json:"base"`
-		User struct {
-			Login string `json:"login"`
-		} `json:"user"`
-		HTMLURL   string `json:"html_url"`
-		CreatedAt string `json:"created_at"`
-		Mergeable bool   `json:"mergeable"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse created pr: %w", err)
-	}
-	pr := parsePRResponse(raw)
-	return &pr, nil
-}
-
-// MergePR merges a pull request. mergeStyle is "merge", "rebase", or "squash".
-func (g *GitService) MergePR(repoPath string, number int, mergeStyle string) error {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return err
-	}
-	payload, err := json.Marshal(map[string]string{"Do": mergeStyle})
-	if err != nil {
-		return err
-	}
-	_, err = g.forgejoAPI(baseURL, http.MethodPost,
-		fmt.Sprintf("repos/%s/%s/pulls/%d/merge", owner, repo, number), payload)
-	return err
-}
-
-// GetPRCommits returns the list of commits included in a pull request.
-func (g *GitService) GetPRCommits(repoPath string, number int) ([]PRCommit, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/pulls/%d/commits?limit=50", owner, repo, number), nil)
-	if err != nil {
-		return nil, err
-	}
-	var raw []struct {
-		SHA    string `json:"sha"`
-		Commit struct {
-			Message string `json:"message"`
-			Author  struct {
-				Name string `json:"name"`
-				Date string `json:"date"`
-			} `json:"author"`
-		} `json:"commit"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse commits: %w", err)
-	}
-	commits := make([]PRCommit, len(raw))
-	for i, r := range raw {
-		msg := r.Commit.Message
-		if idx := strings.IndexByte(msg, '\n'); idx >= 0 {
-			msg = msg[:idx]
-		}
-		commits[i] = PRCommit{
-			SHA:       r.SHA,
-			Message:   msg,
-			Author:    r.Commit.Author.Name,
-			Timestamp: r.Commit.Author.Date,
-		}
-	}
-	return commits, nil
-}
-
-// GetPRComments returns the conversation comments on a pull request.
-func (g *GitService) GetPRComments(repoPath string, number int) ([]PRComment, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/issues/%d/comments?limit=50", owner, repo, number), nil)
-	if err != nil {
-		return nil, err
-	}
-	var raw []struct {
-		ID   int    `json:"id"`
-		Body string `json:"body"`
-		User struct {
-			Login string `json:"login"`
-		} `json:"user"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse comments: %w", err)
-	}
-	comments := make([]PRComment, len(raw))
-	for i, r := range raw {
-		comments[i] = PRComment{
-			ID:        r.ID,
-			Body:      r.Body,
-			Author:    r.User.Login,
-			CreatedAt: r.CreatedAt,
-			UpdatedAt: r.UpdatedAt,
-		}
-	}
-	return comments, nil
-}
-
-// AddPRComment posts a new comment on a pull request and returns the created comment.
-func (g *GitService) AddPRComment(repoPath string, number int, body string) (*PRComment, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(map[string]string{"body": body})
-	if err != nil {
-		return nil, err
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodPost,
-		fmt.Sprintf("repos/%s/%s/issues/%d/comments", owner, repo, number), payload)
-	if err != nil {
-		return nil, err
-	}
-	var raw struct {
-		ID   int    `json:"id"`
-		Body string `json:"body"`
-		User struct {
-			Login string `json:"login"`
-		} `json:"user"`
-		CreatedAt string `json:"created_at"`
-		UpdatedAt string `json:"updated_at"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse comment: %w", err)
-	}
-	return &PRComment{
-		ID:        raw.ID,
-		Body:      raw.Body,
-		Author:    raw.User.Login,
-		CreatedAt: raw.CreatedAt,
-		UpdatedAt: raw.UpdatedAt,
-	}, nil
-}
-
-// GetPRFiles returns the list of files changed in a pull request.
-func (g *GitService) GetPRFiles(repoPath string, number int) ([]CommitFile, error) {
-	baseURL, owner, repo, err := g.parseForgejoRemote(repoPath)
-	if err != nil {
-		return nil, err
-	}
-	data, err := g.forgejoAPI(baseURL, http.MethodGet,
-		fmt.Sprintf("repos/%s/%s/pulls/%d/files?limit=100", owner, repo, number), nil)
-	if err != nil {
-		return nil, err
-	}
-	var raw []struct {
-		Filename string `json:"filename"`
-		Status   string `json:"status"` // "added", "modified", "deleted", "renamed"
-		OldName  string `json:"previous_filename"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse files: %w", err)
-	}
-	// Map Forgejo status strings to single-letter status codes
-	statusMap := map[string]string{
-		"added": "A", "modified": "M", "deleted": "D", "renamed": "R",
-	}
-	files := make([]CommitFile, len(raw))
-	for i, r := range raw {
-		code := statusMap[r.Status]
-		if code == "" {
-			code = "M"
-		}
-		files[i] = CommitFile{Path: r.Filename, StatusCode: code, OldPath: r.OldName}
-	}
-	return files, nil
-}
-
-// GetPRFileDiff returns the diff for a single file across the PR's head vs base branches.
-// Uses a three-dot diff: git diff origin/{base}...origin/{head} -- {filePath}
-func (g *GitService) GetPRFileDiff(repoPath, baseBranch, headBranch, filePath string) (*GitFileDiff, error) {
-	// Fetch to update origin/{base} and origin/{head} refs, authenticated via bearer token.
-	g.gitCmdAuth(repoPath, "git", "fetch", "origin", baseBranch, headBranch) //nolint:errcheck
-
-	lang := gitLang(filePath)
-	diff := &GitFileDiff{Language: lang}
-
-	baseRef := "origin/" + baseBranch
-	headRef := "origin/" + headBranch
-
-	if old, err := gitCmd(repoPath, "git", "show", baseRef+":"+filePath); err == nil {
-		diff.OldContent = old
-	}
-	if new_, err := gitCmd(repoPath, "git", "show", headRef+":"+filePath); err == nil {
-		diff.NewContent = new_
-	}
-
-	// Three-dot diff shows changes on head since it diverged from base.
-	// Falls back to two-dot when the merge-base isn't in the shallow clone.
-	rawDiff, err := gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+"..."+headRef, "--", filePath)
-	if err != nil || rawDiff == "" {
-		rawDiff, err = gitCmd(repoPath, "git", "diff", "--no-color", "-U3", baseRef+".."+headRef, "--", filePath)
-	}
-	if err == nil {
-		diff.Hunks = gitParseHunks(rawDiff)
-	}
-
-	return diff, nil
 }
 
 // gitLang maps a file extension to a language identifier for the diff viewer.

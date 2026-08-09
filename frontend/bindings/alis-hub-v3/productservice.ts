@@ -13,8 +13,13 @@ import * as application$0 from "../github.com/wailsapp/wails/v3/pkg/application/
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function BootstrapBlock(params: $models.BootstrapBlockParams): $CancellablePromise<string> {
-    return $Call.ByID(3259830753, params);
+/**
+ * CLIAvailable is blocksCLIAvailable exposed to the frontend, so a page whose
+ * only path is the CLI can render a setup prompt on mount rather than letting
+ * the user fill in a form and fail on submit.
+ */
+export function CLIAvailable(): $CancellablePromise<boolean> {
+    return $Call.ByID(3637891303);
 }
 
 /**
@@ -45,14 +50,6 @@ export function CheckProductCloneStatus(org: string, product: string): $Cancella
  */
 export function ContributeBlock(params: $models.ContributeBlockParams): $CancellablePromise<string> {
     return $Call.ByID(2599750638, params);
-}
-
-/**
- * ContributeBlockFromCommits publishes a new block version using define and build commit SHAs.
- * This is the production path that matches the VSCode extension's worktree-based flow.
- */
-export function ContributeBlockFromCommits(instanceName: string, defineCommitSha: string, buildCommitSha: string, releaseLevel: number, releaseNotes: string): $CancellablePromise<string> {
-    return $Call.ByID(1195485020, instanceName, defineCommitSha, buildCommitSha, releaseLevel, releaseNotes);
 }
 
 /**
@@ -351,29 +348,25 @@ export function ListBlockRoles(blockId: string): $CancellablePromise<$models.Blo
 }
 
 /**
- * ListBlockVersionsCLI lists a block's versions, newest first.
+ * ListCodeblockInstances lists installed instances for a block.
  */
-export function ListBlockVersionsCLI(blockID: string): $CancellablePromise<$models.BlockVersionInfo[]> {
-    return $Call.ByID(4254031140, blockID).then(($result: any) => {
+export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
+    return $Call.ByID(2469208404, blockId).then(($result: any) => {
         return $$createType41($result);
     });
 }
 
 /**
- * ListCodeblockInstances lists installed instances for a block.
+ * ListCodeblockVersions lists a block's versions, newest first, via
+ * `alis blocks versions <block-id> --json`.
+ * 
+ * The CLI reports the identity of each version but not its body: ReleaseNotes
+ * and Files stay empty here and come from GetCodeblockVersion, which is still
+ * the Console path because the CLI has no per-version read.
  */
-export function ListCodeblockInstances(blockId: string): $CancellablePromise<$models.CodeblockInstance[]> {
-    return $Call.ByID(2469208404, blockId).then(($result: any) => {
-        return $$createType43($result);
-    });
-}
-
-/**
- * ListCodeblockVersions lists available versions for a block.
- */
-export function ListCodeblockVersions(blockId: string): $CancellablePromise<$models.CodeblockVersion[]> {
-    return $Call.ByID(1837251873, blockId).then(($result: any) => {
-        return $$createType44($result);
+export function ListCodeblockVersions(blockID: string): $CancellablePromise<$models.CodeblockVersion[]> {
+    return $Call.ByID(1837251873, blockID).then(($result: any) => {
+        return $$createType42($result);
     });
 }
 
@@ -382,7 +375,7 @@ export function ListCodeblockVersions(blockId: string): $CancellablePromise<$mod
  */
 export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(2482784325).then(($result: any) => {
-        return $$createType45($result);
+        return $$createType43($result);
     });
 }
 
@@ -392,13 +385,13 @@ export function ListCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
  */
 export function ListEnvironmentVariablesCLI(org: string, product: string): $CancellablePromise<$models.EnvironmentVariables[]> {
     return $Call.ByID(3230090326, org, product).then(($result: any) => {
-        return $$createType47($result);
+        return $$createType45($result);
     });
 }
 
 export function ListEnvironments(org: string, product: string): $CancellablePromise<$models.EnvInfo[]> {
     return $Call.ByID(535981680, org, product).then(($result: any) => {
-        return $$createType48($result);
+        return $$createType46($result);
     });
 }
 
@@ -407,7 +400,7 @@ export function ListEnvironments(org: string, product: string): $CancellableProm
  */
 export function ListInstallNeurons(org: string, product: string): $CancellablePromise<$models.InstallNeuron[]> {
     return $Call.ByID(426248599, org, product).then(($result: any) => {
-        return $$createType50($result);
+        return $$createType48($result);
     });
 }
 
@@ -416,13 +409,13 @@ export function ListInstallNeurons(org: string, product: string): $CancellablePr
  */
 export function ListInstallOrgs(): $CancellablePromise<$models.Organisation[]> {
     return $Call.ByID(3252611686).then(($result: any) => {
-        return $$createType52($result);
+        return $$createType50($result);
     });
 }
 
 export function ListInvites(org: string, product: string): $CancellablePromise<$models.InviteInfo[]> {
     return $Call.ByID(1503809804, org, product).then(($result: any) => {
-        return $$createType54($result);
+        return $$createType52($result);
     });
 }
 
@@ -438,7 +431,7 @@ export function ListInvites(org: string, product: string): $CancellablePromise<$
  */
 export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData | null> {
     return $Call.ByID(3242955384).then(($result: any) => {
-        return $$createType56($result);
+        return $$createType54($result);
     });
 }
 
@@ -447,7 +440,7 @@ export function ListLandingZones(): $CancellablePromise<$models.LandingZonesData
  */
 export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
     return $Call.ByID(657485483).then(($result: any) => {
-        return $$createType45($result);
+        return $$createType43($result);
     });
 }
 
@@ -458,7 +451,7 @@ export function ListMyCodeblocks(): $CancellablePromise<$models.Codeblock[]> {
  */
 export function ListProducts(org: string): $CancellablePromise<$models.ProductSummary[]> {
     return $Call.ByID(1517062122, org).then(($result: any) => {
-        return $$createType58($result);
+        return $$createType56($result);
     });
 }
 
@@ -471,7 +464,7 @@ export function ListProducts(org: string): $CancellablePromise<$models.ProductSu
  */
 export function ListServiceBlocks(pkg: string): $CancellablePromise<$models.BlocksOverview | null> {
     return $Call.ByID(316173899, pkg).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType58($result);
     });
 }
 
@@ -499,7 +492,7 @@ export function Logout(): $CancellablePromise<void> {
  */
 export function MergeBlockInstance(instanceName: string): $CancellablePromise<$models.MergeBlockBranchResult | null> {
     return $Call.ByID(4242359780, instanceName).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType60($result);
     });
 }
 
@@ -562,9 +555,15 @@ export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
 /**
  * PublishBlockCLI publishes a new block version from commits on the block's
  * branch, via `alis blocks publish`.
+ * 
+ * Unlike the Console path this can name which install to publish from, which is
+ * the whole point: a block installed into a service more than once cannot be
+ * published unambiguously without --instance.
  */
-export function PublishBlockCLI(opts: $models.BlockPublishOptions): $CancellablePromise<string> {
-    return $Call.ByID(614448208, opts);
+export function PublishBlockCLI(opts: $models.BlockPublishOptions): $CancellablePromise<$models.BlockPublishResult | null> {
+    return $Call.ByID(614448208, opts).then(($result: any) => {
+        return $$createType62($result);
+    });
 }
 
 /**
@@ -775,28 +774,28 @@ const $$createType36 = $models.BlockPlan.createFrom;
 const $$createType37 = $Create.Array($$createType36);
 const $$createType38 = $models.BlockRole.createFrom;
 const $$createType39 = $Create.Array($$createType38);
-const $$createType40 = $models.BlockVersionInfo.createFrom;
+const $$createType40 = $models.CodeblockInstance.createFrom;
 const $$createType41 = $Create.Array($$createType40);
-const $$createType42 = $models.CodeblockInstance.createFrom;
-const $$createType43 = $Create.Array($$createType42);
-const $$createType44 = $Create.Array($$createType16);
-const $$createType45 = $Create.Array($$createType12);
-const $$createType46 = $models.EnvironmentVariables.createFrom;
-const $$createType47 = $Create.Array($$createType46);
-const $$createType48 = $Create.Array($$createType2);
-const $$createType49 = $models.InstallNeuron.createFrom;
+const $$createType42 = $Create.Array($$createType16);
+const $$createType43 = $Create.Array($$createType12);
+const $$createType44 = $models.EnvironmentVariables.createFrom;
+const $$createType45 = $Create.Array($$createType44);
+const $$createType46 = $Create.Array($$createType2);
+const $$createType47 = $models.InstallNeuron.createFrom;
+const $$createType48 = $Create.Array($$createType47);
+const $$createType49 = $models.Organisation.createFrom;
 const $$createType50 = $Create.Array($$createType49);
-const $$createType51 = $models.Organisation.createFrom;
+const $$createType51 = $models.InviteInfo.createFrom;
 const $$createType52 = $Create.Array($$createType51);
-const $$createType53 = $models.InviteInfo.createFrom;
-const $$createType54 = $Create.Array($$createType53);
-const $$createType55 = $models.LandingZonesData.createFrom;
-const $$createType56 = $Create.Nullable($$createType55);
-const $$createType57 = $models.ProductSummary.createFrom;
-const $$createType58 = $Create.Array($$createType57);
-const $$createType59 = $models.BlocksOverview.createFrom;
+const $$createType53 = $models.LandingZonesData.createFrom;
+const $$createType54 = $Create.Nullable($$createType53);
+const $$createType55 = $models.ProductSummary.createFrom;
+const $$createType56 = $Create.Array($$createType55);
+const $$createType57 = $models.BlocksOverview.createFrom;
+const $$createType58 = $Create.Nullable($$createType57);
+const $$createType59 = $models.MergeBlockBranchResult.createFrom;
 const $$createType60 = $Create.Nullable($$createType59);
-const $$createType61 = $models.MergeBlockBranchResult.createFrom;
+const $$createType61 = $models.BlockPublishResult.createFrom;
 const $$createType62 = $Create.Nullable($$createType61);
 const $$createType63 = $models.NeuronFileContents.createFrom;
 const $$createType64 = $Create.Nullable($$createType63);

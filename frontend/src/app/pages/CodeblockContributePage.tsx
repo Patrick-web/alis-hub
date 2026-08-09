@@ -11,7 +11,10 @@ import { useBlockPermission } from "../lib/useBlockPermission";
 
 type Step = "instance" | "edit" | "version";
 
-import { PUBLISH_RELEASE_LEVELS } from "../lib/releaseLevels";
+/** The per-install fields only `alis blocks list` reports. */
+type InstallDetail = { buildFolder: string; gitBranch: string };
+
+import { PUBLISH_RELEASE_CODE, PUBLISH_RELEASE_LEVELS } from "../lib/releaseLevels";
 
 const STATE_LABEL: Record<number, string> = {
   1: "Pending",
@@ -53,6 +56,7 @@ export function CodeblockContributePage() {
 
   // Step 1 state
   const [instances, setInstances] = useState<CodeblockInstance[]>([]);
+  const [instanceDetail, setInstanceDetail] = useState<Record<string, InstallDetail>>({});
   const [instancesLoading, setInstancesLoading] = useState(true);
   const [selectedInstance, setSelectedInstance] = useState<CodeblockInstance | null>(null);
   const [openingWorktrees, setOpeningWorktrees] = useState(false);
@@ -77,6 +81,37 @@ export function CodeblockContributePage() {
       .catch((e) => setError(String(e)))
       .finally(() => setInstancesLoading(false));
   }, [blockId]);
+
+  // Two installs of the same block into the same service differ only by their
+  // build folder and block/* branch, neither of which ListCodeblockInstances
+  // reports. `blocks list` does, but it is package-scoped, so fetch it once per
+  // distinct package. Best-effort: the picker still works without it.
+  useEffect(() => {
+    const packages = [...new Set(instances.map((i) => i.package).filter(Boolean))];
+    if (packages.length === 0) return;
+    let cancelled = false;
+    Promise.all(
+      packages.map((pkg) =>
+        ProductService.ListServiceBlocks(pkg.replace(/^packages\//, "")).catch(() => null),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+      const byInstance: Record<string, InstallDetail> = {};
+      for (const overview of results) {
+        for (const install of overview?.installed ?? []) {
+          if (!install.instance) continue;
+          byInstance[install.instance] = {
+            buildFolder: install.buildFolder,
+            gitBranch: install.gitBranch,
+          };
+        }
+      }
+      setInstanceDetail(byInstance);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [instances]);
 
   async function handleOpenWorktrees() {
     if (!selectedInstance) return;
@@ -135,25 +170,23 @@ export function CodeblockContributePage() {
   }
 
   async function handlePublish() {
-    if (!selectedInstance || !selectedDefineCommit || !selectedBuildCommit) return;
+    if (!canPublish || !selectedInstance) return;
     setError(null);
     setPublishing(true);
     try {
-      await (
-        ProductService.ContributeBlockFromCommits as (
-          instanceName: string,
-          defineCommitSha: string,
-          buildCommitSha: string,
-          releaseLevel: number,
-          releaseNotes: string,
-        ) => Promise<string>
-      )(
-        selectedInstance.name,
-        selectedDefineCommit,
-        selectedBuildCommit,
-        releaseLevel,
-        releaseNotes,
-      );
+      // The instance ref is what makes this work when a block is installed into
+      // the same service more than once: without it the CLI cannot tell which
+      // install to publish from.
+      await ProductService.PublishBlockCLI({
+        instance: selectedInstance.name,
+        // Derived from the instance ref on the Go side.
+        blockId: "",
+        package: selectedInstance.package,
+        releaseLevel: PUBLISH_RELEASE_CODE[releaseLevel],
+        notes: releaseNotes.trim(),
+        defineCommit: selectedDefineCommit,
+        buildCommit: selectedBuildCommit,
+      });
       navigate(`/codeblocks/${blockId}/versions`);
     } catch (e) {
       setError(String(e));
@@ -162,7 +195,10 @@ export function CodeblockContributePage() {
     }
   }
 
-  const canPublish = !!selectedDefineCommit && !!selectedBuildCommit && !publishing;
+  // Release notes are required by `alis blocks publish`, unlike the Console
+  // path this replaced, so the guard has to catch it before the CLI does.
+  const canPublish =
+    !!selectedDefineCommit && !!selectedBuildCommit && !!releaseNotes.trim() && !publishing;
 
   if (!permission.loading && !permission.isContributor) {
     return (
@@ -246,13 +282,21 @@ export function CodeblockContributePage() {
               />
             </div>
             <div className="mb-[8px]">
-              <p className={labelClass}>Release Notes</p>
+              <p className={labelClass}>
+                Release Notes <span className="text-destructive">*</span>
+              </p>
               <textarea
                 className={`${textareaClass} h-[80px]`}
                 placeholder="Describe what changed in this version"
                 value={releaseNotes}
                 onChange={(e) => setReleaseNotes(e.target.value)}
+                required
               />
+              {!releaseNotes.trim() && (
+                <p className="text-[10px] text-foreground/40 mt-[4px]">
+                  Required to publish a version.
+                </p>
+              )}
             </div>
             {error && (
               <div className="text-[11px] text-destructive bg-[rgba(255,107,107,0.08)] border border-[rgba(255,107,107,0.2)] rounded-[4px] p-[10px]">
@@ -282,6 +326,7 @@ export function CodeblockContributePage() {
         {step === "instance" && (
           <InstancePickerStep
             instances={instances}
+            detail={instanceDetail}
             loading={instancesLoading}
             selected={selectedInstance}
             onSelect={setSelectedInstance}
@@ -356,6 +401,7 @@ function StepIndicator({
 
 function InstancePickerStep({
   instances,
+  detail,
   loading,
   selected,
   onSelect,
@@ -364,6 +410,7 @@ function InstancePickerStep({
   error,
 }: {
   instances: CodeblockInstance[];
+  detail: Record<string, InstallDetail>;
   loading: boolean;
   selected: CodeblockInstance | null;
   onSelect: (inst: CodeblockInstance) => void;
@@ -371,6 +418,14 @@ function InstancePickerStep({
   opening: boolean;
   error: string | null;
 }) {
+  // Which packages hold more than one install of this block. Those are the
+  // cards where the package line alone cannot tell them apart.
+  const duplicated = new Set(
+    instances
+      .map((i) => i.package)
+      .filter((pkg, idx, all) => pkg && all.indexOf(pkg) !== idx),
+  );
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="px-[24px] py-[16px] border-b border-border flex items-center justify-between">
@@ -409,6 +464,8 @@ function InstancePickerStep({
           <div className="flex flex-col gap-[8px]">
             {instances.map((inst) => {
               const isSelected = selected?.name === inst.name;
+              const meta = detail[inst.name];
+              const ambiguous = duplicated.has(inst.package);
               return (
                 <button
                   key={inst.name}
@@ -440,6 +497,26 @@ function InstancePickerStep({
                   {inst.blockVersion && (
                     <p className="text-[10px] text-foreground/30 mt-[6px] font-mono">
                       {inst.blockVersion.split("/").pop()}
+                    </p>
+                  )}
+                  {(meta?.buildFolder || meta?.gitBranch) && (
+                    <div className="flex flex-wrap items-center gap-x-[12px] gap-y-[2px] mt-[6px]">
+                      {meta.buildFolder && (
+                        <span className="text-[10px] text-foreground/40 font-mono">
+                          {meta.buildFolder}
+                        </span>
+                      )}
+                      {meta.gitBranch && (
+                        <span className="text-[10px] text-foreground/40 font-mono">
+                          {meta.gitBranch}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {ambiguous && (
+                    <p className="text-[10px] text-warning mt-[6px]">
+                      This block is installed into this service more than once. Check the build
+                      folder before publishing.
                     </p>
                   )}
                 </button>

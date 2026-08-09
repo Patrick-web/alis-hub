@@ -211,9 +211,15 @@ export function CodeblockUpdatePage() {
     setReviewLoading(true);
     setReviewError(null);
     Promise.all([
-      (ProductService.ListCodeblockVersions as (id: string) => Promise<models.CodeblockVersion[]>)(
-        blockId,
-      ).catch(() => [] as models.CodeblockVersion[]),
+      // The versions list comes from `alis blocks versions`, which reports each
+      // version's identity but not its content, so the baseline files need a
+      // second read against the newest one.
+      ProductService.ListCodeblockVersions(blockId)
+        .then((versions) => {
+          const newest = (versions ?? [])[0];
+          return newest?.name ? ProductService.GetCodeblockVersion(newest.name) : null;
+        })
+        .catch(() => null),
       (
         ProductService.ReadNeuronFileContents as (
           pkg: string,
@@ -221,8 +227,7 @@ export function CodeblockUpdatePage() {
         ) => Promise<models.NeuronFileContents | null>
       )(selectedNeuron.package, scannedFiles),
     ])
-      .then(([versions, contents]) => {
-        const latest = versions[0];
+      .then(([latest, contents]) => {
         const baseline = latest?.files ?? [];
         const contentResult = contents ?? new models.NeuronFileContents();
         setFileContents(contentResult);

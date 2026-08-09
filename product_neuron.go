@@ -1,16 +1,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
-
-	blocksv1pb "alis-hub-v3/gen/go/alis/bl/blocks/v1"
-
-	"google.golang.org/protobuf/proto"
 )
 
 // neuronVersionRoot derives ~/alis.build/{org}/build/{product}/{neuron}/{version} from a package string.
@@ -179,69 +173,4 @@ func readSelectedNeuronFiles(pkg string, files []ScannedNeuronFile) (build, infr
 		}
 	}
 	return build, infra, proto, nil
-}
-
-func buildBootstrapBlockRequest(p BootstrapBlockParams, accountName string) (*blocksv1pb.BootstrapBlockRequest, error) {
-	build, infra, proto, err := readSelectedNeuronFiles(p.Package, p.Files)
-	if err != nil {
-		return nil, err
-	}
-
-	block := &blocksv1pb.Block{
-		DisplayName: p.DisplayName,
-		Tagline:     p.Tagline,
-	}
-	if accountName != "" {
-		block.Publisher = &blocksv1pb.Block_Publisher{Account: accountName}
-	}
-
-	req := &blocksv1pb.BootstrapBlockRequest{
-		Block:   block,
-		BlockId: p.BlockID,
-		Package: p.Package,
-	}
-	if len(build) > 0 || len(infra) > 0 || len(proto) > 0 {
-		req.ContributedContent = &blocksv1pb.BlockVersion_Content{
-			BuildFiles: buildFileList(build),
-			InfraFiles: buildFileList(infra),
-			ProtoFiles: buildFileList(proto),
-		}
-	}
-	return req, nil
-}
-
-func (s *ProductService) BootstrapBlock(params BootstrapBlockParams) (string, error) {
-	if err := s.initTokens(); err != nil {
-		return "", err
-	}
-	accountName := s.myPrimaryAccountID()
-	req, err := buildBootstrapBlockRequest(params, accountName)
-	if err != nil {
-		return "", err
-	}
-	protoBytes, err := proto.Marshal(req)
-	if err != nil {
-		return "", fmt.Errorf("BootstrapBlock: marshal request: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlocksService/BootstrapBlock", protoBytes)
-	if err != nil {
-		return "", fmt.Errorf("BootstrapBlock: %w", err)
-	}
-	if grpcStatus != 0 {
-		return "", fmt.Errorf("BootstrapBlock: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return "", fmt.Errorf("BootstrapBlock: response too short (%d bytes)", len(body))
-	}
-	resp := &blocksv1pb.BootstrapBlockResponse{}
-	if err := proto.Unmarshal(body[5:], resp); err != nil {
-		return "", fmt.Errorf("BootstrapBlock: unmarshal response: %w", err)
-	}
-	blockName := resp.GetBlock().GetName()
-	if blockName == "" {
-		return "", fmt.Errorf("BootstrapBlock: response contained no block name")
-	}
-	return blockName, nil
 }

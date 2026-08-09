@@ -133,42 +133,6 @@ func (s *ProductService) DeleteCodeblock(blockId string) error {
 	return nil
 }
 
-// ListCodeblockVersions lists available versions for a block.
-func (s *ProductService) ListCodeblockVersions(blockId string) ([]CodeblockVersion, error) {
-	if err := s.initTokens(); err != nil {
-		return nil, err
-	}
-	req := &blocksv1pb.ListBlockVersionsRequest{Parent: "blocks/" + blockId, PageSize: 100}
-	buf, err := proto.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("ListCodeblockVersions: marshal request: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-	body, grpcStatus, grpcMsg, err := s.doConsoleGRPCWeb(ctx, "alis.bl.blocks.v1.BlockVersionsService/ListBlockVersions", buf)
-	if err != nil {
-		return nil, fmt.Errorf("ListCodeblockVersions: %w", err)
-	}
-	if grpcStatus != 0 {
-		return nil, fmt.Errorf("ListCodeblockVersions: grpc %d: %s", grpcStatus, grpcMsg)
-	}
-	if len(body) < 5 {
-		return nil, fmt.Errorf("ListCodeblockVersions: response too short (%d bytes)", len(body))
-	}
-	resp := &blocksv1pb.ListBlockVersionsResponse{}
-	if err := proto.Unmarshal(body[5:], resp); err != nil {
-		return nil, fmt.Errorf("ListCodeblockVersions: unmarshal response: %w", err)
-	}
-	versions := make([]CodeblockVersion, 0, len(resp.GetBlockVersions()))
-	for _, bv := range resp.GetBlockVersions() {
-		v := blockVersionToCodeblockVersion(bv)
-		if v.Name != "" {
-			versions = append(versions, v)
-		}
-	}
-	return versions, nil
-}
-
 // GetCodeblockDoc returns documentation markdown for a specific block version.
 // audience is "user" or "agent".
 func (s *ProductService) GetCodeblockDoc(versionName, audience string) (string, error) {

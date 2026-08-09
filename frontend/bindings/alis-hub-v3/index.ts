@@ -12,6 +12,7 @@ import * as GitService from "./gitservice.js";
 import * as GreetService from "./greetservice.js";
 import * as LocalAIService from "./localaiservice.js";
 import * as LogService from "./logservice.js";
+import * as PRService from "./prservice.js";
 import * as PackageService from "./packageservice.js";
 import * as ProductService from "./productservice.js";
 import * as ProtoDecodeService from "./protodecodeservice.js";
@@ -30,6 +31,7 @@ export {
     GreetService,
     LocalAIService,
     LogService,
+    PRService,
     PackageService,
     ProductService,
     ProtoDecodeService,
@@ -57,10 +59,9 @@ export {
     BlockInstallOptions,
     BlockPlan,
     BlockPublishOptions,
+    BlockPublishResult,
     BlockRole,
-    BlockVersionInfo,
     BlocksOverview,
-    BootstrapBlockParams,
     BuildAccountInfo,
     BuildLogsResult,
     BuildOptions,
@@ -80,6 +81,7 @@ export {
     ConflictHunk,
     ContributeBlockParams,
     CreateCodeblockParams,
+    DefineArtifact,
     DefineCommit,
     DefineOptions,
     DeployItem,
@@ -132,7 +134,17 @@ export {
     OperationSnapshot,
     Organisation,
     PRComment,
+    PRCommentList,
     PRCommit,
+    PRCommitList,
+    PRDiff,
+    PRDiffFile,
+    PRFileList,
+    PRList,
+    PRRepoInfo,
+    PRReview,
+    PRReviewComment,
+    PRUser,
     PackageInfo,
     PkgRegistries,
     ProductOverview,
@@ -140,6 +152,7 @@ export {
     ProductSummary,
     ProtoFieldInfo,
     ProtoMessageInfo,
+    ReviewDraftComment,
     RunBuildResult,
     RunDefineResult,
     RunDeployResult,
