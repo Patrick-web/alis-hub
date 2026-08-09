@@ -249,8 +249,12 @@ func (s *DeployService) pollDeployGRPC(ctx context.Context, name string) (*RunDe
 // Pass 0 as textOffset on the first call; pass the returned NextOffset on subsequent calls.
 // The deploy page defaults to a structured view; we fetch ?tab=logs for raw command output.
 func (s *DeployService) FetchDeployLogs(logsUrl string, textOffset int64) (*BuildLogsResult, error) {
-	if s.alisClient == nil {
-		return nil, fmt.Errorf("not connected to Alis backend")
+	// The log page is fetched over the authenticated HTTP client, which the CLI
+	// backend never sets up on its own — a CLI deploy touches nothing that
+	// connects. Without this, every log fetch in a CLI-backed deploy failed
+	// before it started.
+	if err := s.initClient(); err != nil {
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)

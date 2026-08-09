@@ -57,15 +57,29 @@ type deployAsyncMeta struct {
 }
 
 type deployAsyncMetadata struct {
-	Version     string                  `json:"version"`
-	Notes       string                  `json:"notes"`
+	Version string `json:"version"`
+	Notes   string `json:"notes"`
+	// The operation-level log link. It points at the same execution page as the
+	// per-deployment links, so it stands in when those are missing.
+	LogsURI     string                  `json:"logsUri"`
 	Deployments []deployAsyncDeployment `json:"deployments"`
 }
 
+// deployAsyncDeployment mirrors cliwrap.OperationDeployment: the CLI spells the
+// log link logsUri, the gRPC metadata spells it logsUrl, and both are read so
+// the deploy pane gets a log link either way.
 type deployAsyncDeployment struct {
 	Name    string `json:"name"`
 	State   string `json:"state"`
+	LogsURI string `json:"logsUri"`
 	LogsURL string `json:"logsUrl"`
+}
+
+func (d deployAsyncDeployment) logsLink() string {
+	if d.LogsURI != "" {
+		return d.LogsURI
+	}
+	return d.LogsURL
 }
 
 // NewCLIBackend creates a CLIBackend. Returns an error if alis is not in PATH.
@@ -252,10 +266,34 @@ func (b *CLIBackend) RunDeployOptions(ctx context.Context, neuron string, opts D
 	if meta.Error != nil {
 		result.Error = meta.Error.Message
 	}
+	links := make([]string, 0, len(meta.Metadata.Deployments))
 	for _, d := range meta.Metadata.Deployments {
-		result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})
+		links = append(links, d.logsLink())
 	}
+	result.Deployments = deployItems(links, meta.Metadata.LogsURI)
 	return result, nil
+}
+
+// deployItems turns per-environment log links into DeployItems, standing the
+// operation-level link in for any that came back empty.
+//
+// The two are the same execution page in practice, and an empty link is what
+// leaves the deploy pane with a terminal that never fills.
+func deployItems(links []string, operationLogsURI string) []*DeployItem {
+	if len(links) == 0 {
+		if operationLogsURI == "" {
+			return nil
+		}
+		return []*DeployItem{{LogsURL: operationLogsURI}}
+	}
+	items := make([]*DeployItem, 0, len(links))
+	for _, link := range links {
+		if link == "" {
+			link = operationLogsURI
+		}
+		items = append(items, &DeployItem{LogsURL: link})
+	}
+	return items
 }
 
 func (b *CLIBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployResult, error) {
@@ -271,14 +309,11 @@ func (b *CLIBackend) PollDeploy(ctx context.Context, opName string) (*RunDeployR
 		Notes:         state.Notes,
 		Error:         state.Error,
 	}
+	links := make([]string, 0, len(state.Deployments))
 	for _, d := range state.Deployments {
-		result.Deployments = append(result.Deployments, &DeployItem{LogsURL: d.LogsURL})
+		links = append(links, d.LogsLink())
 	}
-	// Fallback: if no per-environment deployments but a top-level logsUri is present,
-	// surface it so FetchDeployLogs can stream it.
-	if len(result.Deployments) == 0 && state.LogsURI != "" {
-		result.Deployments = []*DeployItem{{LogsURL: state.LogsURI}}
-	}
+	result.Deployments = deployItems(links, state.LogsURI)
 	return result, nil
 }
 

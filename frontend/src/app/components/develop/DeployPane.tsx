@@ -267,6 +267,9 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
           ...run,
           operationName: deployResult.operationName ?? "",
           deploymentIndex: i,
+          // Taking the log link from the start response means the terminal
+          // starts filling immediately rather than after the first poll.
+          logsUrl: deployResult.deployments?.[i]?.logsUrl ?? "",
           progressMsg: deployResult.notes || "Running...",
         };
       }
@@ -403,6 +406,11 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
     if (withLogs.length === 0) return;
 
     const intervals: (ReturnType<typeof setInterval> | null)[] = withLogs.map((run) => {
+      // A log fetch that keeps failing used to be swallowed entirely, which
+      // looks exactly like a deploy that produces no output. Report it once
+      // into the terminal itself, then stay quiet so a flaky fetch does not
+      // bury the logs it is interrupting.
+      let reportedError = false;
       const fetchLogs = async () => {
         try {
           const chunk = await DeployService.FetchDeployLogs(
@@ -418,7 +426,12 @@ export function DeployPane({ tabId, neuron, restore }: DeployPaneProps) {
               updateNotification(taskIdRef.current, { task: { logBuffer: combined } });
             }
           }
-        } catch {}
+        } catch (e) {
+          if (!reportedError) {
+            reportedError = true;
+            getLogBus(tabId, run.env).write(`\nCould not fetch deploy logs: ${String(e)}\n`);
+          }
+        }
       };
       if (run.done) {
         fetchLogs();

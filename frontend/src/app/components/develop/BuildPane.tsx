@@ -406,6 +406,9 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
       ...run,
       operationName: deployResult?.operationName ?? "",
       deploymentIndex: i,
+      // Taking the log link from the start response means the terminal starts
+      // filling immediately rather than after the first poll.
+      logsUrl: deployResult?.deployments?.[i]?.logsUrl ?? "",
       progressMsg: startError ? `Failed: ${startError}` : deployResult?.notes || "Running...",
       done: !!startError,
       error: startError ?? undefined,
@@ -678,6 +681,9 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
     if (withLogs.length === 0) return;
 
     const intervals: (ReturnType<typeof setInterval> | null)[] = withLogs.map((run) => {
+      // See DeployPane: a swallowed fetch error is indistinguishable from a
+      // deploy that produces no output, so say so once in the terminal.
+      let reportedError = false;
       const fetchLogs = async () => {
         try {
           const chunk = await DeployService.FetchDeployLogs(
@@ -688,7 +694,12 @@ export function BuildPane({ tabId, neuron, restore }: BuildPaneProps) {
             getLogBus(tabId, run.env).write(chunk.content);
             deployLogOffsets.current[run.env] = chunk.nextOffset;
           }
-        } catch {}
+        } catch (e) {
+          if (!reportedError) {
+            reportedError = true;
+            getLogBus(tabId, run.env).write(`\nCould not fetch deploy logs: ${String(e)}\n`);
+          }
+        }
       };
       if (run.done) {
         fetchLogs();

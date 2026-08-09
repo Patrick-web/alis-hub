@@ -71,9 +71,7 @@ type OperationState struct {
 	LogsURI string `json:"logsUri,omitempty"`
 	// Define operations include artifacts.
 	Artifacts []OperationArtifact `json:"artifacts,omitempty"`
-	// Deploy operations include per-environment results. Note the field name:
-	// the operation view uses logsUri, per-deployment entries use logsUrl.
-	// They are distinct proto fields — do not normalise one to the other.
+	// Deploy operations include per-environment results.
 	Deployments []OperationDeployment `json:"deployments,omitempty"`
 }
 
@@ -85,8 +83,24 @@ type OperationArtifact struct {
 }
 
 // OperationDeployment represents a per-environment deploy result.
+//
+// The CLI spells the log link logsUri here, the same as the operation-level
+// field — verified against `alis operations describe` on a deploy operation.
+// logsUrl is the spelling the gRPC deploy metadata uses, and is accepted too so
+// that a CLI change back to it does not silently cost the app its deploy logs.
 type OperationDeployment struct {
+	Name    string `json:"name"`
+	State   string `json:"state"`
+	LogsURI string `json:"logsUri"`
 	LogsURL string `json:"logsUrl"`
+}
+
+// LogsLink returns whichever spelling of the deploy log link arrived.
+func (d OperationDeployment) LogsLink() string {
+	if d.LogsURI != "" {
+		return d.LogsURI
+	}
+	return d.LogsURL
 }
 
 // ErrorEnvelope is returned on pre-flight failures or exit-code-3 confirmations.
