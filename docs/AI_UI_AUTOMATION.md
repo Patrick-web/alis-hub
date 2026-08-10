@@ -75,8 +75,36 @@ production builds (`-tags production`).
 
 ## Connect Chrome
 
-The chrome-devtools MCP server drives Chrome over CDP. Chrome 136 and newer refuse remote
-debugging on the default profile, so Chrome must be started with its own `--user-data-dir`:
+The chrome-devtools MCP server drives Chrome over CDP. This repo is configured with
+`--autoConnect --channel=beta`; the alternatives below exist for when that is not what you
+want, and the choice is really about *whose* browser gets automated.
+
+**`--autoConnect --channel=beta`** (configured) attaches to your own running Chrome Beta. It reads
+`DevToolsActivePort` from that channel's default profile directory, which only exists once
+remote debugging has been switched on inside that browser at
+`chrome://inspect/#remote-debugging` (Chrome 144+). Enable it once and it persists for the
+life of that Chrome process; restarting Chrome without re-enabling it removes the file and
+the server reports "Could not find DevToolsActivePort". The automated tabs are real tabs in
+your real session, so your logins are available and your windows are visible.
+
+**No connection flag** (`--channel=beta` alone) makes the server launch and own a browser
+against a managed profile under `~/.cache/chrome-devtools-mcp/`. Nothing to enable, nothing
+to start by hand, and it cannot disturb your session or compete for port 9222 — but it has
+none of your logged-in state.
+
+**`--browserUrl=http://127.0.0.1:9222`** attaches to a Chrome you started yourself with
+explicit flags. See below.
+
+> **If tool calls fail while the flags look right**, suspect the server process rather than
+> the configuration. A chrome-devtools MCP server that failed to reach a browser once will
+> keep reporting the same error for the rest of the session even after the browser becomes
+> reachable. Restart the session, or test the flags against a fresh server process, before
+> concluding the configuration is wrong.
+
+### Driving a Chrome you launched yourself
+
+Only needed when the page must run in a session you control explicitly. Start Chrome with
+its own profile:
 
 ```bash
 open -na "Google Chrome Beta" --args \
@@ -85,19 +113,25 @@ open -na "Google Chrome Beta" --args \
   http://127.0.0.1:34115/
 ```
 
-Use whichever channel the MCP server is configured for (`--channel=beta` here); the flags
-are the same for stable Chrome.
+`open -na` hands off to an already-running instance of that channel instead of starting a
+new one, so if Chrome Beta is open the flags are silently dropped. Launch the binary
+directly to get a genuinely separate instance:
 
-Then verify CDP is live before using any MCP tool:
+```bash
+"/Applications/Google Chrome Beta.app/Contents/MacOS/Google Chrome Beta" \
+  --remote-debugging-port=9222 --user-data-dir=/tmp/alishub-cdp-profile
+```
+
+Then point the MCP server at it with `--browserUrl=http://127.0.0.1:9222` and verify CDP is
+live first:
 
 ```bash
 curl -s http://127.0.0.1:9222/json/version
 ```
 
-If the MCP server is configured with `--autoConnect`, it looks for `DevToolsActivePort`
-inside the *default* profile directory and will not find this instance. The reliable
-configuration is `--browserUrl=http://127.0.0.1:9222`, or no `--autoConnect` at all so the
-MCP launches and owns its own Chrome.
+If another Chrome already holds 9222 on IPv4, the second instance binds `[::1]:9222`
+instead and `127.0.0.1` reaches the wrong browser — check `lsof -nP -iTCP:9222 -sTCP:LISTEN`
+and use `http://[::1]:9222` when that happens.
 
 Playwright works equally well against the same URL if you prefer scripted tests:
 `chromium.connectOverCDP('http://127.0.0.1:9222')`.
