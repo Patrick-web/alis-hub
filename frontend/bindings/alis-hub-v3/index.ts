@@ -167,6 +167,7 @@ export {
     ShareData,
     SharePerson,
     SkillDetail,
+    SkillInstallTarget,
     SkillSummary,
     SpannerBackup,
     SpannerDMLResult,

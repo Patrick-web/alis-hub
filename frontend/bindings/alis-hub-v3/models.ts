@@ -3236,6 +3236,14 @@ export class InstalledSkill {
     "skillId": string;
     "harness": string;
     "path": string;
+
+    /**
+     * Project distinguishes a repo-scoped install from a user-scope one. Path
+     * alone cannot: a project install is only recognisable by knowing which
+     * directories are repos, and the UI needs the distinction to say where a
+     * skill actually lives and what removing it would take with it.
+     */
+    "project": boolean;
     "version": string;
 
     /**
@@ -3254,6 +3262,9 @@ export class InstalledSkill {
         }
         if (!("path" in $$source)) {
             this["path"] = "";
+        }
+        if (!("project" in $$source)) {
+            this["project"] = false;
         }
         if (!("version" in $$source)) {
             this["version"] = "";
@@ -5296,6 +5307,53 @@ export class SkillDetail {
     static createFrom($$source: any = {}): SkillDetail {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new SkillDetail($$parsedSource as Partial<SkillDetail>);
+    }
+}
+
+/**
+ * SkillInstallTarget is one product's local build repo, offered as a place to
+ * install a skill.
+ */
+export class SkillInstallTarget {
+    "org": string;
+    "product": string;
+    "displayName": string;
+    "dir": string;
+
+    /**
+     * Cloned reports whether Dir exists. Installing into a product that was
+     * never cloned would create a bare folder holding nothing but the skill, so
+     * the UI shows these but does not let them be chosen.
+     */
+    "cloned": boolean;
+
+    /** Creates a new SkillInstallTarget instance. */
+    constructor($$source: Partial<SkillInstallTarget> = {}) {
+        if (!("org" in $$source)) {
+            this["org"] = "";
+        }
+        if (!("product" in $$source)) {
+            this["product"] = "";
+        }
+        if (!("displayName" in $$source)) {
+            this["displayName"] = "";
+        }
+        if (!("dir" in $$source)) {
+            this["dir"] = "";
+        }
+        if (!("cloned" in $$source)) {
+            this["cloned"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SkillInstallTarget instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SkillInstallTarget {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SkillInstallTarget($$parsedSource as Partial<SkillInstallTarget>);
     }
 }
 

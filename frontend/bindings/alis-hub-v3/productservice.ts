@@ -469,6 +469,20 @@ export function ListServiceBlocks(pkg: string): $CancellablePromise<$models.Bloc
 }
 
 /**
+ * ListSkillInstallTargets returns an organisation's products with the local
+ * build repo each one installs into.
+ * 
+ * This deliberately does not reuse CheckProductCloneStatus: that reports on the
+ * define repo as well, and a skill install touches only the build repo. A
+ * product whose protos were never cloned is still a perfectly good target.
+ */
+export function ListSkillInstallTargets(org: string): $CancellablePromise<$models.SkillInstallTarget[]> {
+    return $Call.ByID(3705319820, org).then(($result: any) => {
+        return $$createType60($result);
+    });
+}
+
+/**
  * Login triggers the PKCE OAuth2 flow. The browser opens, the user authenticates,
  * and tokens are saved to ~/.alis/console-credentials.json.
  */
@@ -492,7 +506,7 @@ export function Logout(): $CancellablePromise<void> {
  */
 export function MergeBlockInstance(instanceName: string): $CancellablePromise<$models.MergeBlockBranchResult | null> {
     return $Call.ByID(4242359780, instanceName).then(($result: any) => {
-        return $$createType60($result);
+        return $$createType62($result);
     });
 }
 
@@ -562,7 +576,7 @@ export function OpenWorktreeInFinder(path: string): $CancellablePromise<void> {
  */
 export function PublishBlockCLI(opts: $models.BlockPublishOptions): $CancellablePromise<$models.BlockPublishResult | null> {
     return $Call.ByID(614448208, opts).then(($result: any) => {
-        return $$createType62($result);
+        return $$createType64($result);
     });
 }
 
@@ -573,7 +587,7 @@ export function PublishBlockCLI(opts: $models.BlockPublishOptions): $Cancellable
  */
 export function ReadNeuronFileContents(neuronPackage: string, files: $models.ScannedNeuronFile[]): $CancellablePromise<$models.NeuronFileContents | null> {
     return $Call.ByID(3333239169, neuronPackage, files).then(($result: any) => {
-        return $$createType64($result);
+        return $$createType66($result);
     });
 }
 
@@ -595,7 +609,7 @@ export function RefreshEnvironmentCLI(org: string, product: string, env: string,
  */
 export function ScanNeuronFiles(neuronPackage: string): $CancellablePromise<$models.NeuronScanResult | null> {
     return $Call.ByID(1856011391, neuronPackage).then(($result: any) => {
-        return $$createType66($result);
+        return $$createType68($result);
     });
 }
 
@@ -653,7 +667,7 @@ export function SwitchEnvironment(org: string, product: string, envName: string,
 
 export function SyncRepos(org: string, product: string): $CancellablePromise<$models.SyncReposResult | null> {
     return $Call.ByID(1467472974, org, product).then(($result: any) => {
-        return $$createType68($result);
+        return $$createType70($result);
     });
 }
 
@@ -793,13 +807,15 @@ const $$createType55 = $models.ProductSummary.createFrom;
 const $$createType56 = $Create.Array($$createType55);
 const $$createType57 = $models.BlocksOverview.createFrom;
 const $$createType58 = $Create.Nullable($$createType57);
-const $$createType59 = $models.MergeBlockBranchResult.createFrom;
-const $$createType60 = $Create.Nullable($$createType59);
-const $$createType61 = $models.BlockPublishResult.createFrom;
+const $$createType59 = $models.SkillInstallTarget.createFrom;
+const $$createType60 = $Create.Array($$createType59);
+const $$createType61 = $models.MergeBlockBranchResult.createFrom;
 const $$createType62 = $Create.Nullable($$createType61);
-const $$createType63 = $models.NeuronFileContents.createFrom;
+const $$createType63 = $models.BlockPublishResult.createFrom;
 const $$createType64 = $Create.Nullable($$createType63);
-const $$createType65 = $models.NeuronScanResult.createFrom;
+const $$createType65 = $models.NeuronFileContents.createFrom;
 const $$createType66 = $Create.Nullable($$createType65);
-const $$createType67 = $models.SyncReposResult.createFrom;
+const $$createType67 = $models.NeuronScanResult.createFrom;
 const $$createType68 = $Create.Nullable($$createType67);
+const $$createType69 = $models.SyncReposResult.createFrom;
+const $$createType70 = $Create.Nullable($$createType69);

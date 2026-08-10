@@ -4,6 +4,9 @@ import { Icon } from "@iconify/react";
 import { Loader } from "../components/Loader";
 import { Button } from "../components/Button";
 import { Markdown } from "../components/Markdown";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { InstallTargetPanel } from "../components/skills/InstallTargetPanel";
+import { targetLabel, type InstallTarget } from "../components/skills/target";
 import { copyToClipboard } from "../lib/clipboard";
 import * as CLI from "../../../bindings/alis-hub-v3/cliservice";
 import type { SkillSummary, InstalledSkill } from "../../../bindings/alis-hub-v3/models";
@@ -53,6 +56,20 @@ function SkillMarkdown({ source }: { source: string }) {
   return <Markdown source={stripFrontMatter(source)} />;
 }
 
+/**
+ * Names the landing zone and product a project install lives in.
+ *
+ * The CLI reports only an absolute path, and the app installs into
+ * ~/alis.build/<org>/build/<product>, so the path is where the target has to be
+ * read back from. Anything installed elsewhere falls back to the raw path
+ * rather than being guessed at.
+ */
+function installLocation(skill: InstalledSkill): string {
+  if (!skill.project) return "User scope";
+  const m = skill.path.match(/\/alis\.build\/([^/]+)\/build\/([^/]+)\//);
+  return m ? `${m[1]} · ${m[2]}` : skill.path;
+}
+
 export function SkillsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>("catalog");
@@ -67,6 +84,9 @@ export function SkillsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [copied, setCopied] = useState(false);
+  const [pickingTarget, setPickingTarget] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeScope, setRemoveScope] = useState<"project" | "all">("project");
 
   const installedIds = useMemo(
     () => new Set(installed.map((s) => s.skillId)),
@@ -177,7 +197,7 @@ export function SkillsPage() {
   }, [copied]);
 
   const install = useCallback(
-    async (id: string, project: boolean) => {
+    async (id: string, target: InstallTarget) => {
       setBusyAction(true);
       setError("");
       setNotice("");
@@ -185,8 +205,9 @@ export function SkillsPage() {
         // force is deliberately not offered: without it the CLI refuses to
         // overwrite a folder it did not write, which is what protects a
         // hand-authored skill of the same name.
-        await CLI.SkillsInstall(id, "claude", project, false);
-        setNotice(`Installed ${id}${project ? " into this project" : ""}`);
+        await CLI.SkillsInstall(id, "claude", target !== null, false, target?.dir ?? "");
+        setNotice(`Installed ${id} into ${targetLabel(target)}`);
+        setPickingTarget(false);
         await refreshInstalled();
       } catch (e) {
         setError(String(e));
@@ -197,33 +218,57 @@ export function SkillsPage() {
     [refreshInstalled],
   );
 
-  const uninstall = useCallback(
-    async (id: string) => {
-      setBusyAction(true);
-      setError("");
-      setNotice("");
-      try {
-        await CLI.SkillsUninstall(id, "claude", false);
-        setNotice(`Removed ${id}`);
-        await refreshInstalled();
-      } catch (e) {
-        setError(String(e));
-      } finally {
-        setBusyAction(false);
-      }
-    },
-    [refreshInstalled],
+  // Every install of the selected skill, which is what decides removal: the CLI
+  // deletes by scope, never by location.
+  const selectedInstalls = useMemo(
+    () => installed.filter((s) => s.skillId === selected),
+    [installed, selected],
   );
+  const projectInstalls = selectedInstalls.filter((s) => s.project);
+  const hasUserInstall = selectedInstalls.some((s) => !s.project);
+  // Sparing the user-scope copy is only a distinct outcome when there is one to
+  // spare and something else to remove.
+  const scopeChoice = projectInstalls.length > 0 && hasUserInstall;
+  const doomed = scopeChoice && removeScope === "project" ? projectInstalls : selectedInstalls;
 
-  const listed: SkillRow[] =
-    tab === "catalog"
-      ? rows
-      : installed.map((s) => ({
-          id: s.skillId,
-          displayName: s.skillId,
-          description: `${s.harness} · ${s.version || "unversioned"}`,
-          loadCount: "",
-        }));
+  const uninstall = useCallback(async () => {
+    if (!selected) return;
+    setBusyAction(true);
+    setError("");
+    setNotice("");
+    try {
+      // project=true spares the user-scope copy and removes every project one;
+      // false removes the lot. There is no third option — the CLI cannot delete
+      // a single location, which is why the dialog lists what actually goes.
+      const projectOnly = scopeChoice ? removeScope === "project" : !hasUserInstall;
+      await CLI.SkillsUninstall(selected, "claude", projectOnly);
+      setNotice(`Removed ${doomed.length} install${doomed.length === 1 ? "" : "s"} of ${selected}`);
+      setConfirmRemove(false);
+      await refreshInstalled();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setBusyAction(false);
+    }
+  }, [selected, scopeChoice, removeScope, hasUserInstall, doomed.length, refreshInstalled]);
+
+  // One row per skill, not per install: the same skill installed into three
+  // landing zones is still one thing to read and one thing to remove, and
+  // repeating it would give the list duplicate keys.
+  const installedRows: SkillRow[] = useMemo(() => {
+    const byId = new Map<string, InstalledSkill[]>();
+    for (const s of installed) {
+      byId.set(s.skillId, [...(byId.get(s.skillId) ?? []), s]);
+    }
+    return [...byId.entries()].map(([id, entries]) => ({
+      id,
+      displayName: id,
+      description: entries.map(installLocation).join(" · "),
+      loadCount: "",
+    }));
+  }, [installed]);
+
+  const listed: SkillRow[] = tab === "catalog" ? rows : installedRows;
 
   return (
     <div className="flex flex-1 flex-col h-full min-w-0 min-h-0">
@@ -358,37 +403,28 @@ export function SkillsPage() {
                 >
                   {copied ? "Copied" : "Copy"}
                 </Button>
-                {installedIds.has(selected) ? (
+                {installedIds.has(selected) && (
                   <Button
                     variant="secondary"
                     disabled={busyAction}
-                    onClick={() => void uninstall(selected)}
+                    onClick={() => {
+                      setRemoveScope("project");
+                      setConfirmRemove(true);
+                    }}
                     className="text-[10px]"
                   >
                     Uninstall
                   </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="secondary"
-                      disabled={busyAction}
-                      onClick={() => void install(selected, true)}
-                      className="text-[10px]"
-                      title="Install into this repository's .claude/skills"
-                    >
-                      Install to project
-                    </Button>
-                    <Button
-                      variant="primary"
-                      disabled={busyAction}
-                      onClick={() => void install(selected, false)}
-                      className="text-[10px]"
-                      title="Install into your user-scope Claude Code skills"
-                    >
-                      Install
-                    </Button>
-                  </>
                 )}
+                <Button
+                  variant="primary"
+                  disabled={busyAction}
+                  onClick={() => setPickingTarget(true)}
+                  className="text-[10px]"
+                  title="Choose a landing zone, product, or your user scope"
+                >
+                  {installedIds.has(selected) ? "Install elsewhere" : "Install…"}
+                </Button>
               </div>
 
               <div className="flex-1 overflow-y-auto px-[20px] py-[16px]">
@@ -403,7 +439,64 @@ export function SkillsPage() {
             </div>
           )}
         </div>
+
+        {pickingTarget && selected && (
+          <InstallTargetPanel
+            skillId={selected}
+            busy={busyAction}
+            onInstall={(target) => void install(selected, target)}
+            onClose={() => setPickingTarget(false)}
+          />
+        )}
       </div>
+
+      <ConfirmDialog
+        open={confirmRemove}
+        onOpenChange={setConfirmRemove}
+        title={`Remove ${selected ?? ""}?`}
+        confirmLabel={`Remove ${doomed.length} install${doomed.length === 1 ? "" : "s"}`}
+        loading={busyAction}
+        loadingLabel="Removing…"
+        onConfirm={() => void uninstall()}
+        description={
+          <div className="flex flex-col gap-[10px]">
+            {scopeChoice && (
+              // The CLI removes by scope, not by location, so these two are the
+              // only outcomes it can produce. Offering a per-location choice
+              // here would be a promise the platform cannot keep.
+              <div className="flex flex-col gap-[4px]">
+                {(["project", "all"] as const).map((scope) => (
+                  <button
+                    key={scope}
+                    onClick={() => setRemoveScope(scope)}
+                    className={`text-left px-[10px] py-[6px] rounded-[4px] border transition-colors ${
+                      removeScope === scope
+                        ? "border-brand-fill bg-brand-fill/10"
+                        : "border-border hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-[11px] font-mono text-foreground">
+                      {scope === "project"
+                        ? `Project installs only (${projectInstalls.length})`
+                        : `Everywhere (${selectedInstalls.length})`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-col gap-[2px]">
+              <span className="text-[10px] font-mono text-foreground/50">
+                This deletes {doomed.length === 1 ? "the folder" : "these folders"}:
+              </span>
+              {doomed.map((s) => (
+                <span key={s.path} className="text-[10px] font-mono text-foreground/70 break-all">
+                  {s.path}
+                </span>
+              ))}
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

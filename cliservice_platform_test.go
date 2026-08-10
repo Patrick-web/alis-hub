@@ -45,7 +45,17 @@ func TestSkillsValidation(t *testing.T) {
 			_, err := svc.SkillsResource("id", "")
 			return err
 		},
-		"install with no id": func() error { _, err := svc.SkillsInstall("", "", false, false); return err },
+		"install with no id": func() error { _, err := svc.SkillsInstall("", "", false, false, ""); return err },
+		// A project install with no directory would resolve against the app's
+		// own cwd — "/" under a Finder launch — and write to /.claude/skills.
+		"project install with no dir": func() error {
+			_, err := svc.SkillsInstall("id", "claude", true, false, "")
+			return err
+		},
+		"project install with a missing dir": func() error {
+			_, err := svc.SkillsInstall("id", "claude", true, false, "/no/such/place")
+			return err
+		},
 		// Upgrading nothing would report success while doing nothing.
 		"upgrade with neither ids nor all": func() error { _, err := svc.SkillsUpgrade(nil, false); return err },
 		// Sharing with neither target is a no-op that looks like a grant.
@@ -118,6 +128,22 @@ func TestFixture_SkillsInstalled(t *testing.T) {
 		if s.ContentHash == "" {
 			t.Errorf("skill %s: contentHash not decoded", s.SkillID)
 		}
+	}
+
+	// The scope has to survive decoding: a project install and a user-scope one
+	// are removed by different commands, and path alone does not say which is
+	// which. The fixture carries one of each — an entry with no project key is
+	// user scope, which is how the CLI writes it.
+	var user, project int
+	for _, s := range installed {
+		if s.Project {
+			project++
+		} else {
+			user++
+		}
+	}
+	if user == 0 || project == 0 {
+		t.Errorf("project scope not decoded: %d user, %d project", user, project)
 	}
 }
 

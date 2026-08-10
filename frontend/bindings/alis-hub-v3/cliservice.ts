@@ -255,13 +255,19 @@ export function SkillsFeedback(id: string, message: string, rating: string): $Ca
 /**
  * SkillsInstall installs a registry skill into a local agent harness.
  * 
- * project installs into the current repo's .claude/skills/<id> instead of the
- * user scope. force takes over a target folder that exists but was not written
- * by alis — which is why it is opt-in: without it the CLI reports
- * `unmanaged_target` rather than overwriting someone's hand-written skill.
+ * project installs into dir/.claude/skills/<id> instead of the user scope, and
+ * dir is how the caller says which project — the CLI takes the folder straight
+ * from the working directory and has no flag for it. It does not require a git
+ * repo: whatever the cwd is becomes the project root, so an unset dir under a
+ * Finder launch would install into /.claude/skills. Hence the hard error rather
+ * than a default.
+ * 
+ * force takes over a target folder that exists but was not written by alis —
+ * which is why it is opt-in: without it the CLI reports `unmanaged_target`
+ * rather than overwriting someone's hand-written skill.
  */
-export function SkillsInstall(id: string, harness: string, project: boolean, force: boolean): $CancellablePromise<string> {
-    return $Call.ByID(31847436, id, harness, project, force);
+export function SkillsInstall(id: string, harness: string, project: boolean, force: boolean, dir: string): $CancellablePromise<string> {
+    return $Call.ByID(31847436, id, harness, project, force, dir);
 }
 
 /**
@@ -340,8 +346,15 @@ export function SkillsShare(id: string, email: string, domain: boolean, remove: 
 }
 
 /**
- * SkillsUninstall removes a locally installed skill. project limits removal to
- * project-scope installs.
+ * SkillsUninstall removes a locally installed skill.
+ * 
+ * There is no working directory here, and that is not an oversight: unlike
+ * install, uninstall ignores the cwd. Verified by installing one skill into two
+ * separate repos and running this with project set from inside the first — both
+ * copies were deleted. project therefore selects a scope *kind*, not a place:
+ * set, it removes every project install and spares the user-scope one; unset, it
+ * removes every install of the id anywhere. Callers must not present it as
+ * removing one location.
  */
 export function SkillsUninstall(id: string, harness: string, project: boolean): $CancellablePromise<string> {
     return $Call.ByID(3235572629, id, harness, project);

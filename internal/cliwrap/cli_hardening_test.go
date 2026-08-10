@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -38,6 +39,58 @@ func TestRun_MissingBinaryDoesNotPanic(t *testing.T) {
 
 	if _, err := r.Run(context.Background(), "whoami", "--json"); err == nil {
 		t.Fatal("expected an error when the binary is missing")
+	}
+}
+
+// TestRunIn_SetsWorkingDirectory pins the one thing `skills install --project`
+// depends on: the CLI takes the project folder from its cwd and has no flag that
+// says it, so if the dir stops reaching the process the skill lands somewhere
+// else entirely and nothing errors. Run with no Dir is checked too — it must
+// stay on the app's own cwd rather than inheriting a previous call's.
+func TestRunIn_SetsWorkingDirectory(t *testing.T) {
+	dir := t.TempDir()
+	fake := filepath.Join(dir, "alis")
+	// pwd -P, not pwd: the shell's logical form echoes back whatever path it was
+	// handed, which would pass this test even against an unresolved symlink.
+	if err := os.WriteFile(fake, []byte("#!/bin/sh\npwd -P\n"), 0o755); err != nil {
+		t.Fatalf("write fake binary: %v", err)
+	}
+
+	r, err := New(fake)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	target := t.TempDir()
+	// macOS hands out /var symlinks for temp dirs while the shell reports the
+	// resolved path, so compare what the filesystem agrees on.
+	want, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		t.Fatalf("resolve target: %v", err)
+	}
+
+	res, err := r.RunIn(context.Background(), target, "skills", "install", "x", "--project")
+	if err != nil {
+		t.Fatalf("RunIn: %v", err)
+	}
+	if got := strings.TrimSpace(string(res.Stdout)); got != want {
+		t.Errorf("ran in %q, want %q", got, want)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	self, err := filepath.EvalSymlinks(cwd)
+	if err != nil {
+		t.Fatalf("resolve cwd: %v", err)
+	}
+	res, err = r.Run(context.Background(), "whoami")
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got := strings.TrimSpace(string(res.Stdout)); got != self {
+		t.Errorf("Run with no Dir ran in %q, want the process cwd %q", got, self)
 	}
 }
 

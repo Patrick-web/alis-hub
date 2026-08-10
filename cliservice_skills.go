@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 )
 
@@ -47,6 +48,11 @@ type InstalledSkill struct {
 	SkillID string `json:"skillId"`
 	Harness string `json:"harness"`
 	Path    string `json:"path"`
+	// Project distinguishes a repo-scoped install from a user-scope one. Path
+	// alone cannot: a project install is only recognisable by knowing which
+	// directories are repos, and the UI needs the distinction to say where a
+	// skill actually lives and what removing it would take with it.
+	Project bool   `json:"project"`
 	Version string `json:"version"`
 	// ContentHash is how `skills upgrade` decides what actually changed.
 	ContentHash string `json:"contentHash"`
@@ -54,13 +60,22 @@ type InstalledSkill struct {
 }
 
 func (s *CLIService) runSkills(label string, args ...string) ([]byte, error) {
+	return s.runSkillsIn("", label, args...)
+}
+
+// runSkillsIn is runSkills with an explicit working directory, for `skills
+// install --project`: the CLI resolves "the project" as the git repo containing
+// the cwd, and has no flag that substitutes for it. An empty dir inherits the
+// app's own cwd, which is "/" under a Finder launch — fine for every other
+// skills command, since none of the rest read the cwd.
+func (s *CLIService) runSkillsIn(dir, label string, args ...string) ([]byte, error) {
 	if !s.available() {
 		return nil, fmt.Errorf("alis CLI not available")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), skillsTimeout)
 	defer cancel()
 
-	result, err := s.runner.Run(ctx, args...)
+	result, err := s.runner.RunIn(ctx, dir, args...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", label, err)
 	}
@@ -171,20 +186,50 @@ func skillsInstallArgs(id, harness string, project, force bool) []string {
 
 // SkillsInstall installs a registry skill into a local agent harness.
 //
-// project installs into the current repo's .claude/skills/<id> instead of the
-// user scope. force takes over a target folder that exists but was not written
-// by alis — which is why it is opt-in: without it the CLI reports
-// `unmanaged_target` rather than overwriting someone's hand-written skill.
-func (s *CLIService) SkillsInstall(id, harness string, project, force bool) (string, error) {
+// project installs into dir/.claude/skills/<id> instead of the user scope, and
+// dir is how the caller says which project — the CLI takes the folder straight
+// from the working directory and has no flag for it. It does not require a git
+// repo: whatever the cwd is becomes the project root, so an unset dir under a
+// Finder launch would install into /.claude/skills. Hence the hard error rather
+// than a default.
+//
+// force takes over a target folder that exists but was not written by alis —
+// which is why it is opt-in: without it the CLI reports `unmanaged_target`
+// rather than overwriting someone's hand-written skill.
+func (s *CLIService) SkillsInstall(id, harness string, project, force bool, dir string) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("skill id is required")
 	}
-	stdout, err := s.runSkills("skills install", skillsInstallArgs(id, harness, project, force)...)
+	if project {
+		if dir == "" {
+			return "", fmt.Errorf("a project install needs a target directory")
+		}
+		info, err := os.Stat(dir)
+		if err != nil {
+			return "", fmt.Errorf("target directory %s: %w", dir, err)
+		}
+		if !info.IsDir() {
+			return "", fmt.Errorf("target %s is not a directory", dir)
+		}
+	} else {
+		// A user-scope install writes to the harness config dir wherever it is
+		// run from, so carrying a dir here would only imply a target it does
+		// not have.
+		dir = ""
+	}
+	stdout, err := s.runSkillsIn(dir, "skills install", skillsInstallArgs(id, harness, project, force)...)
 	return string(stdout), err
 }
 
-// SkillsUninstall removes a locally installed skill. project limits removal to
-// project-scope installs.
+// SkillsUninstall removes a locally installed skill.
+//
+// There is no working directory here, and that is not an oversight: unlike
+// install, uninstall ignores the cwd. Verified by installing one skill into two
+// separate repos and running this with project set from inside the first — both
+// copies were deleted. project therefore selects a scope *kind*, not a place:
+// set, it removes every project install and spares the user-scope one; unset, it
+// removes every install of the id anywhere. Callers must not present it as
+// removing one location.
 func (s *CLIService) SkillsUninstall(id, harness string, project bool) (string, error) {
 	if id == "" {
 		return "", fmt.Errorf("skill id is required")

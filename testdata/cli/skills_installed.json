@@ -6,5 +6,13 @@
     "version": "1.4.0",
     "contentHash": "21bfdc07fabf523c03e4ccd60e3821967fca85127eeeba48f8eb266a15b344f6",
     "installTime": "2026-08-04T04:53:57.190493Z"
+  },
+  {
+    "skillId": "dbd-add-protos",
+    "harness": "claude",
+    "path": "/Users/jp/alis.build/voyage/build/zz/.claude/skills/dbd-add-protos",
+    "project": true,
+    "contentHash": "2107f05a4ee34caf6034231f405e32a46c74f99abacbe40edb992eb94ad2f4b2",
+    "installTime": "2026-08-10T03:16:44.576189Z"
   }
 ]
