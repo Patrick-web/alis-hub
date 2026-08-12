@@ -1,6 +1,10 @@
 import type { PendingPaneOpen } from "../stores/notifications";
 
-const DEEP_LINK_SCHEME = "alishub://";
+// Stable and beta are separate applications with separate URL schemes, and the
+// same frontend bundle ships in both, so parsing accepts either. The first
+// entry is the one used when building links.
+const DEEP_LINK_SCHEMES = ["alishub://", "alishub-beta://"] as const;
+const DEEP_LINK_SCHEME = DEEP_LINK_SCHEMES[0];
 
 export interface DevelopDeepLink {
   route: "/develop";
@@ -10,9 +14,10 @@ export interface DevelopDeepLink {
 export type ParsedDeepLink = DevelopDeepLink;
 
 export function parseDeepLink(url: string): ParsedDeepLink | null {
-  if (!url || !url.startsWith(DEEP_LINK_SCHEME)) return null;
+  const scheme = DEEP_LINK_SCHEMES.find((s) => url?.startsWith(s));
+  if (!scheme) return null;
 
-  const raw = url.slice(DEEP_LINK_SCHEME.length);
+  const raw = url.slice(scheme.length);
   if (!raw) return null;
 
   const [pathPart, queryPart] = raw.split("?", 2);

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"alis-hub-v3/internal/appflavor"
 	"alis-hub-v3/internal/updater"
 	wailsnotif "github.com/wailsapp/wails/v3/pkg/services/notifications"
 
@@ -17,14 +18,28 @@ import (
 var version = "dev"
 
 // deepLinkScheme is the custom URL scheme used to focus/return to the app,
-// e.g. from the OAuth login success page (alishub://auth/callback).
-const deepLinkScheme = "alishub"
+// e.g. from the OAuth login success page (alishub://auth/callback). Per-flavor,
+// so a beta login callback cannot land in the user's stable install.
+var deepLinkScheme = appflavor.URLScheme(version)
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// Both icons ride along in every binary and the flavor picks one at runtime,
+// so the two builds differ only in how CI wraps them.
+//
 //go:embed build/appicon.png
-var appIcon []byte
+var appIconStable []byte
+
+//go:embed build/appicon-beta.png
+var appIconBeta []byte
+
+func appIcon() []byte {
+	if appflavor.IsBeta(version) {
+		return appIconBeta
+	}
+	return appIconStable
+}
 
 func main() {
 	SetupLogging()
@@ -91,9 +106,7 @@ func main() {
 	workflowSvc := NewWorkflowService(hubDB, buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
 	settingsSvc := NewSettingsService(hubDB)
 
-	// Built here rather than alongside the other services because it reads the
-	// user's release channel out of hub.db, which is only open from this point on.
-	updaterSvc := updater.NewService(version, settingsSvc)
+	updaterSvc := updater.NewService(version)
 
 	// window is declared up front so the single-instance and deep-link
 	// callbacks can bring it to the foreground.
@@ -110,9 +123,9 @@ func main() {
 	// app is declared up front so the single-instance callback can emit events.
 	var app *application.App
 	app = application.New(application.Options{
-		Name:        "AlisHub",
-		Description: "AlisHub Desktop Application",
-		Icon:        appIcon,
+		Name:        appflavor.Name(version),
+		Description: appflavor.Name(version) + " Desktop Application",
+		Icon:        appIcon(),
 		Services: []application.Service{
 			application.NewService(&GreetService{}),
 			application.NewService(&ServiceManager{}),
@@ -144,7 +157,9 @@ func main() {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "com.patrickweb.alishub",
+			// Per-flavor, otherwise launching the beta would just focus the
+			// running stable window instead of starting its own instance.
+			UniqueID: appflavor.BundleID(version),
 			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
 				focusMainWindow()
 				for _, arg := range data.Args {

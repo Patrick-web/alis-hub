@@ -5,97 +5,48 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"alis-hub-v3/internal/appflavor"
 )
 
-// fakeStore is an in-memory SettingsStore. A nil map models a store that has
-// never been written to.
-type fakeStore struct {
-	values  map[string]string
-	getErr  error
-	setErr  error
-	setCall int
-}
-
-func (f *fakeStore) GetSetting(key string) (string, error) {
-	if f.getErr != nil {
-		return "", f.getErr
-	}
-	return f.values[key], nil
-}
-
-func (f *fakeStore) SetSetting(key, value string) error {
-	f.setCall++
-	if f.setErr != nil {
-		return f.setErr
-	}
-	if f.values == nil {
-		f.values = map[string]string{}
-	}
-	f.values[key] = value
-	return nil
-}
-
-func TestChannelDefaultsToStable(t *testing.T) {
+func TestChannelIsPinnedToTheBuild(t *testing.T) {
 	tests := []struct {
-		name  string
-		store SettingsStore
-		want  string
+		name    string
+		version string
+		want    string
+		beta    bool
 	}{
-		{name: "no settings store wired", store: nil, want: ChannelStable},
-		{name: "setting never written", store: &fakeStore{}, want: ChannelStable},
-		{name: "explicitly stable", store: &fakeStore{values: map[string]string{channelKey: "stable"}}, want: ChannelStable},
-		{name: "explicitly beta", store: &fakeStore{values: map[string]string{channelKey: "beta"}}, want: ChannelBeta},
-		{name: "unrecognised value", store: &fakeStore{values: map[string]string{channelKey: "nightly"}}, want: ChannelStable},
-		{name: "read error", store: &fakeStore{getErr: http.ErrServerClosed}, want: ChannelStable},
+		{name: "stable release", version: "v0.14.7", want: ChannelStable},
+		{name: "beta release", version: "v0.15.0-beta.1", want: ChannelBeta, beta: true},
+		{name: "release candidate", version: "v1.0.0-rc.2", want: ChannelBeta, beta: true},
+		{name: "dev build behaves like stable", version: "dev", want: ChannelStable},
+		{name: "empty version", version: "", want: ChannelStable},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewService("0.14.7", tt.store)
+			s := NewService(tt.version)
 			if got := s.Channel(); got != tt.want {
 				t.Errorf("Channel() = %q, want %q", got, tt.want)
+			}
+			if got := s.IsBeta(); got != tt.beta {
+				t.Errorf("IsBeta() = %v, want %v", got, tt.beta)
 			}
 		})
 	}
 }
 
-func TestSetChannel(t *testing.T) {
-	t.Run("rejects unknown channel without writing", func(t *testing.T) {
-		store := &fakeStore{}
-		s := NewService("0.14.7", store)
+// The flavor override exists so a dev build can exercise the beta identity.
+func TestFlavorEnvOverride(t *testing.T) {
+	t.Setenv(appflavor.FlavorEnv, "beta")
+	if got := NewService("v0.14.7").Channel(); got != ChannelBeta {
+		t.Errorf("Channel() = %q with %s=beta, want %q", got, appflavor.FlavorEnv, ChannelBeta)
+	}
 
-		if err := s.SetChannel("nightly"); err == nil {
-			t.Fatal("SetChannel(\"nightly\") = nil, want error")
-		}
-		if store.setCall != 0 {
-			t.Errorf("SetSetting called %d times, want 0", store.setCall)
-		}
-		if got := s.Channel(); got != ChannelStable {
-			t.Errorf("Channel() = %q after rejected write, want %q", got, ChannelStable)
-		}
-	})
-
-	t.Run("persists a valid channel", func(t *testing.T) {
-		store := &fakeStore{}
-		s := NewService("0.14.7", store)
-
-		if err := s.SetChannel(ChannelBeta); err != nil {
-			t.Fatalf("SetChannel(beta) = %v, want nil", err)
-		}
-		if got := store.values[channelKey]; got != ChannelBeta {
-			t.Errorf("stored value = %q, want %q", got, ChannelBeta)
-		}
-		if got := s.Channel(); got != ChannelBeta {
-			t.Errorf("Channel() = %q, want %q", got, ChannelBeta)
-		}
-	})
-
-	t.Run("errors when no store is wired", func(t *testing.T) {
-		s := NewService("0.14.7", nil)
-		if err := s.SetChannel(ChannelBeta); err == nil {
-			t.Fatal("SetChannel with nil store = nil, want error")
-		}
-	})
+	t.Setenv(appflavor.FlavorEnv, "stable")
+	if got := NewService("v0.15.0-beta.1").Channel(); got != ChannelStable {
+		t.Errorf("Channel() = %q with %s=stable, want %q", got, appflavor.FlavorEnv, ChannelStable)
+	}
 }
 
 // releaseServer stands in for the Cloudflare Worker. It records the channel
@@ -127,18 +78,12 @@ func newReleaseServer(t *testing.T, byChannel map[string]workerRelease) *release
 	return rs
 }
 
-func serviceOnChannel(t *testing.T, version, channel string) *Service {
-	t.Helper()
-	return NewService(version, &fakeStore{values: map[string]string{channelKey: channel}})
-}
-
-func TestCheckForUpdateHonoursChannel(t *testing.T) {
+func TestCheckForUpdateUsesTheBuildsChannel(t *testing.T) {
 	stable := workerRelease{Version: "v0.14.8", URL: "https://example.test/stable", Notes: "stable notes"}
 	beta := workerRelease{Version: "v0.15.0-beta.1", URL: "https://example.test/beta", Notes: "beta notes", Prerelease: true}
 
 	tests := []struct {
 		name          string
-		channel       string
 		current       string
 		wantRequested string
 		wantAvailable bool
@@ -146,25 +91,22 @@ func TestCheckForUpdateHonoursChannel(t *testing.T) {
 		wantPre       bool
 	}{
 		{
-			name:          "stable channel never sees a prerelease",
-			channel:       ChannelStable,
+			name:          "stable build never sees a prerelease",
 			current:       "v0.14.7",
 			wantRequested: ChannelStable,
 			wantAvailable: true,
 			wantLatest:    "0.14.8",
 		},
 		{
-			name:          "beta channel accepts a prerelease",
-			channel:       ChannelBeta,
-			current:       "v0.14.7",
+			name:          "beta build follows the beta line",
+			current:       "v0.15.0-beta.0",
 			wantRequested: ChannelBeta,
 			wantAvailable: true,
 			wantLatest:    "0.15.0-beta.1",
 			wantPre:       true,
 		},
 		{
-			name:          "beta already ahead of the offered prerelease",
-			channel:       ChannelBeta,
+			name:          "beta build already ahead of the offered prerelease",
 			current:       "v0.15.0-beta.3",
 			wantRequested: ChannelBeta,
 			wantAvailable: false,
@@ -179,7 +121,7 @@ func TestCheckForUpdateHonoursChannel(t *testing.T) {
 				ChannelStable: stable,
 				ChannelBeta:   beta,
 			})
-			s := serviceOnChannel(t, tt.current, tt.channel)
+			s := NewService(tt.current)
 
 			info, err := s.CheckForUpdate()
 			if err != nil {
@@ -194,9 +136,6 @@ func TestCheckForUpdateHonoursChannel(t *testing.T) {
 			if info.LatestVersion != tt.wantLatest {
 				t.Errorf("LatestVersion = %q, want %q", info.LatestVersion, tt.wantLatest)
 			}
-			if info.Channel != tt.channel {
-				t.Errorf("Channel = %q, want %q", info.Channel, tt.channel)
-			}
 			if info.IsPrerelease != tt.wantPre {
 				t.Errorf("IsPrerelease = %v, want %v", info.IsPrerelease, tt.wantPre)
 			}
@@ -210,7 +149,7 @@ func TestBetaIsSupersededByItsStableRelease(t *testing.T) {
 	newReleaseServer(t, map[string]workerRelease{
 		ChannelBeta: {Version: "v0.15.0", URL: "https://example.test/stable"},
 	})
-	s := serviceOnChannel(t, "v0.15.0-beta.3", ChannelBeta)
+	s := NewService("v0.15.0-beta.3")
 
 	info, err := s.CheckForUpdate()
 	if err != nil {
@@ -224,52 +163,50 @@ func TestBetaIsSupersededByItsStableRelease(t *testing.T) {
 	}
 }
 
-func TestStableRollback(t *testing.T) {
-	t.Run("offers a downgrade off a beta build", func(t *testing.T) {
+func TestBetaRelease(t *testing.T) {
+	t.Run("advertises a genuine prerelease to the stable build", func(t *testing.T) {
 		srv := newReleaseServer(t, map[string]workerRelease{
-			ChannelStable: {Version: "v0.14.7", URL: "https://example.test/stable"},
-			ChannelBeta:   {Version: "v0.15.0-beta.3", Prerelease: true},
+			ChannelBeta: {Version: "v0.15.0-beta.1", URL: "https://example.test/beta", Prerelease: true},
 		})
-		// Still configured for beta: the rollback must ignore that and ask for
-		// stable anyway.
-		s := serviceOnChannel(t, "v0.15.0-beta.3", ChannelBeta)
+		s := NewService("v0.14.7")
 
-		info, err := s.StableRollback()
+		info, err := s.BetaRelease()
 		if err != nil {
-			t.Fatalf("StableRollback() error = %v", err)
+			t.Fatalf("BetaRelease() error = %v", err)
 		}
-		if len(srv.requested) != 1 || srv.requested[0] != ChannelStable {
-			t.Errorf("worker asked for channels %v, want [stable]", srv.requested)
+		if len(srv.requested) != 1 || srv.requested[0] != ChannelBeta {
+			t.Errorf("worker asked for channels %v, want [beta]", srv.requested)
 		}
 		if !info.Available {
-			t.Error("Available = false, want true: rollback must ignore semver ordering")
+			t.Error("Available = false, want true")
 		}
-		if info.LatestVersion != "0.14.7" {
-			t.Errorf("LatestVersion = %q, want %q", info.LatestVersion, "0.14.7")
-		}
-		if info.Channel != ChannelStable {
-			t.Errorf("Channel = %q, want %q", info.Channel, ChannelStable)
+		if info.LatestVersion != "0.15.0-beta.1" {
+			t.Errorf("LatestVersion = %q, want %q", info.LatestVersion, "0.15.0-beta.1")
 		}
 	})
 
-	t.Run("nothing to do when already on stable", func(t *testing.T) {
+	// With no beta published the beta channel resolves to the stable release,
+	// which must not be advertised as "the beta".
+	t.Run("stays quiet when no beta is published", func(t *testing.T) {
 		newReleaseServer(t, map[string]workerRelease{
-			ChannelStable: {Version: "v0.14.7", URL: "https://example.test/stable"},
+			ChannelBeta: {Version: "v0.14.7", URL: "https://example.test/stable", Prerelease: false},
 		})
-		s := serviceOnChannel(t, "v0.14.7", ChannelStable)
+		s := NewService("v0.14.7")
 
-		info, err := s.StableRollback()
+		info, err := s.BetaRelease()
 		if err != nil {
-			t.Fatalf("StableRollback() error = %v", err)
+			t.Fatalf("BetaRelease() error = %v", err)
 		}
 		if info.Available {
-			t.Error("Available = true, want false: already running the stable build")
+			t.Error("Available = true, want false: the beta channel resolved to a stable release")
 		}
 	})
 }
 
-func TestOpenReleasePageFallsBackToAllReleases(t *testing.T) {
-	s := NewService("v0.14.7", nil)
+// A beta build's release is not reachable from /releases/latest, so the menu
+// item has to open the release resolved by the last check.
+func TestOpenReleasePageRemembersTheResolvedRelease(t *testing.T) {
+	s := NewService("v0.14.7")
 	s.mu.Lock()
 	got := s.lastRelURL
 	s.mu.Unlock()
@@ -277,12 +214,10 @@ func TestOpenReleasePageFallsBackToAllReleases(t *testing.T) {
 		t.Fatalf("lastRelURL = %q on a fresh service, want empty", got)
 	}
 
-	// After a check, the resolved release URL is what the menu item should open,
-	// since a beta build is not reachable from /releases/latest.
 	newReleaseServer(t, map[string]workerRelease{
 		ChannelBeta: {Version: "v0.15.0-beta.1", URL: "https://example.test/beta", Prerelease: true},
 	})
-	s = serviceOnChannel(t, "v0.14.7", ChannelBeta)
+	s = NewService("v0.15.0-beta.0")
 	if _, err := s.CheckForUpdate(); err != nil {
 		t.Fatalf("CheckForUpdate() error = %v", err)
 	}

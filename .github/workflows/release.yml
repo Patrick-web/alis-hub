@@ -9,8 +9,60 @@ permissions:
   contents: write
 
 jobs:
+  # Stable and beta ship as two applications that install side by side, so every
+  # identity the OS keys on has to differ between them. Derived once here and
+  # consumed by all three build jobs; the Go side derives the same values from
+  # the version string (see internal/appflavor).
+  flavor:
+    runs-on: ubuntu-latest
+    outputs:
+      is_beta: ${{ steps.f.outputs.is_beta }}
+      prerelease: ${{ steps.f.outputs.is_beta }}
+      app_name: ${{ steps.f.outputs.app_name }}
+      bundle_id: ${{ steps.f.outputs.bundle_id }}
+      url_scheme: ${{ steps.f.outputs.url_scheme }}
+      icns: ${{ steps.f.outputs.icns }}
+      ico: ${{ steps.f.outputs.ico }}
+      exe_name: ${{ steps.f.outputs.exe_name }}
+      numeric_version: ${{ steps.f.outputs.numeric_version }}
+    steps:
+      - id: f
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NUMERIC="${TAG#v}"; NUMERIC="${NUMERIC%%-*}"
+          case "$NUMERIC" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::tag $TAG is not vX.Y.Z[-suffix]"; exit 1 ;;
+          esac
+          if [ "$TAG" != "${TAG%%-*}" ]; then
+            {
+              echo "is_beta=true"
+              echo "app_name=AlisHub Beta"
+              echo "bundle_id=com.patrickweb.alishub.beta"
+              echo "url_scheme=alishub-beta"
+              echo "icns=build/darwin/icons-beta.icns"
+              echo "ico=build/windows/icon-beta.ico"
+              echo "exe_name=alis-hub-v3-beta.exe"
+            } >> "$GITHUB_OUTPUT"
+          else
+            {
+              echo "is_beta=false"
+              echo "app_name=AlisHub"
+              echo "bundle_id=com.patrickweb.alishub"
+              echo "url_scheme=alishub"
+              echo "icns=build/darwin/icons.icns"
+              echo "ico=build/windows/icon.ico"
+              echo "exe_name=alis-hub-v3.exe"
+            } >> "$GITHUB_OUTPUT"
+          fi
+          echo "numeric_version=$NUMERIC" >> "$GITHUB_OUTPUT"
+
   build-macos:
+    needs: flavor
     runs-on: macos-latest
+    env:
+      APP: ${{ needs.flavor.outputs.app_name }}.app
+      APP_NAME: ${{ needs.flavor.outputs.app_name }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v6
@@ -62,18 +114,24 @@ jobs:
           GOOS: darwin
       - name: Create .app bundle and sign
         run: |
-          APP="AlisHub.app"
           mkdir -p "$APP/Contents/MacOS"
           mkdir -p "$APP/Contents/Resources"
           cp alis-hub-v3 "$APP/Contents/MacOS/"
-          cp build/darwin/icons.icns "$APP/Contents/Resources/"
+          # CFBundleIconFile stays "icons"; only the artwork differs per flavor.
+          cp "${{ needs.flavor.outputs.icns }}" "$APP/Contents/Resources/icons.icns"
           cp build/darwin/Info.plist "$APP/Contents/Info.plist"
           # CFBundleShortVersionString is the user-facing marketing version and
           # Apple expects it numeric, so drop any -beta.N suffix there. The full
           # tag stays in CFBundleVersion.
-          SHORT_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//; s/-.*//')
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.ref_name }}" "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT_VERSION" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ needs.flavor.outputs.numeric_version }}" "$APP/Contents/Info.plist"
+          # Distinct bundle identity, or macOS treats the two installs as one
+          # app and resolves deep links to an arbitrary one of them.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ needs.flavor.outputs.bundle_id }}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName $APP_NAME" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLName ${{ needs.flavor.outputs.bundle_id }}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleURLTypes:0:CFBundleURLSchemes:0 ${{ needs.flavor.outputs.url_scheme }}" "$APP/Contents/Info.plist"
+          plutil -lint "$APP/Contents/Info.plist"
           # Try Developer ID signing; fall back to ad-hoc if cert unavailable
           IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/' || true)
           if [ -n "$IDENTITY" ]; then
@@ -97,7 +155,6 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
-          APP="AlisHub.app"
           if [ -z "$APPLE_ID" ] || [ -z "$APPLE_TEAM_ID" ] || [ -z "$APPLE_APP_PASSWORD" ]; then
             echo "::warning::Notarization secrets missing; skipping notarization. Downloaded app will be blocked by Gatekeeper."
             exit 0
@@ -126,11 +183,10 @@ jobs:
           rm /tmp/AlisHub-notarize.zip
       - name: Create zip + DMG with Applications shortcut
         run: |
-          APP="AlisHub.app"
           VERSION=${{ github.ref_name }}
           ditto -c -k --sequesterRsrc --keepParent "$APP" "AlisHub-macOS-${VERSION}.zip"
 
-          hdiutil create -size 200m -volname "AlisHub" -fs HFS+ -ov /tmp/alishub-rw.dmg
+          hdiutil create -size 200m -volname "$APP_NAME" -fs HFS+ -ov /tmp/alishub-rw.dmg
           hdiutil attach /tmp/alishub-rw.dmg -mountpoint /tmp/alishub-mount
           cp -R "$APP" /tmp/alishub-mount/
           ln -s /Applications /tmp/alishub-mount/Applications
@@ -145,6 +201,7 @@ jobs:
             AlisHub-macOS-*.dmg
 
   build-linux:
+    needs: flavor
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -177,7 +234,7 @@ jobs:
           VERSION=${{ github.ref_name }}
           mkdir -p AlisHub-linux
           cp alis-hub-v3 AlisHub-linux/
-          cp build/appicon.png AlisHub-linux/alishub.png
+          cp "${{ needs.flavor.outputs.is_beta == 'true' && 'build/appicon-beta.png' || 'build/appicon.png' }}" AlisHub-linux/alishub.png
           tar czf "AlisHub-linux-${VERSION}.tar.gz" AlisHub-linux
       - uses: actions/upload-artifact@v5
         with:
@@ -185,6 +242,7 @@ jobs:
           path: AlisHub-linux-*.tar.gz
 
   build-windows:
+    needs: flavor
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v5
@@ -212,13 +270,13 @@ jobs:
       - name: Build frontend
         run: cd frontend && npm run build
       - name: Generate Windows resources (amd64)
-        run: wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+        run: wails3 generate syso -arch amd64 -icon ${{ needs.flavor.outputs.ico }} -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
       - name: Build binary (amd64)
         run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-amd64.exe .
         env:
           GOARCH: amd64
       - name: Generate Windows resources (arm64)
-        run: wails3 generate syso -arch arm64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_arm64.syso
+        run: wails3 generate syso -arch arm64 -icon ${{ needs.flavor.outputs.ico }} -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_arm64.syso
       - name: Build binary (arm64)
         run: go build -tags production -trimpath -ldflags="-w -s -H windowsgui -X main.version=${{ github.ref_name }}" -o alis-hub-v3-arm64.exe .
         env:
@@ -235,7 +293,16 @@ jobs:
           $amd64Path = (Resolve-Path "alis-hub-v3-amd64.exe").Path
           $arm64Path = (Resolve-Path "alis-hub-v3-arm64.exe").Path
           New-Item -ItemType Directory -Force -Path bin | Out-Null
-          & makensis "-DARG_WAILS_AMD64_BINARY=$amd64Path" "-DARG_WAILS_ARM64_BINARY=$arm64Path" "-DINFO_PRODUCTVERSION=$version" build/windows/nsis/project.nsi
+          # Beta installs to its own directory under its own uninstall entry,
+          # ships a differently named exe so the installer's taskkill cannot
+          # terminate a running stable, and claims its own deep-link protocol.
+          $productName = "${{ needs.flavor.outputs.app_name }}"
+          $exeName     = "${{ needs.flavor.outputs.exe_name }}"
+          $protocol    = "${{ needs.flavor.outputs.url_scheme }}"
+          & makensis "-DARG_WAILS_AMD64_BINARY=$amd64Path" "-DARG_WAILS_ARM64_BINARY=$arm64Path" `
+            "-DINFO_PRODUCTVERSION=$version" "-DINFO_PRODUCTNAME=$productName" `
+            "-DPRODUCT_EXECUTABLE=$exeName" "-DCUSTOM_PROTOCOL=$protocol" `
+            build/windows/nsis/project.nsi
       - name: Rename installer
         shell: pwsh
         run: Move-Item "bin/alis-hub-v3-amd64_arm64-installer.exe" "AlisHub-windows-${{ github.ref_name }}-installer.exe"
@@ -245,7 +312,7 @@ jobs:
           path: AlisHub-windows-*-installer.exe
 
   release:
-    needs: [build-macos, build-linux, build-windows]
+    needs: [flavor, build-macos, build-linux, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -272,4 +339,4 @@ jobs:
           # A tag with a semver prerelease suffix (v0.15.0-beta.1) ships to the
           # beta channel only. GitHub's /releases/latest excludes prereleases,
           # which is what keeps stable users from ever seeing these.
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ needs.flavor.outputs.prerelease }}

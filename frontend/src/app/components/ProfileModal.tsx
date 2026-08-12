@@ -33,8 +33,7 @@ import { DndProvider, useDrag, useDrop } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { getAccessibleForeground } from "../lib/colorContrast";
 import { useUserProfile } from "../stores/userProfile";
-import { useUpdate, type UpdateChannel } from "../stores/update";
-import { ConfirmDialog } from "./ConfirmDialog";
+import { useUpdate } from "../stores/update";
 import { LocalAISetupCard } from "./LocalAISetupCard";
 
 interface ProfileModalProps {
@@ -384,11 +383,11 @@ const STATIC_SEARCH_ENTRIES: SearchEntry[] = [
     keywords: ["beta", "stable", "channel", "prerelease", "early access", "preview", "update"],
   },
   {
-    id: "setting-updates-rollback",
+    id: "setting-updates-get-beta",
     tab: "updates",
     section: "Release channel",
-    label: "Reinstall stable build",
-    keywords: ["rollback", "downgrade", "revert", "leave beta", "stable", "restore"],
+    label: "Try the beta",
+    keywords: ["beta", "prerelease", "early access", "preview", "insider", "download"],
   },
   {
     id: "setting-updates-check",
@@ -586,20 +585,16 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
     downloadProgress,
     checkingUpdate,
     channel,
-    switchingChannel,
-    downloading,
-    stableInfo,
+    betaInfo,
     setNotesOpen,
     checkForUpdate,
     startDownload,
     loadChannel,
-    setChannel,
-    refreshStable,
-    rollbackToStable,
+    refreshBeta,
+    openBetaDownload,
   } = useUpdate();
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
-  const [rollbackConfirmOpen, setRollbackConfirmOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [changelogHtml, setChangelogHtml] = useState("");
   const [sysNotifications, setSysNotifications] = useState(() => isSystemNotificationsEnabled());
@@ -653,11 +648,11 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
       })
       .catch(() => {});
 
-    // Both feed the Release channel section: the current channel, and the
-    // stable build a beta user would roll back to.
+    // Feeds the Release channel section: which build this is, and whether
+    // there is a beta worth pointing the user at.
     void loadChannel();
-    void refreshStable();
-  }, [open, loadChannel, refreshStable]);
+    void refreshBeta();
+  }, [open, loadChannel, refreshBeta]);
 
   const handleCheckUpdate = async () => {
     setUpdateError(null);
@@ -670,20 +665,7 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
 
   const handleDownload = () => startDownload(updateInfo ?? undefined);
 
-  const handleChannelChange = async (next: UpdateChannel) => {
-    setUpdateError(null);
-    try {
-      await setChannel(next);
-    } catch (e) {
-      setUpdateError(String(e));
-    }
-  };
-
-  const runningVersion = updateInfo?.currentVersion || appInfo?.version || "";
-  // Semver prerelease suffix: the only reliable signal that the running build
-  // came off the beta channel, since the channel setting can be flipped freely.
-  const runningIsPrerelease = runningVersion.includes("-");
-  const canAutoApply = appInfo?.os !== "linux";
+  const isBetaBuild = channel === "beta";
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -1270,7 +1252,7 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
                             </p>
                             <p className="text-[11px] text-foreground/40 font-mono mt-[1px] flex items-center gap-[5px]">
                               v{appInfo?.version || updateInfo?.currentVersion || "—"}
-                              {runningIsPrerelease && (
+                              {isBetaBuild && (
                                 <span className="text-[9px] font-mono uppercase tracking-wide bg-warning/15 text-warning px-[5px] py-[1px] rounded-[4px]">
                                   beta
                                 </span>
@@ -1317,67 +1299,33 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
                               id="setting-updates-channel"
                               highlighted={highlightedId === "setting-updates-channel"}
                               label="Channel"
-                            >
-                              <div className="flex items-center gap-[2px] bg-foreground/[0.06] rounded-[6px] p-[2px]">
-                                {(["stable", "beta"] as const).map((c) => (
-                                  <button
-                                    key={c}
-                                    onClick={() => handleChannelChange(c)}
-                                    disabled={switchingChannel || downloading}
-                                    className={`px-[8px] py-[3px] rounded-[4px] text-[10px] font-mono capitalize transition-colors disabled:opacity-50 ${
-                                      channel === c
-                                        ? "bg-foreground/[0.1] text-foreground"
-                                        : "text-foreground/35 hover:text-foreground/70"
-                                    }`}
-                                  >
-                                    {c}
-                                  </button>
-                                ))}
-                              </div>
-                            </SettingRow>
+                              value={isBetaBuild ? "Beta" : "Stable"}
+                            />
 
-                            {runningIsPrerelease && (
+                            {!isBetaBuild && (
                               <SettingRow
-                                id="setting-updates-rollback"
-                                highlighted={highlightedId === "setting-updates-rollback"}
-                                label="Reinstall stable build"
+                                id="setting-updates-get-beta"
+                                highlighted={highlightedId === "setting-updates-get-beta"}
+                                label="Try the beta"
                               >
                                 <button
-                                  onClick={() =>
-                                    canAutoApply
-                                      ? setRollbackConfirmOpen(true)
-                                      : UpdaterService.OpenReleasePage()
-                                  }
-                                  disabled={downloading || !stableInfo?.available}
+                                  onClick={() => void openBetaDownload()}
+                                  disabled={!betaInfo?.available}
                                   className="text-[10px] font-bold bg-foreground/[0.08] hover:bg-foreground/[0.12] text-foreground/80 px-[8px] py-[4px] rounded-full font-mono uppercase tracking-wide disabled:opacity-50"
                                 >
-                                  {stableInfo?.available
-                                    ? `v${stableInfo.latestVersion}`
-                                    : "Up to date"}
+                                  {betaInfo?.available
+                                    ? `Get v${betaInfo.latestVersion}`
+                                    : "None available"}
                                 </button>
                               </SettingRow>
                             )}
                           </SettingsCard>
-                          <p className="text-[10px] text-foreground/30 font-mono px-[2px]">
-                            {channel === "beta"
-                              ? "Beta builds ship before release and may be unstable."
-                              : "Only fully released builds."}
+                          <p className="text-[10px] text-foreground/30 font-mono px-[2px] leading-relaxed">
+                            {isBetaBuild
+                              ? "Beta builds ship before release and may be unstable. This is a separate app with its own settings, so your stable install is untouched. To go back, just quit and open AlisHub."
+                              : "Only fully released builds. The beta installs alongside this one as a separate app, so you can run both."}
                           </p>
                         </div>
-
-                        {runningIsPrerelease && channel === "stable" && stableInfo?.available && (
-                          <div className="flex items-start gap-[8px] px-[12px] py-[9px] bg-[rgba(255,159,10,0.06)] border border-[rgba(255,159,10,0.2)] rounded-[9px]">
-                            <Icon
-                              icon="solar:danger-triangle-linear"
-                              className="text-warning text-base shrink-0"
-                            />
-                            <p className="text-[11px] text-foreground/70 font-mono leading-relaxed">
-                              You're running beta v{runningVersion}, which is ahead of stable v
-                              {stableInfo.latestVersion}. Reinstall the stable build to return to
-                              the stable channel now, or stay put until stable catches up.
-                            </p>
-                          </div>
-                        )}
 
                         {updateError && (
                           <p className="text-[10px] text-destructive font-mono">{updateError}</p>
@@ -1833,19 +1781,6 @@ export function ProfileModal({ open, onOpenChange, initialTab }: ProfileModalPro
         </DialogPortal>
       </Dialog>
 
-      <ConfirmDialog
-        open={rollbackConfirmOpen}
-        onOpenChange={setRollbackConfirmOpen}
-        title="Reinstall stable build?"
-        description={`AlisHub will download v${stableInfo?.latestVersion ?? ""} and restart. This is a downgrade from v${runningVersion}, so features added in the beta will disappear until they ship on stable. Your settings and data stay on disk.`}
-        confirmLabel="Reinstall"
-        loadingLabel="Downloading…"
-        loading={downloading}
-        onConfirm={() => {
-          void rollbackToStable();
-          setRollbackConfirmOpen(false);
-        }}
-      />
     </>
   );
 }

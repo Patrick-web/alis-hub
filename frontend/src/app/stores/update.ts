@@ -24,7 +24,6 @@ export interface DownloadProgress {
   error?: string;
   path?: string;
   version?: string;
-  rollback?: boolean;
 }
 
 interface UpdateStore {
@@ -34,21 +33,22 @@ interface UpdateStore {
   notesOpen: boolean;
   updateDismissed: boolean;
   checkingUpdate: boolean;
-  /** Release channel this install follows. Go owns the persisted value. */
+  /**
+   * Release channel this build follows. Fixed at build time, not a setting:
+   * stable and beta are separate applications that install side by side.
+   */
   channel: UpdateChannel;
-  switchingChannel: boolean;
   /** In-flight download guard. Lives in state so the UI can disable controls. */
   downloading: boolean;
-  /** Current stable release, used to offer a rollback off a beta build. */
-  stableInfo: UpdateInfo | null;
+  /** Newest beta release, so the stable app can offer it. Null in the beta app. */
+  betaInfo: UpdateInfo | null;
   setNotesOpen: (open: boolean) => void;
   dismissUpdate: () => void;
   loadChannel: () => Promise<void>;
-  setChannel: (channel: UpdateChannel) => Promise<void>;
-  refreshStable: () => Promise<void>;
-  rollbackToStable: () => Promise<void>;
+  refreshBeta: () => Promise<void>;
+  openBetaDownload: () => Promise<void>;
   checkForUpdate: () => Promise<UpdateInfo>;
-  startDownload: (info?: UpdateInfo, opts?: { rollback?: boolean }) => Promise<void>;
+  startDownload: (info?: UpdateInfo) => Promise<void>;
   applyUpdate: () => Promise<void>;
 }
 
@@ -60,9 +60,8 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
   updateDismissed: false,
   checkingUpdate: false,
   channel: "stable",
-  switchingChannel: false,
   downloading: false,
-  stableInfo: null,
+  betaInfo: null,
   setNotesOpen: (notesOpen) => set({ notesOpen }),
   dismissUpdate: () => set({ updateDismissed: true }),
   loadChannel: async () => {
@@ -73,37 +72,19 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
       // Go defaults to stable; leave the store's default in place.
     }
   },
-  setChannel: async (channel) => {
-    if (get().channel === channel || get().downloading) return;
-    set({ switchingChannel: true });
+  refreshBeta: async () => {
     try {
-      // Awaited so the setting is committed before Go reads it back on the
-      // check below. Switching also invalidates whatever the other channel said.
-      await UpdaterService.SetChannel(channel);
-      set({
-        channel,
-        updateInfo: null,
-        downloadProgress: null,
-        installError: null,
-        updateDismissed: false,
-      });
-      await get().checkForUpdate();
-      await get().refreshStable();
-    } finally {
-      set({ switchingChannel: false });
-    }
-  },
-  refreshStable: async () => {
-    try {
-      set({ stableInfo: (await UpdaterService.StableRollback()) as UpdateInfo });
+      set({ betaInfo: (await UpdaterService.BetaRelease()) as UpdateInfo });
     } catch {
-      set({ stableInfo: null });
+      set({ betaInfo: null });
     }
   },
-  rollbackToStable: async () => {
-    const target = get().stableInfo;
-    if (!target || get().downloading) return;
-    await get().startDownload(target, { rollback: true });
+  openBetaDownload: async () => {
+    try {
+      await UpdaterService.OpenBetaDownload();
+    } catch (err) {
+      notify.error(`Could not open the beta download: ${String(err)}`);
+    }
   },
   checkForUpdate: async () => {
     set({ checkingUpdate: true });
@@ -115,15 +96,14 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
       set({ checkingUpdate: false });
     }
   },
-  startDownload: async (info, opts) => {
+  startDownload: async (info) => {
     const target = info ?? get().updateInfo;
     if (!target || get().downloading) return;
 
-    const rollback = opts?.rollback ?? false;
     set({
       downloading: true,
       installError: null,
-      downloadProgress: { downloaded: 0, total: 0, done: false, rollback },
+      downloadProgress: { downloaded: 0, total: 0, done: false },
     });
 
     let settled = false;
@@ -146,23 +126,17 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
             total: p.total,
             done: true,
             version: p.version,
-            rollback: p.rollback ?? rollback,
           },
         });
         return;
       }
       set({
-        downloadProgress: {
-          downloaded: p.downloaded,
-          total: p.total,
-          done: false,
-          rollback,
-        },
+        downloadProgress: { downloaded: p.downloaded, total: p.total, done: false },
       });
     });
 
     try {
-      await (rollback ? UpdaterService.DownloadStable() : UpdaterService.DownloadUpdate());
+      await UpdaterService.DownloadUpdate();
     } catch (err) {
       // Go emits a terminal update:progress on every failure path, but if it
       // ever returns without one, clear the guard here so the next download

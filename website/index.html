@@ -271,6 +271,7 @@
     if (beta?.prerelease && beta.version !== stable?.version && beta.platforms?.[platform]) {
       betaBtn.href = beta.platforms[platform];
       betaBtn.textContent = `beta ${beta.version}_`;
+      betaBtn.title = 'Installs alongside the stable app, with its own settings';
       betaBtn.hidden = false;
     }
   })();

@@ -17,22 +17,23 @@ export function WailsNotificationBridge() {
   const { addNotification } = useNotifications();
   const {
     updateInfo,
-    stableInfo,
     downloadProgress,
     installError,
     notesOpen,
     updateDismissed,
+    channel,
+    loadChannel,
     setNotesOpen,
     dismissUpdate,
     startDownload,
-    rollbackToStable,
     applyUpdate,
   } = useUpdate();
 
-  // A rollback is driven by stableInfo, not by an available update, so the
-  // overlay has to read its version numbers and its retry action from there.
-  const isRollback = downloadProgress?.rollback ?? false;
-  const overlayInfo = isRollback ? (stableInfo ?? updateInfo) : updateInfo;
+  // The overlay can appear before the settings modal is ever opened, so the
+  // flavor has to be resolved here too or the card renders in stable colours.
+  useEffect(() => {
+    void loadChannel();
+  }, [loadChannel]);
 
   const addRef = useRef(addNotification);
   addRef.current = addNotification;
@@ -85,14 +86,14 @@ export function WailsNotificationBridge() {
       {/* Keyed off either a real update or an in-flight download. Without the
           `available` check a plain "Check for updates" on a current build pops
           a card claiming the version you already run is available. */}
-      {overlayInfo && (overlayInfo.available || downloadProgress) && !updateDismissed && (
+      {updateInfo && (updateInfo.available || downloadProgress) && !updateDismissed && (
         <UpdateNotification
-          info={overlayInfo}
+          info={updateInfo}
           progress={downloadProgress}
           installError={installError}
-          rollback={isRollback}
+          channel={channel}
           onInstall={applyUpdate}
-          onRetryDownload={() => (isRollback ? rollbackToStable() : startDownload(overlayInfo))}
+          onRetryDownload={() => startDownload(updateInfo)}
           onViewNotes={() => setNotesOpen(true)}
           onDismiss={dismissUpdate}
         />

@@ -19,6 +19,8 @@ import (
 	"sync"
 	"text/template"
 	"time"
+
+	"alis-hub-v3/internal/appflavor"
 )
 
 // errAuthRejected indicates the identity server *definitively* rejected the
@@ -440,9 +442,12 @@ func authResultPage(success bool, detail string) string {
 		detailEl = `<pre class="detail">` + template.HTMLEscapeString(detail) + `</pre>`
 	}
 
-	action := `<a class="btn" href="alishub://auth/callback">Return to Alis&nbsp;Hub</a>`
+	// Flavored so a login started from the beta returns to the beta rather than
+	// waking the user's stable install.
+	scheme := appflavor.URLScheme(version)
+	action := `<a class="btn" href="` + scheme + `://auth/callback">Return to Alis&nbsp;Hub</a>`
 	if !success {
-		action = `<a class="btn" href="alishub://auth/failed">Back to Alis&nbsp;Hub</a>`
+		action = `<a class="btn" href="` + scheme + `://auth/failed">Back to Alis&nbsp;Hub</a>`
 	}
 
 	return `<!DOCTYPE html>

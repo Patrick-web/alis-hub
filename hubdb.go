@@ -7,21 +7,36 @@ import (
 	"os"
 	"path/filepath"
 
+	"alis-hub-v3/internal/appflavor"
+
 	_ "modernc.org/sqlite"
 )
 
-// OpenHubDB opens (or creates) the shared AlisHub SQLite database
-// (workflows + settings) and runs all pending migrations.
+// OpenHubDB opens (or creates) the AlisHub SQLite database (workflows +
+// settings) and runs all pending migrations.
+//
+// The directory is per-flavor, so a beta install never shares a database with
+// stable. Migrations are forward-only, so a shared database would mean a beta
+// schema change permanently altered the stable install too.
 func OpenHubDB() (*sql.DB, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return nil, fmt.Errorf("config dir: %w", err)
 	}
-	appDir := filepath.Join(dir, "AlisHub")
+	appDir := filepath.Join(dir, appflavor.ConfigDirName(version))
 	if err := os.MkdirAll(appDir, 0700); err != nil {
 		return nil, fmt.Errorf("create config dir: %w", err)
 	}
-	db, err := sql.Open("sqlite", filepath.Join(appDir, "hub.db"))
+	dbPath := filepath.Join(appDir, "hub.db")
+
+	// First launch of a beta: start from a copy of the user's stable settings
+	// and workflows rather than an empty database. One-time and one-way, so
+	// anything they change here never touches the stable install.
+	if err := seedFromStable(dir, dbPath); err != nil {
+		log.Printf("[hubdb] could not seed from stable install: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
@@ -33,6 +48,50 @@ func OpenHubDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("migrate: %w", err)
 	}
 	return db, nil
+}
+
+// seedFromStable copies the stable install's hub.db into a brand new beta
+// install. No-op for the stable flavor, and no-op if the beta database already
+// exists, so it can only ever run once per machine.
+//
+// The copy happens before the database is opened, so the beta's own migrations
+// run against it afterwards exactly as they would against a fresh file.
+func seedFromStable(configDir, dbPath string) error {
+	if !appflavor.IsBeta(version) {
+		return nil
+	}
+	if _, err := os.Stat(dbPath); err == nil {
+		return nil // already initialised
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	stablePath := filepath.Join(configDir, appflavor.StableConfigDirName(), "hub.db")
+	if _, err := os.Stat(stablePath); os.IsNotExist(err) {
+		return nil // no stable install to copy from; start empty
+	} else if err != nil {
+		return err
+	}
+
+	// VACUUM INTO rather than copying the file: hub.db runs in WAL mode, so the
+	// main file on its own can be missing recent transactions, and a plain copy
+	// taken while stable is writing can be torn. This takes a consistent
+	// snapshot and writes a single clean database, and it refuses to overwrite
+	// an existing target.
+	source, err := sql.Open("sqlite", "file:"+stablePath+"?mode=ro")
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	if _, err := source.Exec(`VACUUM INTO ?`, dbPath); err != nil {
+		// Leave nothing half-written behind for the next launch to mistake for
+		// an initialised database.
+		_ = os.Remove(dbPath)
+		return err
+	}
+	log.Printf("[hubdb] seeded beta database from %s", stablePath)
+	return nil
 }
 
 // ─── Migrations ───────────────────────────────────────────────────────────────

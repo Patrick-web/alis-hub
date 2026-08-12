@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.15.0-beta.2] - 2026-08-12
+
+### What's New
+- The beta is now a separate application. "AlisHub Beta" installs alongside your normal install with its own purple icon, so you can run both at the same time and tell them apart at a glance
+- The beta keeps its own settings, workflows and data, copied across from your stable install the first time you open it. Anything you change in the beta stays in the beta
+- Leaving the beta no longer involves reinstalling anything. Quit it and open AlisHub as usual, and delete AlisHub Beta whenever you are done with it
+- Each build now follows its own release line automatically, so the beta updates along the beta line and your stable install keeps updating along the stable line
+- The Updates settings tab now shows which build you are running, and offers a link to the current beta when one is available
+
+### Bug Fixes
+- Fixed the update notification claiming your current version was available after a manual check on an up-to-date install
+
 ## [v0.15.0-beta.1] - 2026-08-12
 
 ### What's New

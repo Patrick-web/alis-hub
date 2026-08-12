@@ -2,10 +2,15 @@
 
 Release flow: commit any pending changes → pick channel and version → tag → push (triggers CI).
 
-There are two release channels. A plain `vX.Y.Z` tag is a **stable** release and reaches
-everyone. A `vX.Y.Z-beta.N` tag is a **beta**: CI marks it a GitHub prerelease, and it only
-reaches users who opted in under Settings → Updates → Release channel, or who clicked the
-beta link on the website.
+There are two release channels, and they ship as two separate applications. A plain
+`vX.Y.Z` tag is a **stable** release and reaches everyone. A `vX.Y.Z-beta.N` tag is a
+**beta**: CI marks it a GitHub prerelease and builds it with its own bundle identity, so it
+installs as "AlisHub Beta" alongside a user's normal install rather than replacing it.
+
+The channel is a property of the build, not a user setting. The beta application follows the
+beta line and the stable application follows the stable line; users move between them by
+running the other app. See `internal/appflavor` for the identities this keys on, and the
+`flavor` job in `release.yml` for the build-time half.
 
 ## Steps
 
@@ -81,15 +86,14 @@ Show the generated entry to the user and wait for their approval before continui
 
 **2c. Migration check (betas only)**
 
-If the diff since the last stable tag touches the `migrations` slice in `hubdb.go`, warn the
-user before tagging. Beta and stable share one install path and one `hub.db`, and
-`runMigrations` is forward-only with no down migrations. So:
+If the diff since the last stable tag touches the `migrations` slice in `hubdb.go`, mention
+it before tagging. `runMigrations` is forward-only with no down migrations, so:
 
-- Beta migrations must be strictly additive (`CREATE TABLE`, `ADD COLUMN` with a default).
-  Never `DROP` or `RENAME` in a beta, or a user who rolls back to stable is left with a
-  database the older build cannot read.
-- Never renumber or replace a migration that has already shipped in a beta. Testers have
-  already recorded that schema version and will skip the replacement forever.
+- Beta and stable now hold separate databases (`AlisHub Beta/hub.db` vs `AlisHub/hub.db`),
+  so a beta migration can no longer corrupt a user's stable install. The beta's database is
+  seeded from stable once, on its first launch.
+- Still never renumber or replace a migration that has already shipped in a beta. Testers
+  have already recorded that schema version and will skip the replacement forever.
 
 **3. Commit any uncommitted source changes**
 
@@ -167,6 +171,7 @@ After pushing, tell the user:
 For a **stable** release, that means everyone, including users on the beta channel whose
 current beta is older than this release.
 
-For a **beta**, only users who opted in under Settings → Updates → Release channel, or who
-use the beta link on the download page, will be offered it. Everyone else stays on stable
-and will not see it at all.
+For a **beta**, only people already running AlisHub Beta are offered it as an update.
+Everyone on stable sees nothing; they get the beta by installing it from the download page
+or the "Try the beta" button in Settings → Updates, which adds a second app rather than
+replacing the one they have.

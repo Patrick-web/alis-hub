@@ -28,10 +28,26 @@ export function ApplyUpdate(): $CancellablePromise<void> {
 }
 
 /**
- * Channel returns the release channel this install follows, defaulting to
- * stable whenever the setting is unset, unreadable, or unrecognised. Go owns
- * this value: the frontend reads it through this method rather than through
- * settingsClient, so there is only ever one writer.
+ * BetaRelease resolves the newest release on the beta channel so the stable
+ * app can offer it. Reports Available only when it is a genuine prerelease
+ * ahead of what this build is: with no beta published, the beta channel
+ * resolves to stable and there is nothing to advertise.
+ * 
+ * Deliberately does not download anything. The beta is a separate application
+ * that installs alongside this one, so the user fetches and installs it the
+ * same way they would any other app.
+ */
+export function BetaRelease(): $CancellablePromise<$models.UpdateInfo> {
+    return $Call.ByID(3773515716).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+/**
+ * Channel returns the release channel this install follows. It is fixed by the
+ * build, not chosen by the user: stable and beta are separate applications, so
+ * an in-place switch would leave a beta binary sitting in the stable install's
+ * bundle. Moving between channels means running the other application.
  */
 export function Channel(): $CancellablePromise<string> {
     return $Call.ByID(1916561052);
@@ -48,15 +64,6 @@ export function CurrentVersion(): $CancellablePromise<string> {
 }
 
 /**
- * DownloadStable stages the current stable build regardless of the configured
- * channel, and regardless of it being older than what is running. Backs the
- * "reinstall stable build" action for users opting out of beta.
- */
-export function DownloadStable(): $CancellablePromise<string> {
-    return $Call.ByID(3849470986);
-}
-
-/**
  * DownloadUpdate pulls the appropriate artifact for this platform via the
  * Cloudflare Worker proxy, extracts it to a temp directory, and stashes
  * the resulting path. Progress is reported over the "update:progress" event
@@ -67,6 +74,21 @@ export function DownloadStable(): $CancellablePromise<string> {
  */
 export function DownloadUpdate(): $CancellablePromise<string> {
     return $Call.ByID(4121325632);
+}
+
+/**
+ * IsBeta reports whether this is the beta application, so the UI can label
+ * itself without having to parse the version string.
+ */
+export function IsBeta(): $CancellablePromise<boolean> {
+    return $Call.ByID(3940778383);
+}
+
+/**
+ * OpenBetaDownload sends the user to the beta release page in their browser.
+ */
+export function OpenBetaDownload(): $CancellablePromise<void> {
+    return $Call.ByID(3239267223);
 }
 
 /**
@@ -84,26 +106,6 @@ export function OpenReleasePage(): $CancellablePromise<void> {
  */
 export function SetApp(app: application$0.App | null): $CancellablePromise<void> {
     return $Call.ByID(3158555550, app);
-}
-
-/**
- * SetChannel persists the release channel. Rejects anything but a known
- * channel so a bad write cannot silently strand an install on a dead channel.
- */
-export function SetChannel(channel: string): $CancellablePromise<void> {
-    return $Call.ByID(2604797906, channel);
-}
-
-/**
- * StableRollback resolves the current stable release without comparing it to
- * the running build. A user leaving the beta channel is by definition on a
- * higher version than stable, so CheckForUpdate would report nothing to do and
- * strand them on the beta until the next stable release caught up.
- */
-export function StableRollback(): $CancellablePromise<$models.UpdateInfo> {
-    return $Call.ByID(3127051982).then(($result: any) => {
-        return $$createType1($result);
-    });
 }
 
 // Private type creation functions

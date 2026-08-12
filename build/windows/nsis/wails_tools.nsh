@@ -19,6 +19,10 @@
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "(c) 2026, Patrick-web"
 !endif
+!ifndef CUSTOM_PROTOCOL
+    !define CUSTOM_PROTOCOL "alishub"
+!endif
+
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"
 !endif
@@ -227,10 +231,10 @@ RequestExecutionLevel "${REQUEST_EXECUTION_LEVEL}"
 
 !macro wails.associateCustomProtocols
     ; Create custom protocols associations
-    !insertmacro CUSTOM_PROTOCOL_ASSOCIATE "alishub" "AlisHub Protocol" "$INSTDIR\${PRODUCT_EXECUTABLE},0" '"$INSTDIR\${PRODUCT_EXECUTABLE}" "%1"'
+    !insertmacro CUSTOM_PROTOCOL_ASSOCIATE "${CUSTOM_PROTOCOL}" "${INFO_PRODUCTNAME} Protocol" "$INSTDIR\${PRODUCT_EXECUTABLE},0" '"$INSTDIR\${PRODUCT_EXECUTABLE}" "%1"'
 !macroend
 
 !macro wails.unassociateCustomProtocols
     ; Delete app custom protocol associations
-    !insertmacro CUSTOM_PROTOCOL_UNASSOCIATE "alishub"
+    !insertmacro CUSTOM_PROTOCOL_UNASSOCIATE "${CUSTOM_PROTOCOL}"
 !macroend

@@ -11,8 +11,8 @@ interface Props {
   info: UpdateInfo;
   progress: DownloadProgress | null;
   installError: string | null;
-  /** True when this is a deliberate downgrade back to the stable channel. */
-  rollback?: boolean;
+  /** Which application this is, so the card matches the installed icon. */
+  channel?: "stable" | "beta";
   onInstall: () => void;
   onRetryDownload: () => void;
   onViewNotes: () => void;
@@ -23,12 +23,20 @@ export function UpdateNotification({
   info,
   progress,
   installError,
-  rollback = false,
+  channel = "stable",
   onInstall,
   onRetryDownload,
   onViewNotes,
   onDismiss,
 }: Props) {
+  // Beta ships as a separate application with a purple icon; the accent here is
+  // the brand red rotated by the same amount, so the card reads as the app the
+  // user actually launched.
+  const isBeta = channel === "beta";
+  const appName = isBeta ? "AlisHub Beta" : "AlisHub";
+  const accent = isBeta ? "#db14ed" : "#e8192c";
+  const accentLight = isBeta ? "#f351ff" : "#ff5566";
+
   const isPreparing = progress === null;
   const isDownloading = progress !== null && !progress.done;
   const isDone = progress?.done === true;
@@ -75,7 +83,7 @@ export function UpdateNotification({
         >
           <svg
             viewBox="0 0 14 14"
-            fill="#e8192c"
+            fill={accent}
             width="11"
             height="11"
             xmlns="http://www.w3.org/2000/svg"
@@ -101,7 +109,7 @@ export function UpdateNotification({
             letterSpacing: "0.5px",
           }}
         >
-          AlisHub
+          {appName}
         </span>
         {!isDownloading && !isDone && (
           <button
@@ -128,9 +136,7 @@ export function UpdateNotification({
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
-                {rollback
-                  ? `Returning to stable v${info.latestVersion}`
-                  : `v${info.latestVersion} is available`}
+                v{info.latestVersion} is available
               </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
                 Preparing download…
@@ -151,7 +157,7 @@ export function UpdateNotification({
             >
               <svg
                 viewBox="0 0 32 32"
-                fill="#e8192c"
+                fill={accent}
                 width="22"
                 height="22"
                 xmlns="http://www.w3.org/2000/svg"
@@ -174,7 +180,7 @@ export function UpdateNotification({
         {isDownloading && (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
-              {rollback ? "Reinstalling" : "Downloading"} v{info.latestVersion}…
+              Downloading v{info.latestVersion}…
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 10 }}>
               {downloadedMB} MB of {totalMB} MB
@@ -192,7 +198,7 @@ export function UpdateNotification({
                 style={{
                   height: "100%",
                   width: `${pct}%`,
-                  background: "linear-gradient(90deg, #e8192c, #ff5566)",
+                  background: `linear-gradient(90deg, ${accent}, ${accentLight})`,
                   borderRadius: 3,
                   transition: "width 0.3s ease",
                 }}
@@ -259,7 +265,7 @@ export function UpdateNotification({
               <button onClick={onRetryDownload} style={ghostBtn}>
                 Retry Download
               </button>
-              <button onClick={onInstall} style={primaryBtn}>
+              <button onClick={onInstall} style={{ ...primaryBtn, background: accent }}>
                 Install &amp; Restart
               </button>
             </>
@@ -268,7 +274,7 @@ export function UpdateNotification({
               <button onClick={onDismiss} style={ghostBtn}>
                 Later
               </button>
-              <button onClick={onInstall} style={primaryBtn}>
+              <button onClick={onInstall} style={{ ...primaryBtn, background: accent }}>
                 Install &amp; Restart
               </button>
             </>
@@ -303,6 +309,5 @@ const ghostBtn: React.CSSProperties = {
 
 const primaryBtn: React.CSSProperties = {
   ...ghostBtn,
-  background: "#e8192c",
   fontWeight: 700,
 };
