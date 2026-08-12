@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,10 +22,32 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// workerBase is a var rather than a const so tests can point it at an httptest
+// server. Not intended to change at runtime.
+var workerBase = "https://alishub.justpatrick.workers.dev"
+
 const (
-	workerBase = "https://alishub.justpatrick.workers.dev"
-	releaseURL = "https://github.com/Patrick-web/alis-hub/releases/latest"
+	// The all-releases page rather than /latest: a beta user's build will not
+	// be the latest stable release, so /latest would show them the wrong notes.
+	releasesURL = "https://github.com/Patrick-web/alis-hub/releases"
+
+	// ChannelStable only ever resolves to full releases. ChannelBeta resolves to
+	// whichever of the newest prerelease and the newest stable release ranks
+	// higher by semver, so betas are superseded by the stable release they lead
+	// up to. The Worker does the actual filtering; see website/worker.js.
+	ChannelStable = "stable"
+	ChannelBeta   = "beta"
+
+	channelKey = "alis:update-channel"
 )
+
+// SettingsStore is the slice of the app's settings service that the updater
+// needs. Declared here as an interface because internal/updater cannot import
+// package main, where the concrete SettingsService lives.
+type SettingsStore interface {
+	GetSetting(key string) (string, error)
+	SetSetting(key, value string) error
+}
 
 type UpdateInfo struct {
 	Available      bool   `json:"available"`
@@ -32,6 +55,8 @@ type UpdateInfo struct {
 	LatestVersion  string `json:"latestVersion"`
 	ReleaseURL     string `json:"releaseUrl"`
 	ReleaseNotes   string `json:"releaseNotes"`
+	Channel        string `json:"channel"`
+	IsPrerelease   bool   `json:"isPrerelease"`
 }
 
 // DownloadProgress is emitted on the "update:progress" event during a
@@ -42,21 +67,33 @@ type DownloadProgress struct {
 	Done       bool   `json:"done"`
 	Error      string `json:"error,omitempty"`
 	Path       string `json:"path,omitempty"`
+	Version    string `json:"version,omitempty"`
+	// Rollback marks a deliberate downgrade to stable, so the UI can say
+	// "reinstalling" instead of implying an upgrade.
+	Rollback bool `json:"rollback,omitempty"`
 }
 
 type Service struct {
 	version string
 
-	mu     sync.Mutex
-	app    *application.App
-	staged string // filesystem path of the extracted .app once downloaded
+	mu         sync.Mutex
+	app        *application.App
+	settings   SettingsStore
+	staged     string // filesystem path of the extracted .app once downloaded
+	lastRelURL string // html_url of the most recently resolved release
 }
 
-func NewService(version string) *Service {
+// NewService builds the updater. The settings store supplies the release
+// channel and may be nil, in which case the service stays on stable.
+//
+// Injected here rather than through a setter because Wails binds every exported
+// method, and an exported setter taking an interface makes the binding generator
+// emit a warning about a method the frontend must never call.
+func NewService(version string, settings SettingsStore) *Service {
 	if version == "" {
 		version = "0.0.0"
 	}
-	return &Service{version: version}
+	return &Service{version: version, settings: settings}
 }
 
 // SetApp wires the Wails app so the service can emit runtime events.
@@ -64,6 +101,55 @@ func (s *Service) SetApp(app *application.App) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.app = app
+}
+
+// Channel returns the release channel this install follows, defaulting to
+// stable whenever the setting is unset, unreadable, or unrecognised. Go owns
+// this value: the frontend reads it through this method rather than through
+// settingsClient, so there is only ever one writer.
+func (s *Service) Channel() string {
+	s.mu.Lock()
+	store := s.settings
+	s.mu.Unlock()
+	if store == nil {
+		return ChannelStable
+	}
+	value, err := store.GetSetting(channelKey)
+	if err != nil {
+		log.Printf("read update channel: %v", err)
+		return ChannelStable
+	}
+	if value == ChannelBeta {
+		return ChannelBeta
+	}
+	return ChannelStable
+}
+
+// SetChannel persists the release channel. Rejects anything but a known
+// channel so a bad write cannot silently strand an install on a dead channel.
+func (s *Service) SetChannel(channel string) error {
+	if channel != ChannelStable && channel != ChannelBeta {
+		return fmt.Errorf("unknown release channel %q", channel)
+	}
+	s.mu.Lock()
+	store := s.settings
+	s.mu.Unlock()
+	if store == nil {
+		return fmt.Errorf("settings store unavailable")
+	}
+	if err := store.SetSetting(channelKey, channel); err != nil {
+		return fmt.Errorf("save update channel: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) rememberReleaseURL(u string) {
+	if u == "" {
+		return
+	}
+	s.mu.Lock()
+	s.lastRelURL = u
+	s.mu.Unlock()
 }
 
 func (s *Service) emit(event string, data any) {
@@ -79,15 +165,17 @@ func (s *Service) CurrentVersion() string { return s.version }
 
 // workerRelease is the response shape from the Cloudflare Worker /api/release endpoint.
 type workerRelease struct {
-	Version   string            `json:"version"`
-	URL       string            `json:"url"`
-	Notes     string            `json:"notes"`
-	Platforms map[string]string `json:"platforms"` // "macos" | "linux" | "windows" → "/download/<platform>"
+	Version    string            `json:"version"`
+	URL        string            `json:"url"`
+	Notes      string            `json:"notes"`
+	Channel    string            `json:"channel"`
+	Prerelease bool              `json:"prerelease"`
+	Platforms  map[string]string `json:"platforms"` // "macos" | "linux" | "windows" → "/download/<platform>?channel=<channel>"
 }
 
-func fetchWorkerRelease() (*workerRelease, error) {
+func fetchWorkerRelease(channel string) (*workerRelease, error) {
 	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Get(workerBase + "/api/release")
+	resp, err := client.Get(workerBase + "/api/release?channel=" + url.QueryEscape(channel))
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +194,19 @@ func fetchWorkerRelease() (*workerRelease, error) {
 }
 
 func (s *Service) CheckForUpdate() (UpdateInfo, error) {
-	info := UpdateInfo{CurrentVersion: s.version}
+	channel := s.Channel()
+	info := UpdateInfo{CurrentVersion: s.version, Channel: channel}
 
-	rel, err := fetchWorkerRelease()
+	rel, err := fetchWorkerRelease(channel)
 	if err != nil {
 		return info, fmt.Errorf("update check failed: %w", err)
 	}
+	info.IsPrerelease = rel.Prerelease
+	s.rememberReleaseURL(rel.URL)
 
+	// semver.Parse handles prerelease identifiers, and blang's ordering follows
+	// the spec: 0.15.0 outranks 0.15.0-beta.3, so a beta user is carried onto
+	// the stable release without any special casing here.
 	latest, err := semver.Parse(trimV(rel.Version))
 	if err != nil {
 		return info, fmt.Errorf("parse latest version %q: %w", rel.Version, err)
@@ -132,6 +226,27 @@ func (s *Service) CheckForUpdate() (UpdateInfo, error) {
 		info.ReleaseURL = rel.URL
 		info.ReleaseNotes = inlineImages(rel.Notes)
 	}
+	return info, nil
+}
+
+// StableRollback resolves the current stable release without comparing it to
+// the running build. A user leaving the beta channel is by definition on a
+// higher version than stable, so CheckForUpdate would report nothing to do and
+// strand them on the beta until the next stable release caught up.
+func (s *Service) StableRollback() (UpdateInfo, error) {
+	info := UpdateInfo{CurrentVersion: s.version, Channel: ChannelStable}
+
+	rel, err := fetchWorkerRelease(ChannelStable)
+	if err != nil {
+		return info, fmt.Errorf("stable release lookup failed: %w", err)
+	}
+	s.rememberReleaseURL(rel.URL)
+
+	info.LatestVersion = trimV(rel.Version)
+	info.ReleaseURL = rel.URL
+	info.ReleaseNotes = inlineImages(rel.Notes)
+	// Actionable unless they are already running exactly this build.
+	info.Available = info.LatestVersion != trimV(s.version)
 	return info, nil
 }
 
@@ -157,28 +272,44 @@ func platformKey() (string, error) {
 // Returns the path to the extracted .app (macOS), directory (Linux), or
 // .exe (Windows).
 func (s *Service) DownloadUpdate() (string, error) {
-	rel, err := fetchWorkerRelease()
-	if err != nil {
-		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
+	return s.download(s.Channel(), false)
+}
+
+// DownloadStable stages the current stable build regardless of the configured
+// channel, and regardless of it being older than what is running. Backs the
+// "reinstall stable build" action for users opting out of beta.
+func (s *Service) DownloadStable() (string, error) {
+	return s.download(ChannelStable, true)
+}
+
+func (s *Service) download(channel string, rollback bool) (string, error) {
+	// Every exit from here has to emit a terminal update:progress. The frontend
+	// latches a "downloading" flag when it starts and only clears it on a Done
+	// or Error event, so a silent return wedges the UI until restart.
+	fail := func(err error) (string, error) {
+		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error(), Rollback: rollback})
 		return "", err
+	}
+
+	rel, err := fetchWorkerRelease(channel)
+	if err != nil {
+		return fail(err)
 	}
 
 	key, err := platformKey()
 	if err != nil {
-		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-		return "", err
+		return fail(err)
 	}
 	path, ok := rel.Platforms[key]
 	if !ok {
-		err := fmt.Errorf("no download available for %s", runtime.GOOS)
-		s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-		return "", err
+		return fail(fmt.Errorf("no download available for %s", runtime.GOOS))
 	}
+	// The Worker already encodes ?channel= into these paths.
 	downloadURL := workerBase + path
 
 	tmpDir, err := os.MkdirTemp("", "alishub-update-*")
 	if err != nil {
-		return "", fmt.Errorf("mkdir temp: %w", err)
+		return fail(fmt.Errorf("mkdir temp: %w", err))
 	}
 
 	// TODO(security): verify checksum of downloaded artifact before use.
@@ -193,8 +324,7 @@ func (s *Service) DownloadUpdate() (string, error) {
 		installerPath := filepath.Join(tmpDir, key+"-"+trimV(rel.Version)+"-installer.exe")
 		if err := s.downloadFile(downloadURL, installerPath, 0); err != nil {
 			_ = os.RemoveAll(tmpDir)
-			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-			return "", err
+			return fail(err)
 		}
 		newPath = installerPath
 	} else {
@@ -202,32 +332,29 @@ func (s *Service) DownloadUpdate() (string, error) {
 		archivePath := filepath.Join(tmpDir, archiveName)
 		if err := s.downloadFile(downloadURL, archivePath, 0); err != nil {
 			_ = os.RemoveAll(tmpDir)
-			s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-			return "", err
+			return fail(err)
 		}
 
 		extractDir := filepath.Join(tmpDir, "extracted")
 		if err := os.MkdirAll(extractDir, 0o755); err != nil {
-			return "", err
+			_ = os.RemoveAll(tmpDir)
+			return fail(err)
 		}
 		switch runtime.GOOS {
 		case "darwin":
 			if err := unzip(archivePath, extractDir); err != nil {
 				_ = os.RemoveAll(tmpDir)
-				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-				return "", fmt.Errorf("unzip: %w", err)
+				return fail(fmt.Errorf("unzip: %w", err))
 			}
 			newPath, err = findAppBundle(extractDir)
 			if err != nil {
 				_ = os.RemoveAll(tmpDir)
-				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-				return "", err
+				return fail(err)
 			}
 		case "linux":
 			if err := untarGz(archivePath, extractDir); err != nil {
 				_ = os.RemoveAll(tmpDir)
-				s.emit("update:progress", DownloadProgress{Done: true, Error: err.Error()})
-				return "", fmt.Errorf("untar: %w", err)
+				return fail(fmt.Errorf("untar: %w", err))
 			}
 			newPath = extractDir
 		}
@@ -237,7 +364,14 @@ func (s *Service) DownloadUpdate() (string, error) {
 	s.staged = newPath
 	s.mu.Unlock()
 
-	s.emit("update:progress", DownloadProgress{Done: true, Path: newPath})
+	// Version and Rollback let the progress overlay say "Reinstalling v0.14.7"
+	// rather than implying every download is an upgrade.
+	s.emit("update:progress", DownloadProgress{
+		Done:     true,
+		Path:     newPath,
+		Version:  trimV(rel.Version),
+		Rollback: rollback,
+	})
 	return newPath, nil
 }
 
@@ -431,16 +565,24 @@ Start-Process $oldExe
 	return nil
 }
 
-// OpenReleasePage asks the OS to open the latest-release URL in the default
-// browser. Used as a fallback when auto-download isn't supported.
+// OpenReleasePage asks the OS to open the release page in the default browser.
+// Used as a fallback when auto-download isn't supported. Prefers the release
+// resolved by the last check, since on the beta channel that is a prerelease
+// and would not be reachable from /releases/latest.
 func (s *Service) OpenReleasePage() error {
+	s.mu.Lock()
+	target := s.lastRelURL
+	s.mu.Unlock()
+	if target == "" {
+		target = releasesURL
+	}
 	switch runtime.GOOS {
 	case "darwin":
-		return exec.Command("open", releaseURL).Start()
+		return exec.Command("open", target).Start()
 	case "linux":
-		return exec.Command("xdg-open", releaseURL).Start()
+		return exec.Command("xdg-open", target).Start()
 	case "windows":
-		return exec.Command("rundll32", "url.dll,FileProtocolHandler", releaseURL).Start()
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", target).Start()
 	}
 	return fmt.Errorf("unsupported platform")
 }
@@ -467,8 +609,8 @@ func inlineImages(notes string) string {
 		if len(parts) < 3 {
 			return match
 		}
-		alt, url := parts[1], parts[2]
-		resp, err := client.Get(url)
+		alt, imgURL := parts[1], parts[2]
+		resp, err := client.Get(imgURL)
 		if err != nil || resp.StatusCode != 200 {
 			return match
 		}
@@ -569,17 +711,20 @@ func findAppBundle(dir string) (string, error) {
 
 // BackgroundCheck runs an update check after a delay. If a new version is found,
 // emits an "update:available" Wails event so the frontend can show a toast.
-func BackgroundCheck(app *application.App, version string, delay time.Duration) {
+//
+// Takes the configured service rather than building its own: a fresh Service
+// would have no settings store and would silently check the stable channel for
+// every user, including those opted into beta.
+func BackgroundCheck(app *application.App, svc *Service, delay time.Duration) {
 	go func() {
 		time.Sleep(delay)
-		svc := NewService(version)
 		info, err := svc.CheckForUpdate()
 		if err != nil {
 			log.Printf("update check: %v", err)
 			return
 		}
 		if info.Available {
-			log.Printf("update available: %s → %s (%s)", info.CurrentVersion, info.LatestVersion, info.ReleaseURL)
+			log.Printf("update available on %s: %s → %s (%s)", info.Channel, info.CurrentVersion, info.LatestVersion, info.ReleaseURL)
 			if app != nil {
 				app.Event.Emit("update:available", info)
 			}

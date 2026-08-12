@@ -11,6 +11,8 @@ export class UpdateInfo {
     "latestVersion": string;
     "releaseUrl": string;
     "releaseNotes": string;
+    "channel": string;
+    "isPrerelease": boolean;
 
     /** Creates a new UpdateInfo instance. */
     constructor($$source: Partial<UpdateInfo> = {}) {
@@ -28,6 +30,12 @@ export class UpdateInfo {
         }
         if (!("releaseNotes" in $$source)) {
             this["releaseNotes"] = "";
+        }
+        if (!("channel" in $$source)) {
+            this["channel"] = "";
+        }
+        if (!("isPrerelease" in $$source)) {
+            this["isPrerelease"] = false;
         }
 
         Object.assign(this, $$source);

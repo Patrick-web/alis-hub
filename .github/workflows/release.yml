@@ -64,8 +64,12 @@ jobs:
           cp alis-hub-v3 "$APP/Contents/MacOS/"
           cp build/darwin/icons.icns "$APP/Contents/Resources/"
           cp build/darwin/Info.plist "$APP/Contents/Info.plist"
+          # CFBundleShortVersionString is the user-facing marketing version and
+          # Apple expects it numeric, so drop any -beta.N suffix there. The full
+          # tag stays in CFBundleVersion.
+          SHORT_VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//; s/-.*//')
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.ref_name }}" "$APP/Contents/Info.plist"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ github.ref_name }}" "$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $SHORT_VERSION" "$APP/Contents/Info.plist"
           # Try Developer ID signing; fall back to ad-hoc if cert unavailable
           IDENTITY=$(security find-identity -v -p codesigning | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)"/\1/' || true)
           if [ -n "$IDENTITY" ]; then
@@ -212,7 +216,10 @@ jobs:
       - name: Build NSIS installer (amd64 + arm64)
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
+          # project.nsi builds VIProductVersion as "$version.0", and NSIS requires
+          # a strictly numeric X.X.X.X, so a -beta.N suffix has to be stripped here
+          # or makensis aborts. The installer filename below keeps the full tag.
+          $version = "${{ github.ref_name }}".TrimStart('v').Split('-')[0]
           $amd64Path = (Resolve-Path "alis-hub-v3-amd64.exe").Path
           $arm64Path = (Resolve-Path "alis-hub-v3-arm64.exe").Path
           New-Item -ItemType Directory -Force -Path bin | Out-Null
@@ -250,4 +257,7 @@ jobs:
             AlisHub-windows-*-installer.exe
           body: ${{ steps.changelog.outputs.notes }}
           draft: false
-          prerelease: false
+          # A tag with a semver prerelease suffix (v0.15.0-beta.1) ships to the
+          # beta channel only. GitHub's /releases/latest excludes prereleases,
+          # which is what keeps stable users from ever seeing these.
+          prerelease: ${{ contains(github.ref_name, '-') }}

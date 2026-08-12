@@ -17,6 +17,7 @@ export function WailsNotificationBridge() {
   const { addNotification } = useNotifications();
   const {
     updateInfo,
+    stableInfo,
     downloadProgress,
     installError,
     notesOpen,
@@ -24,8 +25,14 @@ export function WailsNotificationBridge() {
     setNotesOpen,
     dismissUpdate,
     startDownload,
+    rollbackToStable,
     applyUpdate,
   } = useUpdate();
+
+  // A rollback is driven by stableInfo, not by an available update, so the
+  // overlay has to read its version numbers and its retry action from there.
+  const isRollback = downloadProgress?.rollback ?? false;
+  const overlayInfo = isRollback ? (stableInfo ?? updateInfo) : updateInfo;
 
   const addRef = useRef(addNotification);
   addRef.current = addNotification;
@@ -75,13 +82,17 @@ export function WailsNotificationBridge() {
 
   return (
     <>
-      {updateInfo && !updateDismissed && (
+      {/* Keyed off either a real update or an in-flight download. Without the
+          `available` check a plain "Check for updates" on a current build pops
+          a card claiming the version you already run is available. */}
+      {overlayInfo && (overlayInfo.available || downloadProgress) && !updateDismissed && (
         <UpdateNotification
-          info={updateInfo}
+          info={overlayInfo}
           progress={downloadProgress}
           installError={installError}
+          rollback={isRollback}
           onInstall={applyUpdate}
-          onRetryDownload={() => startDownload(updateInfo)}
+          onRetryDownload={() => (isRollback ? rollbackToStable() : startDownload(overlayInfo))}
           onViewNotes={() => setNotesOpen(true)}
           onDismiss={dismissUpdate}
         />

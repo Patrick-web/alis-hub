@@ -47,7 +47,6 @@ func main() {
 		}
 	}()
 
-	updaterSvc := updater.NewService(version)
 	notifSvc := wailsnotif.New()
 	productSvc := NewProductService()
 	gitSvc := NewGitService()
@@ -91,6 +90,10 @@ func main() {
 	}
 	workflowSvc := NewWorkflowService(hubDB, buildSvc, gitSvc, deploySvc, defineSvc, packageSvc)
 	settingsSvc := NewSettingsService(hubDB)
+
+	// Built here rather than alongside the other services because it reads the
+	// user's release channel out of hub.db, which is only open from this point on.
+	updaterSvc := updater.NewService(version, settingsSvc)
 
 	// window is declared up front so the single-instance and deep-link
 	// callbacks can bring it to the foreground.
@@ -233,7 +236,7 @@ func main() {
 	// Lets the DBD services emit dbd:progress / dbd:done while an operation runs.
 	dbdProgress.setApp(app)
 	if !isDevelopment {
-		updater.BackgroundCheck(app, version, 30*time.Second)
+		updater.BackgroundCheck(app, updaterSvc, 30*time.Second)
 	}
 
 	if err := app.Run(); err != nil {

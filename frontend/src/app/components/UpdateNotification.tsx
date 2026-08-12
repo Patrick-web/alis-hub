@@ -11,6 +11,8 @@ interface Props {
   info: UpdateInfo;
   progress: DownloadProgress | null;
   installError: string | null;
+  /** True when this is a deliberate downgrade back to the stable channel. */
+  rollback?: boolean;
   onInstall: () => void;
   onRetryDownload: () => void;
   onViewNotes: () => void;
@@ -21,6 +23,7 @@ export function UpdateNotification({
   info,
   progress,
   installError,
+  rollback = false,
   onInstall,
   onRetryDownload,
   onViewNotes,
@@ -125,7 +128,9 @@ export function UpdateNotification({
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 3 }}>
-                v{info.latestVersion} is available
+                {rollback
+                  ? `Returning to stable v${info.latestVersion}`
+                  : `v${info.latestVersion} is available`}
               </div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", lineHeight: 1.5 }}>
                 Preparing download…
@@ -169,7 +174,7 @@ export function UpdateNotification({
         {isDownloading && (
           <>
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>
-              Downloading v{info.latestVersion}…
+              {rollback ? "Reinstalling" : "Downloading"} v{info.latestVersion}…
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 10 }}>
               {downloadedMB} MB of {totalMB} MB

@@ -217,6 +217,7 @@
     <div class="cta-row">
       <a id="download-btn" href="https://github.com/Patrick-web/alis-hub/releases/latest" class="btn btn-primary">download_</a>
       <a href="https://github.com/Patrick-web/alis-hub/releases" class="btn btn-ghost">all releases_</a>
+      <a id="beta-btn" class="btn btn-ghost" hidden href="#">beta_</a>
       <span class="version-tag" id="version-tag"></span>
     </div>
     <div class="pills">
@@ -239,6 +240,7 @@
 <script>
   (async function() {
     const btn = document.getElementById('download-btn');
+    const betaBtn = document.getElementById('beta-btn');
     const tag = document.getElementById('version-tag');
     const ua = navigator.userAgent.toLowerCase();
     let platform = 'macos', label = 'macOS';
@@ -248,17 +250,29 @@
     btn.textContent = `download for ${label}_`;
     btn.href = `/download/${platform}`;
 
-    try {
-      const res = await fetch('/api/release');
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.version) {
-        tag.innerHTML = `latest <span>${data.version}</span>`;
-      }
-      if (data.platforms?.[platform]) {
-        btn.href = data.platforms[platform];
-      }
-    } catch {}
+    const get = (url) =>
+      fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+    const [stable, beta] = await Promise.all([
+      get('/api/release'),
+      get('/api/release?channel=beta'),
+    ]);
+
+    if (stable?.version) {
+      tag.innerHTML = `latest <span>${stable.version}</span>`;
+    }
+    if (stable?.platforms?.[platform]) {
+      btn.href = stable.platforms[platform];
+    }
+
+    // Only advertise beta when there is a genuine prerelease ahead of stable.
+    // With no betas published the beta channel resolves to stable, and linking
+    // to it would just be a second copy of the same download.
+    if (beta?.prerelease && beta.version !== stable?.version && beta.platforms?.[platform]) {
+      betaBtn.href = beta.platforms[platform];
+      betaBtn.textContent = `beta ${beta.version}_`;
+      betaBtn.hidden = false;
+    }
   })();
 </script>
 
