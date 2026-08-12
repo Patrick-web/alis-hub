@@ -24,7 +24,11 @@ jobs:
       - name: Install frontend deps
         run: npm --prefix frontend install
       - name: Generate bindings
-        run: wails3 generate bindings
+        # -ts must match build/Taskfile.yml and the bindings checked into
+        # frontend/bindings. Without it wails emits .js with JSDoc types, which
+        # tsc widens (map values become {} instead of string) and the frontend
+        # build fails on code that typechecks fine locally.
+        run: wails3 generate bindings -clean=true -ts
       - name: Build frontend
         run: npm --prefix frontend run build
       - name: Import signing certificate
@@ -159,7 +163,11 @@ jobs:
       - name: Install frontend deps
         run: npm --prefix frontend install
       - name: Generate bindings
-        run: wails3 generate bindings
+        # -ts must match build/Taskfile.yml and the bindings checked into
+        # frontend/bindings. Without it wails emits .js with JSDoc types, which
+        # tsc widens (map values become {} instead of string) and the frontend
+        # build fails on code that typechecks fine locally.
+        run: wails3 generate bindings -clean=true -ts
       - name: Build frontend
         run: npm --prefix frontend run build
       - name: Build binary
@@ -196,7 +204,11 @@ jobs:
       - name: Install frontend deps
         run: cd frontend && npm install
       - name: Generate bindings
-        run: wails3 generate bindings
+        # -ts must match build/Taskfile.yml and the bindings checked into
+        # frontend/bindings. Without it wails emits .js with JSDoc types, which
+        # tsc widens (map values become {} instead of string) and the frontend
+        # build fails on code that typechecks fine locally.
+        run: wails3 generate bindings -clean=true -ts
       - name: Build frontend
         run: cd frontend && npm run build
       - name: Generate Windows resources (amd64)
