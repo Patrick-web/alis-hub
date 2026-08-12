@@ -75,9 +75,10 @@ production builds (`-tags production`).
 
 ## Connect Chrome
 
-The chrome-devtools MCP server drives Chrome over CDP. This repo is configured with
-`--autoConnect --channel=beta`; the alternatives below exist for when that is not what you
-want, and the choice is really about *whose* browser gets automated.
+The chrome-devtools MCP server drives Chrome over CDP. This machine runs it with
+`--autoConnect --channel=beta` for this project, configured outside the repo (see "Where the
+configuration lives"). The alternatives below exist for when that is not what you want, and
+the choice is really about *whose* browser gets automated.
 
 **`--autoConnect --channel=beta`** (configured) attaches to your own running Chrome Beta. It reads
 `DevToolsActivePort` from that channel's default profile directory, which only exists once
@@ -87,19 +88,96 @@ life of that Chrome process; restarting Chrome without re-enabling it removes th
 the server reports "Could not find DevToolsActivePort". The automated tabs are real tabs in
 your real session, so your logins are available and your windows are visible.
 
+Check that mode yourself with the file and the port, not with curl:
+
+```bash
+cat "$HOME/Library/Application Support/Google/Chrome Beta/DevToolsActivePort"   # port, then ws path
+lsof -nP -iTCP:9222 -sTCP:LISTEN                                                 # who holds it
+```
+
+A browser toggled on this way serves **only** the WebSocket endpoint named on the file's
+second line. The discovery API is gone: `/json/version`, `/json/list` and `/` all return
+404 (verified on Chrome Beta 152). That is normal for this mode, not a fault, and it is the
+reason `--browserUrl` cannot be pointed at it.
+
 **No connection flag** (`--channel=beta` alone) makes the server launch and own a browser
 against a managed profile under `~/.cache/chrome-devtools-mcp/`. Nothing to enable, nothing
 to start by hand, and it cannot disturb your session or compete for port 9222 — but it has
 none of your logged-in state.
 
 **`--browserUrl=http://127.0.0.1:9222`** attaches to a Chrome you started yourself with
-explicit flags. See below.
+explicit flags. It resolves the target over the `/json/version` HTTP API, which only a
+`--remote-debugging-port` launch serves, so it is not interchangeable with the toggle above
+even when both would be "Chrome Beta on 9222". See below.
 
 > **If tool calls fail while the flags look right**, suspect the server process rather than
 > the configuration. A chrome-devtools MCP server that failed to reach a browser once will
 > keep reporting the same error for the rest of the session even after the browser becomes
 > reachable. Restart the session, or test the flags against a fresh server process, before
 > concluding the configuration is wrong.
+>
+> The signature is unmistakable once you know it: `DevToolsActivePort` is present, `lsof`
+> shows Chrome Beta holding 9222, and every tool call still answers "Could not find
+> DevToolsActivePort". Observed exactly that on 2026-08-12. Nothing about the browser needs
+> fixing in that state.
+
+### Where the configuration lives
+
+The server is registered per project in `~/.claude.json`, under this repo's path, as
+`chrome-devtools`:
+
+```json
+{ "type": "stdio",
+  "command": "npx",
+  "args": ["chrome-devtools-mcp@latest", "--autoConnect", "--channel=beta"] }
+```
+
+That is machine-local state, not repo state. It is not `.mcp.json`, nothing in the repo
+declares it, and a fresh clone therefore has no browser tooling at all until someone adds
+it:
+
+```bash
+claude mcp list      # the authority on what is actually loaded
+claude mcp add chrome-devtools -- npx chrome-devtools-mcp@latest --autoConnect --channel=beta
+```
+
+Two things on this machine are easy to mistake for that entry. `~/.config/opencode/opencode.json`
+carries the same server with the same flags for opencode, so both tools drive the same
+Chrome Beta and the same enable-once toggle serves both. `~/.claude/mcp.json` defines a
+server named `chrome` pointing at `--browserUrl http://127.0.0.1:9222`; Claude Code does not
+load it, and `claude mcp list` not showing it is the proof. If you change a flag, change it
+in `~/.claude.json` and confirm with `claude mcp list`.
+
+### Two Chrome channels are installed
+
+This is the detail that wastes the most time, because both channels are called Chrome and
+only one of them is wired up.
+
+| | Stable | Beta |
+| --- | --- | --- |
+| App | `/Applications/Google Chrome.app` | `/Applications/Google Chrome Beta.app` |
+| Version here | 151.0.7922.109 | 152.0.7977.30 |
+| Profile | `~/Library/Application Support/Google/Chrome` | `~/Library/Application Support/Google/Chrome Beta` |
+| Automated | no | yes, via `--channel=beta` |
+
+They are separate installs with separate profiles, separate logins, separate windows and
+separate `DevToolsActivePort` files. Nothing carries across. So:
+
+- Toggling `chrome://inspect/#remote-debugging` in stable Chrome does nothing for the MCP
+  server. It reads the Beta profile, and only the Beta profile. Check the title bar or
+  `chrome://version` if you are unsure which one you are looking at, since the two windows
+  are hard to tell apart.
+- The tabs an agent opens appear in a Chrome Beta window. If you are watching stable, you
+  will see nothing happen and wrongly conclude the automation is broken.
+- Your stable session is untouched by any of this, which is the reason to keep the beta
+  channel for automation rather than pointing the tooling at your everyday browser.
+- Only one channel can hold `127.0.0.1:9222`. If both have remote debugging on, the loser
+  binds `[::1]:9222` and you can end up driving the browser you did not mean to. See the
+  `lsof` note below.
+
+To automate stable instead, change the flag to `--channel=stable` and enable remote
+debugging in that browser. There is nothing special about beta here beyond it being the
+channel this machine has wired up.
 
 ### Driving a Chrome you launched yourself
 
@@ -128,6 +206,10 @@ live first:
 ```bash
 curl -s http://127.0.0.1:9222/json/version
 ```
+
+This is the one mode where that curl means anything. A JSON body proves the flag launch
+took; a 404 means you are talking to a toggle-enabled browser instead, and `--browserUrl`
+will not attach to it.
 
 If another Chrome already holds 9222 on IPv4, the second instance binds `[::1]:9222`
 instead and `127.0.0.1` reaches the wrong browser — check `lsof -nP -iTCP:9222 -sTCP:LISTEN`
@@ -305,8 +387,13 @@ startup lines that tell you the CLI backend is actually active.
 bare binary. It must run from inside the `.app` bundle, which is what `wails3 task run`
 and `dev:bridge` do.
 
-**MCP says it cannot find `DevToolsActivePort`** See "Connect Chrome". Chrome must have a
-non-default `--user-data-dir` for CDP to listen at all.
+**MCP says it cannot find `DevToolsActivePort`** Three different causes, in the order they
+are worth checking. The file really is absent, because remote debugging was never toggled on
+in Chrome Beta or that Chrome has restarted since: re-enable it at
+`chrome://inspect/#remote-debugging`. Or the file exists and 9222 is held, in which case the
+MCP server process is stale and only a fresh session fixes it. Or you toggled the wrong
+channel, since `--channel=beta` reads Chrome Beta's profile and ignores stable. Full detail
+in "Connect Chrome".
 
 **`window.devBridge is undefined`** The tab was opened against Vite (`:9245`) rather than
 the bridge port, or the page was loaded before the app finished starting. The script is
