@@ -1,5 +1,27 @@
 # Changelog
 
+## [v0.15.0-beta.1] - 2026-08-12
+
+### What's New
+- Define, Build and Deploy now run through the alis CLI, with the previous backend kept as a fallback for machines where the CLI isn't installed
+- Git credentials are now handled entirely by the alis CLI, so there's no second login to keep in sync
+- The home screen now leads with Landing Zones
+- New Skills, Ask and Diagnostics pages, and you can install a skill into whichever landing zone you choose
+- Pull requests are now backed by Forgejo
+- New per-service code blocks page
+- Environments now show which branch deploys to them and whether you can edit them
+- Approval gates now appear in the UI, and deleting a variable goes through them
+- The Define and Build panes now show live progress while an operation runs
+- You can now opt into beta releases under Settings → Updates → Release channel. Beta builds arrive before a release is final and may be unstable; switching back to Stable offers to reinstall the stable build straight away
+
+### Bug Fixes
+- Fixed deploy logs not streaming when running on the CLI backend
+- Fixed DBD logs showing scraped markup instead of readable text
+- Fixed Ask answers not rendering as markdown
+- Fixed several new pages not filling the window
+- Fixed skill citations being ignored, and rejected variable writes not rolling back
+- Fixed the production gate not being handled in the deploy pane
+
 ## [v0.14.7] - 2026-07-28
 
 ### Bug Fixes
