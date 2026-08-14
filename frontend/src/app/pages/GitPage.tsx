@@ -594,6 +594,7 @@ export function GitPage() {
                     }
                     onSetReady={(number) => gitActions.setPRReady(number)}
                     onRefresh={() => void gitActions.fetchPRs()}
+                    onRefreshPR={() => gitActions.refreshPR()}
                     onClose={() => useGitStore.setState({ selectedPR: null })}
                   />
                 ) : (

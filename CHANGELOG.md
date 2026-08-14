@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.15.0-beta.3] - 2026-08-14
+
+### What's New
+- Pull request conversations now show commits interleaved with comments and reviews in a single timeline, the way Forgejo and GitHub do
+- Images in pull request comments now render inline, and attached files appear as downloadable links
+- You can search pull requests by number or title and sort them by newest, oldest, recently updated, most comments, or title
+- Click a pull request's number, title, or branch to copy it, and refresh the details with one click
+
 ## [v0.15.0-beta.2] - 2026-08-12
 
 ### What's New

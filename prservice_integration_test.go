@@ -405,6 +405,40 @@ func TestForgejoNotFoundIsTyped(t *testing.T) {
 	}
 }
 
+// TestForgejoTimeline reads the conversation timeline for the first open PR and
+// logs what came back, so the exact event types and field mapping can be checked
+// against the live instance rather than assumed from the swagger docs.
+func TestForgejoTimeline(t *testing.T) {
+	svc, org, product := newPRSvc(t)
+
+	list, err := svc.ListPRs(org, product, "build", "open")
+	if err != nil {
+		t.Fatalf("ListPRs: %v", err)
+	}
+	if len(list.PRs) == 0 {
+		t.Skip("no open PRs to test against")
+	}
+	number := list.PRs[0].Number
+
+	timeline, err := svc.GetPRTimeline(org, product, "build", number)
+	if err != nil {
+		t.Fatalf("GetPRTimeline: %v", err)
+	}
+	t.Logf("#%d has %d timeline events (total %d)", number, len(timeline.Events), timeline.Total)
+	for _, ev := range timeline.Events {
+		switch ev.Type {
+		case "comment":
+			t.Logf("  comment %d by %s: %.40q", ev.ID, ev.Author, ev.Body)
+		case "commit":
+			t.Logf("  commit %s by %s: %.40q (action=%s)", ev.SHA, ev.Author, ev.Message, ev.RefAction)
+		case "review":
+			t.Logf("  review %d by %s: %.40q", ev.ReviewID, ev.Author, ev.Body)
+		default:
+			t.Logf("  %s by %s (action=%s, old=%q new=%q)", ev.Type, ev.Author, ev.RefAction, ev.OldRef+ev.OldTitle, ev.NewRef+ev.NewTitle)
+		}
+	}
+}
+
 // closePR closes a pull request, used to clean up after the create test.
 func closePR(svc *PRService, org, product, repo string, number int) error {
 	t, err := svc.client.resolve(org, product, repo)

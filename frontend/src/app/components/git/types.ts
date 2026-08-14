@@ -39,6 +39,7 @@ export interface GitCommit {
 // stale as fields were added to the Go structs.
 export type {
   ForgejoPR,
+  PRAttachment,
   PRComment,
   PRCommit,
   PRCommentList,
@@ -50,6 +51,8 @@ export type {
   PRRepoInfo,
   PRReview,
   PRReviewComment,
+  PRTimelineEvent,
+  PRTimelineList,
   PRUser,
   ReviewDraftComment,
 } from "../../../../bindings/alis-hub-v3/models";

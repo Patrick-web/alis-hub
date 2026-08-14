@@ -825,6 +825,29 @@ function selectPR(pr: ForgejoPR): void {
     });
 }
 
+/**
+ * Refetches the currently selected PR, for the detail view's refresh button.
+ * Unlike selectPR this does not touch selection: it only replaces the snapshot
+ * the detail renders, so a stale mergeability verdict or count is corrected in
+ * place.
+ */
+function refreshPR(): void {
+  const t = prTarget();
+  if (!t) return;
+  const pr = useGitStore.getState().selectedPR;
+  if (!pr) return;
+  void PRService.GetPR(t.org, t.product, t.repo, pr.number)
+    .then((fresh) => {
+      if (!fresh) return;
+      const current = useGitStore.getState().selectedPR;
+      if (current?.number !== pr.number) return; // selection moved on
+      useGitStore.setState({ selectedPR: fresh });
+    })
+    .catch(() => {
+      // Leave the current snapshot: it is stale, not wrong.
+    });
+}
+
 async function createPR(title: string, body: string, head: string, base: string): Promise<void> {
   const t = prTarget();
   if (!t) return;
@@ -956,6 +979,7 @@ export const gitActions = {
   openPRTab,
   fetchPRs,
   selectPR,
+  refreshPR,
   createPR,
   mergePR,
   setPRReady,

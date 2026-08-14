@@ -116,11 +116,31 @@ export function GetPRReviews(org: string, product: string, repo: string, $number
 }
 
 /**
+ * GetPRTimeline returns the pull request's conversation as one time-ordered
+ * stream of comments, commits, reviews and ref events, exactly as Forgejo
+ * presents it. The per-kind endpoints only tell part of the story: comments
+ * and commits are separate calls, so a timeline built from them would put every
+ * commit ahead of every comment regardless of when each actually happened.
+ * 
+ * Forgejo's timeline records a push as a single "pull_push" entry whose body is
+ * a JSON array of commit IDs, not as one entry per commit. Forgejo's own UI
+ * expands that into individual commits (LoadPushCommits), so this does the same
+ * here: each commit becomes a "commit" event carrying its own message, author
+ * and timestamp, and the whole stream is re-sorted so commits interleave with
+ * the comments around them.
+ */
+export function GetPRTimeline(org: string, product: string, repo: string, $number: number): $CancellablePromise<$models.PRTimelineList | null> {
+    return $Call.ByID(2679905412, org, product, repo, $number).then(($result: any) => {
+        return $$createType17($result);
+    });
+}
+
+/**
  * GetReviewComments returns the inline comments belonging to one review.
  */
 export function GetReviewComments(org: string, product: string, repo: string, $number: number, reviewID: number): $CancellablePromise<$models.PRReviewComment[]> {
     return $Call.ByID(1294956715, org, product, repo, $number, reviewID).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -138,7 +158,7 @@ export function InvalidateProduct(org: string, product: string): $CancellablePro
  */
 export function ListPRs(org: string, product: string, repo: string, state: string): $CancellablePromise<$models.PRList | null> {
     return $Call.ByID(3309884414, org, product, repo, state).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -165,7 +185,7 @@ export function PRsAvailable(org: string, product: string, repo: string): $Cance
  */
 export function RepoInfo(org: string, product: string, repo: string): $CancellablePromise<$models.PRRepoInfo | null> {
     return $Call.ByID(3466187039, org, product, repo).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType23($result);
     });
 }
 
@@ -190,7 +210,7 @@ export function SetPRReady(org: string, product: string, repo: string, $number: 
  */
 export function SubmitReview(org: string, product: string, repo: string, $number: number, event: string, body: string, comments: $models.ReviewDraftComment[]): $CancellablePromise<$models.PRReview | null> {
     return $Call.ByID(2805551291, org, product, repo, $number, event, body, comments).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -211,10 +231,12 @@ const $$createType12 = $models.PRFileList.createFrom;
 const $$createType13 = $Create.Nullable($$createType12);
 const $$createType14 = $models.PRReview.createFrom;
 const $$createType15 = $Create.Array($$createType14);
-const $$createType16 = $models.PRReviewComment.createFrom;
-const $$createType17 = $Create.Array($$createType16);
-const $$createType18 = $models.PRList.createFrom;
-const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $models.PRRepoInfo.createFrom;
+const $$createType16 = $models.PRTimelineList.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = $models.PRReviewComment.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = $models.PRList.createFrom;
 const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $Create.Nullable($$createType14);
+const $$createType22 = $models.PRRepoInfo.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $Create.Nullable($$createType14);

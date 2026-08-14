@@ -1,10 +1,39 @@
+import { useState } from "react";
 import { ForgejoPR } from "./types";
-import { GitPullRequest, Loader2, Plus, RefreshCw, X } from "lucide-react";
+import { ArrowUpDown, GitPullRequest, Loader2, Plus, RefreshCw, Search, X } from "lucide-react";
 import { relativeTime } from "../../lib/relativeTime";
 import { SearchableSelect } from "../ui/searchable-select";
 
 /** Sentinel for "has nobody assigned", which is distinct from "any assignee". */
 export const UNASSIGNED = "\u0000unassigned";
+
+type SortKey = "newest" | "oldest" | "updated" | "comments" | "title";
+
+const SORT_OPTIONS: [SortKey, string][] = [
+  ["newest", "Newest"],
+  ["oldest", "Oldest"],
+  ["updated", "Recently updated"],
+  ["comments", "Most comments"],
+  ["title", "Title A–Z"],
+];
+
+function sortPRs(prs: ForgejoPR[], key: SortKey): ForgejoPR[] {
+  const sorted = [...prs];
+  switch (key) {
+    case "newest":
+      return sorted.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    case "oldest":
+      return sorted.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    case "updated":
+      return sorted.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    case "comments":
+      return sorted.sort((a, b) => b.comments + b.reviewComments - (a.comments + a.reviewComments));
+    case "title":
+      return sorted.sort((a, b) =>
+        a.title.localeCompare(b.title, undefined, { sensitivity: "base" }),
+      );
+  }
+}
 
 interface Props {
   prs: ForgejoPR[];
@@ -38,6 +67,11 @@ export function GitPRList({
   onNewPR,
   onRefresh,
 }: Props) {
+  // Search and sort are pure view concerns: they narrow what is already loaded
+  // rather than driving a refetch, so they live here rather than in the store.
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("newest");
+
   // Options come from the loaded list, so they only ever offer people who
   // actually appear in it.
   const authors = [...new Set(prs.map((p) => p.author).filter(Boolean))].sort();
@@ -59,15 +93,23 @@ export function GitPRList({
     ...withMe(assignees),
   ];
 
-  const visible = prs.filter((pr) => {
-    if (authorFilter && pr.author !== authorFilter) return false;
-    const assigned = pr.assignees ?? [];
-    if (assigneeFilter === UNASSIGNED) return assigned.length === 0;
-    if (assigneeFilter && !assigned.includes(assigneeFilter)) return false;
-    return true;
-  });
+  const query = searchQuery.trim().toLowerCase();
+  const searchByNumber = query.startsWith("#") ? query.slice(1) : query;
 
-  const filtering = !!authorFilter || !!assigneeFilter;
+  const visible = sortPRs(
+    prs.filter((pr) => {
+      if (authorFilter && pr.author !== authorFilter) return false;
+      const assigned = pr.assignees ?? [];
+      if (assigneeFilter === UNASSIGNED) return assigned.length === 0;
+      if (assigneeFilter && !assigned.includes(assigneeFilter)) return false;
+      if (query && !pr.title.toLowerCase().includes(query) && String(pr.number) !== searchByNumber)
+        return false;
+      return true;
+    }),
+    sortKey,
+  );
+
+  const filtering = !!authorFilter || !!assigneeFilter || !!query;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -99,6 +141,36 @@ export function GitPRList({
         </button>
       </div>
 
+      {/* Search */}
+      <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-foreground/10">
+        <div className="relative flex-1 min-w-0">
+          <Search
+            size={11}
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-foreground/30 pointer-events-none"
+          />
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by number or title…"
+            className="w-full text-[11px] bg-foreground/5 border border-foreground/15 rounded pl-6 pr-2 py-1 text-foreground/80 outline-none focus:border-brand/40"
+          />
+        </div>
+        <div className="shrink-0 flex items-center gap-1">
+          <ArrowUpDown size={10} className="text-foreground/30" />
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            className="text-[10px] bg-foreground/5 border border-foreground/15 rounded px-1 py-1 text-foreground/60 outline-none focus:border-brand/40"
+          >
+            {SORT_OPTIONS.map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 border-b border-foreground/10">
         <SearchableSelect
@@ -122,6 +194,7 @@ export function GitPRList({
             onClick={() => {
               onChangeAuthorFilter("");
               onChangeAssigneeFilter("");
+              setSearchQuery("");
             }}
             title="Clear filters"
             className="shrink-0 p-1 rounded hover:bg-foreground/5 text-foreground/40 hover:text-foreground/70 transition-colors"
@@ -158,6 +231,7 @@ export function GitPRList({
               onClick={() => {
                 onChangeAuthorFilter("");
                 onChangeAssigneeFilter("");
+                setSearchQuery("");
               }}
               className="text-[10px] px-2 py-1 rounded border border-foreground/15 text-foreground/50 hover:text-foreground/80 hover:border-foreground/30 transition-colors"
             >

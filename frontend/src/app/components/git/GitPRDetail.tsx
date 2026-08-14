@@ -2,29 +2,36 @@ import { useEffect, useState } from "react";
 import {
   ChevronDown,
   CircleDot,
+  Download,
   ExternalLink,
   FileDiff,
+  GitCommitHorizontal,
   GitMerge,
   GitPullRequest,
   Loader2,
   MessageSquare,
+  Paperclip,
+  RefreshCw,
   X,
 } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   ForgejoPR,
+  PRAttachment,
   PRCommit,
-  PRComment,
   PRDiff,
   PRDiffFile,
   PRRepoInfo,
   PRReview,
   PRReviewComment,
+  PRTimelineEvent,
   ReviewDraftComment,
 } from "./types";
 import { GitDiffViewer } from "./GitDiffViewer";
 import { Markdown } from "../Markdown";
 import { relativeTime } from "../../lib/relativeTime";
+import { copyToClipboard } from "../../lib/clipboard";
+import { notify } from "../../lib/notify";
 import * as PRService from "../../../../bindings/alis-hub-v3/prservice";
 
 type Tab = "overview" | "commits" | "files" | "conversation";
@@ -43,6 +50,7 @@ interface Props {
   onMerge: (number: number, style: MergeStyle, deleteBranch: boolean) => Promise<void>;
   onSetReady: (number: number) => Promise<void>;
   onRefresh: () => void;
+  onRefreshPR: () => void;
   onClose: () => void;
 }
 
@@ -58,6 +66,42 @@ function errText(e: unknown): string {
   return String((e as Error)?.message ?? e ?? "").replace(/^Error:\s*/, "");
 }
 
+/** forgejoOrigin is the Forgejo origin the PR lives on, for resolving relative URLs. */
+function forgejoOrigin(htmlUrl: string): string {
+  try {
+    return new URL(htmlUrl).origin;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Rewrites root-relative markdown link/image targets to absolute Forgejo URLs.
+ * Comment bodies reference attachments as `/attachments/<uuid>`, which resolve
+ * against the app's own webview origin and 404; they live on the Forgejo host
+ * instead.
+ */
+function absolutizeLinks(markdown: string, origin: string): string {
+  if (!origin || !markdown) return markdown;
+  return markdown.replace(/\]\((\/[^)\s]+)\)/g, (_m, path) => `](${origin}${path})`);
+}
+
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)$/i;
+const isImageName = (name: string) => IMAGE_EXT.test(name);
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** copy puts text on the clipboard and says so, so a click has visible feedback. */
+function copy(text: string, label: string) {
+  void copyToClipboard(text)
+    .then(() => notify.success(`${label} copied`))
+    .catch(() => notify.error(`Failed to copy ${label.toLowerCase()}`));
+}
+
 export function GitPRDetail({
   pr,
   org,
@@ -70,6 +114,7 @@ export function GitPRDetail({
   onMerge,
   onSetReady,
   onRefresh,
+  onRefreshPR,
   onClose,
 }: Props) {
   const [tab, setTab] = useState<Tab>("overview");
@@ -99,11 +144,14 @@ export function GitPRDetail({
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   // Conversation
-  const [comments, setComments] = useState<PRComment[] | null>(null);
-  const [commentsTruncated, setCommentsTruncated] = useState<{
+  const [timeline, setTimeline] = useState<PRTimelineEvent[] | null>(null);
+  const [timelineTruncated, setTimelineTruncated] = useState<{
     shown: number;
     total: number;
   } | null>(null);
+  // Attachments keyed by comment id, so comment events can render their images
+  // and files without the timeline endpoint having to carry them.
+  const [commentAssets, setCommentAssets] = useState<Map<number, PRAttachment[]>>(new Map());
   const [reviews, setReviews] = useState<PRReview[]>([]);
   const [reviewComments, setReviewComments] = useState<PRReviewComment[]>([]);
   const [conversationError, setConversationError] = useState("");
@@ -129,9 +177,9 @@ export function GitPRDetail({
   useEffect(() => {
     if (tab === "commits" && commits === null && !loadingCommits) void loadCommits();
     if (tab === "files" && diff === null && !loadingDiff) void loadDiff();
-    if (tab === "conversation" && comments === null && !loadingConversation)
+    if (tab === "conversation" && timeline === null && !loadingConversation)
       void loadConversation();
-  }, [tab, commits, diff, comments]);
+  }, [tab, commits, diff, timeline]);
 
   async function loadCommits() {
     setLoadingCommits(true);
@@ -181,18 +229,21 @@ export function GitPRDetail({
     setLoadingConversation(true);
     setConversationError("");
     try {
-      const [commentList, reviewList] = await Promise.all([
-        PRService.GetPRComments(org, product, repo, pr.number),
+      const [timelineResult, reviewList, commentList] = await Promise.all([
+        PRService.GetPRTimeline(org, product, repo, pr.number),
         PRService.GetPRReviews(org, product, repo, pr.number),
+        PRService.GetPRComments(org, product, repo, pr.number),
       ]);
-      const list = commentList?.comments ?? [];
-      setComments(list);
-      setCommentsTruncated(
-        commentList?.truncated ? { shown: list.length, total: commentList.total } : null,
+      const events = timelineResult?.events ?? [];
+      setTimeline(events);
+      setTimelineTruncated(
+        timelineResult?.truncated ? { shown: events.length, total: timelineResult.total } : null,
       );
 
       const submitted = (reviewList ?? []).filter((r) => r.state !== "PENDING");
       setReviews(submitted);
+
+      setCommentAssets(new Map((commentList?.comments ?? []).map((c) => [c.id, c.assets ?? []])));
 
       // Inline comments hang off their review, so they need one fetch each.
       const withComments = submitted.filter((r) => r.comments > 0);
@@ -203,7 +254,7 @@ export function GitPRDetail({
       );
       setReviewComments(threads.flat().filter(Boolean) as PRReviewComment[]);
     } catch (e) {
-      setComments([]);
+      setTimeline([]);
       setConversationError(errText(e));
     } finally {
       setLoadingConversation(false);
@@ -239,7 +290,27 @@ export function GitPRDetail({
         pr.number,
         newComment.trim(),
       );
-      if (created) setComments((prev) => [...(prev ?? []), created]);
+      if (created) {
+        // A freshly posted comment has no attachments, so it can be appended to
+        // the timeline directly rather than reloading the whole conversation.
+        const event: PRTimelineEvent = {
+          id: created.id,
+          type: "comment",
+          author: created.author,
+          body: created.body,
+          createdAt: created.createdAt,
+          htmlUrl: created.htmlUrl,
+          sha: "",
+          message: "",
+          reviewId: 0,
+          refAction: "",
+          oldRef: "",
+          newRef: "",
+          oldTitle: "",
+          newTitle: "",
+        };
+        setTimeline((prev) => [...(prev ?? []), event]);
+      }
       setNewComment("");
     } catch (e) {
       setConversationError(errText(e));
@@ -264,7 +335,7 @@ export function GitPRDetail({
       setReviewBody("");
       setDraftComments([]);
       setReviewEvent("COMMENT");
-      setComments(null); // force a reload of the timeline
+      setTimeline(null); // force a reload of the timeline
       await loadConversation();
       onRefresh();
     } catch (e) {
@@ -276,6 +347,21 @@ export function GitPRDetail({
 
   function stageDraftComment(path: string, line: number, body: string) {
     setDraftComments((prev) => [...prev, { path, body, newPosition: line }]);
+  }
+
+  // Refresh reloads the PR itself and every tab's cache, so a changed branch,
+  // verdict or conversation shows up without leaving and re-entering the view.
+  function handleRefresh() {
+    setCommits(null);
+    setDiff(null);
+    setTimeline(null);
+    setReviews([]);
+    setReviewComments([]);
+    setCommentAssets(new Map());
+    setConversationError("");
+    setDiffError("");
+    setCommitsError("");
+    onRefreshPR();
   }
 
   const mergeStyleLabels: Record<MergeStyle, string> = {
@@ -307,6 +393,9 @@ export function GitPRDetail({
   const commitFiles = commitDiff?.files ?? [];
   const activeCommitFile = commitFiles.find((f) => f.path === selectedCommitFile) ?? null;
 
+  // The Forgejo origin everything relative (attachment URLs in comments) hangs off.
+  const origin = forgejoOrigin(pr.htmlUrl);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
@@ -318,15 +407,31 @@ export function GitPRDetail({
           />
           <div className="flex-1 min-w-0">
             <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="text-xs text-foreground/30 shrink-0">#{pr.number}</span>
-              <span className="text-sm font-medium text-foreground/90 leading-snug">
+              <button
+                onClick={() => copy(`#${pr.number}`, "PR number")}
+                title="Copy PR number"
+                className="text-xs text-foreground/30 hover:text-foreground/70 transition-colors shrink-0 cursor-pointer"
+              >
+                #{pr.number}
+              </button>
+              <button
+                onClick={() => copy(pr.title, "Title")}
+                title="Copy title"
+                className="text-sm font-medium text-foreground/90 leading-snug text-left hover:text-brand transition-colors cursor-pointer"
+              >
                 {pr.title}
-              </span>
+              </button>
               <PRStateBadge pr={pr} />
             </div>
             <div className="mt-1 flex items-center gap-2 text-[11px] text-foreground/35 flex-wrap">
               {pr.headRepo && <span className="font-mono text-amber-400/80">{pr.headRepo}</span>}
-              <span className="font-mono text-brand/70">{pr.headBranch}</span>
+              <button
+                onClick={() => copy(pr.headBranch, "Branch")}
+                title="Copy branch"
+                className="font-mono text-brand/70 hover:text-brand transition-colors cursor-pointer"
+              >
+                {pr.headBranch}
+              </button>
               <span>→</span>
               <span className="font-mono text-foreground/50">{pr.baseBranch}</span>
               <span>·</span>
@@ -350,6 +455,13 @@ export function GitPRDetail({
               </div>
             )}
           </div>
+          <button
+            onClick={handleRefresh}
+            title="Refresh"
+            className="shrink-0 p-1 rounded hover:bg-foreground/5 text-foreground/30 hover:text-foreground/60 transition-colors"
+          >
+            <RefreshCw size={13} />
+          </button>
           {pr.htmlUrl && (
             <a
               href={pr.htmlUrl}
@@ -377,7 +489,7 @@ export function GitPRDetail({
               ["overview", "Overview", null],
               ["commits", "Commits", commits?.length ?? null],
               ["files", "Files Changed", pr.changedFiles || null],
-              ["conversation", "Conversation", (comments?.length ?? 0) + reviews.length || null],
+              ["conversation", "Conversation", timeline?.length ?? null],
             ] as [Tab, string, number | null][]
           ).map(([id, label, count]) => (
             <button
@@ -402,7 +514,7 @@ export function GitPRDetail({
 
       {/* Tab body */}
       <div className="flex-1 overflow-hidden">
-        {tab === "overview" && <OverviewTab pr={pr} reviews={reviews} />}
+        {tab === "overview" && <OverviewTab pr={pr} reviews={reviews} origin={origin} />}
 
         {tab === "commits" &&
           (loadingCommits ? (
@@ -536,12 +648,14 @@ export function GitPRDetail({
             <LoadingPane />
           ) : (
             <ConversationTab
-              comments={comments ?? []}
-              commentsTruncated={commentsTruncated}
+              timeline={timeline ?? []}
+              timelineTruncated={timelineTruncated}
+              commentAssets={commentAssets}
               reviews={reviews}
               reviewComments={reviewComments}
               error={conversationError}
               htmlUrl={pr.htmlUrl}
+              origin={origin}
               newComment={newComment}
               posting={postingComment}
               onChangeComment={setNewComment}
@@ -681,12 +795,20 @@ function MergeStatus({ pr, reviews }: { pr: ForgejoPR; reviews: PRReview[] }) {
   );
 }
 
-function OverviewTab({ pr, reviews }: { pr: ForgejoPR; reviews: PRReview[] }) {
+function OverviewTab({
+  pr,
+  reviews,
+  origin,
+}: {
+  pr: ForgejoPR;
+  reviews: PRReview[];
+  origin: string;
+}) {
   return (
     <div className="h-full overflow-y-auto px-4 py-4 flex flex-col gap-4">
       {pr.body ? (
         <div className="max-w-prose">
-          <Markdown source={pr.body} untrusted />
+          <Markdown source={absolutizeLinks(pr.body, origin)} untrusted />
         </div>
       ) : (
         <p className="text-sm text-foreground/25 italic">No description provided.</p>
@@ -768,12 +890,14 @@ function FileRow({
 }
 
 interface ConversationTabProps {
-  comments: PRComment[];
-  commentsTruncated: { shown: number; total: number } | null;
+  timeline: PRTimelineEvent[];
+  timelineTruncated: { shown: number; total: number } | null;
+  commentAssets: Map<number, PRAttachment[]>;
   reviews: PRReview[];
   reviewComments: PRReviewComment[];
   error: string;
   htmlUrl: string;
+  origin: string;
   newComment: string;
   posting: boolean;
   onChangeComment: (v: string) => void;
@@ -791,12 +915,14 @@ interface ConversationTabProps {
 }
 
 function ConversationTab({
-  comments,
-  commentsTruncated,
+  timeline,
+  timelineTruncated,
+  commentAssets,
   reviews,
   reviewComments,
   error,
   htmlUrl,
+  origin,
   newComment,
   posting,
   onChangeComment,
@@ -812,12 +938,9 @@ function ConversationTab({
   onDropDraft,
   onSubmitReview,
 }: ConversationTabProps) {
-  // One timeline: plain comments and reviews interleaved by time, which is the
-  // order they happened in.
-  const timeline = [
-    ...comments.map((c) => ({ kind: "comment" as const, at: c.createdAt, comment: c })),
-    ...reviews.map((r) => ({ kind: "review" as const, at: r.submittedAt, review: r })),
-  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  // Review events only carry their id, so state and inline threads are joined in
+  // from the reviews and review comments already fetched.
+  const reviewById = new Map(reviews.map((r) => [r.id, r]));
 
   const reviewEvents: [ReviewEvent, string][] = [
     ["COMMENT", "Comment"],
@@ -829,50 +952,67 @@ function ConversationTab({
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
         {error && <InlineError message={error} />}
-        {commentsTruncated && (
+        {timelineTruncated && (
           <TruncationNotice
-            shown={commentsTruncated.shown}
-            total={commentsTruncated.total}
-            noun="comments"
+            shown={timelineTruncated.shown}
+            total={timelineTruncated.total}
+            noun="conversation items"
             htmlUrl={htmlUrl}
           />
         )}
         {timeline.length === 0 && !error && (
           <div className="flex flex-col items-center justify-center py-8 gap-1">
             <MessageSquare size={18} className="text-foreground/15" />
-            <p className="text-[11px] text-foreground/30">No comments or reviews yet</p>
+            <p className="text-[11px] text-foreground/30">No conversation yet</p>
           </div>
         )}
-        {timeline.map((entry) =>
-          entry.kind === "comment" ? (
-            <Comment
-              key={`c${entry.comment.id}`}
-              author={entry.comment.author}
-              at={entry.comment.createdAt}
-              body={entry.comment.body}
-            />
-          ) : (
-            <div key={`r${entry.review.id}`} className="flex flex-col gap-1.5">
+        {timeline.map((ev) => {
+          if (ev.type === "comment") {
+            return (
               <Comment
-                author={entry.review.author}
-                at={entry.review.submittedAt}
-                body={entry.review.body}
-                badge={<ReviewStateBadge state={entry.review.state} stale={entry.review.stale} />}
+                key={`c${ev.id}`}
+                author={ev.author}
+                at={ev.createdAt}
+                body={ev.body}
+                origin={origin}
+                assets={commentAssets.get(ev.id) ?? []}
               />
-              {reviewComments
-                .filter((rc) => rc.reviewId === entry.review.id)
-                .map((rc) => (
-                  <div key={rc.id} className="ml-8 border-l-2 border-brand/20 pl-3">
-                    <div className="text-[9px] font-mono text-foreground/35 truncate">
-                      {rc.path}
-                      {rc.line ? `:${rc.line}` : ""}
+            );
+          }
+          if (ev.type === "commit") {
+            return <CommitEvent key={`k${ev.id}-${ev.sha}`} ev={ev} />;
+          }
+          if (ev.type === "review") {
+            const review = reviewById.get(ev.reviewId);
+            return (
+              <div key={`r${ev.id}`} className="flex flex-col gap-1.5">
+                <Comment
+                  author={ev.author}
+                  at={ev.createdAt}
+                  body={ev.body}
+                  origin={origin}
+                  badge={
+                    review ? (
+                      <ReviewStateBadge state={review.state} stale={review.stale} />
+                    ) : undefined
+                  }
+                />
+                {reviewComments
+                  .filter((rc) => rc.reviewId === ev.reviewId)
+                  .map((rc) => (
+                    <div key={rc.id} className="ml-8 border-l-2 border-brand/20 pl-3">
+                      <div className="text-[9px] font-mono text-foreground/35 truncate">
+                        {rc.path}
+                        {rc.line ? `:${rc.line}` : ""}
+                      </div>
+                      <Markdown source={absolutizeLinks(rc.body, origin)} compact untrusted />
                     </div>
-                    <Markdown source={rc.body} compact untrusted />
-                  </div>
-                ))}
-            </div>
-          ),
-        )}
+                  ))}
+              </div>
+            );
+          }
+          return <EventLine key={`e${ev.id}`} ev={ev} />;
+        })}
       </div>
 
       {/* Review composer */}
@@ -972,15 +1112,113 @@ function ConversationTab({
   );
 }
 
+/**
+ * A commit in the conversation timeline: the short SHA, the first line of the
+ * message and the author, the way Forgejo and GitHub show them rather than as a
+ * full comment.
+ */
+function CommitEvent({ ev }: { ev: PRTimelineEvent }) {
+  return (
+    <div className="flex gap-2.5">
+      <div className="w-6 h-6 rounded-full bg-foreground/10 border border-foreground/15 flex items-center justify-center shrink-0">
+        <GitCommitHorizontal size={12} className="text-foreground/50" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-[10px] font-mono text-foreground/50">{ev.sha.slice(0, 7)}</span>
+          <span className="text-[11px] text-foreground/70 leading-snug break-words">
+            {ev.message || "commit"}
+          </span>
+          <span className="text-[10px] text-foreground/30">
+            {ev.author} · {relativeTime(ev.createdAt)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A one-line event with no body: a close, merge, branch change or similar. The
+ * type word and the ref/title fields are all Forgejo gives for these, so they
+ * are turned into a short sentence rather than left as a bare type token.
+ */
+function EventLine({ ev }: { ev: PRTimelineEvent }) {
+  return (
+    <div className="flex items-center gap-2 text-[11px] text-foreground/35">
+      <span className="w-1.5 h-1.5 rounded-full bg-foreground/25 shrink-0" />
+      <span className="text-foreground/50">{ev.author || "Someone"}</span>
+      <span>{eventDescription(ev)}</span>
+      <span className="text-foreground/25">{relativeTime(ev.createdAt)}</span>
+    </div>
+  );
+}
+
+function eventDescription(ev: PRTimelineEvent): string {
+  switch (ev.type) {
+    case "close":
+      return "closed this pull request";
+    case "reopen":
+      return "reopened this pull request";
+    case "merge_pull":
+      return "merged this pull request";
+    case "change_title":
+      return ev.oldTitle && ev.newTitle
+        ? `changed the title from “${ev.oldTitle}” to “${ev.newTitle}”`
+        : "changed the title";
+    case "change_target_branch":
+      return ev.newRef ? `changed the base branch to \`${ev.newRef}\`` : "changed the base branch";
+    case "delete_branch":
+      return ev.newRef ? `deleted the branch \`${ev.newRef}\`` : "deleted a branch";
+    case "label":
+      return "changed the labels";
+    case "milestone":
+      return "changed the milestone";
+    case "assignees":
+      return "changed the assignees";
+    case "review_request":
+      return "requested a review";
+    case "dismiss_review":
+      return "dismissed a review";
+    case "lock":
+      return "locked this pull request";
+    case "unlock":
+      return "unlocked this pull request";
+    case "pull_push":
+      return ev.refAction === "force-pushed" ? "force-pushed the branch" : "pushed commits";
+  }
+  if (ev.refAction) {
+    switch (ev.refAction) {
+      case "force-pushed":
+        return "force-pushed the branch";
+      case "closed":
+        return "closed this pull request";
+      case "reopened":
+        return "reopened this pull request";
+      case "merged":
+        return "merged this pull request";
+      case "renamed":
+        return ev.newRef ? `renamed the branch to \`${ev.newRef}\`` : "renamed the branch";
+      case "deleted":
+        return "deleted the branch";
+    }
+  }
+  return ev.type ? `updated this pull request (${ev.type})` : "updated this pull request";
+}
+
 function Comment({
   author,
   at,
   body,
+  origin,
+  assets,
   badge,
 }: {
   author: string;
   at: string;
   body: string;
+  origin: string;
+  assets?: PRAttachment[];
   badge?: React.ReactNode;
 }) {
   return (
@@ -996,10 +1234,58 @@ function Comment({
         </div>
         {body && (
           <div className="bg-foreground/[0.03] border border-foreground/8 rounded px-3 py-2">
-            <Markdown source={body} compact untrusted />
+            <Markdown source={absolutizeLinks(body, origin)} compact untrusted />
           </div>
         )}
+        <Attachments assets={assets ?? []} body={body} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Files and images attached to a comment. The markdown body usually references
+ * each attachment itself (a pasted screenshot becomes `![…](/attachments/…)`),
+ * so only attachments the body does not already mention are rendered here to
+ * avoid showing them twice.
+ */
+function Attachments({ assets, body }: { assets: PRAttachment[]; body: string }) {
+  if (assets.length === 0) return null;
+  const unreferenced = assets.filter((a) => !a.uuid || !body.includes(a.uuid));
+  if (unreferenced.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-2 mt-1.5">
+      {unreferenced.map((a) =>
+        isImageName(a.name) ? (
+          <a
+            key={a.id}
+            href={a.browserDownloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block"
+          >
+            <img
+              src={a.browserDownloadUrl}
+              alt={a.name}
+              className="max-w-[280px] max-h-[240px] rounded border border-foreground/10 object-contain bg-foreground/[0.03]"
+            />
+          </a>
+        ) : (
+          <a
+            key={a.id}
+            href={a.browserDownloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            title={`Download ${a.name}`}
+            className="flex items-center gap-1.5 text-[10px] px-2 py-1.5 rounded border border-foreground/15 text-foreground/60 hover:text-brand hover:border-brand/40 transition-colors"
+          >
+            <Paperclip size={10} className="shrink-0" />
+            <span className="truncate max-w-[200px]">{a.name}</span>
+            <span className="text-foreground/30 shrink-0">{formatBytes(a.size)}</span>
+            <Download size={10} className="shrink-0" />
+          </a>
+        ),
+      )}
     </div>
   );
 }

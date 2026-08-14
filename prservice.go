@@ -10,8 +10,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -94,19 +96,68 @@ type PRCommitList struct {
 	Truncated bool       `json:"truncated"`
 }
 
+// PRAttachment is a file or image attached to a pull request comment.
+type PRAttachment struct {
+	ID                 int    `json:"id"`
+	Name               string `json:"name"`
+	Size               int64  `json:"size"`
+	UUID               string `json:"uuid"`
+	BrowserDownloadURL string `json:"browserDownloadUrl"`
+	CreatedAt          string `json:"createdAt"`
+}
+
 // PRComment is a conversation comment on a pull request.
 type PRComment struct {
-	ID        int    `json:"id"`
-	Body      string `json:"body"`
-	Author    string `json:"author"`
-	CreatedAt string `json:"createdAt"`
-	UpdatedAt string `json:"updatedAt"`
+	ID        int             `json:"id"`
+	Body      string          `json:"body"`
+	Author    string          `json:"author"`
+	CreatedAt string          `json:"createdAt"`
+	UpdatedAt string          `json:"updatedAt"`
+	HTMLURL   string          `json:"htmlUrl"`
+	Assets    []PRAttachment  `json:"assets"`
 }
 
 type PRCommentList struct {
 	Comments  []PRComment `json:"comments"`
 	Total     int         `json:"total"`
 	Truncated bool        `json:"truncated"`
+}
+
+// PRTimelineEvent is one entry in a pull request's conversation timeline.
+// Forgejo's timeline endpoint returns comments, commits, reviews and ref events
+// already interleaved in the order they happened, so the frontend renders them
+// as a single stream the way Forgejo and GitHub do instead of grouping them by
+// kind. Type carries the raw CommentType word ("comment", "commit", "review",
+// "close", "reopen", "merge", …); the commit and review fields below are only
+// populated for the entries that have them.
+type PRTimelineEvent struct {
+	ID        int    `json:"id"`
+	Type      string `json:"type"`
+	Author    string `json:"author"`
+	Body      string `json:"body"`
+	CreatedAt string `json:"createdAt"`
+	HTMLURL   string `json:"htmlUrl"`
+
+	// Commit entries: the SHA in sha and the message in message (the timeline's
+	// body field doubles as the message for commit entries).
+	SHA     string `json:"sha"`
+	Message string `json:"message"`
+
+	// Review entries.
+	ReviewID int `json:"reviewId"`
+
+	// Ref and other events, used to describe what happened without a body.
+	RefAction string `json:"refAction"`
+	OldRef    string `json:"oldRef"`
+	NewRef    string `json:"newRef"`
+	OldTitle  string `json:"oldTitle"`
+	NewTitle  string `json:"newTitle"`
+}
+
+type PRTimelineList struct {
+	Events    []PRTimelineEvent `json:"events"`
+	Total     int               `json:"total"`
+	Truncated bool              `json:"truncated"`
 }
 
 type PRFileList struct {
@@ -283,6 +334,60 @@ type rawComment struct {
 	} `json:"user"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string          `json:"html_url"`
+	Assets    []rawAttachment `json:"assets"`
+}
+
+type rawAttachment struct {
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"`
+	Size               int64  `json:"size"`
+	UUID               string `json:"uuid"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+	CreatedAt          string `json:"created_at"`
+}
+
+// rawTimelineEvent is one entry of Forgejo's issue timeline. The endpoint is
+// heterogenous: every entry shares id/type/body/user/created_at, and the rest
+// of the fields are only present on the comment types that use them.
+type rawTimelineEvent struct {
+	ID   int    `json:"id"`
+	Type string `json:"type"`
+	User struct {
+		Login string `json:"login"`
+	} `json:"user"`
+	Body      string `json:"body"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	HTMLURL   string `json:"html_url"`
+
+	RefAction string `json:"ref_action"`
+	ReviewID  int    `json:"review_id"`
+
+	OldRef   string `json:"old_ref"`
+	NewRef   string `json:"new_ref"`
+	OldTitle string `json:"old_title"`
+	NewTitle string `json:"new_title"`
+}
+
+// toEvent normalises one timeline entry. Commit entries are not produced here:
+// GetPRTimeline expands push events into "commit" entries itself, so the shared
+// fields below are all a generic entry needs.
+func (r rawTimelineEvent) toEvent() PRTimelineEvent {
+	return PRTimelineEvent{
+		ID:        r.ID,
+		Type:      r.Type,
+		Author:    r.User.Login,
+		Body:      r.Body,
+		CreatedAt: r.CreatedAt,
+		HTMLURL:   r.HTMLURL,
+		ReviewID:  r.ReviewID,
+		RefAction: r.RefAction,
+		OldRef:    r.OldRef,
+		NewRef:    r.NewRef,
+		OldTitle:  r.OldTitle,
+		NewTitle:  r.NewTitle,
+	}
 }
 
 // --- helpers ---
@@ -571,29 +676,25 @@ func stripWIPPrefix(title string) (string, bool) {
 
 // --- commits, files, diffs ---
 
-// GetPRCommits returns the commits in a pull request.
-func (s *PRService) GetPRCommits(org, product, repo string, number int) (*PRCommitList, error) {
-	t, err := s.target(org, product, repo)
-	if err != nil {
-		return nil, err
-	}
-	ctx, cancel := s.ctx()
-	defer cancel()
+type rawPRCommit struct {
+	SHA    string `json:"sha"`
+	Commit struct {
+		Message string `json:"message"`
+		Author  struct {
+			Name string `json:"name"`
+			Date string `json:"date"`
+		} `json:"author"`
+	} `json:"commit"`
+}
 
-	type rawCommit struct {
-		SHA    string `json:"sha"`
-		Commit struct {
-			Message string `json:"message"`
-			Author  struct {
-				Name string `json:"name"`
-				Date string `json:"date"`
-			} `json:"author"`
-		} `json:"commit"`
-	}
-	raws, meta, err := forgejoList[rawCommit](ctx, s.client, t,
+// prCommits fetches the commits in a pull request. Shared by GetPRCommits and
+// GetPRTimeline, which needs the same list to expand push events into one
+// timeline entry per commit.
+func (s *PRService) prCommits(ctx context.Context, t forgejoTarget, number int) ([]PRCommit, listMeta, error) {
+	raws, meta, err := forgejoList[rawPRCommit](ctx, s.client, t,
 		fmt.Sprintf("repos/%s/pulls/%d/commits", t.repoPath(), number))
 	if err != nil {
-		return nil, s.fail(err)
+		return nil, meta, err
 	}
 	commits := make([]PRCommit, len(raws))
 	for i, r := range raws {
@@ -607,6 +708,22 @@ func (s *PRService) GetPRCommits(org, product, repo string, number int) (*PRComm
 			Author:    r.Commit.Author.Name,
 			Timestamp: r.Commit.Author.Date,
 		}
+	}
+	return commits, meta, nil
+}
+
+// GetPRCommits returns the commits in a pull request.
+func (s *PRService) GetPRCommits(org, product, repo string, number int) (*PRCommitList, error) {
+	t, err := s.target(org, product, repo)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := s.ctx()
+	defer cancel()
+
+	commits, meta, err := s.prCommits(ctx, t, number)
+	if err != nil {
+		return nil, s.fail(err)
 	}
 	return &PRCommitList{Commits: commits, Total: meta.Total, Truncated: meta.Truncated}, nil
 }
@@ -702,6 +819,31 @@ func (s *PRService) GetCommitDiff(org, product, repo, sha string) (*PRDiff, erro
 
 // --- conversation ---
 
+// toComment converts a raw issue comment to the wire shape, including its
+// attachments so the conversation tab can render images and file links.
+func (r rawComment) toComment() PRComment {
+	assets := make([]PRAttachment, 0, len(r.Assets))
+	for _, a := range r.Assets {
+		assets = append(assets, PRAttachment{
+			ID:                 int(a.ID),
+			Name:               a.Name,
+			Size:               a.Size,
+			UUID:               a.UUID,
+			BrowserDownloadURL: a.BrowserDownloadURL,
+			CreatedAt:          a.CreatedAt,
+		})
+	}
+	return PRComment{
+		ID:        r.ID,
+		Body:      r.Body,
+		Author:    r.User.Login,
+		CreatedAt: r.CreatedAt,
+		UpdatedAt: r.UpdatedAt,
+		HTMLURL:   r.HTMLURL,
+		Assets:    assets,
+	}
+}
+
 // GetPRComments returns the conversation comments on a pull request.
 func (s *PRService) GetPRComments(org, product, repo string, number int) (*PRCommentList, error) {
 	t, err := s.target(org, product, repo)
@@ -718,9 +860,102 @@ func (s *PRService) GetPRComments(org, product, repo string, number int) (*PRCom
 	}
 	comments := make([]PRComment, len(raws))
 	for i, r := range raws {
-		comments[i] = PRComment{ID: r.ID, Body: r.Body, Author: r.User.Login, CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt}
+		comments[i] = r.toComment()
 	}
 	return &PRCommentList{Comments: comments, Total: meta.Total, Truncated: meta.Truncated}, nil
+}
+
+// GetPRTimeline returns the pull request's conversation as one time-ordered
+// stream of comments, commits, reviews and ref events, exactly as Forgejo
+// presents it. The per-kind endpoints only tell part of the story: comments
+// and commits are separate calls, so a timeline built from them would put every
+// commit ahead of every comment regardless of when each actually happened.
+//
+// Forgejo's timeline records a push as a single "pull_push" entry whose body is
+// a JSON array of commit IDs, not as one entry per commit. Forgejo's own UI
+// expands that into individual commits (LoadPushCommits), so this does the same
+// here: each commit becomes a "commit" event carrying its own message, author
+// and timestamp, and the whole stream is re-sorted so commits interleave with
+// the comments around them.
+func (s *PRService) GetPRTimeline(org, product, repo string, number int) (*PRTimelineList, error) {
+	t, err := s.target(org, product, repo)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := s.ctx()
+	defer cancel()
+
+	raws, meta, err := forgejoList[rawTimelineEvent](ctx, s.client, t,
+		fmt.Sprintf("repos/%s/issues/%d/timeline", t.repoPath(), number))
+	if err != nil {
+		return nil, s.fail(err)
+	}
+
+	// The commit list is only needed to flesh out push events; a failure here
+	// must not take the whole conversation down, so it degrades to unexpanded
+	// events rather than an error.
+	commitBySHA := map[string]PRCommit{}
+	if commits, _, cerr := s.prCommits(ctx, t, number); cerr == nil {
+		for _, c := range commits {
+			commitBySHA[c.SHA] = c
+		}
+	}
+
+	return &PRTimelineList{
+		Events:    expandTimeline(raws, commitBySHA),
+		Total:     meta.Total,
+		Truncated: meta.Truncated,
+	}, nil
+}
+
+// expandTimeline flattens push events into one entry per commit and re-sorts the
+// stream, so commits interleave with the comments around them rather than
+// clumping at each push's position. Pure so it can be tested without a client.
+func expandTimeline(raws []rawTimelineEvent, commitBySHA map[string]PRCommit) []PRTimelineEvent {
+	events := make([]PRTimelineEvent, 0, len(raws))
+	for _, r := range raws {
+		if r.Type != "pull_push" {
+			events = append(events, r.toEvent())
+			continue
+		}
+		var push struct {
+			IsForcePush bool     `json:"is_force_push"`
+			CommitIDs   []string `json:"commit_ids"`
+		}
+		if json.Unmarshal([]byte(r.Body), &push) != nil || len(push.CommitIDs) == 0 {
+			events = append(events, r.toEvent())
+			continue
+		}
+		if push.IsForcePush {
+			ev := r.toEvent()
+			ev.RefAction = "force-pushed"
+			events = append(events, ev)
+			continue
+		}
+		for _, sha := range push.CommitIDs {
+			ev := PRTimelineEvent{
+				ID:        r.ID,
+				Type:      "commit",
+				Author:    r.User.Login,
+				CreatedAt: r.CreatedAt,
+				HTMLURL:   r.HTMLURL,
+				SHA:       sha,
+			}
+			if c, ok := commitBySHA[sha]; ok {
+				ev.Message = c.Message
+				ev.Author = c.Author
+				ev.CreatedAt = c.Timestamp
+			}
+			events = append(events, ev)
+		}
+	}
+
+	// Interleave commits with the comments around them rather than leaving each
+	// push's commits clumped at the push's position.
+	sort.SliceStable(events, func(i, j int) bool {
+		return events[i].CreatedAt < events[j].CreatedAt
+	})
+	return events
 }
 
 // AddPRComment posts a conversation comment and returns it.
@@ -740,7 +975,8 @@ func (s *PRService) AddPRComment(org, product, repo string, number int, body str
 	if err := s.client.postJSON(ctx, t, fmt.Sprintf("repos/%s/issues/%d/comments", t.repoPath(), number), in, &raw); err != nil {
 		return nil, s.fail(err)
 	}
-	return &PRComment{ID: raw.ID, Body: raw.Body, Author: raw.User.Login, CreatedAt: raw.CreatedAt, UpdatedAt: raw.UpdatedAt}, nil
+	c := raw.toComment()
+	return &c, nil
 }
 
 // --- reviews ---

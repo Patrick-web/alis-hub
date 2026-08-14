@@ -3932,6 +3932,50 @@ export class Organisation {
 }
 
 /**
+ * PRAttachment is a file or image attached to a pull request comment.
+ */
+export class PRAttachment {
+    "id": number;
+    "name": string;
+    "size": number;
+    "uuid": string;
+    "browserDownloadUrl": string;
+    "createdAt": string;
+
+    /** Creates a new PRAttachment instance. */
+    constructor($$source: Partial<PRAttachment> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("size" in $$source)) {
+            this["size"] = 0;
+        }
+        if (!("uuid" in $$source)) {
+            this["uuid"] = "";
+        }
+        if (!("browserDownloadUrl" in $$source)) {
+            this["browserDownloadUrl"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PRAttachment instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PRAttachment {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PRAttachment($$parsedSource as Partial<PRAttachment>);
+    }
+}
+
+/**
  * PRComment is a conversation comment on a pull request.
  */
 export class PRComment {
@@ -3940,6 +3984,8 @@ export class PRComment {
     "author": string;
     "createdAt": string;
     "updatedAt": string;
+    "htmlUrl": string;
+    "assets": PRAttachment[];
 
     /** Creates a new PRComment instance. */
     constructor($$source: Partial<PRComment> = {}) {
@@ -3958,6 +4004,12 @@ export class PRComment {
         if (!("updatedAt" in $$source)) {
             this["updatedAt"] = "";
         }
+        if (!("htmlUrl" in $$source)) {
+            this["htmlUrl"] = "";
+        }
+        if (!("assets" in $$source)) {
+            this["assets"] = [];
+        }
 
         Object.assign(this, $$source);
     }
@@ -3966,7 +4018,11 @@ export class PRComment {
      * Creates a new PRComment instance from a string or object.
      */
     static createFrom($$source: any = {}): PRComment {
+        const $$createField6_0 = $$createType47;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("assets" in $$parsedSource) {
+            $$parsedSource["assets"] = $$createField6_0($$parsedSource["assets"]);
+        }
         return new PRComment($$parsedSource as Partial<PRComment>);
     }
 }
@@ -3995,7 +4051,7 @@ export class PRCommentList {
      * Creates a new PRCommentList instance from a string or object.
      */
     static createFrom($$source: any = {}): PRCommentList {
-        const $$createField0_0 = $$createType47;
+        const $$createField0_0 = $$createType49;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("comments" in $$parsedSource) {
             $$parsedSource["comments"] = $$createField0_0($$parsedSource["comments"]);
@@ -4064,7 +4120,7 @@ export class PRCommitList {
      * Creates a new PRCommitList instance from a string or object.
      */
     static createFrom($$source: any = {}): PRCommitList {
-        const $$createField0_0 = $$createType49;
+        const $$createField0_0 = $$createType51;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("commits" in $$parsedSource) {
             $$parsedSource["commits"] = $$createField0_0($$parsedSource["commits"]);
@@ -4101,7 +4157,7 @@ export class PRDiff {
      * Creates a new PRDiff instance from a string or object.
      */
     static createFrom($$source: any = {}): PRDiff {
-        const $$createField0_0 = $$createType51;
+        const $$createField0_0 = $$createType53;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("files" in $$parsedSource) {
             $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
@@ -4146,7 +4202,7 @@ export class PRDiffFile {
      * Creates a new PRDiffFile instance from a string or object.
      */
     static createFrom($$source: any = {}): PRDiffFile {
-        const $$createField4_0 = $$createType52;
+        const $$createField4_0 = $$createType54;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("diff" in $$parsedSource) {
             $$parsedSource["diff"] = $$createField4_0($$parsedSource["diff"]);
@@ -4179,7 +4235,7 @@ export class PRFileList {
      * Creates a new PRFileList instance from a string or object.
      */
     static createFrom($$source: any = {}): PRFileList {
-        const $$createField0_0 = $$createType54;
+        const $$createField0_0 = $$createType56;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("files" in $$parsedSource) {
             $$parsedSource["files"] = $$createField0_0($$parsedSource["files"]);
@@ -4216,7 +4272,7 @@ export class PRList {
      * Creates a new PRList instance from a string or object.
      */
     static createFrom($$source: any = {}): PRList {
-        const $$createField0_0 = $$createType56;
+        const $$createField0_0 = $$createType58;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("prs" in $$parsedSource) {
             $$parsedSource["prs"] = $$createField0_0($$parsedSource["prs"]);
@@ -4403,6 +4459,134 @@ export class PRReviewComment {
 }
 
 /**
+ * PRTimelineEvent is one entry in a pull request's conversation timeline.
+ * Forgejo's timeline endpoint returns comments, commits, reviews and ref events
+ * already interleaved in the order they happened, so the frontend renders them
+ * as a single stream the way Forgejo and GitHub do instead of grouping them by
+ * kind. Type carries the raw CommentType word ("comment", "commit", "review",
+ * "close", "reopen", "merge", …); the commit and review fields below are only
+ * populated for the entries that have them.
+ */
+export class PRTimelineEvent {
+    "id": number;
+    "type": string;
+    "author": string;
+    "body": string;
+    "createdAt": string;
+    "htmlUrl": string;
+
+    /**
+     * Commit entries: the SHA in sha and the message in message (the timeline's
+     * body field doubles as the message for commit entries).
+     */
+    "sha": string;
+    "message": string;
+
+    /**
+     * Review entries.
+     */
+    "reviewId": number;
+
+    /**
+     * Ref and other events, used to describe what happened without a body.
+     */
+    "refAction": string;
+    "oldRef": string;
+    "newRef": string;
+    "oldTitle": string;
+    "newTitle": string;
+
+    /** Creates a new PRTimelineEvent instance. */
+    constructor($$source: Partial<PRTimelineEvent> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("author" in $$source)) {
+            this["author"] = "";
+        }
+        if (!("body" in $$source)) {
+            this["body"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = "";
+        }
+        if (!("htmlUrl" in $$source)) {
+            this["htmlUrl"] = "";
+        }
+        if (!("sha" in $$source)) {
+            this["sha"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("reviewId" in $$source)) {
+            this["reviewId"] = 0;
+        }
+        if (!("refAction" in $$source)) {
+            this["refAction"] = "";
+        }
+        if (!("oldRef" in $$source)) {
+            this["oldRef"] = "";
+        }
+        if (!("newRef" in $$source)) {
+            this["newRef"] = "";
+        }
+        if (!("oldTitle" in $$source)) {
+            this["oldTitle"] = "";
+        }
+        if (!("newTitle" in $$source)) {
+            this["newTitle"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PRTimelineEvent instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PRTimelineEvent {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new PRTimelineEvent($$parsedSource as Partial<PRTimelineEvent>);
+    }
+}
+
+export class PRTimelineList {
+    "events": PRTimelineEvent[];
+    "total": number;
+    "truncated": boolean;
+
+    /** Creates a new PRTimelineList instance. */
+    constructor($$source: Partial<PRTimelineList> = {}) {
+        if (!("events" in $$source)) {
+            this["events"] = [];
+        }
+        if (!("total" in $$source)) {
+            this["total"] = 0;
+        }
+        if (!("truncated" in $$source)) {
+            this["truncated"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PRTimelineList instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PRTimelineList {
+        const $$createField0_0 = $$createType60;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("events" in $$parsedSource) {
+            $$parsedSource["events"] = $$createField0_0($$parsedSource["events"]);
+        }
+        return new PRTimelineList($$parsedSource as Partial<PRTimelineList>);
+    }
+}
+
+/**
  * PRUser is the signed-in Forgejo identity, needed to suppress self-approval.
  */
 export class PRUser {
@@ -4520,8 +4704,8 @@ export class ProductOverview {
      */
     static createFrom($$source: any = {}): ProductOverview {
         const $$createField3_0 = $$createType28;
-        const $$createField4_0 = $$createType58;
-        const $$createField5_0 = $$createType60;
+        const $$createField4_0 = $$createType62;
+        const $$createField5_0 = $$createType64;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("googleProject" in $$parsedSource) {
             $$parsedSource["googleProject"] = $$createField3_0($$parsedSource["googleProject"]);
@@ -4829,7 +5013,7 @@ export class RunDefineResult {
      */
     static createFrom($$source: any = {}): RunDefineResult {
         const $$createField4_0 = $$createType2;
-        const $$createField5_0 = $$createType62;
+        const $$createField5_0 = $$createType66;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("definitionArtifacts" in $$parsedSource) {
             $$parsedSource["definitionArtifacts"] = $$createField4_0($$parsedSource["definitionArtifacts"]);
@@ -4877,7 +5061,7 @@ export class RunDeployResult {
      * Creates a new RunDeployResult instance from a string or object.
      */
     static createFrom($$source: any = {}): RunDeployResult {
-        const $$createField2_0 = $$createType65;
+        const $$createField2_0 = $$createType69;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("deployments" in $$parsedSource) {
             $$parsedSource["deployments"] = $$createField2_0($$parsedSource["deployments"]);
@@ -4914,7 +5098,7 @@ export class RunLogChunk {
      * Creates a new RunLogChunk instance from a string or object.
      */
     static createFrom($$source: any = {}): RunLogChunk {
-        const $$createField0_0 = $$createType67;
+        const $$createField0_0 = $$createType71;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stepRuns" in $$parsedSource) {
             $$parsedSource["stepRuns"] = $$createField0_0($$parsedSource["stepRuns"]);
@@ -5079,8 +5263,8 @@ export class ServicesOverview {
      * Creates a new ServicesOverview instance from a string or object.
      */
     static createFrom($$source: any = {}): ServicesOverview {
-        const $$createField0_0 = $$createType69;
-        const $$createField1_0 = $$createType71;
+        const $$createField0_0 = $$createType73;
+        const $$createField1_0 = $$createType75;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("neurons" in $$parsedSource) {
             $$parsedSource["neurons"] = $$createField0_0($$parsedSource["neurons"]);
@@ -5175,9 +5359,9 @@ export class ShareData {
      * Creates a new ShareData instance from a string or object.
      */
     static createFrom($$source: any = {}): ShareData {
-        const $$createField0_0 = $$createType73;
-        const $$createField1_0 = $$createType75;
-        const $$createField2_0 = $$createType75;
+        const $$createField0_0 = $$createType77;
+        const $$createField1_0 = $$createType79;
+        const $$createField2_0 = $$createType79;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("people" in $$parsedSource) {
             $$parsedSource["people"] = $$createField0_0($$parsedSource["people"]);
@@ -5596,7 +5780,7 @@ export class SpannerQueryResult {
         const $$createField0_0 = $$createType2;
         const $$createField1_0 = $$createType2;
         const $$createField2_0 = $$createType2;
-        const $$createField3_0 = $$createType76;
+        const $$createField3_0 = $$createType80;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("columns" in $$parsedSource) {
             $$parsedSource["columns"] = $$createField0_0($$parsedSource["columns"]);
@@ -5828,8 +6012,8 @@ export class UpsertWorkflowParams {
      * Creates a new UpsertWorkflowParams instance from a string or object.
      */
     static createFrom($$source: any = {}): UpsertWorkflowParams {
-        const $$createField2_0 = $$createType78;
-        const $$createField3_0 = $$createType80;
+        const $$createField2_0 = $$createType82;
+        const $$createField3_0 = $$createType84;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField2_0($$parsedSource["steps"]);
@@ -5914,8 +6098,8 @@ export class Workflow {
      * Creates a new Workflow instance from a string or object.
      */
     static createFrom($$source: any = {}): Workflow {
-        const $$createField6_0 = $$createType82;
-        const $$createField7_0 = $$createType80;
+        const $$createField6_0 = $$createType86;
+        const $$createField7_0 = $$createType84;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("steps" in $$parsedSource) {
             $$parsedSource["steps"] = $$createField6_0($$parsedSource["steps"]);
@@ -5996,7 +6180,7 @@ export class WorkflowRun {
      * Creates a new WorkflowRun instance from a string or object.
      */
     static createFrom($$source: any = {}): WorkflowRun {
-        const $$createField6_0 = $$createType67;
+        const $$createField6_0 = $$createType71;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("stepRuns" in $$parsedSource) {
             $$parsedSource["stepRuns"] = $$createField6_0($$parsedSource["stepRuns"]);
@@ -6154,40 +6338,44 @@ const $$createType42 = LogEntry.createFrom;
 const $$createType43 = $Create.Array($$createType42);
 const $$createType44 = ScannedNeuronFile.createFrom;
 const $$createType45 = $Create.Array($$createType44);
-const $$createType46 = PRComment.createFrom;
+const $$createType46 = PRAttachment.createFrom;
 const $$createType47 = $Create.Array($$createType46);
-const $$createType48 = PRCommit.createFrom;
+const $$createType48 = PRComment.createFrom;
 const $$createType49 = $Create.Array($$createType48);
-const $$createType50 = PRDiffFile.createFrom;
+const $$createType50 = PRCommit.createFrom;
 const $$createType51 = $Create.Array($$createType50);
-const $$createType52 = GitFileDiff.createFrom;
-const $$createType53 = CommitFile.createFrom;
-const $$createType54 = $Create.Array($$createType53);
-const $$createType55 = ForgejoPR.createFrom;
+const $$createType52 = PRDiffFile.createFrom;
+const $$createType53 = $Create.Array($$createType52);
+const $$createType54 = GitFileDiff.createFrom;
+const $$createType55 = CommitFile.createFrom;
 const $$createType56 = $Create.Array($$createType55);
-const $$createType57 = GitRepoInfo.createFrom;
-const $$createType58 = $Create.Nullable($$createType57);
-const $$createType59 = PkgRegistries.createFrom;
-const $$createType60 = $Create.Nullable($$createType59);
-const $$createType61 = DefineArtifact.createFrom;
-const $$createType62 = $Create.Array($$createType61);
-const $$createType63 = DeployItem.createFrom;
+const $$createType57 = ForgejoPR.createFrom;
+const $$createType58 = $Create.Array($$createType57);
+const $$createType59 = PRTimelineEvent.createFrom;
+const $$createType60 = $Create.Array($$createType59);
+const $$createType61 = GitRepoInfo.createFrom;
+const $$createType62 = $Create.Nullable($$createType61);
+const $$createType63 = PkgRegistries.createFrom;
 const $$createType64 = $Create.Nullable($$createType63);
-const $$createType65 = $Create.Array($$createType64);
-const $$createType66 = StepRunStatus.createFrom;
-const $$createType67 = $Create.Array($$createType66);
-const $$createType68 = NeuronItem.createFrom;
+const $$createType65 = DefineArtifact.createFrom;
+const $$createType66 = $Create.Array($$createType65);
+const $$createType67 = DeployItem.createFrom;
+const $$createType68 = $Create.Nullable($$createType67);
 const $$createType69 = $Create.Array($$createType68);
-const $$createType70 = EnvDeployments.createFrom;
+const $$createType70 = StepRunStatus.createFrom;
 const $$createType71 = $Create.Array($$createType70);
-const $$createType72 = SharePerson.createFrom;
+const $$createType72 = NeuronItem.createFrom;
 const $$createType73 = $Create.Array($$createType72);
-const $$createType74 = ShareAccount.createFrom;
+const $$createType74 = EnvDeployments.createFrom;
 const $$createType75 = $Create.Array($$createType74);
-const $$createType76 = $Create.Array($$createType2);
-const $$createType77 = UpsertStepParams.createFrom;
-const $$createType78 = $Create.Array($$createType77);
-const $$createType79 = WorkflowArg.createFrom;
-const $$createType80 = $Create.Array($$createType79);
-const $$createType81 = WorkflowStep.createFrom;
+const $$createType76 = SharePerson.createFrom;
+const $$createType77 = $Create.Array($$createType76);
+const $$createType78 = ShareAccount.createFrom;
+const $$createType79 = $Create.Array($$createType78);
+const $$createType80 = $Create.Array($$createType2);
+const $$createType81 = UpsertStepParams.createFrom;
 const $$createType82 = $Create.Array($$createType81);
+const $$createType83 = WorkflowArg.createFrom;
+const $$createType84 = $Create.Array($$createType83);
+const $$createType85 = WorkflowStep.createFrom;
+const $$createType86 = $Create.Array($$createType85);
