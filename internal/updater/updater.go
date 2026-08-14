@@ -406,6 +406,44 @@ func (s *Service) ApplyUpdate() error {
 	}
 }
 
+// relocatableAppError reports whether the running bundle can be replaced in
+// place. It has to be checked before the swap is handed to the detached
+// relaunch script, whose rm -rf and mv failures the user never sees: without
+// this the app quits, the old bundle survives, and the relaunch silently brings
+// back the version the user was already running.
+//
+// The two ways a bundle becomes un-swappable both trace back to running it
+// somewhere other than Applications. A quarantined app launched from Downloads
+// or a mounted disk image runs under App Translocation, which maps it to a
+// randomized read-only path under /var/folders; and a bundle on a mounted image
+// sits on a read-only volume.
+func relocatableAppError(appPath string) error {
+	if isTranslocated(appPath) {
+		return fmt.Errorf("AlisHub is running from a temporary read-only location. Move it to Applications and try the update again")
+	}
+	if !dirWritable(filepath.Dir(appPath)) {
+		return fmt.Errorf("AlisHub is installed somewhere it cannot be updated in place. Move it to Applications and try the update again")
+	}
+	return nil
+}
+
+func isTranslocated(path string) bool {
+	return strings.Contains(path, "AppTranslocation")
+}
+
+// dirWritable probes the directory the bundle lives in by creating and removing
+// a scratch file, which is exactly the permission the in-place swap needs.
+func dirWritable(dir string) bool {
+	f, err := os.CreateTemp(dir, ".alishub-write-test-*")
+	if err != nil {
+		return false
+	}
+	name := f.Name()
+	_ = f.Close()
+	_ = os.Remove(name)
+	return true
+}
+
 func (s *Service) applyDarwin(newAppPath string) error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -416,6 +454,9 @@ func (s *Service) applyDarwin(newAppPath string) error {
 	oldApp := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
 	if !strings.HasSuffix(oldApp, ".app") {
 		return fmt.Errorf("not running from an .app bundle (%s)", exe)
+	}
+	if err := relocatableAppError(oldApp); err != nil {
+		return err
 	}
 
 	pid := os.Getpid()

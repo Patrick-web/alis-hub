@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"alis-hub-v3/internal/appflavor"
@@ -226,5 +228,46 @@ func TestOpenReleasePageRemembersTheResolvedRelease(t *testing.T) {
 	s.mu.Unlock()
 	if got != "https://example.test/beta" {
 		t.Errorf("lastRelURL = %q, want the resolved prerelease URL", got)
+	}
+}
+
+func TestIsTranslocated(t *testing.T) {
+	translocated := "/private/var/folders/ab/cd/AppTranslocation/1a2b/d/AlisHub Beta.app"
+	if !isTranslocated(translocated) {
+		t.Errorf("isTranslocated(%q) = false, want true", translocated)
+	}
+	for _, p := range []string{
+		"/Applications/AlisHub Beta.app",
+		"/Users/jp/Downloads/AlisHub Beta.app",
+	} {
+		if isTranslocated(p) {
+			t.Errorf("isTranslocated(%q) = true, want false", p)
+		}
+	}
+}
+
+func TestRelocatableAppError(t *testing.T) {
+	if err := relocatableAppError("/private/var/folders/x/AppTranslocation/1a2b/d/AlisHub Beta.app"); err == nil {
+		t.Error("translocated bundle passed, want an error")
+	} else if !strings.Contains(err.Error(), "Applications") {
+		t.Errorf("error %q does not point the user at Applications", err)
+	}
+
+	if err := relocatableAppError(filepath.Join(t.TempDir(), "nonexistent", "AlisHub Beta.app")); err == nil {
+		t.Error("bundle in a missing directory passed, want an error")
+	}
+
+	dir := t.TempDir()
+	if err := relocatableAppError(filepath.Join(dir, "AlisHub Beta.app")); err != nil {
+		t.Errorf("writable bundle dir returned error %v, want nil", err)
+	}
+}
+
+func TestDirWritable(t *testing.T) {
+	if !dirWritable(t.TempDir()) {
+		t.Error("dirWritable = false for a fresh temp dir, want true")
+	}
+	if dirWritable(filepath.Join(t.TempDir(), "missing")) {
+		t.Error("dirWritable = true for a nonexistent dir, want false")
 	}
 }

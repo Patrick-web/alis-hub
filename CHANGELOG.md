@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.15.0-beta.4] - 2026-08-14
+
+### Bug Fixes
+- Fixed an issue where updating would silently fail and leave you on the old version when the app was run from outside Applications, such as the Downloads folder or a disk image
+
 ## [v0.15.0-beta.3] - 2026-08-14
 
 ### What's New
